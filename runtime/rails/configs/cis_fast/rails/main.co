@@ -1,0 +1,180 @@
+# ── Pass-Through: General Questions ─────────────────────────────────────
+# Gate 6C: patterns that are semantically closer to simple questions than
+# the guarded flows.  These fire first and pass through to Fast directly.
+
+define user ask general question
+  "what is 2+2"
+  "what is the capital of"
+  "what is the meaning of"
+  "how do I"
+  "who is"
+  "when did"
+  "where is"
+  "why does"
+  "tell me about"
+  "explain how"
+  "can you explain"
+  "I have a question about"
+  "do you know"
+  "what time is it"
+  "what day is it"
+
+define flow
+  user ask general question
+  $result = execute pass_through_query(query=$user_message)
+  bot $result
+
+
+# ── Pass-Through: Creative & Brainstorming ──────────────────────────────
+# Gate 6C: creative/collaborative prompts pass through to Fast.
+# These patterns are closer to brainstorming than to execution.
+
+define user ask creative question
+  "brainstorm ideas for"
+  "brainstorm names for"
+  "draft a proposal"
+  "write a proposal"
+  "draft a directive"
+  "draft a final directive"
+  "write a directive"
+  "draft a FINAL_DIRECTIVE"
+  "critique this directive"
+  "review this directive"
+  "critique the directive"
+  "review this for"
+  "propose a solution"
+  "propose a new"
+  "draft a plan"
+  "create a plan"
+  "design a system"
+  "architect a"
+  "creative names for"
+  "help me name"
+  "suggest names for"
+  "what should I call"
+  "generate ideas for"
+  "come up with names"
+  "think of some names"
+  "give me some ideas"
+  "help me brainstorm"
+  "let us discuss"
+  "can we talk about"
+  "what do you think about"
+  "I want to explore"
+
+define flow
+  user ask creative question
+  $result = execute pass_through_query(query=$user_message)
+  bot $result
+
+
+# ── System Configuration Queries ───────────────────────────────────────
+define user ask about system config
+  "what model is behind *"
+  "what port does *"
+  "what port is *"
+  "what gateway is *"
+  "what config file *"
+  "where is the config *"
+  "what API key *"
+  "is thinking enabled *"
+  "how is * routed"
+  "routing configuration"
+  "gateway setup"
+  "agent instances"
+  "current status"
+  "what system state *"
+  "check if * is done"
+  "are we done with *"
+  "has * been finished"
+  "what port * run on"
+
+define flow
+  user ask about system config
+  $result = execute verify_local_routing_action(query=$user_message)
+  bot $result
+
+
+# ── Current External Facts ─────────────────────────────────────────────
+define user ask about current external facts
+  "current model name *"
+  "current model list *"
+  "latest version of *"
+  "latest API *"
+  "version of the package *"
+  "current version of *"
+  "recent release of *"
+  "package version for *"
+  "model catalog *"
+  "API cost *"
+  "pricing for * API"
+  "deprecation notice *"
+  "release notes for *"
+  "install the package *"
+  "look up online *"
+  "search the web for *"
+  "verify online the *"
+  "current documentation for *"
+  "API reference for *"
+  "what is the latest version"
+  "what is the current version"
+  "what are the current model"
+  "check the current * version"
+  "draft a proposal using the current"
+  "draft a proposal using the latest"
+  "propose a solution using the current"
+  "write a proposal about the current"
+  "draft a plan using current"
+  "proposal for current * API"
+  "current * syntax"
+  "current * registration"
+
+define flow
+  user ask about current external facts
+  $result = execute verify_web_evidence_action(query=$user_message)
+  bot $result
+
+
+# ── Execution & Completion Claims — BLOCKED ────────────────────────────
+define user ask to do execution work
+  "write a file *"
+  "edit a file *"
+  "create a file *"
+  "make a file *"
+  "modify the code *"
+  "change the code *"
+  "update the code *"
+  "patch the file *"
+  "run a command *"
+  "restart a service *"
+  "implement a feature *"
+  "deploy to *"
+  "commit the code *"
+  "push the code *"
+  "execute the command *"
+  "report PASS on *"
+  "report DONE on *"
+  "tell Eric it is done"
+  "tell Eric I completed"
+  "tell me you completed"
+  "tell me it is done"
+  "completed the code changes"
+  "claim it is complete"
+  "mark the task done"
+  "report that work is done"
+  "finished the task *"
+  "completed the phase *"
+  "the task is complete"
+  "all tests pass for *"
+  "everything is working now"
+  "I have fixed the *"
+  "I fixed the *"
+  "I built the *"
+  "I created the *"
+  "I updated the *"
+  "I changed the *"
+
+define flow
+  user ask to do execution work
+  $result = execute block_execution_claim
+  bot $result

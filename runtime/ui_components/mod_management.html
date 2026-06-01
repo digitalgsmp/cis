@@ -1,0 +1,177 @@
+<div class="module-content">
+  <div class="hdr">
+    <div class="hdr-title">Management</div>
+    <div class="hdr-sub">Cross-project overview — status tracking, metrics, and project governance</div>
+  </div>
+
+  <!-- Dashboard metrics -->
+  <div class="row" id="mgmt-metrics">
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-total">0</div>
+        <div class="metric-label">Total Projects</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-active" style="color:var(--blue)">0</div>
+        <div class="metric-label">Active</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-complete" style="color:var(--green)">0</div>
+        <div class="metric-label">Complete</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-blocked" style="color:var(--red)">0</div>
+        <div class="metric-label">Blocked</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-assets">0</div>
+        <div class="metric-label">Total Assets</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card metric-card">
+        <div class="metric-val" id="m-slots">0</div>
+        <div class="metric-label">Schedule Slots</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status pipeline -->
+  <div class="card">
+    <div class="card-title">Status Pipeline</div>
+    <div style="display:flex;gap:4px;align-items:flex-start;flex-wrap:wrap" id="status-pipeline"></div>
+  </div>
+
+  <!-- Domain breakdown -->
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <div class="card-title">By Domain</div>
+        <div id="domain-breakdown"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="card-title">By Project Type</div>
+        <div id="type-breakdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="card">
+    <div class="card-title">Activity Log</div>
+    <div id="activity-log" style="font-size:12px">
+      <p style="color:var(--t3)">No activity yet.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Aggregates data from all stores ──
+function refreshMgmt() {
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+  const assets = JSON.parse(localStorage.getItem('cis_assets') || '[]')
+  const schedule = JSON.parse(localStorage.getItem('cis_schedule') || '[]')
+  const ideas = JSON.parse(localStorage.getItem('cis_ideas') || '[]')
+
+  // Metrics
+  document.getElementById('m-total').textContent = projects.length
+  document.getElementById('m-active').textContent = projects.filter(p => p.status === 'active' || p.status === 'initiated').length
+  document.getElementById('m-complete').textContent = projects.filter(p => p.status === 'complete').length
+  document.getElementById('m-blocked').textContent = projects.filter(p => p.status === 'blocked').length
+  document.getElementById('m-assets').textContent = assets.length
+  document.getElementById('m-slots').textContent = schedule.length
+
+  // Status pipeline
+  const pipeline = document.getElementById('status-pipeline')
+  const statusDefs = [
+    {id:'captured', label:'Captured', color:'var(--amber)'},
+    {id:'initiated', label:'Initiated', color:'var(--amber)'},
+    {id:'active', label:'Active', color:'var(--blue)'},
+    {id:'blocked', label:'Blocked', color:'var(--red)'},
+    {id:'review', label:'In Review', color:'var(--purple)'},
+    {id:'complete', label:'Complete', color:'var(--green)'}
+  ]
+  pipeline.innerHTML = statusDefs.map(sd => {
+    const count = projects.filter(p => p.status === sd.id).length
+    return `<div class="pipe-item">
+      <div class="pipe-circle" style="background:${sd.color}; opacity:${count > 0 ? 1 : 0.3}"></div>
+      <div class="pipe-count" style="color:${sd.color}">${count}</div>
+      <div class="pipe-label">${sd.label}</div>
+    </div>`
+  }).join('')
+
+  // Domain breakdown
+  const domainEl = document.getElementById('domain-breakdown')
+  const domains = {}
+  projects.forEach(p => { domains[p.domain] = (domains[p.domain] || 0) + 1 })
+  const domainNames = { creative:'Creative', socialcare:'Social Care', personal:'Personal', technical:'Technical', learning:'Learning' }
+  domainEl.innerHTML = Object.entries(domains).length
+    ? Object.entries(domains).map(([d, c]) => `<div class="br-item"><span class="tag-domain ${d}">${domainNames[d] || d}</span><span class="br-count">${c}</span></div>`).join('')
+    : '<p style="color:var(--t3);font-size:12px">No projects yet.</p>'
+
+  // Type breakdown
+  const typeEl = document.getElementById('type-breakdown')
+  const types = {}
+  projects.forEach(p => { if (p.type) types[p.type] = (types[p.type] || 0) + 1 })
+  typeEl.innerHTML = Object.entries(types).length
+    ? Object.entries(types).map(([t, c]) => `<div class="br-item"><span class="br-label">${t}</span><span class="br-count">${c}</span></div>`).join('')
+    : '<p style="color:var(--t3);font-size:12px">No project types defined.</p>'
+
+  // Activity log — most recently updated items across stores
+  const activity = []
+  projects.forEach(p => activity.push({ text: p.name + ' — ' + p.status, date: p.updated || p.created, type: 'project' }))
+  assets.forEach(a => activity.push({ text: a.name + ' (' + a.type + ') — ' + a.status, date: a.updated || a.created, type: 'asset' }))
+  schedule.forEach(s => activity.push({ text: s.name + ' — slot ' + s.status, date: s.created, type: 'schedule' }))
+  ideas.forEach(i => activity.push({ text: i.name + ' — ' + i.status + ' idea', date: i.created, type: 'idea' }))
+  activity.sort((a,b) => new Date(b.date) - new Date(a.date))
+
+  const logEl = document.getElementById('activity-log')
+  if (!activity.length) {
+    logEl.innerHTML = '<p style="color:var(--t3)">No activity yet.</p>'
+    return
+  }
+  logEl.innerHTML = activity.slice(0, 30).map(a => {
+    const typeColors = { project:'var(--blue)', asset:'var(--purple)', schedule:'var(--amber)', idea:'var(--green)' }
+    return `<div class="act-item">
+      <span class="act-dot" style="background:${typeColors[a.type] || 'var(--t3)'}"></span>
+      <span class="act-text">${a.text}</span>
+      <span class="act-date">${new Date(a.date).toLocaleString()}</span>
+    </div>`
+  }).join('')
+}
+
+// ── Auto-refresh on tab focus ──
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshMgmt() })
+
+// ── Init ──
+refreshMgmt()
+</script>
+
+<style>
+.metric-card { text-align:center; padding:16px 12px }
+.metric-val { font-family:var(--cond); font-weight:800; font-size:32px; color:var(--t1); line-height:1 }
+.metric-label { font-family:var(--mono); font-size:9px; color:var(--t3); margin-top:4px; text-transform:uppercase; letter-spacing:.1em }
+.pipe-item { display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; min-width:60px }
+.pipe-circle { width:12px; height:12px; border-radius:50% }
+.pipe-count { font-family:var(--cond); font-weight:800; font-size:20px }
+.pipe-label { font-family:var(--mono); font-size:8px; color:var(--t3); text-transform:uppercase; letter-spacing:.05em }
+.br-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border) }
+.br-item:last-child { border-bottom:0 }
+.br-label { font-size:12px; color:var(--t1); text-transform:capitalize }
+.br-count { margin-left:auto; font-family:var(--cond); font-weight:700; font-size:16px; color:var(--t2) }
+.act-item { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); font-size:11px }
+.act-item:last-child { border-bottom:0 }
+.act-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0 }
+.act-text { color:var(--t2); flex:1 }
+.act-date { font-family:var(--mono); font-size:9px; color:var(--t3); white-space:nowrap }
+</style>

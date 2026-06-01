@@ -1,0 +1,23 @@
+CIS-Workflow Description and todos.
+
+The user uses the chat advisor to talk through an idea in prime chat. When the idea is fleshed out some refer the discussion to R1 Deep Reasoning for input, then to V4-Pro for deep analaysis. If user is not confident with the solution presented the topic can be escalated to claude or Chatgtp.
+
+But there are questions that need to be workout with the workflow of CIS moving a project through the production work flow.
+
+for instance the CIS application is the first project being developed using the CIS process. There are mulitble features or issues that come up on the fly, how are these new issues captured and prioritized in the system like an ongoing todo list or roadmap additions.
+
+looking at the CIS navigation, these button need to be separated between the stand alone CIS tools and the project management flows. schedule could be a stand alone calendar page, but projects also have due dates and milestone tracking, how does that intergrate into the projects. Projects, should be the project management tool. Just like the DAM should be intergrated in such a way that an object added to a project, a 3d model or code snippet should be viewable in a details page that is a part of the DAM.
+
+What is the relationship between the dam and the knowledge base. when research is done and references found, how are they shared or the relational connection maintained between between the dam, knowledge base and the project management system.
+
+the learn button was suppose to represent the LMS system accumulated in CIS, but isn't it actually just parts of the knowledgebase that has been vectorized into the knowledge. For instance I a complete video tutorial is vectorized into the knowledge for fast retreival to ai assist a user, the use could also just want to go through a complete course during a training cycle. But that same tutorial is in the vdb to assist live time when skills are needs to problem solve during a working session in a project.
+
+Fix the storage block issue that prevents proxmox ability to snapshot vm. The is a serious vulnerability existing with out immediate backup option.
+
+moonlight sunshine needs to be enabled.
+
+I am not confident the current file structure is clean and the current working version is isolated from previous dev session legacy files and content. 
+
+Deepseek V4 Pro token usage in hermes is not clearly understood. Deepseek works otimally with in the 10-20 % of context range of the 1M deepseek context window. V4 uses 10% within a few exchanges. I remains usefell but it is an issue without understood parameters.
+
+everything seems to be working as expected with advisor chat. The only friction is subjective and aesthetic. Prime is bottom left corner. Not ideal for a prime first engagement chat location. The layout should reflect the flow of engagement.  I would on an ultrawide monitor that could accomodate the current layout but I have concerns about smaller single monitor useablitity and what about mobile device use.

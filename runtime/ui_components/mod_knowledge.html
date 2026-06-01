@@ -1,0 +1,52 @@
+<div class="hdr"><div class="hdr-title">Knowledge Base</div><div class="hdr-sub">Searchable, recursively building. Informs next steps. Cross-project.</div></div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Search</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" placeholder="Search all accumulated knowledge..." style="flex:1;padding:10px;border-radius:5px;border:1px solid var(--border);background:var(--bg-surface);color:var(--t1);font-family:var(--sans);font-size:13px;outline:0">
+        <button class="btn btn-blue">Search</button>
+      </div>
+      <div style="text-align:center;padding:24px;color:var(--t3)">
+        <div style="font-size:32px;margin-bottom:8px">🔍</div>
+        <p>No indexed knowledge yet.</p>
+        <p style="font-size:11px;margin-top:4px">As extraction and research produce results, they accumulate here — queryable from any future project.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Suggested Next Steps</div>
+      <p style="font-size:12px;color:var(--t3)">Once knowledge is indexed, the system will suggest possible next actions based on patterns discovered across all projects.</p>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+        <div class="pl-item" style="opacity:0.4"><span class="pl-icon">💡</span><div class="pl-info"><div class="pl-title">Start with extraction</div><div class="pl-meta">No indexed data to suggest from yet</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Index Status</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--t3)"><span>Total records</span><span>0</span></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--t3)"><span>Source files processed</span><span>0 / 518</span></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--t3)"><span>Projects contributing</span><span>1</span></div>
+        <div style="height:6px;background:var(--bg-surface);border-radius:3px;overflow:hidden;margin-top:4px">
+          <div style="width:0%;height:100%;background:var(--blue);border-radius:3px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cross-Project</div>
+      <p style="font-size:12px;color:var(--t2)">When you start a new project, the first step is to search here:</p>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+        <div class="pl-item" style="opacity:0.5"><span class="pl-icon">🔍</span><div class="pl-info"><div class="pl-title">"How did we handle intake?"</div><div class="pl-meta">Finds the CIS Kernel pattern</div></div></div>
+        <div class="pl-item" style="opacity:0.5"><span class="pl-icon">🔍</span><div class="pl-info"><div class="pl-title">"What agent roles exist?"</div><div class="pl-meta">Finds prior research</div></div></div>
+        <div class="pl-item" style="opacity:0.5"><span class="pl-icon">🔍</span><div class="pl-info"><div class="pl-title">"What file structure works?"</div><div class="pl-meta">Finds the template</div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Actions</div>
+      <button class="btn btn-amber" style="width:100%">Index All Unprocessed Source</button>
+      <div style="margin-top:6px"><button class="btn" style="width:100%">Rebuild Index</button></div>
+    </div>
+  </div>
+</div>

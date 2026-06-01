@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/_CIS_The pattern across the CIS docs.md

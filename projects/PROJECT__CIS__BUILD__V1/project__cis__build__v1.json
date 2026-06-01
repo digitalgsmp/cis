@@ -1,0 +1,121 @@
+{
+  "project_id": "PROJECT__CIS__BUILD__V1",
+  "project_type": "application",
+  "title": "CIS Creative Intelligence System — Build v1",
+  "working_title": "CIS Build v1",
+  "created_at": "2026-04-17T00:00:00Z",
+  "updated_at": "2026-04-17T22:00:00Z",
+  "created_by": "human",
+  "status": "active",
+
+  "concept": "Design, build, and document a local creative intelligence studio operating system that transforms raw source material into structured knowledge and finished creative work. The system itself is the first project — every architectural decision, pipeline command, knowledge record, and workflow discovery is source material for the system's own knowledge base.",
+
+  "intended_output_type": "local web application + CLI pipeline + structured knowledge base",
+
+  "project_scope": "major",
+
+  "active_stages": ["web"],
+
+  "wias_notes": "WEB is the primary active stage. WEB is the catchall domain for code-based application development. The dashboard, pipeline scripts, and operator interface are all WEB outputs. Other WIAS stages will become active as the system processes source material from those domains.",
+
+  "production_phases": [
+    {
+      "phase_id": "phase_pd",
+      "label": "Phase PD — Pre-Development Harness",
+      "status": "complete",
+      "summary": "Infrastructure proven. 5 drives mounted. SQLite memory layer. cis-start harness. Obsidian vault synced to GitHub."
+    },
+    {
+      "phase_id": "phase_0",
+      "label": "Phase 0 — Execution Layer",
+      "status": "proven",
+      "summary": "Full pipeline proven: intake → classify → preprocess → extract → normalize. First knowledge record produced from Weird War Tales cover. 12 ADRs locked."
+    },
+    {
+      "phase_id": "phase_1",
+      "label": "Phase 1 — Intelligence Extraction",
+      "status": "active",
+      "summary": "cis_review.py built and tested. cis-log insight subcommand added. Runtime scripts committed to version control. Dashboard design under evaluation."
+    },
+    {
+      "phase_id": "phase_2",
+      "label": "Phase 2 — Operator Dashboard",
+      "status": "pending",
+      "summary": "Flask API backend + React frontend. Five panels: Intake, Pipeline, Review, Knowledge Base, Insights."
+    },
+    {
+      "phase_id": "phase_3",
+      "label": "Phase 3 — Knowledge Base + Retrieval",
+      "status": "pending",
+      "summary": "Vector index. Retrieval system. Knowledge browser."
+    },
+    {
+      "phase_id": "phase_4",
+      "label": "Phase 4 — Project Management Interface",
+      "status": "pending",
+      "summary": "Full project tracking. DAM integration. WIAS stage progression."
+    },
+    {
+      "phase_id": "phase_5",
+      "label": "Phase 5 — Agent Layer",
+      "status": "pending",
+      "summary": "Bounded agent roles. Librarian, Researcher, Producer, Guardrail."
+    }
+  ],
+
+  "knowledge_links": {
+    "record_ids": [
+      "KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001"
+    ],
+    "research_ids": [],
+    "reference_ids": [
+      "KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001"
+    ],
+    "learning_ids": [],
+    "template_ids": []
+  },
+
+  "adr_links": [
+    "ADR-001", "ADR-002", "ADR-002-SUPERSEDED", "ADR-003", "ADR-004",
+    "ADR-005", "ADR-006", "ADR-007", "ADR-008", "ADR-009",
+    "ADR-010", "ADR-011", "ADR-012"
+  ],
+
+  "source_material": {
+    "archive_path": "/mnt/archive",
+    "active_sources": [
+      "/mnt/projects/cis/ingest/processing/image__weird_war_tales_cover__001/"
+    ],
+    "note": "The 10TB archive at /mnt/archive is the primary raw material pool for the system. Sources are ingested on demand via cis-intake."
+  },
+
+  "runtime": {
+    "vm": "Ubuntu 24.04 in Proxmox VM 100 on node wander",
+    "gpu": "RTX 4090 24GB VRAM",
+    "ram": "48GB",
+    "model": "Qwen2.5-VL-32B-Instruct-4bit",
+    "inference_env": "/home/eric/gpu-test",
+    "extract_invocation": "PYTORCH_ALLOC_CONF=expandable_segments:True /home/eric/gpu-test/bin/python3 /mnt/projects/cis/runtime/cis_extract.py <source_id>"
+  },
+
+  "ai_inference": {
+    "inferred_constraints": [
+      "Sequential build discipline must be maintained — no phase skipped",
+      "Dashboard framework must support final vision — React + Flask chosen to prevent rebuild",
+      "Version control must cover runtime scripts and knowledge records, not docs only",
+      "Human review is required at every knowledge record promotion step"
+    ],
+    "required_skills": [
+      "Python", "Flask", "React", "SQLite", "Git", "Linux CLI", "JSON schema design"
+    ],
+    "risk_flags": [
+      "Session insights being lost in chat — insight capture now active via cis-log",
+      "Runtime scripts were outside version control until 2026-04-17 — now resolved",
+      "DB schema must be checked before any new INSERT operation"
+    ],
+    "effort_estimate": "Multi-month build. Phase 1 active. Dashboard is next major deliverable."
+  },
+
+  "version": "v1",
+  "is_current": true
+}

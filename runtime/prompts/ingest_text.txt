@@ -1,0 +1,12 @@
+
+
+Extract structured knowledge from this material.
+
+Return:
+- summary
+- key concepts
+- tools mentioned
+- topics
+- example uses
+
+Keep output structured and reusable.

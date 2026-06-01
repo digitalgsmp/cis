@@ -1,0 +1,11 @@
+define user ask about v4pro routing
+  "what port is V4-Pro R1 on"
+  "what model is behind V4-Pro R1"
+  "what port does V4-Pro R1 run on"
+  "where is V4-Pro R1"
+  "what gateway is V4-Pro R1 using"
+
+define flow
+  user ask about v4pro routing
+  $result = execute verify_local_routing_action(query=$user_message)
+  bot $result

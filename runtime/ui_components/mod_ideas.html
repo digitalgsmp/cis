@@ -1,0 +1,249 @@
+<div class="module-content">
+  <div class="hdr">
+    <div class="hdr-title">Ideas</div>
+    <div class="hdr-sub">Capture, classify, and promote ideas into projects</div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <div class="card-title">New Idea</div>
+        <form id="idea-form" onsubmit="return false;" style="display:flex;flex-direction:column;gap:10px">
+          <input id="f-idea-name" class="cis-input" type="text" placeholder="Idea name / working title" required>
+
+          <input id="f-idea-link" class="cis-input" type="url" placeholder="Source link (URL, reference)">
+
+          <div class="field-row">
+            <label class="field-label">Original date</label>
+            <input id="f-idea-date" class="cis-input" type="date">
+          </div>
+
+          <textarea id="f-idea-desc" class="cis-textarea" placeholder="What's the concept? Description, vision, why it matters…" style="min-height:90px"></textarea>
+
+          <textarea id="f-idea-context" class="cis-textarea" placeholder="Context — where did this come from? What problem does it solve?" style="min-height:60px"></textarea>
+
+          <div class="field-row">
+            <label class="field-label">Domain</label>
+            <select id="f-idea-domain" class="cis-select" onchange="swapDomainTaxonomy()">
+              <option value="creative">Creative Production (WIAS)</option>
+              <option value="socialcare">Social Care / Work</option>
+              <option value="personal">Personal / Life</option>
+              <option value="technical">Technical / Infrastructure</option>
+              <option value="learning">Learning / Education</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label">Category</label>
+            <select id="f-idea-category" class="cis-select"></select>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label">Medium / Type</label>
+            <select id="f-idea-medium" class="cis-select"></select>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label">Story / Format type</label>
+            <select id="f-idea-storytype" class="cis-select">
+              <option value="">— optional —</option>
+              <option value="narrative">Narrative</option>
+              <option value="exploratory">Exploratory / Experimental</option>
+              <option value="applied">Applied / Practical</option>
+              <option value="educational">Educational / Informative</option>
+              <option value="procedural">Procedural / System</option>
+              <option value="critical">Critical / Analytical</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label">User level</label>
+            <select id="f-idea-level" class="cis-select">
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="pro">Professional</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label">Tags</label>
+            <input id="f-idea-tags" class="cis-input" type="text" placeholder="Comma-separated tags">
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-blue" onclick="captureIdea()">+ Capture Idea</button>
+            <button class="btn" onclick="clearIdeaForm()" type="button">Clear</button>
+          </div>
+          <div id="idea-status" style="font-family:var(--mono);font-size:10px;color:var(--t3);min-height:18px"></div>
+        </form>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="card-title">Recent Ideas</div>
+        <div id="recent-ideas" style="font-size:12px;color:var(--t3)"><p>No ideas captured yet.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Domain taxonomies ──
+const DOMAIN_TAXONOMIES = {
+  creative: {
+    categories: ['Word / Web','Image','Action','Sound','Non-Digital Product','Wildcard'],
+    media: ['Poetry','Fiction','Script / Screenplay','Song Lyric','Nonfiction / Essay',
+      'Drawing','Painting','2D Animation','3D Animation','3D Game','Film / Video',
+      'Music Production','Sound Design','Learning Course','Stream Content','Web Post',
+      'AR / VR','Photo','Comic','Zine','Installation','Performance']
+  },
+  socialcare: {
+    categories: ['Case Management','Assessment','Referral','Intervention','Reporting','Supervision','Training','Policy'],
+    media: ['Intake Form','Case Note','Assessment Report','Support Plan','Risk Assessment',
+      'Referral Letter','Progress Note','Care Plan','Discharge Summary','Audit Record',
+      'Policy Document','Training Material','Client Correspondence','Team Handoff']
+  },
+  personal: {
+    categories: ['Home','Body','Mind','Finance','Relationships','Projects','Infrastructure','Philosophy'],
+    media: ['Task List','Journal Entry','Habit Tracker','Budget Plan','Goal Sheet',
+      'Inventory','Calendar Event','Note','Decision Log','Review','Routine','Reflection']
+  },
+  technical: {
+    categories: ['Infrastructure','Development','Deployment','Security','Data','Integration','Research','Documentation'],
+    media: ['Architecture Doc','API Spec','Config','Script','Test Plan','Deployment Runbook',
+      'Incident Report','Performance Review','Security Audit','Migration Plan','ADR',
+      'Knowledge Base','Changelog','Roadmap']
+  },
+  learning: {
+    categories: ['Skill Building','Theory','Practice','Research','Teaching','Certification','Exploration'],
+    media: ['Course Note','Tutorial','Exercise','Study Guide','Flashcard','Reading List',
+      'Project Log','Lab Report','Workshop Plan','Curriculum','Assessment','Reflection']
+  },
+  custom: {
+    categories: ['Category 1','Category 2','Category 3','Category 4','Category 5'],
+    media: ['Type 1','Type 2','Type 3','Type 4','Type 5']
+  }
+}
+
+function swapDomainTaxonomy() {
+  const domain = document.getElementById('f-idea-domain').value
+  const tax = DOMAIN_TAXONOMIES[domain] || DOMAIN_TAXONOMIES.custom
+  const catSel = document.getElementById('f-idea-category')
+  const medSel = document.getElementById('f-idea-medium')
+  catSel.innerHTML = tax.categories.map(c => `<option value="${c}">${c}</option>`).join('')
+  medSel.innerHTML = '<option value="">— select —</option>' + tax.media.map(m => `<option value="${m}">${m}</option>`).join('')
+  // Enable custom editing for 'custom' domain
+  document.getElementById('f-idea-category').style.outline = domain === 'custom' ? '1px dashed var(--amber)' : 'none'
+}
+
+// ── Ideas storage (local for now) ──
+let ideas = JSON.parse(localStorage.getItem('cis_ideas') || '[]')
+
+function captureIdea() {
+  const name = document.getElementById('f-idea-name').value.trim()
+  if (!name) { document.getElementById('idea-status').textContent = '⚠ Name is required'; return }
+
+  const idea = {
+    id: 'idea_' + Date.now(),
+    name,
+    link: document.getElementById('f-idea-link').value.trim(),
+    date: document.getElementById('f-idea-date').value || new Date().toISOString().slice(0,10),
+    description: document.getElementById('f-idea-desc').value.trim(),
+    context: document.getElementById('f-idea-context').value.trim(),
+    domain: document.getElementById('f-idea-domain').value,
+    category: document.getElementById('f-idea-category').value,
+    medium: document.getElementById('f-idea-medium').value,
+    storyType: document.getElementById('f-idea-storytype').value,
+    userLevel: document.getElementById('f-idea-level').value,
+    tags: document.getElementById('f-idea-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    status: 'captured',
+    created: new Date().toISOString()
+  }
+  ideas.unshift(idea)
+  localStorage.setItem('cis_ideas', JSON.stringify(ideas))
+  renderRecentIdeas()
+  document.getElementById('idea-status').textContent = '✓ Captured as ' + idea.id
+  clearIdeaForm()
+}
+
+function clearIdeaForm() {
+  ['f-idea-name','f-idea-link','f-idea-desc','f-idea-context','f-idea-tags'].forEach(id => document.getElementById(id).value = '')
+  document.getElementById('f-idea-date').value = ''
+  document.getElementById('f-idea-domain').value = 'creative'
+  document.getElementById('f-idea-storytype').value = ''
+  document.getElementById('f-idea-level').value = 'beginner'
+  swapDomainTaxonomy()
+}
+
+function renderRecentIdeas() {
+  const el = document.getElementById('recent-ideas')
+  if (!ideas.length) { el.innerHTML = '<p style="color:var(--t3);font-size:12px">No ideas captured yet.</p>'; return }
+  el.innerHTML = ideas.slice(0, 10).map(idea => `
+    <div class="idea-card" onclick="promoteIdea('${idea.id}')" title="Click to promote to project">
+      <div class="idea-name">${idea.name}</div>
+      <div class="idea-meta">
+        <span class="tag-domain ${idea.domain}">${idea.domain}</span>
+        ${idea.category ? `<span class="tag">${idea.category}</span>` : ''}
+        ${idea.medium ? `<span class="tag">${idea.medium}</span>` : ''}
+        <span class="tag-status">${idea.status}</span>
+        <span class="date">${idea.date}</span>
+      </div>
+      ${idea.description ? `<div class="idea-desc">${idea.description.slice(0,120)}${idea.description.length > 120 ? '…' : ''}</div>` : ''}
+    </div>
+  `).join('')
+}
+
+function promoteIdea(id) {
+  const idea = ideas.find(i => i.id === id)
+  if (!idea || idea.status === 'promoted') return
+  idea.status = 'promoted'
+  localStorage.setItem('cis_ideas', JSON.stringify(ideas))
+  renderRecentIdeas()
+  // Fire event for projects module to pick up
+  window.dispatchEvent(new CustomEvent('idea-promoted', { detail: idea }))
+  document.getElementById('idea-status').textContent = '↑ Promoted "' + idea.name + '" — switch to Projects tab'
+}
+
+// ── Init ──
+swapDomainTaxonomy()
+renderRecentIdeas()
+</script>
+
+<style>
+.cis-input {
+  width:100%; padding:10px 12px; border-radius:5px; border:1px solid var(--border);
+  background:var(--bg-surface); color:var(--t1); font-family:var(--sans); font-size:13px;
+  outline:0; transition:border-color .12s;
+}
+.cis-input:focus { border-color:var(--blue) }
+.cis-input::placeholder { color:var(--t3) }
+.cis-textarea {
+  width:100%; padding:10px 12px; border-radius:5px; border:1px solid var(--border);
+  background:var(--bg-surface); color:var(--t1); font-family:var(--sans); font-size:13px;
+  resize:vertical; outline:0; transition:border-color .12s;
+}
+.cis-textarea:focus { border-color:var(--blue) }
+.cis-textarea::placeholder { color:var(--t3) }
+.cis-select {
+  width:100%; padding:9px 10px; border-radius:5px; border:1px solid var(--border);
+  background:var(--bg-surface); color:var(--t1); font-family:var(--sans); font-size:12px;
+  outline:0; cursor:pointer;
+}
+.cis-select:focus { border-color:var(--blue) }
+.field-row { display:flex; flex-direction:column; gap:4px }
+.field-label { font-family:var(--cond); font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--t3) }
+.idea-card {
+  padding:10px 12px; margin-bottom:6px; border-radius:5px;
+  background:var(--bg-surface); border:1px solid var(--border); cursor:pointer;
+  transition:all .12s;
+}
+.idea-card:hover { border-color:var(--border-hi); background:var(--bg-raised) }
+.idea-name { font-family:var(--cond); font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px }
+.idea-meta { display:flex; gap:4px; flex-wrap:wrap; align-items:center }
+.tag { font-family:var(--mono); font-size:8px; padding:2px 6px; border-radius:8px; background:var(--bg-base); border:1px solid var(--border); color:var(--t2) }
+.tag-domain { font-family:var(--mono); font-size:8px; padding:2px 6px; border-radius:8px; background:rgba(74,158,255,.12); border:1px solid rgba(74,158,255,.3); color:var(--blue) }
+.tag-status { font-family:var(--mono); font-size:8px; padding:2px 6px; border-radius:8px; background:rgba(61,255,160,.1); border:1px solid rgba(61,255,160,.3); color:var(--green) }
+.date { font-family:var(--mono); font-size:8px; color:var(--t3); margin-left:auto }
+.idea-desc { font-size:11px; color:var(--t3); margin-top:4px; line-height:1.4 }
+</style>

@@ -1,0 +1,3194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIS — Creative Intelligence System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base:       #09090c;
+    --bg-surface:    #101218;
+    --bg-raised:     #161a24;
+    --bg-panel:      #1a1f2e;
+    --border:        #242b3a;
+    --border-bright: #354060;
+    --accent-blue:   #4a9eff;
+    --accent-green:  #3dffa0;
+    --accent-amber:  #ffb830;
+    --accent-red:    #ff4a6a;
+    --accent-purple: #a855f7;
+    --accent-cyan:   #22d3ee;
+    --text-primary:  #e8eaf2;
+    --text-secondary:#c8cede;
+    --text-dim:      #7a8299;
+    --mono:          'Share Tech Mono', monospace;
+    --sans:          'Barlow', sans-serif;
+    --condensed:     'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    height: 48px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .topbar-logo {
+    font-family: var(--condensed);
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.25em;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .topbar-logo:hover { color: #6ab4ff; }
+
+  .topbar-sep {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+
+  .topbar-breadcrumb {
+    font-family: var(--condensed);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 6px var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .topbar-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .topbar-count strong {
+    color: var(--accent-blue);
+    font-size: 12px;
+  }
+
+  /* ── Capture Button (always visible) ── */
+  .capture-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--accent-amber);
+    border-radius: 5px;
+    color: var(--accent-amber);
+    font-family: var(--condensed);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .capture-btn:hover {
+    background: rgba(255,184,48,0.1);
+    box-shadow: 0 0 14px rgba(255,184,48,0.25);
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  /* ── Stream Deck Column ── */
+  .deck-column {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.2s ease;
+  }
+
+  .deck-column.collapsed {
+    width: 58px;
+    overflow-y: hidden;
+  }
+
+  .deck-header {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 0 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .deck-header-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .deck-toggle {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--text-dim);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .deck-toggle:hover { background: var(--bg-raised); color: var(--text-secondary); }
+
+  /* Collapsed state — show icon nav only */
+  .deck-column.collapsed .deck-nav-icon-strip {
+    display: flex;
+  }
+
+  .deck-column.collapsed .deck-sections {
+    display: none;
+  }
+
+  .deck-nav-icon-strip {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+  }
+
+  /* Deck section group */
+  .deck-sections {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .deck-section-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 2px 2px 5px;
+  }
+
+  /* Stream Deck key grid */
+  .deck-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+
+  .deck-grid.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Individual deck key */
+  .dk {
+    aspect-ratio: 1;
+    border-radius: 7px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.12s;
+    padding: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dk::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    border-radius: 7px;
+  }
+
+  .dk:hover {
+    border-color: var(--border-bright);
+    transform: scale(1.04);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .dk:active { transform: scale(0.95); }
+
+  .dk.dk-active {
+    border-color: var(--accent-blue);
+    background: var(--bg-panel);
+    box-shadow: 0 0 12px rgba(74,158,255,0.18);
+  }
+
+  /* Key color variants */
+  .dk.dk-blue   { background: rgba(74,158,255,0.1);  border-color: rgba(74,158,255,0.3); }
+  .dk.dk-green  { background: rgba(61,255,160,0.08); border-color: rgba(61,255,160,0.25); }
+  .dk.dk-amber  { background: rgba(255,184,48,0.08); border-color: rgba(255,184,48,0.25); }
+  .dk.dk-red    { background: rgba(255,74,106,0.08); border-color: rgba(255,74,106,0.25); }
+  .dk.dk-purple { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.25); }
+  .dk.dk-cyan   { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.25); }
+  .dk.dk-teal   { background: rgba(20,184,166,0.08); border-color: rgba(20,184,166,0.25); }
+  .dk.dk-orange { background: rgba(251,146,60,0.08); border-color: rgba(251,146,60,0.25); }
+
+  .dk-icon { font-size: 18px; line-height: 1; }
+
+  .dk-label {
+    font-family: var(--mono);
+    font-size: 7px;
+    letter-spacing: 0.05em;
+    text-align: center;
+    color: var(--text-secondary);
+    line-height: 1.2;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dk.dk-active .dk-label { color: var(--accent-blue); }
+
+  .deck-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  /* Nav icon strip (collapsed mode) */
+  .nav-btn {
+    width: 46px; height: 46px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: all 0.15s;
+  }
+
+  .nav-btn:hover { background: var(--bg-raised); border-color: var(--border); }
+
+  .nav-btn.active {
+    background: var(--bg-panel);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 14px rgba(74,158,255,0.12);
+  }
+
+  .nav-icon { font-size: 17px; line-height: 1; }
+  .nav-label {
+    font-family: var(--condensed);
+    font-size: 8px; font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #c8cede;
+    text-transform: uppercase;
+  }
+
+  .nav-btn.active .nav-label { color: var(--accent-blue); }
+
+  .sidebar-div {
+    width: 30px; height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    height: 38px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-family: var(--condensed);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .panel-title-accent { color: var(--accent-blue); }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+  }
+
+  /* ── Intelligence Sidebar ── */
+  .intel-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.2s ease;
+    position: relative;
+  }
+  .intel-sidebar.collapsed { width: 48px; }
+  .intel-header {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 0 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 6px;
+  }
+  .intel-header-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .intel-toggle {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--text-dim);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .intel-toggle:hover { background: var(--bg-raised); color: var(--text-secondary); }
+  .intel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .intel-tab {
+    flex: 1; padding: 7px 2px;
+    font-family: var(--mono); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase; text-align: center;
+    color: var(--text-dim); cursor: pointer;
+    border: none; border-bottom: 2px solid transparent;
+    background: transparent; transition: all 0.15s;
+  }
+  .intel-tab:hover { color: var(--text-secondary); }
+  .intel-tab.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
+  .intel-body {
+    flex: 1; overflow-y: auto;
+    padding: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .intel-section-label {
+    font-family: var(--mono); font-size: 8px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-dim); padding: 6px 2px 3px;
+  }
+  .model-card {
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; transition: border-color 0.15s;
+  }
+  .model-card.active-model {
+    border-color: rgba(34,211,238,0.35);
+    background: rgba(34,211,238,0.04);
+  }
+  .model-card-header {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 3px;
+  }
+  .model-name {
+    font-family: var(--condensed); font-size: 12px;
+    font-weight: 700; color: var(--text-primary);
+  }
+  .model-badge {
+    font-family: var(--mono); font-size: 8px;
+    padding: 1px 5px; border-radius: 3px; border: 1px solid;
+  }
+  .model-badge.local  { color: var(--accent-green); border-color: var(--accent-green); background: rgba(61,255,160,0.08); }
+  .model-badge.remote { color: var(--accent-cyan);  border-color: var(--accent-cyan);  background: rgba(34,211,238,0.08); }
+  .model-badge.idle   { color: var(--text-dim);     border-color: var(--border);       background: transparent; }
+  .model-role { font-family: var(--mono); font-size: 9px; color: var(--text-dim); margin-bottom: 5px; }
+  .model-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .model-bar-fill { height: 100%; border-radius: 1px; transition: width 0.4s; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-family: var(--condensed);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9aa3b8;
+    margin-bottom: 12px;
+  }
+
+  /* ── Inputs ── */
+  input[type="text"], textarea, select {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--accent-blue);
+  }
+
+  select option { background: var(--bg-raised); }
+  textarea { resize: vertical; min-height: 64px; }
+
+  .field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: var(--condensed);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-primary { background: var(--accent-blue); color: #000; border-color: var(--accent-blue); }
+  .btn-primary:hover:not(:disabled) { background: #6ab4ff; box-shadow: 0 0 14px rgba(74,158,255,0.3); }
+
+  .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  .btn-secondary:hover:not(:disabled) { background: var(--bg-raised); border-color: var(--border-bright); color: var(--text-primary); }
+
+  .btn-success { background: transparent; color: var(--accent-green); border-color: var(--accent-green); }
+  .btn-success:hover:not(:disabled) { background: rgba(61,255,160,0.08); box-shadow: 0 0 12px rgba(61,255,160,0.2); }
+
+  .btn-amber { background: transparent; color: var(--accent-amber); border-color: var(--accent-amber); }
+  .btn-amber:hover:not(:disabled) { background: rgba(255,184,48,0.08); }
+
+  .btn-danger { background: transparent; color: var(--accent-red); border-color: var(--accent-red); }
+  .btn-danger:hover:not(:disabled) { background: rgba(255,74,106,0.08); }
+
+  /* ── Badge ── */
+  .badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .badge-draft    { color: var(--accent-amber);  border-color: var(--accent-amber);  background: rgba(255,184,48,0.08); }
+  .badge-checked  { color: var(--accent-blue);   border-color: var(--accent-blue);   background: rgba(74,158,255,0.08); }
+  .badge-approved { color: var(--accent-green);  border-color: var(--accent-green);  background: rgba(61,255,160,0.08); }
+  .badge-locked   { color: var(--accent-purple); border-color: var(--accent-purple); background: rgba(168,85,247,0.08); }
+  .badge-active   { color: var(--accent-green);  border-color: var(--accent-green);  background: rgba(61,255,160,0.08); }
+  .badge-open     { color: var(--accent-amber);  border-color: var(--accent-amber);  background: rgba(255,184,48,0.08); }
+  .badge-complete { color: var(--accent-green);  border-color: var(--accent-green);  background: rgba(61,255,160,0.08); }
+  .badge-web      { color: var(--accent-cyan);   border-color: var(--accent-cyan);   background: rgba(34,211,238,0.08); }
+  .badge-word     { color: #a3e635;              border-color: #a3e635;              background: rgba(163,230,53,0.08); }
+  .badge-image    { color: var(--accent-purple); border-color: var(--accent-purple); background: rgba(168,85,247,0.08); }
+  .badge-action   { color: var(--accent-amber);  border-color: var(--accent-amber);  background: rgba(255,184,48,0.08); }
+  .badge-sound    { color: var(--accent-red);    border-color: var(--accent-red);    background: rgba(255,74,106,0.08); }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── Stat ── */
+  .stat-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .stat-value {
+    font-family: var(--condensed);
+    font-size: 30px; font-weight: 800;
+    color: var(--accent-blue);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: var(--condensed);
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ── WIAS Progress ── */
+  .wias-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .wias-stage {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .wias-stage.active { border-color: var(--accent-blue); background: var(--bg-panel); }
+  .wias-stage.complete { border-color: var(--accent-green); background: rgba(61,255,160,0.04); }
+
+  .wias-letter {
+    font-family: var(--condensed);
+    font-size: 22px; font-weight: 800;
+    color: var(--text-dim);
+    line-height: 1;
+  }
+
+  .wias-stage.active .wias-letter { color: var(--accent-blue); }
+  .wias-stage.complete .wias-letter { color: var(--accent-green); }
+
+  .wias-name {
+    font-family: var(--condensed);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .wias-stage.active .wias-name { color: var(--accent-blue); }
+  .wias-stage.complete .wias-name { color: var(--accent-green); }
+
+  .wias-pips {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 6px;
+  }
+
+  .pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+
+  .pip.on { background: var(--accent-blue); box-shadow: 0 0 4px var(--accent-blue); }
+  .wias-stage.complete .pip.on { background: var(--accent-green); box-shadow: 0 0 4px var(--accent-green); }
+
+  /* ── Project Launcher ── */
+  .launcher {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+
+  .launcher-header {
+    margin-bottom: 28px;
+  }
+
+  .launcher-title {
+    font-family: var(--condensed);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .launcher-heading {
+    font-family: var(--condensed);
+    font-size: 28px; font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--text-primary);
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .project-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .project-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .project-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-raised);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .project-card:hover::before { opacity: 1; }
+
+  .project-card-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .project-card-title {
+    font-family: var(--condensed);
+    font-size: 18px; font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .project-card-concept {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .project-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .project-card-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .new-project-card {
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 140px;
+    transition: all 0.2s;
+    color: var(--text-dim);
+  }
+
+  .new-project-card:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(74,158,255,0.04);
+  }
+
+  .new-project-icon { font-size: 28px; }
+  .new-project-label {
+    font-family: var(--condensed);
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── New Project Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 12px;
+    padding: 28px;
+    width: 480px;
+    max-width: 90vw;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+
+  .modal-title {
+    font-family: var(--condensed);
+    font-size: 16px; font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+  }
+
+  .modal-field { margin-bottom: 12px; }
+
+  .modal-label {
+    font-family: var(--condensed);
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  /* ── Capture Modal ── */
+  .capture-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 56px 16px 0 0;
+    z-index: 900;
+  }
+
+  .capture-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--accent-amber);
+    border-radius: 10px;
+    padding: 20px;
+    width: 360px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 24px rgba(255,184,48,0.1);
+  }
+
+  .capture-title {
+    font-family: var(--condensed);
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-amber);
+    margin-bottom: 14px;
+  }
+
+  /* ── Row items ── */
+  .row-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: var(--bg-surface);
+    transition: all 0.12s;
+  }
+
+  .row-item:hover { border-color: var(--border-bright); background: var(--bg-raised); }
+  .row-item.selected { border-color: var(--accent-blue); background: var(--bg-panel); }
+
+  .row-title { flex: 1; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-sub { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+
+  /* ── Pipeline steps ── */
+  .pipeline-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 12px 0;
+  }
+
+  .p-step { flex: 1; }
+
+  .step-btn {
+    width: 100%;
+    padding: 9px 4px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-dim);
+  }
+
+  .step-btn:hover:not(:disabled) { border-color: var(--accent-blue); background: var(--bg-raised); }
+  .step-btn.done { border-color: var(--accent-green); background: rgba(61,255,160,0.04); color: var(--accent-green); }
+  .step-btn.running { border-color: var(--accent-amber); color: var(--accent-amber); animation: stepglow 1.2s infinite; }
+  .step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @keyframes stepglow {
+    0%,100% { box-shadow: 0 0 6px rgba(255,184,48,0.2); }
+    50% { box-shadow: 0 0 18px rgba(255,184,48,0.5); }
+  }
+
+  .step-icon { font-size: 16px; line-height: 1; }
+  .step-label { font-family: var(--condensed); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .p-arrow { width: 18px; text-align: center; color: var(--text-dim); font-size: 11px; flex-shrink: 0; }
+
+  /* ── Output log ── */
+  .output-log {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 9px 11px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent-green);
+    min-height: 50px;
+    max-height: 110px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-top: 8px;
+  }
+
+  .output-log.err { color: var(--accent-red); }
+
+  /* ── Task list ── */
+  .task-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    background: var(--bg-surface);
+    transition: border-color 0.12s;
+  }
+
+  .task-row.complete { opacity: 0.4; }
+  .task-row.priority-1 { border-left: 3px solid var(--accent-red); }
+  .task-row.priority-2 { border-left: 3px solid var(--accent-amber); }
+  .task-row.priority-3 { border-left: 3px solid var(--accent-blue); }
+
+  .task-check {
+    width: 16px; height: 16px;
+    border: 1px solid var(--border-bright);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+    color: var(--accent-green);
+    font-size: 11px;
+  }
+
+  .task-check:hover { border-color: var(--accent-green); background: rgba(61,255,160,0.08); }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-size: 13px; color: var(--text-primary); margin-bottom: 2px; }
+  .task-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+  .task-phase { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Session ── */
+  .session-output {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 10px;
+  }
+
+  /* ── Insights ── */
+  .insight-row {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-blue);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    background: var(--bg-surface);
+  }
+
+  .insight-row.architectural { border-left-color: var(--accent-purple); }
+  .insight-row.extraction    { border-left-color: var(--accent-amber); }
+  .insight-row.workflow      { border-left-color: var(--accent-green); }
+  .insight-row.system        { border-left-color: var(--accent-cyan); }
+
+  .insight-cat {
+    font-family: var(--condensed);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .insight-title-text { font-size: 13px; font-weight: 500; color: var(--text-primary); margin: 2px 0; }
+  .insight-obs { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .insight-time { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Loading / Empty ── */
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-family: var(--mono); font-size: 11px; padding: 20px 0; }
+  .spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 32px 20px; color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useCallback, useRef } = React;
+const e = React.createElement;
+
+// ── API ────────────────────────────────────────────────────────────────────────
+const api = {
+  get:  url => fetch(url).then(r => r.json()),
+  post: (url, data) => fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(r => r.json())
+};
+
+// ── Routing ────────────────────────────────────────────────────────────────────
+function useRoute() {
+  const [path, setPath] = useState(window.location.pathname);
+  useEffect(() => {
+    const handler = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+  const navigate = useCallback(to => {
+    window.history.pushState({}, '', to);
+    setPath(to);
+  }, []);
+  const parts = path.split('/').filter(Boolean);
+  return {
+    path,
+    navigate,
+    isLauncher: parts.length === 0,
+    projectId: parts[0] === 'project' ? parts[1] : null,
+    panel: parts[0] === 'project' ? (parts[2] || 'overview') : null
+  };
+}
+
+// ── Badge ──────────────────────────────────────────────────────────────────────
+function Badge({ status }) {
+  return e('span', { className: `badge badge-${status}` }, status);
+}
+
+// ── WIAS Progress ──────────────────────────────────────────────────────────────
+const WIAS = [
+  { key: 'word',   letter: 'W', name: 'Word' },
+  { key: 'image',  letter: 'I', name: 'Image' },
+  { key: 'action', letter: 'A', name: 'Action' },
+  { key: 'sound',  letter: 'S', name: 'Sound' },
+  { key: 'web',    letter: 'W', name: 'Web' },
+];
+
+function WiasProgress({ progress }) {
+  return e('div', { className: 'wias-grid' },
+    WIAS.map(({ key, letter, name }) => {
+      const depth = progress?.[key] || 0;
+      const cls = `wias-stage ${depth >= 4 ? 'complete' : depth > 0 ? 'active' : ''}`;
+      return e('div', { key, className: cls },
+        e('div', { className: 'wias-letter' }, letter),
+        e('div', { className: 'wias-name' }, name),
+        e('div', { className: 'wias-pips' },
+          [0,1,2,3].map(i => e('div', { key: i, className: `pip ${depth > i ? 'on' : ''}` }))
+        )
+      );
+    })
+  );
+}
+
+// ── Capture Flyout ─────────────────────────────────────────────────────────────
+function CapturePanel({ projectId, onClose }) {
+  const [type, setType]  = useState('insight');
+  const [title, setTitle] = useState('');
+  const [obs, setObs]    = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]    = useState('');
+
+  const save = async () => {
+    if (!title.trim() || !obs.trim()) return;
+    setSaving(true);
+    const result = await api.post('/api/captures', {
+      capture_type: type, title, observation: obs,
+      project_id: projectId || null
+    });
+    if (result.success) {
+      setMsg('Captured.'); setTitle(''); setObs('');
+      setTimeout(() => { setMsg(''); onClose(); }, 800);
+    } else {
+      setMsg('Failed: ' + (result.error || 'unknown'));
+    }
+    setSaving(false);
+  };
+
+  return e('div', { className: 'capture-overlay', onClick: onClose },
+    e('div', { className: 'capture-panel', onClick: ev => ev.stopPropagation() },
+      e('div', { className: 'capture-title' }, '⚡ Quick Capture'),
+      e('div', { className: 'field-row' },
+        e('select', { value: type, onChange: ev => setType(ev.target.value), style: { maxWidth: 140 } },
+          ['insight','observation','correction','decision'].map(t =>
+            e('option', { key: t, value: t }, t)
+          )
+        )
+      ),
+      e('div', { className: 'field-row' },
+        e('input', { type: 'text', placeholder: 'Title', value: title, onChange: ev => setTitle(ev.target.value) })
+      ),
+      e('textarea', { placeholder: 'What did you notice or discover?', value: obs, onChange: ev => setObs(ev.target.value) }),
+      e('div', { style: { display:'flex', gap:8, marginTop:10, alignItems:'center' } },
+        e('button', { className:'btn btn-amber', onClick:save, disabled: saving||!title.trim()||!obs.trim() },
+          saving ? '⟳' : '+ Capture'
+        ),
+        e('button', { className:'btn btn-secondary', onClick:onClose }, 'Cancel'),
+        msg && e('span', { style:{ fontFamily:'var(--mono)', fontSize:11, color:'var(--accent-green)' } }, msg)
+      )
+    )
+  );
+}
+
+// ── New Project Modal ──────────────────────────────────────────────────────────
+function NewProjectModal({ onClose, onCreated }) {
+  const [title, setTitle]   = useState('');
+  const [concept, setConcept] = useState('');
+  const [output, setOutput] = useState('');
+  const [scope, setScope]   = useState('minor');
+  const [ptype, setPtype]   = useState('creative');
+  const [stages, setStages] = useState(['word']);
+  const [saving, setSaving] = useState(false);
+
+  const toggleStage = s => setStages(prev =>
+    prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+  );
+
+  const create = async () => {
+    if (!title.trim()) return;
+    setSaving(true);
+    const result = await api.post('/api/projects', {
+      title, concept, intended_output_type: output,
+      project_scope: scope, project_type: ptype, active_stages: stages
+    });
+    if (result.success) { onCreated(result.project_id); }
+    setSaving(false);
+  };
+
+  return e('div', { className: 'modal-overlay', onClick: onClose },
+    e('div', { className: 'modal', onClick: ev => ev.stopPropagation() },
+      e('div', { className: 'modal-title' }, 'New Project'),
+      e('div', { className: 'modal-field' },
+        e('div', { className: 'modal-label' }, 'Title'),
+        e('input', { type:'text', placeholder:'Project title', value:title, onChange: ev=>setTitle(ev.target.value) })
+      ),
+      e('div', { className: 'modal-field' },
+        e('div', { className: 'modal-label' }, 'Concept'),
+        e('textarea', { placeholder:'What is this project?', value:concept, onChange: ev=>setConcept(ev.target.value) })
+      ),
+      e('div', { className: 'modal-field' },
+        e('div', { className: 'modal-label' }, 'Intended Output'),
+        e('input', { type:'text', placeholder:'e.g. short film, web app, comic series', value:output, onChange: ev=>setOutput(ev.target.value) })
+      ),
+      e('div', { className: 'field-row' },
+        e('div', { className: 'modal-field', style:{flex:1} },
+          e('div', { className: 'modal-label' }, 'Type'),
+          e('select', { value:ptype, onChange: ev=>setPtype(ev.target.value) },
+            ['creative','application','research'].map(t => e('option',{key:t,value:t},t))
+          )
+        ),
+        e('div', { className: 'modal-field', style:{flex:1} },
+          e('div', { className: 'modal-label' }, 'Scope'),
+          e('select', { value:scope, onChange: ev=>setScope(ev.target.value) },
+            ['minor','major'].map(s => e('option',{key:s,value:s},s))
+          )
+        )
+      ),
+      e('div', { className: 'modal-field' },
+        e('div', { className: 'modal-label' }, 'Active WIAS Stages'),
+        e('div', { style:{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 } },
+          ['word','image','action','sound','web'].map(s =>
+            e('button', {
+              key: s,
+              className: `btn ${stages.includes(s) ? 'btn-primary' : 'btn-secondary'}`,
+              style:{ padding:'4px 10px', fontSize:10 },
+              onClick: () => toggleStage(s)
+            }, s)
+          )
+        )
+      ),
+      e('div', { className: 'modal-footer' },
+        e('button', { className:'btn btn-secondary', onClick:onClose }, 'Cancel'),
+        e('button', { className:'btn btn-primary', onClick:create, disabled:saving||!title.trim() },
+          saving ? '⟳ Creating...' : 'Create Project'
+        )
+      )
+    )
+  );
+}
+
+// ── Project Launcher ───────────────────────────────────────────────────────────
+function Launcher({ navigate }) {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [showNew, setShowNew]   = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api.get('/api/projects').then(p => { setProjects(p); setLoading(false); });
+  };
+
+  useEffect(() => { load(); }, []);
+
+  return e('div', { className: 'launcher' },
+    e('div', { className: 'launcher-header' },
+      e('div', { className: 'launcher-title' }, 'Creative Intelligence System'),
+      e('div', { className: 'launcher-heading' }, 'Select a Project')
+    ),
+    loading
+      ? e('div', { className: 'loading' }, e('div', { className:'spinner' }), 'Loading projects...')
+      : e('div', { className: 'project-grid' },
+          ...projects.map(p =>
+            e('div', {
+              key: p.project_id,
+              className: 'project-card',
+              onClick: () => navigate(`/project/${p.project_id}`)
+            },
+              e('div', { className: 'project-card-type' }, p.project_type || 'project'),
+              e('div', { className: 'project-card-title' }, p.title),
+              p.concept && e('div', { className: 'project-card-concept' }, p.concept),
+              e('div', { className: 'project-card-footer' },
+                ...(p.active_stages || []).map(s => e(Badge, { key:s, status:s })),
+                e('span', { className: 'project-card-meta' },
+                  `${p._record_count || 0} records`
+                )
+              )
+            )
+          ),
+          e('div', { className: 'new-project-card', onClick: () => setShowNew(true) },
+            e('div', { className: 'new-project-icon' }, '+'),
+            e('div', { className: 'new-project-label' }, 'New Project')
+          )
+        ),
+    showNew && e(NewProjectModal, {
+      onClose: () => setShowNew(false),
+      onCreated: id => { setShowNew(false); navigate(`/project/${id}`); }
+    })
+  );
+}
+
+// ── Overview Panel ─────────────────────────────────────────────────────────────
+function OverviewPanel({ projectId }) {
+  const [project, setProject] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [decisions, setDecisions] = useState([]);
+
+  useEffect(() => {
+    api.get(`/api/projects/${projectId}`).then(setProject);
+    api.get(`/api/records?project_id=${projectId}`).then(setRecords);
+    api.get('/api/decisions').then(setDecisions);
+  }, [projectId]);
+
+  if (!project) return e('div', { className:'loading' }, e('div',{className:'spinner'}), 'Loading...');
+
+  const progress = project._wias_progress || {};
+
+  return e('div', null,
+    e('div', { className:'grid-3', style:{marginBottom:12} },
+      e('div', { className:'stat-block' },
+        e('div', { className:'stat-value' }, records.length),
+        e('div', { className:'stat-label' }, 'Records')
+      ),
+      e('div', { className:'stat-block' },
+        e('div', { className:'stat-value' }, decisions.length),
+        e('div', { className:'stat-label' }, 'Decisions')
+      ),
+      e('div', { className:'stat-block' },
+        e('div', { className:'stat-value' }, (project.production_phases||[]).filter(p=>p.status==='complete').length),
+        e('div', { className:'stat-label' }, 'Phases Done')
+      )
+    ),
+
+    e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'WIAS Stage Progress'),
+      e(WiasProgress, { progress })
+    ),
+
+    project.concept && e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Concept'),
+      e('div', { style:{ fontSize:13, color:'var(--text-secondary)', lineHeight:1.6 } }, project.concept)
+    ),
+
+    (project.production_phases||[]).length > 0 && e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Build Phases'),
+      (project.production_phases||[]).map(ph =>
+        e('div', { key:ph.phase_id, className:'row-item' },
+          e('div', { className:'row-title' }, ph.label),
+          e(Badge, { status: ph.status==='complete' ? 'complete' : ph.status==='active' ? 'active' : 'draft' })
+        )
+      )
+    )
+  );
+}
+
+// ── Session Panel ──────────────────────────────────────────────────────────────
+function SessionPanel({ projectId }) {
+  const [startOutput, setStartOutput] = useState('');
+  const [starting, setStarting]       = useState(false);
+  const [focus, setFocus]             = useState('');
+  const [completed, setCompleted]     = useState('');
+  const [nextSteps, setNextSteps]     = useState('');
+  const [notes, setNotes]             = useState('');
+  const [verfStatus, setVerfStatus]   = useState('');
+  const [verfClean, setVerfClean]     = useState(null);
+  const [closing, setClosing]         = useState(false);
+  const [closeResult, setCloseResult] = useState(null);
+  const [recent, setRecent]           = useState([]);
+
+  useEffect(() => {
+    api.get('/api/session/recent').then(setRecent);
+    api.get('/api/session/verification-status').then(r => {
+      if (r.status_line) {
+        setVerfStatus(r.status_line);
+        setVerfClean(r.clean);
+      }
+    });
+  }, []);
+
+  const startSession = async () => {
+    setStarting(true);
+    setStartOutput('Starting session...');
+    const result = await api.post('/api/session/start', {});
+    setStartOutput(result.stdout || result.stderr || 'Done.');
+    setStarting(false);
+  };
+
+  const closeSession = async () => {
+    if (!focus || !completed || !nextSteps) return;
+    if (closeResult?.success) return;
+    setClosing(true);
+    const result = await api.post('/api/session/close', { focus, completed, next_steps: nextSteps, notes, verification_status: verfStatus, project_id: projectId });
+    setCloseResult(result);
+    setClosing(false);
+    api.get('/api/session/recent').then(setRecent);
+  };
+
+  const taStyle = (h) => ({ minHeight: h, resize: 'vertical' });
+
+  return e('div', null,
+    e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Session Start'),
+      e('button', { className:'btn btn-primary', onClick:startSession, disabled:starting },
+        starting ? '\u29bf Starting...' : '\u25b6 Run cis-start'
+      ),
+      startOutput && e('div', { className:'session-output' }, startOutput)
+    ),
+
+    e('div', { className:'card', style:{ marginTop: 16 } },
+      e('div', { className:'card-title' }, 'Session Close'),
+      e('div', { className:'field-row' },
+        e('input', { type:'text', placeholder:'Session focus — one sentence', value:focus, onChange:ev=>setFocus(ev.target.value), disabled:!!closeResult?.success })
+      ),
+      e('div', { className:'field-row' },
+        e('textarea', { placeholder:'What was completed this session?', value:completed, onChange:ev=>setCompleted(ev.target.value), style:taStyle(80), disabled:!!closeResult?.success })
+      ),
+      e('div', { className:'field-row' },
+        e('textarea', { placeholder:'Next steps for the next session', value:nextSteps, onChange:ev=>setNextSteps(ev.target.value), style:taStyle(80), disabled:!!closeResult?.success })
+      ),
+      e('div', { className:'field-row' },
+        e('textarea', { placeholder:'Notes — pending decisions, warnings, deferred context (optional)', value:notes, onChange:ev=>setNotes(ev.target.value), style:taStyle(48), disabled:!!closeResult?.success })
+      ),
+      e('div', { className:'field-row' },
+        e('div', { style:{ fontSize:10, color:'var(--text-dim)', marginBottom:4, display:'flex', alignItems:'center', gap:6 } },
+          'Field 5 — Verification Status',
+          verfClean === true  && e('span', { style:{ color:'var(--accent-green)', fontWeight:600 } }, '● CLEAN'),
+          verfClean === false && e('span', { style:{ color:'var(--accent-red)',   fontWeight:600 } }, '● UNRESOLVED FAILs')
+        ),
+        e('textarea', {
+          placeholder: 'Auto-populated from verification log — edit if needed',
+          value: verfStatus,
+          onChange: ev => setVerfStatus(ev.target.value),
+          style: {
+            ...taStyle(64),
+            borderColor: verfClean === false ? 'var(--accent-red)' : verfClean === true ? 'var(--accent-green)' : undefined,
+            fontFamily: 'var(--mono)',
+            fontSize: 11
+          },
+          disabled: !!closeResult?.success
+        })
+      ),
+      e('button', {
+        className: `btn ${closeResult?.success ? 'btn-success' : 'btn-primary'}`,
+        onClick: closeSession,
+        disabled: closing || !focus || !completed || !nextSteps || !!closeResult?.success
+      }, closing ? '⟳ Closing...' : closeResult?.success ? '✓ Session Closed' : '✓ Close Session + Commit'),
+
+      closeResult && e('div', { className:'output-log', style:{marginTop:8} },
+        (closeResult.step_log || []).join('\n') ||
+        (closeResult.git?.success ? '✓ Done.' : closeResult.git?.stderr || 'Error')
+      )
+    ),
+
+    recent.length > 0 && e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Recent Sessions'),
+      recent.map((s,i) =>
+        e('div', { key:i, className:'row-item', style:{flexDirection:'column', alignItems:'flex-start', gap:3} },
+          e('div', { style:{display:'flex', gap:8, width:'100%', alignItems:'center'} },
+            e('div', { className:'row-title' }, s.focus),
+            e('div', { className:'row-sub' }, s.session_date)
+          ),
+          e('div', { style:{fontSize:11, color:'var(--text-dim)'} }, s.next_steps)
+        )
+      )
+    )
+  );
+}
+
+// ── Tasks Panel ────────────────────────────────────────────────────────────────
+function TasksPanel({ projectId }) {
+  const [tasks, setTasks]     = useState([]);
+  const [title, setTitle]     = useState('');
+  const [desc, setDesc]       = useState('');
+  const [cmd, setCmd]         = useState('');
+  const [phase, setPhase]     = useState('');
+  const [priority, setPriority] = useState('3');
+  const [running, setRunning] = useState(null);
+  const [log, setLog]         = useState('');
+  const [logErr, setLogErr]   = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const load = () => api.get(`/api/tasks?project_id=${projectId}`).then(setTasks);
+  useEffect(() => { load(); }, [projectId]);
+
+  const addTask = async () => {
+    if (!title.trim()) return;
+    await api.post('/api/tasks', { title, description:desc, command:cmd||undefined, phase:phase||undefined, project_id:projectId, priority:parseInt(priority) });
+    setTitle(''); setDesc(''); setCmd(''); setPhase(''); setPriority('3');
+    setShowAdd(false);
+    load();
+  };
+
+  const complete = async id => {
+    await api.post(`/api/tasks/${id}/complete`, {});
+    load();
+  };
+
+  const runTask = async task => {
+    setRunning(task.id);
+    setLog(`Running: ${task.command}`);
+    setLogErr(false);
+    const result = await api.post(`/api/tasks/${task.id}/run`, {});
+    setLog(result.stdout || result.stderr || 'Done.');
+    setLogErr(!result.success);
+    setRunning(null);
+    load();
+  };
+
+  const open   = tasks.filter(t => t.status === 'open');
+  const done   = tasks.filter(t => t.status === 'complete');
+
+  return e('div', null,
+    e('div', { className:'card' },
+      e('div', { style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12} },
+        e('div', { className:'card-title', style:{margin:0} }, `${open.length} Open Tasks`),
+        e('button', { className:'btn btn-secondary', style:{padding:'4px 10px'}, onClick:()=>setShowAdd(!showAdd) },
+          showAdd ? '− Cancel' : '+ Add Task'
+        )
+      ),
+
+      showAdd && e('div', { style:{marginBottom:14, padding:12, background:'var(--bg-base)', borderRadius:6, border:'1px solid var(--border)'} },
+        e('div', { className:'field-row' },
+          e('input', { type:'text', placeholder:'Task title', value:title, onChange:ev=>setTitle(ev.target.value) })
+        ),
+        e('div', { className:'field-row' },
+          e('textarea', { placeholder:'Description (optional)', value:desc, onChange:ev=>setDesc(ev.target.value), style:{minHeight:48} })
+        ),
+        e('div', { className:'field-row' },
+          e('input', { type:'text', placeholder:'Command (optional)', value:cmd, onChange:ev=>setCmd(ev.target.value) }),
+          e('input', { type:'text', placeholder:'Phase', value:phase, onChange:ev=>setPhase(ev.target.value), style:{maxWidth:100} }),
+          e('select', { value:priority, onChange:ev=>setPriority(ev.target.value), style:{maxWidth:80} },
+            [['1','High'],['2','Med'],['3','Low']].map(([v,l]) => e('option',{key:v,value:v},l))
+          )
+        ),
+        e('button', { className:'btn btn-primary', onClick:addTask, disabled:!title.trim() }, '+ Add')
+      ),
+
+      open.length === 0
+        ? e('div', { className:'empty' }, 'No open tasks')
+        : open.map(t =>
+            e('div', { key:t.id, className:`task-row priority-${t.priority}` },
+              e('div', { className:'task-check', onClick:()=>complete(t.id) }, ''),
+              e('div', { className:'task-body' },
+                e('div', { className:'task-title' }, t.title),
+                t.description && e('div', { className:'task-desc' }, t.description),
+                t.phase && e('div', { className:'task-phase' }, `Phase: ${t.phase}`)
+              ),
+              t.command && e('button', {
+                className:'btn btn-secondary',
+                style:{padding:'3px 9px', fontSize:10},
+                disabled: running === t.id,
+                onClick: () => runTask(t)
+              }, running === t.id ? '⟳' : '▶ Run')
+            )
+          ),
+
+      log && e('div', { className:`output-log ${logErr?'err':''}` }, log)
+    ),
+
+    done.length > 0 && e('div', { className:'card' },
+      e('div', { className:'card-title' }, `${done.length} Completed`),
+      done.slice(0,5).map(t =>
+        e('div', { key:t.id, className:'task-row complete' },
+          e('div', { className:'task-check' }, '✓'),
+          e('div', { className:'task-body' },
+            e('div', { className:'task-title' }, t.title)
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Pipeline Panel ─────────────────────────────────────────────────────────────
+const STEPS = [
+  { key:'classify',   label:'Classify',   icon:'◈' },
+  { key:'preprocess', label:'Preprocess', icon:'⬡' },
+  { key:'extract',    label:'Extract',    icon:'◉' },
+  { key:'normalize',  label:'Normalize',  icon:'◎' },
+];
+
+const STATUS_ORDER = ['arrived','classified','preprocessed','extracted','draft','normalized','checked','approved','locked'];
+
+function FileBrowser({ onSelect }) {
+  const [browsePath, setBrowsePath] = useState('/mnt/archive');
+  const [entries, setEntries]       = useState([]);
+  const [parent, setParent]         = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
+
+  const INGESTABLE = ['.pdf','.jpg','.jpeg','.png','.webp','.mp4','.mov','.avi','.mp3','.wav','.txt','.md'];
+
+  const browse = async (path) => {
+    setLoading(true); setError('');
+    const r = await api.get(`/api/browse?path=${encodeURIComponent(path)}`);
+    if (r.error) { setError(r.error); setLoading(false); return; }
+    setBrowsePath(r.path);
+    setParent(r.parent);
+    setEntries(r.entries);
+    setLoading(false);
+  };
+
+  useEffect(() => { browse('/mnt/archive'); }, []);
+
+  const canIngest = (entry) => !entry.is_dir && INGESTABLE.includes(entry.ext);
+
+  return e('div', { style:{ border:'1px solid var(--border)', borderRadius:6, overflow:'hidden', marginTop:8 } },
+    e('div', { style:{ background:'var(--bg-card)', padding:'6px 10px', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid var(--border)' } },
+      parent && e('button', { className:'btn btn-secondary', style:{padding:'2px 8px', fontSize:11}, onClick:()=>browse(parent) }, '↑ Up'),
+      e('span', { style:{ fontFamily:'var(--mono)', fontSize:11, color:'var(--text-dim)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, browsePath)
+    ),
+    loading && e('div', { style:{padding:12, color:'var(--text-dim)', fontSize:12} }, 'Loading...'),
+    error   && e('div', { style:{padding:12, color:'var(--accent-red)', fontSize:12} }, error),
+    !loading && e('div', { style:{ maxHeight:240, overflowY:'auto' } },
+      entries.length === 0 && e('div', { style:{padding:12, color:'var(--text-dim)', fontSize:12} }, 'Empty folder'),
+      entries.map((entry, i) =>
+        e('div', { key:i,
+          style:{
+            display:'flex', alignItems:'center', gap:8, padding:'5px 10px',
+            cursor: entry.is_dir || canIngest(entry) ? 'pointer' : 'default',
+            borderBottom:'1px solid var(--border)',
+            opacity: !entry.is_dir && !canIngest(entry) ? 0.35 : 1,
+            background:'transparent'
+          },
+          onClick: () => {
+            if (entry.is_dir) browse(entry.path);
+            else if (canIngest(entry)) onSelect(entry.path);
+          },
+          onMouseEnter: e2 => { if (entry.is_dir || canIngest(entry)) e2.currentTarget.style.background = 'var(--bg-hover)'; },
+          onMouseLeave: e2 => { e2.currentTarget.style.background = 'transparent'; }
+        },
+          e('span', { style:{fontSize:13, width:16, textAlign:'center', flexShrink:0} }, entry.is_dir ? '📁' : '📄'),
+          e('span', { style:{fontFamily:'var(--mono)', fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'} }, entry.name),
+          canIngest(entry) && e('span', { style:{fontSize:10, color:'var(--accent-green)', flexShrink:0} }, 'SELECT')
+        )
+      )
+    )
+  );
+}
+
+function PipelinePanel({ projectId }) {
+  const [sourceId, setSourceId]   = useState('');
+  const [manifest, setManifest]   = useState(null);
+  const [filePath, setFilePath]   = useState('');
+  const [running, setRunning]     = useState(null);
+  const [log, setLog]             = useState('');
+  const [logErr, setLogErr]       = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [runs, setRuns]               = useState([]);
+  const loadRuns = (id) => {
+    const sid = id || sourceId;
+    if (sid && sid.trim()) api.get('/api/extraction_runs?source_id=' + sid.trim()).then(setRuns);
+  };
+
+  const fetchManifest = async id => {
+    if (!id.trim()) return;
+    const r = await api.get(`/api/pipeline/status/${id.trim()}`);
+    setManifest(r.found ? r : null);
+  };
+
+  const runStep = async step => {
+    if (!sourceId.trim()) return;
+    const t0 = Date.now();
+    setRunning(step); setLog(`Running ${step}...`); setLogErr(false);
+    const r = await api.post(`/api/pipeline/${step}`, { source_id: sourceId.trim() });
+    setLog(r.success ? (r.stdout||`${step} complete.`) : (r.stderr||`${step} failed.`));
+    setLogErr(!r.success);
+    setRunning(null);
+    await fetchManifest(sourceId);
+    // Auto-log extraction runs
+    if (step === 'extract') {
+      const duration = ((Date.now() - t0) / 1000).toFixed(1);
+      await api.post('/api/extraction_runs', {
+        source_id: sourceId.trim(),
+        project_id: projectId || null,
+        extraction_type: 'vision',
+        status: r.success ? 'success' : 'failed',
+        duration_seconds: parseFloat(duration),
+        error: r.success ? null : (r.stderr || 'unknown error'),
+      });
+      loadRuns();
+    }
+  };
+
+  const runIntake = async () => {
+    if (!filePath.trim()) return;
+    setRunning('intake'); setLog('Running intake...'); setLogErr(false);
+    const r = await api.post('/api/intake', { path: filePath.trim(), project_id: projectId });
+    setLog(r.success ? (r.stdout||'Intake complete.') : (r.stderr||'Intake failed.'));
+    setLogErr(!r.success);
+    setRunning(null);
+  };
+
+  const statusIdx = manifest ? STATUS_ORDER.indexOf(manifest.status) : -1;
+  const stepDone  = step => {
+    const stepIdxMap = { classify:1, preprocess:2, extract:3, normalize:4 };
+    return statusIdx >= stepIdxMap[step];
+  };
+
+  return e('div', null,
+    e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Intake New Source'),
+      e('div', { className:'field-row' },
+        e('input', { type:'text', placeholder:'/mnt/archive/path/to/file', value:filePath,
+          onChange:ev=>setFilePath(ev.target.value), style:{flex:1} }),
+        e('button', { className:'btn btn-secondary', onClick:()=>setShowBrowser(b=>!b), style:{minWidth:80} },
+          showBrowser ? '✕ Close' : '📁 Browse'
+        ),
+        e('button', { className:'btn btn-primary', disabled:running==='intake'||!filePath.trim(), onClick:runIntake, style:{minWidth:80} },
+          running==='intake' ? '⟳' : '↓ Intake'
+        )
+      ),
+      showBrowser && e(FileBrowser, { onSelect: path => { setFilePath(path); setShowBrowser(false); } })
+    ),
+
+    e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Pipeline'),
+      e('div', { className:'field-row' },
+        e('input', { type:'text', placeholder:'source_id e.g. image__weird_war_tales_cover__001', value:sourceId,
+          onChange:ev=>setSourceId(ev.target.value), onBlur:()=>fetchManifest(sourceId) }),
+        e('button', { className:'btn btn-secondary', onClick:()=>fetchManifest(sourceId), style:{minWidth:70} }, 'Check')
+      ),
+      manifest && e('div', { style:{display:'flex', gap:8, marginBottom:8, alignItems:'center'} },
+        e('span', { style:{fontFamily:'var(--mono)', fontSize:11, color:'var(--text-dim)'} }, manifest.source_name||manifest.source_id),
+        e(Badge, { status: manifest.status })
+      ),
+      e('div', { className:'pipeline-track' },
+        STEPS.map((step,i) => [
+          i > 0 && e('div', { key:`a${i}`, className:'p-arrow' }, '›'),
+          e('div', { key:step.key, className:'p-step' },
+            e('button', {
+              className:`step-btn ${stepDone(step.key)?'done':''} ${running===step.key?'running':''}`,
+              onClick:()=>runStep(step.key),
+              disabled: !!running || !sourceId.trim()
+            },
+              e('span', { className:'step-icon' }, running===step.key?'⟳':stepDone(step.key)?'✓':step.icon),
+              e('span', { className:'step-label' }, step.label)
+            )
+          )
+        ]).flat().filter(Boolean)
+      ),
+      log && e('div', { className:`output-log ${logErr?'err':''}` }, log)
+    ),
+    runs.length > 0 && e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Extraction Run History'),
+      runs.map((run, i) =>
+        e('div', { key:run.id||i, style:{
+          padding:'8px 12px', marginBottom:5,
+          border:'1px solid var(--border)',
+          borderLeft: `3px solid ${run.status==='success' ? 'var(--accent-green)' : 'var(--accent-red)'}`,
+          borderRadius:6, background:'var(--bg-surface)',
+          display:'flex', alignItems:'center', gap:10
+        }},
+          e('span', { style:{fontFamily:'var(--mono)', fontSize:10, color:'var(--text-dim)', flexShrink:0} }, run.created_at?.slice(0,16).replace('T',' ')),
+          e('span', { style:{flex:1, fontFamily:'var(--mono)', fontSize:11, color: run.status==='success' ? 'var(--accent-green)' : 'var(--accent-red)'} }, run.status),
+          run.duration_seconds && e('span', { style:{fontFamily:'var(--mono)', fontSize:10, color:'var(--text-dim)'} }, run.duration_seconds + 's'),
+          run.error && e('span', { style:{fontSize:11, color:'var(--accent-red)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:200} }, run.error)
+        )
+      )
+    )
+  );
+}
+
+// ── Knowledge Panel ────────────────────────────────────────────────────────────
+function KnowledgePanel({ projectId }) {
+  const [records, setRecords]   = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [filter, setFilter]     = useState('');
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    api.get(`/api/records?project_id=${projectId}`).then(r => { setRecords(r); setLoading(false); });
+  }, [projectId]);
+
+  const filtered = records.filter(r => !filter || r.status === filter);
+
+  return e('div', null,
+    e('div', { className:'card' },
+      e('div', { style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10} },
+        e('div', { className:'card-title', style:{margin:0} }, `${records.length} Records`),
+        e('div', { style:{display:'flex', gap:4} },
+          ['','draft','checked','approved','locked'].map(s =>
+            e('button', { key:s, className:`btn ${filter===s?'btn-primary':'btn-secondary'}`, style:{padding:'3px 8px', fontSize:10}, onClick:()=>setFilter(s) },
+              s || 'All'
+            )
+          )
+        )
+      ),
+      loading
+        ? e('div', { className:'loading' }, e('div',{className:'spinner'}), 'Loading...')
+        : filtered.length === 0
+          ? e('div', { className:'empty' }, 'No records')
+          : filtered.map(r =>
+              e('div', { key:r.record_id, className:`row-item ${selected?.record_id===r.record_id?'selected':''}`, onClick:()=>setSelected(selected?.record_id===r.record_id?null:r) },
+                e('div', { className:'row-title' }, r.title||r.record_id),
+                e('div', { className:'row-sub' }, r.knowledge_category),
+                e(Badge, { status:r.status })
+              )
+            )
+    ),
+    selected && e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Record Detail'),
+      [
+        ['ID', selected.record_id],
+        ['Category', selected.knowledge_category],
+        ['Status', selected.status],
+        ['Stages', (selected.active_stages||[]).join(', ') || '—'],
+        ['Created', selected.created_at?.slice(0,10)],
+      ].map(([l,v]) =>
+        e('div', { key:l, style:{marginBottom:8} },
+          e('div', { style:{fontFamily:'var(--condensed)', fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--text-dim)', marginBottom:2} }, l),
+          e('div', { style:{fontFamily:'var(--mono)', fontSize:12, color:'var(--text-secondary)'} }, v)
+        )
+      )
+    )
+  );
+}
+
+// ── Insights Panel ─────────────────────────────────────────────────────────────
+function InsightsPanel({ projectId }) {
+  const [insights, setInsights] = useState([]);
+  const [cat, setCat]     = useState('architectural');
+  const [title, setTitle] = useState('');
+  const [obs, setObs]     = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]     = useState('');
+
+  const load = () => api.get('/api/captures?project_id=' + projectId).then(setInsights);
+  useEffect(() => { load(); }, [projectId]);
+
+  const save = async () => {
+    if (!title.trim()||!obs.trim()) return;
+    setSaving(true);
+    const r = await api.post('/api/captures', { capture_type:cat, title, observation:obs, project_id:projectId });
+    if (r.success) { setTitle(''); setObs(''); setMsg('Saved.'); load(); }
+    else setMsg('Error: ' + (r.error||'unknown'));
+    setSaving(false);
+    setTimeout(()=>setMsg(''), 3000);
+  };
+
+  return e('div', null,
+    e('div', { className:'card' },
+      e('div', { className:'card-title' }, 'Capture'),
+      e('div', { className:'field-row' },
+        e('select', { value:cat, onChange:ev=>setCat(ev.target.value), style:{maxWidth:150} },
+          ['architectural','extraction','workflow','system','observation'].map(c => e('option',{key:c,value:c},c))
+        ),
+        e('input', { type:'text', placeholder:'Title', value:title, onChange:ev=>setTitle(ev.target.value) })
+      ),
+      e('textarea', { placeholder:'What did you discover?', value:obs, onChange:ev=>setObs(ev.target.value) }),
+      e('div', { style:{display:'flex', gap:8, marginTop:8, alignItems:'center'} },
+        e('button', { className:'btn btn-success', onClick:save, disabled:saving||!title.trim()||!obs.trim() },
+          saving ? '⟳' : '+ Save'
+        ),
+        msg && e('span', { style:{fontFamily:'var(--mono)', fontSize:11, color:'var(--accent-green)'} }, msg)
+      )
+    ),
+    insights.length > 0 && e('div', { className:'card' },
+      e('div', { className:'card-title' }, `${insights.length} Captures`),
+      insights.map(ins =>
+        e('div', { key:ins.id, className:`insight-row ${ins.capture_type||''}` },
+          e('div', { className:'insight-cat' }, ins.capture_type),
+          e('div', { className:'insight-title-text' }, ins.title),
+          e('div', { className:'insight-obs' }, ins.observation),
+          e('div', { className:'insight-time' }, ins.created_at?.slice(0,16).replace('T',' '))
+        )
+      )
+    )
+  );
+}
+
+
+// ── Decisions Panel ────────────────────────────────────────────────────────────
+function DecisionsPanel({ projectId }) {
+  const [decisions, setDecisions] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [showForm, setShowForm]   = useState(false);
+  const [number, setNumber]       = useState('');
+  const [title, setTitle]         = useState('');
+  const [desc, setDesc]           = useState('');
+  const [rat, setRat]             = useState('');
+  const [status, setStatus]       = useState('locked');
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState('');
+  const [expanded, setExpanded]   = useState(null);
+
+  const load = () => {
+    setLoading(true);
+    api.get('/api/decisions').then(d => {
+      // Sort numerically by ADR number, superseded entries go to end
+      const sorted = [...d].sort((a, b) => {
+        const numA = parseInt((a.decision_number.match(/ADR-(\d+)/) || [0,9999])[1]);
+        const numB = parseInt((b.decision_number.match(/ADR-(\d+)/) || [0,9999])[1]);
+        return numA - numB;
+      });
+      setDecisions(sorted);
+      setLoading(false);
+      // Auto-suggest next ADR number from highest numeric value
+      const nums = d.map(x => {
+        const m = x.decision_number.match(/ADR-(\d+)$/);
+        return m ? parseInt(m[1]) : 0;
+      });
+      const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+      setNumber('ADR-' + String(next).padStart(3, '0'));
+    });
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!number.trim() || !title.trim() || !desc.trim() || !rat.trim()) return;
+    setSaving(true);
+    const r = await api.post('/api/decisions', {
+      decision_number: number, title, description: desc, rationale: rat, status
+    });
+    if (r.success) {
+      setMsg('✓ ADR logged successfully.'); load();
+      setTimeout(() => { setNumber(''); setTitle(''); setDesc(''); setRat(''); setShowForm(false); setMsg(''); }, 2000);
+    } else {
+      setMsg('Error: ' + (r.error || 'unknown'));
+    }
+    setSaving(false);
+  };
+
+  const labelStyle = {
+    fontFamily: 'var(--condensed)', fontSize: 10, fontWeight: 700,
+    letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: 'var(--text-dim)', marginBottom: 4
+  };
+
+  return e('div', null,
+    e('div', { className: 'card' },
+      e('div', { style: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: showForm ? 14 : 0 } },
+        e('div', { className:'card-title', style:{margin:0} }, decisions.length + ' Architecture Decision Records'),
+        e('button', {
+          className: showForm ? 'btn btn-secondary' : 'btn btn-primary',
+          style: { padding: '4px 12px', fontSize: 10 },
+          onClick: () => { setShowForm(f => !f); setMsg(''); }
+        }, showForm ? '✕ Cancel' : '+ Log ADR')
+      ),
+      showForm && e('div', { style: { marginTop: 14 } },
+        e('div', { className: 'field-row' },
+          e('div', { style: { flex: '0 0 120px' } },
+            e('div', { style: labelStyle }, 'ADR Number'),
+            e('input', { type:'text', placeholder:'ADR-020', value:number,
+              onChange: ev => setNumber(ev.target.value) })
+          ),
+          e('div', { style: { flex: 1 } },
+            e('div', { style: labelStyle }, 'Status'),
+            e('select', { value: status, onChange: ev => setStatus(ev.target.value) },
+              ['locked','proposed','superseded'].map(s => e('option',{key:s,value:s},s))
+            )
+          )
+        ),
+        e('div', { style: { marginBottom: 8 } },
+          e('div', { style: labelStyle }, 'Title'),
+          e('input', { type:'text', placeholder:'Short decision title', value:title,
+            onChange: ev => setTitle(ev.target.value) })
+        ),
+        e('div', { style: { marginBottom: 8 } },
+          e('div', { style: labelStyle }, 'Decision'),
+          e('textarea', { placeholder:'What was decided?', value:desc,
+            onChange: ev => setDesc(ev.target.value), style: { minHeight: 64 } })
+        ),
+        e('div', { style: { marginBottom: 10 } },
+          e('div', { style: labelStyle }, 'Rationale'),
+          e('textarea', { placeholder:'Why was this decided?', value:rat,
+            onChange: ev => setRat(ev.target.value), style: { minHeight: 48 } })
+        ),
+        e('div', { style: { display:'flex', gap:8, alignItems:'center' } },
+          e('button', {
+            className: 'btn btn-success',
+            onClick: save,
+            disabled: saving || !number.trim() || !title.trim() || !desc.trim() || !rat.trim()
+          }, saving ? '⟳ Saving...' : '✓ Log Decision'),
+          msg && e('span', { style: { fontFamily:'var(--mono)', fontSize:11, color:'var(--accent-green)' } }, msg)
+        )
+      )
+    ),
+    loading
+      ? e('div', { className:'loading' }, e('div',{className:'spinner'}), 'Loading...')
+      : decisions.length === 0
+        ? e('div', { className:'empty' }, 'No decisions logged')
+        : decisions.map((d, idx) =>
+            e('div', { key: d.decision_number || idx,
+              style: {
+                padding: '10px 14px',
+                border: '1px solid var(--border)',
+                borderLeft: '3px solid var(--accent-purple)',
+                borderRadius: 6,
+                marginBottom: 6,
+                background: 'var(--bg-surface)',
+                cursor: 'pointer',
+                transition: 'border-color 0.12s'
+              },
+              onClick: () => setExpanded(expanded === d.decision_number ? null : d.decision_number)
+            },
+              e('div', { style: { display:'flex', alignItems:'center', gap:10 } },
+                e('div', { style: { fontFamily:'var(--mono)', fontSize:10, color:'var(--accent-purple)', flexShrink:0 } }, d.decision_number),
+                e('div', { style: { flex:1, fontSize:13, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace: expanded===d.decision_number ? 'normal' : 'nowrap' } }, d.title),
+                e('span', { className: `badge badge-${d.status}` }, d.status)
+              ),
+              expanded === d.decision_number && e('div', { style: { marginTop: 10 } },
+                e('div', { style: { marginBottom: 8 } },
+                  e('div', { style: { ...labelStyle, marginBottom: 3 } }, 'Decision'),
+                  e('div', { style: { fontSize:12, color:'var(--text-secondary)', lineHeight:1.6 } }, d.description)
+                ),
+                e('div', null,
+                  e('div', { style: { ...labelStyle, marginBottom: 3 } }, 'Rationale'),
+                  e('div', { style: { fontSize:12, color:'var(--text-secondary)', lineHeight:1.6 } }, d.rationale)
+                ),
+                d.created_at && e('div', { style: { fontFamily:'var(--mono)', fontSize:10, color:'var(--text-dim)', marginTop:8 } },
+                  d.created_at.slice(0,10)
+                )
+              )
+            )
+          )
+  );
+}
+
+
+// ── Live Panel ─────────────────────────────────────────────────────────────────
+function LivePanel({ projectId }) {
+  const [sessions, setSessions]   = useState([]);
+  const [activeId, setActiveId]   = useState(null);
+  const [showNew, setShowNew]     = useState(false);
+  const [topic, setTopic]         = useState('');
+  const [problem, setProblem]     = useState('');
+  const [tags, setTags]           = useState('');
+  const [creating, setCreating]   = useState(false);
+  const [syncing, setSyncing]     = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedMsg, setCopiedMsg] = useState(false);
+
+  // Round form
+  const [yourMsg, setYourMsg]         = useState('');
+  const [consolidated, setConsolidated] = useState('');
+  const [showAttrib, setShowAttrib]   = useState(false);
+  const [gemini, setGemini]           = useState('');
+  const [claude, setClaude]           = useState('');
+  const [chatgpt, setChatgpt]         = useState('');
+  const [addingRound, setAddingRound] = useState(false);
+
+  // Resolve form
+  const [showResolve, setShowResolve] = useState(false);
+  const [solution, setSolution]       = useState('');
+  const [decidedBy, setDecidedBy]     = useState('Consensus');
+  const [resolving, setResolving]     = useState(false);
+
+  const FORMAT = `Read this and answer in 15 lines max, bullets only, end with ACTION.\nAppend your response in format: ## [ModelName] HH:MM — topic\n\n`;
+
+  const load = () => api.get('/api/live/sessions').then(d => { setSessions(d); });
+  useEffect(() => { load(); }, []);
+
+  const active = sessions.find(s => s.session.id === activeId);
+
+  const createSession = async () => {
+    if (!topic.trim() || !problem.trim()) return;
+    setCreating(true);
+    const r = await api.post('/api/live/sessions', { topic, problem, tags, project_id: projectId });
+    if (r.success) { setActiveId(r.session_id); setShowNew(false); setTopic(''); setProblem(''); setTags(''); load(); }
+    setCreating(false);
+  };
+
+  const addRound = async () => {
+    if (!activeId) return;
+    setAddingRound(true);
+    try {
+      await api.post(`/api/live/sessions/${activeId}/rounds`, {
+        your_message: yourMsg, consolidated, gemini, claude, chatgpt
+      });
+      setYourMsg(''); setConsolidated(''); setGemini(''); setClaude(''); setChatgpt('');
+      setShowAttrib(false);
+      load();
+    } finally {
+      setAddingRound(false);
+    }
+  };
+
+  const LIVE_URL = 'https://creative-intelligence-system.com/CIS_LIVE.md';
+
+  const push = async () => {
+    setSyncing(true); setSyncStatus('Pushing...');
+    const r = await api.post('/api/live/push', {});
+    if (r.synced) {
+      setSyncStatus('✓ Live site updated');
+    } else if (r.git_ok) {
+      setSyncStatus('✓ Git pushed — SCP failed');
+    } else {
+      setSyncStatus('✗ Push failed — check terminal');
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncStatus(''), 5000);
+  };
+
+  const resolve = async () => {
+    if (!solution.trim()) return;
+    setResolving(true);
+    await api.post(`/api/live/sessions/${activeId}/resolve`, { solution, decided_by: decidedBy });
+    setShowResolve(false); setSolution('');
+    load();
+    setResolving(false);
+  };
+
+  const copyForModel = () => {
+    if (!active) return;
+    const s = active.session;
+    let text = FORMAT + `Topic: ${s.topic}\nProblem: ${s.problem}\n`;
+    if (s.tags) text += `Tags: ${s.tags}\n`;
+    active.rounds.forEach(r => {
+      text += `\n--- Round ${r.round_number} ---\n`;
+      if (r.your_message)  text += `YOU: ${r.your_message}\n`;
+      if (r.consolidated)  text += `RESPONSES: ${r.consolidated}\n`;
+    });
+    navigator.clipboard.writeText(text).then(() => { setCopiedMsg(true); setTimeout(() => setCopiedMsg(false), 2000); });
+  };
+
+  const lbl = t => e('div', { style:{ fontFamily:'var(--condensed)', fontSize:10, fontWeight:700,
+    letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--text-dim)', marginBottom:4 } }, t);
+
+  const ta = (h, val, fn, ph) => e('textarea', { value:val, onChange:ev=>fn(ev.target.value),
+    placeholder: ph||'', style:{ width:'100%', minHeight:h, fontFamily:'var(--mono)', fontSize:12,
+    lineHeight:1.6, background:'var(--bg-base)', border:'1px solid var(--border)', borderRadius:6,
+    color:'var(--text-primary)', padding:'8px 10px', resize:'vertical' } });
+
+  const badge = s => e('span', { style:{ fontFamily:'var(--mono)', fontSize:9, padding:'2px 7px',
+    borderRadius:3, border:'1px solid', marginLeft:6,
+    color: s==='resolved'?'var(--accent-green)':'var(--accent-amber)',
+    borderColor: s==='resolved'?'var(--accent-green)':'var(--accent-amber)',
+    background: s==='resolved'?'rgba(61,255,160,0.08)':'rgba(255,184,48,0.08)' } }, s.toUpperCase());
+
+  const borderColor = who => ({ gemini:'var(--accent-amber)', claude:'var(--accent-purple)',
+    chatgpt:'var(--accent-green)', you:'var(--accent-blue)' })[who] || 'var(--border)';
+
+  const bubble = (label, text, who) => text && e('div', { style:{ marginBottom:10 } },
+    lbl(label),
+    e('div', { style:{ fontSize:12, color:'var(--text-secondary)', lineHeight:1.6, padding:'8px 12px',
+      background:'var(--bg-base)', borderRadius:5, borderLeft:`3px solid ${borderColor(who)}` } }, text)
+  );
+
+  return e('div', { style:{ display:'flex', gap:12, height:'calc(100vh - 100px)', overflow:'hidden' } },
+
+    // ── Session list (left) ─────────────────────────────────────────────────
+    e('div', { style:{ width:210, flexShrink:0, display:'flex', flexDirection:'column', gap:8 } },
+      e('button', { className:'btn btn-primary', style:{width:'100%'},
+        onClick:()=>setShowNew(s=>!s) }, showNew ? '✕ Cancel' : '+ New Problem'),
+
+      showNew && e('div', { className:'card', style:{padding:12} },
+        lbl('Topic'),
+        e('input', { type:'text', placeholder:'Short title', value:topic,
+          onChange:ev=>setTopic(ev.target.value), style:{marginBottom:8} }),
+        lbl('Problem'),
+        ta(70, problem, setProblem, 'Describe the problem'),
+        e('div', { style:{marginTop:8, marginBottom:8} },
+          lbl('Tags'),
+          e('input', { type:'text', placeholder:'comma, separated', value:tags,
+            onChange:ev=>setTags(ev.target.value) })
+        ),
+        e('button', { className:'btn btn-success', style:{width:'100%'},
+          onClick:createSession, disabled:creating||!topic.trim()||!problem.trim() },
+          creating ? '⟳' : '+ Create')
+      ),
+
+      e('div', { style:{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:5 } },
+        sessions.length === 0
+          ? e('div', { className:'empty' }, 'No sessions')
+          : sessions.map((item, idx) => {
+              const s = item.session;
+              const num = String(sessions.length - idx).padStart(3, '0');
+              return e('div', { key:s.id, onClick:()=>setActiveId(s.id), style:{
+                padding:'9px 12px', borderRadius:6, cursor:'pointer',
+                border:`1px solid ${activeId===s.id?'var(--accent-blue)':'var(--border)'}`,
+                background: activeId===s.id?'var(--bg-panel)':'var(--bg-surface)'
+              } },
+                e('div', { style:{ display:'flex', alignItems:'baseline', gap:5, marginBottom:3 } },
+                  e('span', { style:{ fontFamily:'var(--mono)', fontSize:9,
+                    color:'var(--text-dim)', flexShrink:0 } }, `#${num}`),
+                  e('span', { style:{ fontSize:12, color:'var(--text-primary)',
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, s.topic)
+                ),
+                e('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center' } },
+                  e('span', { style:{ fontFamily:'var(--mono)', fontSize:9, color:'var(--text-dim)' } },
+                    `${item.rounds.length} round${item.rounds.length!==1?'s':''}`),
+                  badge(s.status)
+                )
+              );
+            })
+      )
+    ),
+
+    // ── Active session ──────────────────────────────────────────────────────
+    e('div', { style:{ flex:1, display:'flex', flexDirection:'column', gap:0, overflow:'hidden' } },
+
+      !active
+        ? e('div', { className:'empty', style:{marginTop:80} }, 'Select a problem or create one')
+        : e('div', { style:{ display:'flex', flexDirection:'column', height:'100%' } },
+
+          // Session title bar
+          e('div', { style:{ background:'var(--bg-surface)', border:'1px solid var(--border)',
+            borderRadius:8, padding:'8px 14px', marginBottom:8, flexShrink:0,
+            display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' } },
+            e('div', { style:{ flex:1 } },
+              e('span', { style:{ fontSize:14, fontWeight:600, color:'var(--text-primary)' } },
+                active.session.topic),
+              badge(active.session.status),
+              active.session.tags && e('span', { style:{ fontFamily:'var(--mono)', fontSize:10,
+                color:'var(--text-dim)', marginLeft:10 } }, active.session.tags)
+            ),
+            syncStatus && e('span', { style:{ fontFamily:'var(--mono)', fontSize:10,
+              color: syncStatus.startsWith('✓')?'var(--accent-green)':'var(--accent-red)' } }, syncStatus),
+            active.session.status === 'open' && e('button', {
+              className:'btn btn-success', style:{padding:'4px 12px', fontSize:10},
+              onClick:()=>setShowResolve(s=>!s) },
+             showResolve ? '✕ Cancel' : '✓ Resolve Session')
+          ),
+
+          showResolve && e('div', { className:'card', style:{ margin:'0 0 8px 0', borderColor:'var(--accent-green)' } },
+            lbl('Solution'),
+            ta(80, solution, setSolution, 'What was decided or built?'),
+            e('div', { style:{ display:'flex', gap:8, marginTop:8, alignItems:'center' } },
+              lbl('Decided by:'),
+              e('input', { value:decidedBy, onChange:ev=>setDecidedBy(ev.target.value),
+                style:{ fontFamily:'var(--mono)', fontSize:11, background:'var(--bg-base)',
+                  border:'1px solid var(--border)', borderRadius:4, color:'var(--text-primary)',
+                  padding:'4px 8px', flex:1 } })
+            ),
+            e('button', { className:'btn btn-success', style:{ marginTop:8, width:'100%' },
+              onClick: resolve, disabled: !solution.trim() },
+              '✓ Confirm Resolution')
+          ),
+
+          // Scrollable thread
+
+          // Scrollable thread
+          e('div', { style:{ flex:1, overflowY:'auto', paddingRight:4 } },
+            e('div', { className:'card' },
+              lbl('Problem'),
+              e('div', { style:{ fontSize:13, color:'var(--text-secondary)', lineHeight:1.7 } },
+                active.session.problem)
+            ),
+            active.rounds.map(r =>
+              e('div', { key:r.id, className:'card' },
+                e('div', { className:'card-title' },
+                  `Round ${r.round_number} — ${r.created_at?.slice(0,16).replace('T',' ')}`),
+                bubble('You', r.your_message, 'you'),
+                bubble('Consolidated', r.consolidated, 'consolidated'),
+                r.gemini  && bubble('Gemini',  r.gemini,  'gemini'),
+                r.claude  && bubble('Claude',  r.claude,  'claude'),
+                r.chatgpt && bubble('ChatGPT', r.chatgpt, 'chatgpt')
+              )
+            ),
+            active.session.status === 'resolved' && e('div', { className:'card',
+              style:{ borderColor:'var(--accent-green)' } },
+              e('div', { className:'card-title', style:{color:'var(--accent-green)'} }, '✓ Resolved'),
+              lbl('Solution'),
+              e('div', { style:{ fontSize:13, color:'var(--text-secondary)', lineHeight:1.7,
+                marginBottom:8 } }, active.session.solution),
+              e('div', { style:{ fontFamily:'var(--mono)', fontSize:10, color:'var(--text-dim)' } },
+                `Decided by: ${active.session.decided_by} · ${active.session.resolved_at?.slice(0,10)}`)
+            )
+          ),
+
+        )
+    )
+  );
+}
+
+
+// ── Project Workspace ──────────────────────────────────────────────────────────
+const PANELS = [
+  { key:'overview',   icon:'⬡', label:'System' },
+  { key:'session',    icon:'▷', label:'Session' },
+  { key:'tasks',      icon:'☑', label:'Tasks' },
+  { key:'pipeline',   icon:'▶', label:'Pipeline' },
+  { key:'knowledge',  icon:'◈', label:'Knowledge' },
+  { key:'insights',   icon:'◎', label:'Insights' },
+  { key:'decisions',  icon:'⊕', label:'ADRs' },
+  { key:'live',        icon:'⚡', label:'Live' },
+];
+
+/// ── Operator Panel (ADR-044) ───────────────────────────────────────────────────
+function OperatorPanel() {
+  const [slot1Status,  setSlot1Status]  = useState(null);
+  const [flaskStatus,  setFlaskStatus]  = useState(null);
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifying,    setVerifying]    = useState(false);
+  const [jobId,        setJobId]        = useState(null);
+  const [jobStatus,    setJobStatus]    = useState(null);
+  const [starting,     setStarting]     = useState(false);
+  const [nextAction,   setNextAction]   = useState(null);
+  const [filePath,     setFilePath]     = useState('');
+  const [showInput,    setShowInput]    = useState(false);
+
+  useEffect(() => {
+    fetch('/api/operator/flask-status')
+      .then(r => r.json())
+      .then(d => setFlaskStatus(d.status))
+      .catch(() => setFlaskStatus('ERROR'));
+  }, []);
+
+  const checkSlot1 = async () => {
+    try {
+      const r = await fetch('/api/operator/slot1-health');
+      const d = await r.json();
+      setSlot1Status(d.status);
+    } catch { setSlot1Status('ERROR'); }
+  };
+  const startSlot1 = async () => {
+    setStarting(true);
+    try {
+      await fetch('/api/operator/slot1-start', { method: 'POST' });
+      setSlot1Status('STARTING');
+      setTimeout(checkSlot1, 8000);
+    } catch { setSlot1Status('ERROR'); }
+    setStarting(false);
+  };
+ const verifyContract = async () => {
+    if (!filePath.trim()) { setShowInput(true); return; }
+    setVerifying(true);
+    setVerifyResult(null);
+    setJobId(null);
+    setJobStatus(null);
+    try {
+      const r = await fetch('/api/queue/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_type: 'verify_contract',
+          source: 'operator_panel',
+          payload: JSON.stringify({ contract_path: filePath.trim() })
+        })
+      });
+      const d = await r.json();
+      if (!d.success) { setVerifyResult({ overall: 'ERROR', error: d.error }); setVerifying(false); return; }
+      const jid = d.job_id;
+      setJobId(jid);
+      setJobStatus('queued');
+      const poll = setInterval(async () => {
+        try {
+          const pr = await fetch('/api/queue/job/' + jid);
+          const pd = await pr.json();
+          const status = pd.job && pd.job.status;
+          setJobStatus(status);
+          if (status === 'complete' || status === 'failed') {
+            clearInterval(poll);
+            setVerifying(false);
+            const result = pd.job && pd.job.result ? JSON.parse(pd.job.result) : {};
+            setVerifyResult({
+              overall: result.passed ? 'PASS' : 'FAIL',
+              l1: { verdict: result.passed ? 'PASS' : 'FAIL' },
+              error: result.stderr || null
+            });
+          }
+        } catch { clearInterval(poll); setVerifying(false); setVerifyResult({ overall: 'ERROR', error: 'Poll failed' }); }
+      }, 2000);
+    } catch (err) {
+      setVerifyResult({ overall: 'ERROR', error: err.message });
+      setVerifying(false);
+    }
+  };
+  const getNextAction = async () => {
+    try {
+      const r = await fetch('/api/operator/next-action');
+      const d = await r.json();
+      setNextAction(d.next_steps);
+    } catch { setNextAction(['Could not load next steps.']); }
+  };
+  const verdictColor = (v) => {
+    if (!v) return 'var(--text-dim)';
+    if (v === 'PASS') return 'var(--accent-green)';
+    if (v === 'FAIL' || v === 'ERROR') return 'var(--accent-red)';
+    if (v === 'L1_PASS_L2_PENDING') return 'var(--accent-amber)';
+    return 'var(--accent-amber)';
+  };
+  const statusColor = (s) => {
+    if (s === 'UP') return 'var(--accent-green)';
+    if (s === 'ERROR') return 'var(--accent-red)';
+    return 'var(--text-dim)';
+  };
+  return e('div', { style: { marginTop: 8 } },
+    e('div', { className: 'deck-section-label' }, '▸ Operator'),
+    e('div', {
+      style: {
+        fontSize: 9, fontFamily: 'var(--mono)', marginBottom: 6,
+        display: 'flex', gap: 12
+      }
+    },
+      e('span', null,
+        'Flask: ',
+        e('span', { style: { color: statusColor(flaskStatus) } }, flaskStatus || '…')
+      ),
+      e('span', null,
+        'Slot 1: ',
+        e('span', { style: { color: statusColor(slot1Status) } }, slot1Status || '…')
+      )
+    ),
+    e('div', { className: 'deck-grid cols-2', style: { marginBottom: 6 } },
+      e('button', {
+        className: 'dk dk-amber',
+        style: { fontSize: 11, padding: '10px 6px' },
+        onClick: checkSlot1
+      },
+        e('div', { style: { fontSize: 14 } }, '⚙'),
+        e('div', null, 'Slot 1 Health'),
+        slot1Status && e('div', {
+          style: { fontSize: 9, color: statusColor(slot1Status), marginTop: 2 }
+        }, slot1Status)
+      ),
+      e('button', {
+        className: 'dk dk-green',
+        style: { fontSize: 10, padding: '6px 4px' },
+        onClick: startSlot1,
+        disabled: starting
+      },
+        e('div', { style: { fontSize: 14 } }, '▶'),
+        e('div', null, starting ? 'Starting...' : 'Start Slot 1')
+      ),
+      e('button', {
+        className: 'dk dk-blue',
+        style: { fontSize: 11, padding: '10px 6px' },
+        onClick: verifyContract,
+        disabled: verifying
+      },
+        e('div', { style: { fontSize: 14 } }, '✓'),
+        e('div', null, verifying ? ('Verifying' + (jobStatus ? ' [' + jobStatus + ']' : '...')) : 'Verify Contract'),
+        verifyResult && e('div', {
+          style: { fontSize: 9, color: verdictColor(verifyResult.overall), marginTop: 2 }
+        }, verifyResult.overall)
+      ),
+      e('button', {
+        className: 'dk dk-purple',
+        style: { fontSize: 11, padding: '10px 6px' },
+        onClick: getNextAction
+      },
+        e('div', { style: { fontSize: 14 } }, '→'),
+        e('div', null, 'Next Required Action')
+      )
+    ),
+    (showInput || verifyResult) && e('div', { style: { padding: '4px 0' } },
+      e('input', {
+        type: 'text',
+        placeholder: '/mnt/projects/cis/docs/contracts/filename.md',
+        value: filePath,
+        onChange: ev => setFilePath(ev.target.value),
+        style: {
+          width: '100%', fontSize: 10, padding: '4px 6px',
+          background: 'var(--bg-raised)', border: '1px solid var(--border)',
+          color: 'var(--text-primary)', borderRadius: 3, fontFamily: 'var(--mono)'
+        }
+      })
+    ),
+    verifyResult && e('div', {
+      style: {
+        fontSize: 10, padding: '6px 8px', marginTop: 4,
+        background: 'var(--bg-raised)', border: '1px solid var(--border)',
+        borderRadius: 3, fontFamily: 'var(--mono)', lineHeight: 1.6
+      }
+    },
+      e('div', { style: { color: verdictColor(verifyResult.overall), fontWeight: 600 } },
+        'Overall: ' + (verifyResult.overall || 'UNKNOWN')),
+      verifyResult.l1 && e('div', {
+        style: { color: verifyResult.l1.verdict === 'PASS' ? 'var(--accent-green)' : 'var(--accent-red)' }
+      }, 'L1: ' + verifyResult.l1.verdict),
+      verifyResult.l2 && e('div', {
+        style: { color: verifyResult.l2.verdict === 'PASS' ? 'var(--accent-green)' : verifyResult.l2.verdict === 'SKIPPED' ? 'var(--text-dim)' : 'var(--accent-amber)' }
+      }, 'L2: ' + verifyResult.l2.verdict),
+      verifyResult.error && e('div', { style: { color: 'var(--accent-red)' } }, verifyResult.error)
+    ),
+    nextAction && e('div', {
+      style: {
+        fontSize: 10, padding: '6px 8px', marginTop: 4,
+        background: 'var(--bg-raised)', border: '1px solid var(--border)',
+        borderRadius: 3, lineHeight: 1.6
+      }
+    },
+      nextAction.map((step, i) => e('div', { key: i, style: { color: 'var(--text-secondary)' } }, '→ ' + step))
+    )
+  );
+}
+// ── Draft Intake Panel — ADR-048 Phase 1 ─────────────────────────────────────
+function DraftIntakePanel() {
+  const [drafts, setDrafts]           = React.useState([]);
+  const [loading, setLoading]         = React.useState(false);
+  const [selected, setSelected]       = React.useState(null);
+  const [actionMsg, setActionMsg]     = React.useState(null);
+  const [operator, setOperator]       = React.useState('eric');
+
+  const statusColor = (s) => {
+    if (s === 'approved')  return 'var(--accent-green)';
+    if (s === 'rejected')  return 'var(--accent-red)';
+    if (s === 'staged')    return 'var(--accent-blue)';
+    if (s === 'committed') return 'var(--accent-green)';
+    if (s === 'superseded') return 'var(--text-dim)';
+    return 'var(--text-secondary)';
+  };
+
+  const loadDrafts = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/drafts/list');
+      const d = await r.json();
+      setDrafts(Array.isArray(d) ? d : []);
+    } catch(err) {
+      setDrafts([]);
+    }
+    setLoading(false);
+  };
+
+  const applyAction = async (draft_id, action, extra={}) => {
+    setActionMsg(null);
+    try {
+      const r = await fetch('/api/drafts/' + draft_id + '/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, operator, ...extra })
+      });
+      const d = await r.json();
+      if (r.ok) {
+        setActionMsg({ ok: true, text: 'Draft ' + draft_id + ' → ' + d.status });
+        setSelected(null);
+        loadDrafts();
+      } else {
+        setActionMsg({ ok: false, text: d.error || 'Action failed' });
+      }
+    } catch(err) {
+      setActionMsg({ ok: false, text: 'Request failed' });
+    }
+  };
+
+  React.useEffect(() => { loadDrafts(); }, []);
+
+  const sel = selected ? drafts.find(d => d.id === selected) : null;
+
+  return e('div', { style: { marginTop: 8 } },
+    e('div', { className: 'deck-section-label' }, '▸ Draft Intake'),
+
+    // Refresh + operator field
+    e('div', { style: { display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' } },
+      e('input', {
+        type: 'text',
+        value: operator,
+        onChange: ev => setOperator(ev.target.value),
+        placeholder: 'operator',
+        style: {
+          flex: 1, fontSize: 10, padding: '3px 6px',
+          background: 'var(--bg-raised)', border: '1px solid var(--border)',
+          color: 'var(--text-primary)', borderRadius: 3, fontFamily: 'var(--mono)'
+        }
+      }),
+      e('button', {
+        className: 'dk dk-blue',
+        style: { fontSize: 10, padding: '4px 8px' },
+        onClick: loadDrafts,
+        disabled: loading
+      }, loading ? '…' : '↻ Refresh')
+    ),
+
+    // Draft list
+    drafts.length === 0
+      ? e('div', {
+          style: {
+            fontSize: 10, color: 'var(--text-dim)', fontFamily: 'var(--mono)',
+            padding: '6px 0'
+          }
+        }, loading ? 'Loading…' : 'No staged drafts.')
+      : e('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 } },
+          drafts.map(d =>
+            e('div', {
+              key: d.id,
+              onClick: () => setSelected(selected === d.id ? null : d.id),
+              style: {
+                fontSize: 10, padding: '5px 8px', borderRadius: 3, cursor: 'pointer',
+                background: selected === d.id ? 'var(--bg-raised)' : 'transparent',
+                border: '1px solid ' + (selected === d.id ? 'var(--accent-blue)' : 'var(--border)'),
+                fontFamily: 'var(--mono)'
+              }
+            },
+              e('div', { style: { display: 'flex', justifyContent: 'space-between' } },
+                e('span', { style: { color: 'var(--text-primary)' } },
+                  '#' + d.id + ' ' + d.draft_type),
+                e('span', { style: { color: statusColor(d.status) } }, d.status)
+              ),
+              e('div', { style: { color: 'var(--text-dim)', fontSize: 9, marginTop: 2 } },
+                d.zone + ' · ' + (d.source_model || 'unknown') + ' · ' + d.created_at)
+            )
+          )
+        ),
+
+    // Selected draft action bar
+    sel && e('div', {
+      style: {
+        padding: '6px 8px', background: 'var(--bg-raised)',
+        border: '1px solid var(--border)', borderRadius: 3, marginBottom: 4
+      }
+    },
+      e('div', {
+        style: { fontSize: 9, fontFamily: 'var(--mono)',
+                 color: 'var(--text-secondary)', marginBottom: 5 }
+      },
+        'Draft #' + sel.id + ' — ' + sel.draft_type +
+        (sel.proposed_target ? ' → ' + sel.proposed_target : '')
+      ),
+      e('div', { className: 'deck-grid cols-2', style: { gap: 4 } },
+        e('button', {
+          className: 'dk dk-green',
+          style: { fontSize: 10, padding: '6px 4px' },
+          onClick: () => applyAction(sel.id, 'approve')
+        },
+          e('div', { style: { fontSize: 12 } }, '✓'),
+          e('div', null, 'Approve')
+        ),
+        e('button', {
+          className: 'dk dk-amber',
+          style: { fontSize: 10, padding: '6px 4px' },
+          onClick: () => applyAction(sel.id, 'reject',
+            { reason: 'Rejected via dashboard' })
+        },
+          e('div', { style: { fontSize: 12 } }, '✕'),
+          e('div', null, 'Reject')
+        ),
+        e('button', {
+          className: 'dk dk-purple',
+          style: { fontSize: 10, padding: '6px 4px' },
+          onClick: () => applyAction(sel.id, 'archive')
+        },
+          e('div', { style: { fontSize: 12 } }, '▣'),
+          e('div', null, 'Archive')
+        ),
+        e('button', {
+          className: 'dk',
+          style: { fontSize: 10, padding: '6px 4px' },
+          onClick: () => setSelected(null)
+        },
+          e('div', { style: { fontSize: 12 } }, '↩'),
+          e('div', null, 'Deselect')
+        )
+      )
+    ),
+
+    // Action result message
+    actionMsg && e('div', {
+      style: {
+        fontSize: 10, padding: '4px 8px', marginTop: 4, borderRadius: 3,
+        fontFamily: 'var(--mono)',
+        background: 'var(--bg-raised)',
+        border: '1px solid ' + (actionMsg.ok ? 'var(--accent-green)' : 'var(--accent-red)'),
+        color: actionMsg.ok ? 'var(--accent-green)' : 'var(--accent-red)'
+      }
+    }, actionMsg.text)
+  );
+}
+// ── Stream Deck Column ────────────────────────────────────────────────────────
+function StreamDeck({ activePanel, goPanel, collapsed, onToggle }) {
+
+  const Dk = ({ icon, label, colorClass='', panelKey=null, onClick=null }) => {
+    const isActive = panelKey && activePanel === panelKey;
+    const handler  = onClick || (panelKey ? () => goPanel(panelKey) : null);
+    return e('div', {
+      className: `dk ${colorClass} ${isActive ? 'dk-active' : ''}`,
+      onClick: handler,
+      title: label
+    },
+      e('div', { className: 'dk-icon' }, icon),
+      e('div', { className: 'dk-label' }, label)
+    );
+  };
+
+  // Collapsed — show icon strip for panel nav only
+  if (collapsed) {
+    return e('div', { className: 'deck-column collapsed' },
+      e('div', { className: 'deck-header' },
+        e('button', { className: 'deck-toggle', onClick: onToggle, title: 'Expand deck' }, '▶')
+      ),
+      e('div', { className: 'deck-nav-icon-strip' },
+        PANELS.map((p, i) => [
+          i === 3 && e('div', { key: 'div', className: 'sidebar-div' }),
+          e('button', { key: p.key,
+            className: `nav-btn ${activePanel === p.key ? 'active' : ''}`,
+            onClick: () => goPanel(p.key), title: p.label },
+            e('span', { className: 'nav-icon' }, p.icon),
+            e('span', { className: 'nav-label' }, p.label)
+          )
+        ]).flat().filter(Boolean)
+      )
+    );
+  }
+
+  // Expanded — full stream deck layout
+  return e('div', { className: 'deck-column' },
+
+    // Header
+    e('div', { className: 'deck-header' },
+      e('div', { className: 'deck-header-label' }, 'Control Surface'),
+      e('button', { className: 'deck-toggle', onClick: onToggle, title: 'Collapse deck' }, '◀')
+    ),
+
+    e('div', { className: 'deck-sections' },
+
+      // ── Navigate ────────────────────────────────────────────────
+      e('div', null,
+        e('div', { className: 'deck-section-label' }, '▸ Navigate'),
+        e('div', { className: 'deck-grid' },
+          e(Dk, { icon:'⬡', label:'System',    colorClass:'dk-blue',   panelKey:'overview'  }),
+          e(Dk, { icon:'▷', label:'Session',   colorClass:'',          panelKey:'session'   }),
+          e(Dk, { icon:'☑', label:'Tasks',     colorClass:'',          panelKey:'tasks'     }),
+          e(Dk, { icon:'▶', label:'Pipeline',  colorClass:'dk-green',  panelKey:'pipeline'  }),
+          e(Dk, { icon:'◈', label:'Knowledge', colorClass:'dk-purple', panelKey:'knowledge' }),
+          e(Dk, { icon:'◎', label:'Insights',  colorClass:'',          panelKey:'insights'  }),
+          e(Dk, { icon:'⊕', label:'ADRs',      colorClass:'',          panelKey:'decisions' }),
+          e(Dk, { icon:'⚡', label:'Live',      colorClass:'dk-cyan',   panelKey:'live'      })
+        )
+      ),
+
+      e('div', { className: 'deck-divider' }),
+
+      // ── Pipeline ─────────────────────────────────────────────────
+      e('div', null,
+        e('div', { className: 'deck-section-label' }, '▸ Pipeline'),
+        e('div', { className: 'deck-grid' },
+          e(Dk, { icon:'⬇', label:'Intake',    colorClass:'dk-green',  panelKey:'pipeline' }),
+          e(Dk, { icon:'⊛', label:'Classify',  colorClass:'dk-amber' }),
+          e(Dk, { icon:'⚡', label:'Extract',   colorClass:'dk-cyan'  }),
+          e(Dk, { icon:'⟳', label:'Normalize', colorClass:'dk-purple'})
+        )
+      ),
+
+      e('div', { className: 'deck-divider' }),
+
+      // ── Knowledge ────────────────────────────────────────────────
+      e('div', null,
+        e('div', { className: 'deck-section-label' }, '▸ Knowledge'),
+        e('div', { className: 'deck-grid' },
+          e(Dk, { icon:'📄', label:'Records',  colorClass:'',          panelKey:'knowledge' }),
+          e(Dk, { icon:'🔍', label:'Search',   colorClass:''           }),
+          e(Dk, { icon:'✓',  label:'Review',   colorClass:''           }),
+          e(Dk, { icon:'★',  label:'Approve',  colorClass:'dk-amber'   })
+        )
+      ),
+
+      e('div', { className: 'deck-divider' }),
+
+      // ── WIAS ─────────────────────────────────────────────────────
+      e('div', null,
+        e('div', { className: 'deck-section-label' }, '▸ WIAS'),
+        e('div', { className: 'deck-grid cols-3' },
+          e(Dk, { icon:'W', label:'Word',   colorClass:'dk-teal'   }),
+          e(Dk, { icon:'I', label:'Image',  colorClass:'dk-blue'   }),
+          e(Dk, { icon:'A', label:'Action', colorClass:'dk-orange' })
+        ),
+        e('div', { className: 'deck-grid cols-3', style:{ marginTop: 5 } },
+          e(Dk, { icon:'S', label:'Sound',  colorClass:'dk-amber'  }),
+          e(Dk, { icon:'W', label:'Web',    colorClass:'dk-purple' }),
+          e(Dk, { icon:'⊕', label:'All',   colorClass:''           })
+        )
+      ),
+
+      e('div', { className: 'deck-divider' }),
+
+      // ── Session ──────────────────────────────────────────────────
+      e('div', null,
+        e('div', { className: 'deck-section-label' }, '▸ Session'),
+        e('div', { className: 'deck-grid cols-3' },
+          e(Dk, { icon:'▶', label:'Start',   colorClass:'dk-green', panelKey:'session' }),
+          e(Dk, { icon:'◼', label:'Close',   colorClass:''          }),
+          e(Dk, { icon:'⚑', label:'Handoff', colorClass:'dk-red'    })
+        )
+      ),
+
+      // ── Operator ─────────────────────────────────────────────────
+      e(OperatorPanel, null),
+      e(DraftIntakePanel, null)
+    )
+  );
+}
+
+// ── Intelligence Sidebar ───────────────────────────────────────────────────────
+function IntelSidebar({ collapsed, onToggle, activePanel }) {
+  const [activeTab, setActiveTab] = useState('local');
+
+  React.useEffect(() => {
+    if (activePanel === 'live') setActiveTab('live');
+  }, [activePanel]);
+
+  const [sessions,     setSessions]     = useState([]);
+  const [activeId,     setActiveId]     = useState(null);
+  const [yourMsg,      setYourMsg]      = useState('');
+  const [consolidated, setConsolidated] = useState('');
+  const [gemini,       setGemini]       = useState('');
+  const [claude,       setClaude]       = useState('');
+  const [chatgpt,      setChatgpt]      = useState('');
+  const [showAttrib,   setShowAttrib]   = useState(false);
+  const [syncing,      setSyncing]      = useState(false);
+  const [syncStatus,   setSyncStatus]   = useState('');
+  const [addingRound,  setAddingRound]  = useState(false);
+  const [copiedUrl,    setCopiedUrl]    = useState(false);
+  
+
+  const LIVE_URL = 'https://creative-intelligence-system.com';
+
+  const loadSessions = () => api.get('/api/live/sessions').then(setSessions);
+  React.useEffect(() => { loadSessions(); }, []);
+
+  const active = sessions.find(s => s.session.id === activeId);
+  const roundNum = active ? active.rounds.length + 1 : 1;
+
+  // pushQuestion: saves the current question as a partial round, then pushes to live site.
+  // This lets models read the question before responses are pasted.
+  const pushQuestion = async () => {
+    if (!activeId || !yourMsg.trim()) {
+      // No question typed — just push current state
+      setSyncing(true); setSyncStatus('Pushing...');
+      const r = await api.post('/api/live/push', {});
+      setSyncStatus(r.synced ? '✓ Live site updated' : '✗ Push failed');
+      setSyncing(false);
+      setTimeout(() => setSyncStatus(''), 4000);
+      return;
+    }
+    setSyncing(true); setSyncStatus('Saving question...');
+    // Save partial round with question only
+    await api.post(`/api/live/sessions/${activeId}/rounds`, {
+      your_message: yourMsg, consolidated: '', gemini: '', claude: '', chatgpt: ''
+    });
+    await loadSessions();
+    setSyncStatus('Pushing to live site...');
+    const r = await api.post('/api/live/push', {});
+    setSyncStatus(r.synced ? '✓ Question live — give models the URL' : '✗ Push failed');
+    setSyncing(false);
+    // Clear only the question — keep response fields for pasting
+    setYourMsg('');
+    setTimeout(() => setSyncStatus(''), 5000);
+  };
+
+  // pushResponses: saves responses to the latest round and pushes.
+  const pushResponses = async () => {
+    if (!activeId) return;
+    // Find the most recent round that has a question but no responses yet
+    const lastRound = active?.rounds?.[active.rounds.length - 1];
+    const hasContent = consolidated.trim() || gemini.trim() || claude.trim() || chatgpt.trim();
+    if (!hasContent) return;
+    setAddingRound(true);
+    setSyncStatus('Saving responses...');
+    try {
+      if (lastRound && lastRound.your_message && !lastRound.consolidated && !lastRound.gemini) {
+        // Update the existing partial round with responses via a new round entry
+        await api.post(`/api/live/sessions/${activeId}/rounds`, {
+          your_message: '', consolidated, gemini, claude, chatgpt
+        });
+      } else {
+        await api.post(`/api/live/sessions/${activeId}/rounds`, {
+          your_message: yourMsg, consolidated, gemini, claude, chatgpt
+        });
+        setYourMsg('');
+      }
+      setConsolidated(''); setGemini(''); setClaude(''); setChatgpt('');
+      setShowAttrib(false);
+      await loadSessions();
+      setSyncStatus('Pushing...');
+      const r = await api.post('/api/live/push', {});
+      setSyncStatus(r.synced ? '✓ Responses logged + pushed' : '✗ Push failed');
+      setTimeout(() => setSyncStatus(''), 4000);
+    } finally { setAddingRound(false); }
+  };
+
+  const push = async () => {
+    setSyncing(true); setSyncStatus('Pushing...');
+    const r = await api.post('/api/live/push', {});
+    setSyncStatus(r.synced ? '✓ Live site updated' : '✗ Push failed');
+    setSyncing(false);
+    setTimeout(() => setSyncStatus(''), 4000);
+  };
+
+  const stepNum = (num, bg) => e('div', {
+    style:{ width:20, height:20, borderRadius:'50%', flexShrink:0,
+      background:bg, display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize:11, fontWeight:700, color: bg==='var(--accent-purple)'?'#fff':'#000' }
+  }, num);
+
+  const hint = txt => e('div', { style:{ fontFamily:'var(--mono)', fontSize:9,
+    color:'var(--text-dim)', paddingLeft:28, marginTop:-4 } }, txt);
+
+  const [modelRegistry, setModelRegistry] = useState({ local: [], remote: [], agent: [] });
+  const [modelsLoading, setModelsLoading] = useState(true);
+
+  React.useEffect(() => {
+    fetch('/api/models')
+      .then(r => r.json())
+      .then(data => {
+        setModelRegistry(data.models || { local: [], remote: [], agent: [] });
+        setModelsLoading(false);
+      })
+      .catch(() => setModelsLoading(false));
+     }, []
+  );
+
+  const normalizeModel = (m, tier) => ({
+    name:   m.name,
+    role:   [m.capability.split(',').join(' \u00b7 '), m.size_params].filter(Boolean).join(' \u00b7 '),
+    badge:  tier === 'agent' ? 'idle' : tier,
+    load:   0,
+    color:  tier === 'local'  ? 'var(--accent-green)'
+          : tier === 'remote' ? 'var(--accent-cyan)'
+          : 'var(--accent-purple)',
+    active: m.status === 'active',
+    runtime_status: m.runtime_status,
+    status: m.status,
+    notes:  m.notes,
+      }
+    );
+
+  const ModelCard = ({ m }) =>
+    e('div', { className: `model-card ${m.active ? 'active-model' : ''}` },
+      e('div', { className: 'model-card-header' },
+        e('div', { className: 'model-name' }, m.name),
+        e('div', { className: `model-badge ${m.badge}` }, m.badge.toUpperCase())
+      ),
+      e('div', { className: 'model-role' }, m.role),
+      m.runtime_status && e('div', {
+        style: {
+          fontSize: 9, fontFamily: 'var(--mono)', marginTop: 3,
+          color: m.runtime_status === 'loaded'       ? 'var(--accent-green)'
+               : m.runtime_status === 'available'    ? 'var(--text-secondary)'
+               : m.runtime_status === 'manual'       ? 'var(--accent-cyan)'
+               : m.runtime_status === 'not_implemented' ? 'var(--text-dim)'
+               : 'var(--text-dim)'
+        }
+      }, m.runtime_status.toUpperCase()),
+      m.load > 0 && e('div', { className: 'model-bar' },
+        e('div', { className: 'model-bar-fill', style: { width: m.load + '%', background: m.color } })
+      )
+    );
+
+  const models = (modelRegistry[activeTab] || []).map(m => normalizeModel(m, activeTab));
+
+  const renderLiveTab = () => {
+    const taStyle = (color) => ({
+      fontFamily:'var(--mono)', fontSize:11, lineHeight:1.5,
+      background:'var(--bg-base)', border:'1px solid var(--border)',
+      borderLeft:`3px solid ${color}`, borderRadius:6,
+      color:'var(--text-primary)', padding:'5px 8px', resize:'none', width:'100%'
+    });
+    return e('div', { style:{ display:'flex', flexDirection:'column', gap:8, padding:'8px' } },
+      e('div', null,
+        e('div', { className:'intel-section-label' }, '\u25b8 Active Session'),
+        e('select', {
+          value: activeId || '',
+          onChange: ev => setActiveId(Number(ev.target.value) || null),
+          style:{ width:'100%', marginBottom:4 }
+        },
+          e('option', { value:'' }, '\u2014 select session \u2014'),
+          sessions.map((item, idx) => {
+            const s = item.session;
+            const num = String(sessions.length - idx).padStart(3,'0');
+            return e('option', { key:s.id, value:s.id }, `#${num} ${s.topic}`);
+          })
+        )
+      ),
+      !active
+        ? e('div', { style:{ fontFamily:'var(--mono)', fontSize:10, color:'var(--text-dim)',
+            textAlign:'center', padding:'16px 0' } }, 'Select a session above')
+        : e('div', { style:{ display:'flex', flexDirection:'column', gap:8 } },
+          e('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between' } },
+            e('div', { style:{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'0.1em',
+              textTransform:'uppercase', color:'var(--text-dim)' } },
+              `Round ${roundNum}`),
+            e('button', { className:'btn btn-secondary', style:{ padding:'2px 6px', fontSize:9 },
+              onClick:()=>setShowAttrib(s=>!s) },
+              showAttrib ? '\u25be Combined' : '\u25b8 Per-model')
+          ),
+          e('div', { style:{ display:'flex', gap:6, alignItems:'flex-start' } },
+            stepNum('1','var(--accent-blue)'),
+            e('textarea', { value:yourMsg, onChange:ev=>setYourMsg(ev.target.value),
+              placeholder:'Type your question...', rows:3,
+              style: taStyle('var(--accent-blue)') })
+          ),
+          e('div', { style:{ display:'flex', gap:5, alignItems:'center' } },
+            stepNum('2','var(--accent-amber)'),
+            e('button', { className:'btn btn-amber',
+              style:{ flex:1, padding:'6px', fontSize:10, fontWeight:600 },
+              onClick:pushQuestion, disabled:syncing },
+              syncing ? '\u27f3' : '\u2191 Save Question + Push'),
+            e('button', { className:'btn btn-secondary',
+              style:{ padding:'6px 8px', fontSize:10, whiteSpace:'nowrap' },
+             onClick:()=>{
+            if (!active) return;
+            const s = active.session;
+            const FORMAT = `Read this and answer in 15 lines max, bullets only, end with ACTION.\nAppend your response in format: ## [ModelName] HH:MM\n\n`;
+            let text = FORMAT + `Topic: ${s.topic}\nProblem: ${s.problem}\n`;
+            if (s.tags) text += `Tags: ${s.tags}\n`;
+            active.rounds.forEach(r => {
+              text += `\n--- Round ${r.round_number} ---\n`;
+              if (r.your_message)  text += `YOU: ${r.your_message}\n`;
+              if (r.consolidated)  text += `RESPONSES: ${r.consolidated}\n`;
+              if (r.gemini)        text += `Gemini: ${r.gemini}\n`;
+              if (r.claude)        text += `Claude: ${r.claude}\n`;
+              if (r.chatgpt)       text += `ChatGPT: ${r.chatgpt}\n`;
+            });
+            navigator.clipboard.writeText(text);
+            setCopiedUrl(true);
+            setTimeout(()=>setCopiedUrl(false), 2000);
+          } },
+          copiedUrl ? '\u2713 Copied' : '\u270d Copy Prompt')
+          ),
+          syncStatus && e('div', { style:{ fontFamily:'var(--mono)', fontSize:9, paddingLeft:26,
+            color: syncStatus.startsWith('\u2713')?'var(--accent-green)':'var(--accent-red)' } }, syncStatus),
+          hint('Saves question to DB + pushes. Give models the URL — they read your question.'),
+          e('div', { style:{ display:'flex', gap:6, alignItems:'flex-start' } },
+            stepNum('3','var(--accent-purple)'),
+            e('div', { style:{ flex:1 } },
+              !showAttrib
+                ? e('textarea', { value:consolidated, onChange:ev=>setConsolidated(ev.target.value),
+                    placeholder:'Paste all responses here...', rows:5,
+                    style: taStyle('var(--accent-purple)') })
+                : e('div', { style:{ display:'flex', flexDirection:'column', gap:5 } },
+                    ...[
+                      ['Gemini',  gemini,  setGemini,  'var(--accent-amber)'],
+                      ['Claude',  claude,  setClaude,  'var(--accent-purple)'],
+                      ['ChatGPT', chatgpt, setChatgpt, 'var(--accent-green)'],
+                    ].map(([label, val, fn, color]) =>
+                      e('div', { key:label },
+                        e('div', { style:{ fontFamily:'var(--mono)', fontSize:8,
+                          letterSpacing:'0.1em', textTransform:'uppercase',
+                          color:color, marginBottom:2 } }, label),
+                        e('textarea', { value:val, onChange:ev=>fn(ev.target.value),
+                          placeholder:`${label}...`, rows:2,
+                          style:{ ...taStyle(color), borderLeft:'none', borderTop:`2px solid ${color}` } })
+                      )
+                    )
+                  )
+            )
+          ),
+          e('div', { style:{ display:'flex', gap:5, alignItems:'center' } },
+            stepNum('4','var(--accent-green)'),
+            e('button', { className:'btn btn-success',
+              style:{ flex:1, padding:'6px', fontSize:10, fontWeight:600 },
+              onClick: async () => { await pushResponses(); },
+              disabled: addingRound || (!consolidated.trim()
+                && !gemini.trim() && !claude.trim() && !chatgpt.trim()) },
+              addingRound ? '\u27f3' : `\u2713 Log Responses + Push`)
+          ),
+          hint('Saves + pushes. Models see the full updated thread.')
+        )
+    );
+  };
+
+  return e('div', { className: `intel-sidebar ${collapsed ? 'collapsed' : ''}` },
+    e('div', { className: 'intel-header' },
+      !collapsed && e('div', { className: 'intel-header-label' }, 'Intelligence'),
+      e('button', { className: 'intel-toggle', onClick: onToggle }, collapsed ? '\u25c0' : '\u25b6')
+    ),
+    !collapsed && e('div', { key:'tabs', className:'intel-tabs' },
+      ['local','remote','agent','live'].map(t =>
+        e('button', { key:t,
+          className: `intel-tab ${activeTab===t?'active':''}`,
+          onClick: () => setActiveTab(t) },
+          t === 'live' ? '\u26a1' : t.toUpperCase()
+        )
+      )
+    ),
+    !collapsed && activeTab !== 'live' && e('div', { key:'body', className:'intel-body' },
+      e('div', { className:'intel-section-label' }, activeTab==='agent' ? '\u25b8 Agents' : '\u25b8 Models'),
+      models.map((m,i) => e(ModelCard, { key:i, m }))
+    ),
+    !collapsed && activeTab === 'live' && e('div', { key:'live', style:{ flex:1, overflowY:'auto' } },
+      renderLiveTab()
+    )
+  );
+}
+
+function ProjectWorkspace({ projectId, panel, navigate }) {
+  const [activePanel, setActivePanel] = useState(panel || 'overview');
+  const [project, setProject]         = useState(null);
+  const [showCapture, setShowCapture] = useState(false);
+  const [sysStatus, setSysStatus]     = useState(null);
+  const [intelCollapsed, setIntelCollapsed] = useState(false);
+  const [deckCollapsed,  setDeckCollapsed]  = useState(false);
+
+  useEffect(() => {
+    api.get(`/api/projects/${projectId}`).then(setProject);
+    api.get('/api/status').then(setSysStatus);
+    const iv = setInterval(() => api.get('/api/status').then(setSysStatus), 30000);
+    return () => clearInterval(iv);
+  }, [projectId]);
+
+  const goPanel = p => {
+    setActivePanel(p);
+    navigate(`/project/${projectId}/${p}`);
+  };
+
+  const renderPanel = () => {
+    switch(activePanel) {
+      case 'overview':  return e(OverviewPanel,  { projectId });
+      case 'session':   return e(SessionPanel,   { projectId });
+      case 'tasks':     return e(TasksPanel,     { projectId });
+      case 'pipeline':  return e(PipelinePanel,  { projectId });
+      case 'knowledge': return e(KnowledgePanel, { projectId });
+      case 'insights':   return e(InsightsPanel,   { projectId });
+      case 'decisions':  return e(DecisionsPanel, { projectId });
+      case 'live':        return e(LivePanel,      { projectId });
+      default: return null;
+    }
+  };
+
+  return e('div', { style:{display:'flex', flexDirection:'column', height:'100vh'} },
+
+    e('div', { className:'topbar' },
+      e('div', { className:'topbar-logo', onClick:()=>navigate('/') }, 'CIS'),
+      e('span', { className:'topbar-sep' }, '/'),
+      e('div', { className:'topbar-breadcrumb' }, project?.title || projectId),
+      e('div', { className:'topbar-status' },
+        e('div', { className:'status-dot' }),
+        'ONLINE'
+      ),
+      e('div', { className:'topbar-right' },
+        sysStatus && [
+          e('span', { key:'r', className:'topbar-count' }, e('strong',null,sysStatus.counts.records), ' records'),
+          e('span', { key:'t', className:'topbar-count' }, e('strong',null,sysStatus.counts.open_tasks), ' tasks'),
+        ],
+        e('button', { className:'capture-btn', onClick:()=>setShowCapture(true) }, '⚡ Capture')
+      )
+    ),
+
+    e('div', { className:'layout' },
+      e(StreamDeck, {
+        activePanel,
+        goPanel,
+        collapsed: deckCollapsed,
+        onToggle: () => setDeckCollapsed(s => !s)
+      }),
+      e('div', { className:'main' },
+        e('div', { className:'panel-header' },
+          e('div', { className:'panel-title' },
+            e('span', { className:'panel-title-accent' }, 'CIS'),
+            ' / ' + (PANELS.find(p=>p.key===activePanel)?.label || activePanel)
+          )
+        ),
+        e('div', { className:'panel-body' }, renderPanel())
+      ),
+      e(IntelSidebar, {
+        collapsed: intelCollapsed,
+        onToggle: () => setIntelCollapsed(s => !s),
+        activePanel
+      })
+    ),
+
+    showCapture && e(CapturePanel, { projectId, onClose:()=>setShowCapture(false) })
+  );
+}
+
+// ── App Root ───────────────────────────────────────────────────────────────────
+function App() {
+  const route = useRoute();
+
+  if (route.projectId) {
+    return e(ProjectWorkspace, {
+      projectId: route.projectId,
+      panel: route.panel,
+      navigate: route.navigate
+    });
+  }
+
+  return e('div', { style:{display:'flex', flexDirection:'column', height:'100vh'} },
+    e('div', { className:'topbar' },
+      e('div', { className:'topbar-logo' }, 'CIS'),
+      e('span', { className:'topbar-sep' }, '—'),
+      e('div', { className:'topbar-breadcrumb' }, 'Creative Intelligence System'),
+      e('div', { className:'topbar-status' },
+        e('div', { className:'status-dot' }),
+        'ONLINE'
+      )
+    ),
+    e(Launcher, { navigate: route.navigate })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+</script>
+</body>
+</html>

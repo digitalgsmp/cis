@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIS — Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base: #09090c;
+  --bg-surface: #101218;
+  --bg-raised: #161a24;
+  --bg-panel: #1a1f2e;
+  --border: #242b3a;
+  --border-bright: #354060;
+  --blue: #4a9eff;
+  --green: #3dffa0;
+  --amber: #ffb830;
+  --red: #ff4a6a;
+  --purple: #a855f7;
+  --cyan: #22d3ee;
+  --t1: #e8eaf2;
+  --t2: #c8cede;
+  --t3: #7a8299;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'Barlow', sans-serif;
+  --cond: 'Barlow Condensed', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-base);color:var(--t1);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Top Bar */
+.topbar{height:44px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0}
+.tb-logo{font-family:var(--cond);font-weight:800;font-size:14px;letter-spacing:.3em;color:var(--blue);text-transform:uppercase;padding-right:14px;border-right:1px solid var(--border)}
+.tb-nav{display:flex;gap:2px;flex:1}
+.tb-nav button{background:0;border:0;cursor:pointer;font-family:var(--cond);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:4px 10px;border-radius:4px;transition:all .12s;white-space:nowrap}
+.tb-nav button:hover{color:var(--t2);background:var(--bg-raised)}
+.tb-nav button.active{color:var(--blue);background:rgba(74,158,255,.08)}
+.tb-right{display:flex;align-items:center;gap:8px;padding-left:12px;border-left:1px solid var(--border)}
+.tb-pill{font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);color:var(--t3);cursor:pointer}
+.tb-pill:hover{border-color:var(--border-bright);color:var(--t2)}
+.tb-pill.online{border-color:rgba(61,255,160,.3);color:var(--green)}
+
+/* Main layout: two columns */
+.main{flex:1;display:flex;overflow:hidden}
+.workbench-col{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.workbench-col:first-child{border-right:1px solid var(--border);max-width:60%;min-width:400px}
+.spine-col{width:340px;min-width:280px;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-surface)}
+
+/* ── WORKBENCH (left side) ── */
+.wb-header{height:36px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
+.wb-title{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--t2)}
+.wb-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(74,158,255,.1);color:var(--blue);border:1px solid rgba(74,158,255,.2)}
+.wb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border)}
+
+/* Workbench panels */
+.wb-panel{background:var(--bg-base);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.wb-panel-label{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--t3);flex-shrink:0}
+.wb-panel-content{flex:1;display:flex;flex-direction:column;gap:8px}
+
+/* Source preview area */
+.source-preview{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:12px;flex:1;display:flex;flex-direction:column;gap:8px}
+.source-preview .meta{display:flex;gap:8px;flex-wrap:wrap}
+.source-preview .meta span{font-family:var(--mono);font-size:9px;color:var(--t3);background:var(--bg-surface);padding:2px 8px;border-radius:4px;border:1px solid var(--border)}
+.source-preview .body{flex:1;font-size:12px;color:var(--t2);line-height:1.6;overflow-y:auto;padding:8px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);white-space:pre-wrap;font-family:var(--mono);font-size:10px}
+
+/* Proposed structure cards */
+.prop-card{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;transition:all .12s}
+.prop-card:hover{border-color:var(--border-bright)}
+.prop-card .tag-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.prop-card .tag{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:8px;background:rgba(74,158,255,.08);color:var(--blue);border:1px solid rgba(74,158,255,.2)}
+.prop-card .tag.conf{background:rgba(255,184,48,.08);color:var(--amber);border-color:rgba(255,184,48,.2)}
+.prop-card .tag.high{background:rgba(61,255,160,.08);color:var(--green);border-color:rgba(61,255,160,.2)}
+.prop-card .label{font-family:var(--cond);font-size:12px;font-weight:600;color:var(--t1)}
+.prop-card .desc{font-size:11px;color:var(--t3);margin-top:2px}
+.prop-card .confidence{font-family:var(--mono);font-size:8px;color:var(--amber);margin-top:4px}
+
+/* Your Input panel */
+.input-actions{display:flex;gap:6px;flex-wrap:wrap}
+.input-actions button{padding:6px 14px;border-radius:5px;border:1px solid var(--border);font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .12s;background:var(--bg-surface);color:var(--t2)}
+.input-actions button:hover{border-color:var(--border-bright);color:var(--t1)}
+.input-actions button.approve{border-color:rgba(61,255,160,.3);color:var(--green)}
+.input-actions button.approve:hover{background:rgba(61,255,160,.1)}
+.input-actions button.reject{border-color:rgba(255,74,106,.3);color:var(--red)}
+.input-actions button.reject:hover{background:rgba(255,74,106,.1)}
+.input-actions button.edit{border-color:rgba(74,158,255,.3);color:var(--blue)}
+.input-actions button.edit:hover{background:rgba(74,158,255,.1)}
+.correction-field{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:var(--sans);font-size:12px;color:var(--t1);resize:vertical;min-height:60px}
+
+/* Resulting knowledge object */
+.knowledge-result{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:12px;flex:1;overflow-y:auto}
+.knowledge-result .field{display:flex;gap:8px;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)}
+.knowledge-result .field:last-child{border:0}
+.knowledge-result .field .k{color:var(--t3);width:80px;flex-shrink:0;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.knowledge-result .field .v{color:var(--t2)}
+
+/* ── SPINE (right column) ── */
+.spine-header{height:36px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.spine-title{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--t2);flex:1}
+.spine-proj-name{font-family:var(--mono);font-size:9px;color:var(--blue)}
+
+/* Phase timeline */
+.phase-list{flex:1;overflow-y:auto;padding:8px 0}
+.phase{display:flex;align-items:center;gap:8px;padding:8px 12px;border-left:2px solid var(--border);margin-left:12px;position:relative;cursor:pointer;transition:all .12s}
+.phase:hover{background:var(--bg-raised)}
+.phase.active{border-left-color:var(--blue);background:rgba(74,158,255,.04)}
+.phase.done{border-left-color:var(--green)}
+.phase.blocked{border-left-color:var(--red)}
+.phase .dot{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0}
+.phase.active .dot{background:var(--blue)}
+.phase.done .dot{background:var(--green)}
+.phase.blocked .dot{background:var(--red)}
+.phase .info{flex:1}
+.phase .info .name{font-family:var(--cond);font-size:12px;font-weight:600;color:var(--t1)}
+.phase .info .sub{font-size:10px;color:var(--t3);margin-top:1px}
+.phase .info .sub strong{color:var(--t2)}
+.phase .count{font-family:var(--mono);font-size:9px;color:var(--t3);padding:2px 6px;border-radius:8px;background:var(--bg-surface);border:1px solid var(--border)}
+
+/* Knowledge items within active phase */
+.knowledge-items{padding:4px 12px 8px 28px;display:flex;flex-direction:column;gap:3px}
+.ki{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;cursor:pointer;transition:all .12s;font-size:11px}
+.ki:hover{background:var(--bg-raised)}
+.ki .icon{font-size:12px}
+.ki .text{color:var(--t2);flex:1}
+.ki .status{font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:6px}
+.ki .status.done{background:rgba(61,255,160,.1);color:var(--green)}
+.ki .status.draft{background:rgba(255,184,48,.1);color:var(--amber)}
+.ki .status.pending{background:rgba(74,158,255,.1);color:var(--blue)}
+.ki .status.missing{background:rgba(255,74,106,.1);color:var(--red)}
+
+.statusbar{height:22px;background:var(--bg-surface);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0}
+.sb{font-family:var(--mono);font-size:9px;color:var(--t3);display:flex;align-items:center;gap:4px}
+.sb .dg{width:4px;height:4px;border-radius:50%;background:var(--green)}
+.sb-sep{color:var(--border)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">CIS █</div>
+  <div class="tb-nav" id="topnav">
+    <button class="active" data-view="workbench">Workbench</button>
+    <button data-view="spine">Spine</button>
+    <button data-view="ideas">Ideas</button>
+    <button data-view="knowledge">Knowledge</button>
+  </div>
+  <div class="tb-right">
+    <span class="tb-pill online">● CIS Kernel v1</span>
+    <span class="tb-pill">Phase 0</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT: Workbench -->
+  <div class="workbench-col" id="workbench-col">
+    <div class="wb-header">
+      <span class="wb-title">Workbench</span>
+      <span class="wb-badge">source: operator_model.md</span>
+      <span style="flex:1"></span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">draft · v1</span>
+    </div>
+    <div class="wb-grid">
+      <!-- Top-Left: Source Panel -->
+      <div class="wb-panel">
+        <div class="wb-panel-label">Source Material</div>
+        <div class="source-preview">
+          <div class="meta">
+            <span>X_00_OPERATOR_MODEL.md</span>
+            <span>markdown</span>
+            <span>133 lines</span>
+            <span>LegacyBuildFiles</span>
+          </div>
+          <div class="body">X_00_OPERATOR_MODEL.md
+
+# Purpose
+Define how the user works.
+Mandate all system layers conform.
+
+# Core Rules
+## 1. Ideas originate as imperfect concepts.
+- Each idea implies an output form.
+- The form evolves through discovery.
+
+## 2. Output orientation.
+- Every project has a target output.
+- That target can change based on what's learned.
+
+## 3. Reality-driven evolution.
+- Projects change based on:
+  - knowledge gaps
+  - technical constraints
+  - hardware limits</div>
+          <div style="display:flex;gap:6px">
+            <button style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);font-family:var(--cond);font-size:9px;font-weight:700;cursor:pointer;background:var(--bg-surface);color:var(--t2)">⟳ Re-extract</button>
+            <button style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);font-family:var(--cond);font-size:9px;font-weight:700;cursor:pointer;background:var(--bg-surface);color:var(--t2)">⤓ Raw file</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top-Right: Proposed Structure -->
+      <div class="wb-panel">
+        <div class="wb-panel-label">Proposed Structure <span style="color:var(--amber);font-weight:400">— provisional</span></div>
+        <div class="wb-panel-content">
+          <div class="prop-card">
+            <div class="tag-row">
+              <span class="tag high">governance</span>
+              <span class="tag">operator-model</span>
+              <span class="tag">foundational</span>
+            </div>
+            <div class="label">Operator Model — Authority Document</div>
+            <div class="desc">Defines human-centric operating logic for all CIS layers. Ideas originate imperfect, output-oriented, reality-driven evolution.</div>
+            <div class="confidence">● ● ● ○ confidence: high</div>
+          </div>
+          <div class="prop-card">
+            <div class="tag-row">
+              <span class="tag">workflow</span>
+              <span class="tag conf">non-linear</span>
+            </div>
+            <div class="label">Reality-Driven Workflow Pattern</div>
+            <div class="desc">Projects branch, merge, and rescope based on knowledge gaps and constraints. Not fixed-path.</div>
+            <div class="confidence">● ● ○ ○ confidence: medium</div>
+          </div>
+          <div class="prop-card">
+            <div class="tag-row">
+              <span class="tag">ai-role</span>
+              <span class="tag">permission</span>
+            </div>
+            <div class="label">AI Behavioral Contract</div>
+            <div class="desc">Wait → Suggest → Organize → Challenge → Fill Gaps → Automate. Permission-sensitive, context-aware.</div>
+            <div class="confidence">● ● ● ● confidence: high</div>
+          </div>
+          <div style="font-size:10px;color:var(--t3);padding:4px 0">+ 2 more suggestions below confidence threshold</div>
+        </div>
+      </div>
+
+      <!-- Bottom-Left: Your Input -->
+      <div class="wb-panel">
+        <div class="wb-panel-label">Your Input</div>
+        <div class="wb-panel-content">
+          <div class="input-actions">
+            <button class="approve">✓ Approve All</button>
+            <button class="reject">✗ Reject</button>
+            <button class="edit">✎ Edit Fields</button>
+          </div>
+          <textarea class="correction-field" placeholder="Corrections, additions, or notes... e.g.: 'This is a governing document, not a workflow doc. Tag should be "control-layer" not "workflow".'"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <label style="font-family:var(--mono);font-size:9px;color:var(--t3);display:flex;align-items:center;gap:4px">
+              <input type="checkbox"> Mark as draft
+            </label>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--t3);display:flex;align-items:center;gap:4px">
+              <input type="checkbox"> Link to active project
+            </label>
+            <span style="flex:1"></span>
+            <button style="padding:6px 16px;border-radius:5px;border:1px solid rgba(61,255,160,.3);font-family:var(--cond);font-size:10px;font-weight:700;cursor:pointer;background:rgba(61,255,160,.1);color:var(--green)">Save to Knowledge</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom-Right: Knowledge Output -->
+      <div class="wb-panel">
+        <div class="wb-panel-label">Knowledge Output</div>
+        <div class="knowledge-result">
+          <div class="field"><span class="k">record_id</span><span class="v">KNOWLEDGE__GOV__OPERATOR_MODEL__001</span></div>
+          <div class="field"><span class="k">type</span><span class="v">governance_document</span></div>
+          <div class="field"><span class="k">title</span><span class="v">Operator Model — CIS Governing Authority</span></div>
+          <div class="field"><span class="k">tags</span><span class="v">operator-model, governance, ai-contract, human-led</span></div>
+          <div class="field"><span class="k">source</span><span class="v">X_00_OPERATOR_MODEL.md · LegacyBuildFiles</span></div>
+          <div class="field"><span class="k">linked</span><span class="v">CIS Kernel v1 · Phase 0</span></div>
+          <div class="field"><span class="k">status</span><span class="v" style="color:var(--amber)">draft — awaiting review</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Project Spine -->
+  <div class="spine-col">
+    <div class="spine-header">
+      <span class="spine-title">Project Spine</span>
+      <span class="spine-proj-name">CIS Kernel v1</span>
+    </div>
+    <div class="phase-list">
+      <div class="phase done">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase PD · Pre-Development Harness</div>
+          <div class="sub">Memory layer, ADRs, protocol</div>
+        </div>
+        <span class="count">8 items</span>
+      </div>
+      <div class="phase active">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 0 · Execution Layer</div>
+          <div class="sub">Pipeline scripts · <strong>3 items incomplete</strong></div>
+        </div>
+        <span class="count">12 / 15</span>
+      </div>
+      <div class="knowledge-items">
+        <div class="ki">
+          <span class="icon">◇</span>
+          <span class="text">Operator Model — Authority Document</span>
+          <span class="status done">saved</span>
+        </div>
+        <div class="ki">
+          <span class="icon">◇</span>
+          <span class="text">System Blueprint — 8-Layer Architecture</span>
+          <span class="status done">saved</span>
+        </div>
+        <div class="ki">
+          <span class="icon">◇</span>
+          <span class="text">Pipeline: Intake → Classify → Preprocess</span>
+          <span class="status done">built</span>
+        </div>
+        <div class="ki">
+          <span class="icon">◇</span>
+          <span class="text">PDF OCR + Vision Merge Layer</span>
+          <span class="status missing">blocking</span>
+        </div>
+        <div class="ki">
+          <span class="icon">◇</span>
+          <span class="text">Video Frame Sampling</span>
+          <span class="status pending">next</span>
+        </div>
+      </div>
+      <div class="phase blocked">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 1 · Intelligence Extraction</div>
+          <div class="sub">Waiting on Phase 0 merge layer</div>
+        </div>
+        <span class="count">0 / 12</span>
+      </div>
+      <div class="phase">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 2 · Knowledge Formation</div>
+          <div class="sub">Vector index, retrieval, review pipeline</div>
+        </div>
+        <span class="count">0 / 10</span>
+      </div>
+      <div class="phase">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 3 · Workflow System</div>
+          <div class="sub">Project objects, WIAS stages</div>
+        </div>
+        <span class="count">—</span>
+      </div>
+      <div class="phase">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 4 · Bounded Agents</div>
+          <div class="sub">Librarian → Researcher → Teacher</div>
+        </div>
+        <span class="count">—</span>
+      </div>
+      <div class="phase">
+        <span class="dot"></span>
+        <div class="info">
+          <div class="name">Phase 5 · Application Layer</div>
+          <div class="sub">Unified workbench surface</div>
+        </div>
+        <span class="count">—</span>
+      </div>
+    </div>
+    <div style="padding:8px 12px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--t3)">next action: build PDF OCR + vision merge</div>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span class="sb"><span class="dg"></span>CIS Workbench v1</span>
+  <span class="sb-sep">|</span>
+  <span class="sb">24 knowledge records</span>
+  <span class="sb-sep">|</span>
+  <span class="sb">Phase 0 · 12/15 complete</span>
+  <span class="sb-sep">|</span>
+  <span class="sb">1 item blocking</span>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tb-nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tb-nav button').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+  })
+})
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_What You SHOULD Pass to a New Chat (Minimal + Complete).md

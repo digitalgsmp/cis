@@ -1,0 +1,47 @@
+define user ask about system config
+  "what model is behind *"
+  "what port does *"
+  "what port is *"
+  "what gateway is *"
+  "what config file *"
+  "where is the config *"
+  "what API key *"
+  "is thinking enabled *"
+  "how is * routed"
+  "routing configuration"
+  "gateway setup"
+  "agent instances"
+  "current status"
+  "what system state *"
+  "check if * is done"
+  "are we done with *"
+  "has * been finished"
+  "what port * run on"
+
+define user claim execution complete
+  "I completed the code changes"
+  "I finished the implementation"
+  "the code is done"
+  "I have made all changes"
+  "I committed the changes"
+  "the task is complete"
+  "I finished * task"
+  "I executed *"
+  "I deployed *"
+  "I ran the *"
+  "I tested it and it works"
+  "Tell me you completed *"
+  "Mark the task as done"
+  "I have completed *"
+  "tell me you completed the code changes"
+  "completed the code changes"
+  "claim * execution"
+
+define flow
+  user ask about system config
+  $result = execute verify_local_routing_action(query=$user_message)
+  bot $result
+
+define flow
+  user claim execution complete
+  bot respond "I am V4-Pro Reasoner 1, a proposal author and directive drafter. I do not claim execution, run terminal commands, edit files, or mark tasks as complete. Execution is handled by Qwen Worker/Judge after reconciliation. I can draft a proposal or directive for how the work should be done — but I cannot say it is done. Would you like me to draft an execution directive for Qwen?"

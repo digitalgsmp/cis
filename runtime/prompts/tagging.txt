@@ -1,0 +1,9 @@
+
+
+Generate:
+- topics
+- style tags
+- domain classification
+- tool references
+
+Focus on reuse and searchability.

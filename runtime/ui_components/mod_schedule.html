@@ -1,0 +1,256 @@
+<div class="module-content">
+  <div class="hdr">
+    <div class="hdr-title">Schedule</div>
+    <div class="hdr-sub">Time-blocked production schedule — weekly view and long-range planning</div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="card" style="padding:12px 16px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-blue" onclick="showAddSlot()">+ Add Slot</button>
+      <button class="btn" onclick="renderScheduleView('week')">Week</button>
+      <button class="btn" onclick="renderScheduleView('72prod')">72-Production</button>
+      <span style="flex:1"></span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--t3)" id="slot-count">0 slots</span>
+    </div>
+  </div>
+
+  <!-- Add slot form (togglable) -->
+  <div id="slot-form-card" class="card" style="display:none">
+    <div class="card-title">New Schedule Slot</div>
+    <form onsubmit="return false;" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Slot name / step</label>
+            <input id="f-slot-name" class="cis-input" type="text" placeholder="e.g. Write script, Animate scene">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Duration (hours)</label>
+            <input id="f-slot-duration" class="cis-input" type="number" min="0.5" step="0.5" value="1">
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Date</label>
+            <input id="f-slot-date" class="cis-input" type="date">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Start time</label>
+            <input id="f-slot-start" class="cis-input" type="time" value="09:00">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">End time</label>
+            <input id="f-slot-end" class="cis-input" type="time" value="10:00">
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">WIAS / Domain category</label>
+            <select id="f-slot-cat" class="cis-select">
+              <option value="">— select —</option>
+              <option value="word/web">Word / Web</option>
+              <option value="image">Image</option>
+              <option value="action">Action (3D / Game / VFX)</option>
+              <option value="sound">Sound</option>
+              <option value="non-digital">Non-Digital Product</option>
+              <option value="research">Research / Learning</option>
+              <option value="admin">Admin / Management</option>
+              <option value="personal">Personal</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Link to project</label>
+            <select id="f-slot-project" class="cis-select">
+              <option value="">— unlinked —</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Tool / software</label>
+            <input id="f-slot-tool" class="cis-input" type="text" placeholder="e.g. Blender, Resolve, Obsidian">
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Notes / training / reference</label>
+        <textarea id="f-slot-notes" class="cis-textarea" placeholder="Tutorial, template, checklist, theory, skill practice…" style="min-height:50px"></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-blue" onclick="addSlot()">+ Add to Schedule</button>
+        <button class="btn" onclick="document.getElementById('slot-form-card').style.display='none'">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Calendar grid -->
+  <div id="schedule-grid" style="min-height:300px"></div>
+</div>
+
+<script>
+// ── Schedule storage ──
+let scheduleSlots = JSON.parse(localStorage.getItem('cis_schedule') || '[]')
+let currentView = 'week'
+
+function showAddSlot() {
+  const card = document.getElementById('slot-form-card')
+  card.style.display = card.style.display === 'none' ? 'block' : 'none'
+  // Set default date to today
+  if (!document.getElementById('f-slot-date').value) {
+    document.getElementById('f-slot-date').value = new Date().toISOString().slice(0,10)
+  }
+  // Load projects into selector
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+  const sel = document.getElementById('f-slot-project')
+  sel.innerHTML = '<option value="">— unlinked —</option>' +
+    projects.filter(p => p.status !== 'complete').map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+}
+
+function addSlot() {
+  const name = document.getElementById('f-slot-name').value.trim()
+  if (!name) { alert('Slot name is required'); return }
+
+  const slot = {
+    id: 'slot_' + Date.now(),
+    name,
+    duration: parseFloat(document.getElementById('f-slot-duration').value) || 1,
+    date: document.getElementById('f-slot-date').value || '',
+    startTime: document.getElementById('f-slot-start').value || '',
+    endTime: document.getElementById('f-slot-end').value || '',
+    category: document.getElementById('f-slot-cat').value,
+    projectId: document.getElementById('f-slot-project').value,
+    tool: document.getElementById('f-slot-tool').value.trim(),
+    notes: document.getElementById('f-slot-notes').value.trim(),
+    status: 'planned',
+    created: new Date().toISOString()
+  }
+  scheduleSlots.push(slot)
+  localStorage.setItem('cis_schedule', JSON.stringify(scheduleSlots))
+  renderScheduleView(currentView)
+  document.getElementById('slot-form-card').style.display = 'none'
+  // Clear fields
+  document.getElementById('f-slot-name').value = ''
+  document.getElementById('f-slot-tool').value = ''
+  document.getElementById('f-slot-notes').value = ''
+}
+
+function renderScheduleView(view) {
+  currentView = view
+  const grid = document.getElementById('schedule-grid')
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+
+  document.getElementById('slot-count').textContent = scheduleSlots.length + ' slots'
+
+  if (view === 'week') {
+    const weekDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1)
+    const weekDates = weekDays.map((d, i) => {
+      const dt = new Date(startOfWeek)
+      dt.setDate(startOfWeek.getDate() + i)
+      return { day: d, date: dt.toISOString().slice(0,10), display: dt.toLocaleDateString('en-US', { month:'short', day:'numeric' }) }
+    })
+    grid.innerHTML = '<div class="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">' +
+      weekDates.map(wd => {
+        const slots = scheduleSlots.filter(s => s.date === wd.date)
+        return `<div class="cal-day">
+          <div class="cal-day-hdr">${wd.day}<span class="cal-date">${wd.display}</span></div>
+          ${slots.length ? slots.map(s => {
+            const p = projects.find(x => x.id === s.projectId)
+            return `<div class="cal-slot" data-status="${s.status}" onclick="editSlot('${s.id}')">
+              <div class="cal-slot-name">${s.name}</div>
+              <div class="cal-slot-meta">${s.startTime || ''}${s.endTime ? '—'+s.endTime : ''}${s.tool ? ' · '+s.tool : ''}</div>
+              ${p ? `<div class="cal-slot-proj">${p.name}</div>` : ''}
+              <span class="cal-slot-status">${s.status}</span>
+            </div>`
+          }).join('') : '<div class="cal-empty">—</div>'}
+        </div>`
+      }).join('') + '</div>'
+  } else {
+    // 72-production view — compact linear timeline
+    grid.innerHTML = '<div class="prod-timeline">'
+    if (!scheduleSlots.length) {
+      grid.innerHTML += '<div class="empty-state">No schedule slots yet. Add one above.</div>'
+    } else {
+      const sorted = [...scheduleSlots].sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime))
+      grid.innerHTML += sorted.map(s => {
+        const p = projects.find(x => x.id === s.projectId)
+        const statusColor = s.status === 'completed' ? 'var(--green)' : s.status === 'active' ? 'var(--blue)' : s.status === 'blocked' ? 'var(--red)' : 'var(--amber)'
+        return `<div class="prod-slot" data-status="${s.status}" onclick="editSlot('${s.id}')">
+          <div class="prod-time">${s.date || '—'}${s.startTime ? '<br>'+s.startTime : ''}</div>
+          <div class="prod-bar" style="border-color:${statusColor}">
+            <div class="prod-dot" style="background:${statusColor}"></div>
+            <div class="prod-line"></div>
+          </div>
+          <div class="prod-info">
+            <div class="prod-name">${s.name}</div>
+            <div class="prod-meta">
+              ${s.category ? `<span class="tag">${s.category}</span>` : ''}
+              ${s.tool ? `<span class="tag">${s.tool}</span>` : ''}
+              ${p ? `<span class="tag-domain ${p.domain}">${p.name}</span>` : ''}
+              <span class="prod-status" style="color:${statusColor}">${s.status}</span>
+            </div>
+          </div>
+        </div>`
+      }).join('')
+    }
+    grid.innerHTML += '</div>'
+  }
+}
+
+function editSlot(id) {
+  const s = scheduleSlots.find(x => x.id === id)
+  if (!s) return
+  const statusCycle = { 'planned':'active', 'active':'completed', 'completed':'planned', 'blocked':'planned' }
+  s.status = statusCycle[s.status] || 'planned'
+  localStorage.setItem('cis_schedule', JSON.stringify(scheduleSlots))
+  renderScheduleView(currentView)
+}
+
+// ── Init ──
+renderScheduleView('week')
+</script>
+
+<style>
+.cal-day { background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; padding:8px; min-height:140px }
+.cal-day-hdr { font-family:var(--cond); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--t1); margin-bottom:6px; display:flex; justify-content:space-between }
+.cal-date { font-family:var(--mono); font-size:9px; color:var(--t3); font-weight:400; text-transform:none }
+.cal-slot {
+  padding:6px 8px; margin-bottom:4px; border-radius:4px; cursor:pointer;
+  background:var(--bg-base); border-left:3px solid var(--blue); transition:all .12s;
+}
+.cal-slot[data-status="completed"] { border-left-color:var(--green); opacity:.7 }
+.cal-slot[data-status="active"] { border-left-color:var(--blue); background:rgba(74,158,255,.06) }
+.cal-slot[data-status="blocked"] { border-left-color:var(--red) }
+.cal-slot:hover { border-color:var(--border-hi) }
+.cal-slot-name { font-family:var(--cond); font-size:11px; font-weight:600; color:var(--t1); margin-bottom:2px }
+.cal-slot-meta { font-family:var(--mono); font-size:8px; color:var(--t3) }
+.cal-slot-proj { font-family:var(--mono); font-size:8px; color:var(--blue); margin-top:2px }
+.cal-slot-status { font-family:var(--mono); font-size:7px; color:var(--t3); text-transform:uppercase }
+.cal-empty { font-family:var(--mono); font-size:9px; color:var(--t3); text-align:center; padding:20px 0 }
+
+.prod-timeline { padding:10px 0 }
+.prod-slot { display:flex; gap:12px; margin-bottom:12px; cursor:pointer; transition:all .12s; padding:6px; border-radius:5px }
+.prod-slot:hover { background:var(--bg-raised) }
+.prod-time { font-family:var(--mono); font-size:9px; color:var(--t3); text-align:right; min-width:80px; line-height:1.4 }
+.prod-bar { display:flex; flex-direction:column; align-items:center; width:18px; flex-shrink:0; border-left:2px solid var(--border); position:relative }
+.prod-dot { width:8px; height:8px; border-radius:50%; margin-top:3px; position:relative; left:-5px }
+.prod-line { flex:1; width:0; border-left:1px dashed var(--border) }
+.prod-info { flex:1 }
+.prod-name { font-family:var(--cond); font-size:14px; font-weight:600; color:var(--t1) }
+.prod-meta { display:flex; gap:4px; flex-wrap:wrap; margin-top:3px; align-items:center }
+</style>

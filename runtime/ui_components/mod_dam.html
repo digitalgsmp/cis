@@ -1,0 +1,293 @@
+<div class="module-content">
+  <div class="hdr">
+    <div class="hdr-title">DAM — Digital Asset Management</div>
+    <div class="hdr-sub">Store, search, review, and link all project assets — research, references, learning, templates, checklists, outputs</div>
+  </div>
+
+  <!-- Search & Filter bar -->
+  <div class="card" style="padding:12px 16px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="dam-search" class="cis-input" type="text" placeholder="Search all assets…" oninput="filterAssets()" style="flex:1;min-width:200px">
+      <select id="dam-type-filter" class="cis-select" style="width:auto;min-width:110px" onchange="filterAssets()">
+        <option value="">All types</option>
+        <option value="research">Research</option>
+        <option value="reference">Reference</option>
+        <option value="learning">Learning</option>
+        <option value="template">Template</option>
+        <option value="checklist">Checklist</option>
+        <option value="output">Output / Deliverable</option>
+        <option value="note">Note</option>
+      </select>
+      <select id="dam-project-filter" class="cis-select" style="width:auto;min-width:130px" onchange="filterAssets()">
+        <option value="">All projects</option>
+      </select>
+      <select id="dam-status-filter" class="cis-select" style="width:auto;min-width:100px" onchange="filterAssets()">
+        <option value="">Any status</option>
+        <option value="draft">Draft</option>
+        <option value="reviewed">Reviewed</option>
+        <option value="approved">Approved</option>
+        <option value="locked">Locked</option>
+        <option value="deprecated">Deprecated</option>
+      </select>
+      <button class="btn btn-blue" onclick="showAddAsset()">+ Add Asset</button>
+      <span id="asset-count" style="font-family:var(--mono);font-size:10px;color:var(--t3)">0 assets</span>
+    </div>
+  </div>
+
+  <!-- Add asset form (togglable) -->
+  <div id="asset-form-card" class="card" style="display:none">
+    <div class="card-title">New Asset</div>
+    <form onsubmit="return false;" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Asset name</label>
+            <input id="f-asset-name" class="cis-input" type="text" placeholder="Name / title">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Type</label>
+            <select id="f-asset-type" class="cis-select">
+              <option value="research">Research</option>
+              <option value="reference">Reference</option>
+              <option value="learning">Learning</option>
+              <option value="template">Template</option>
+              <option value="checklist">Checklist</option>
+              <option value="output">Output / Deliverable</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">URL / source</label>
+            <input id="f-asset-url" class="cis-input" type="url" placeholder="https://…">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">File path</label>
+            <input id="f-asset-path" class="cis-input" type="text" placeholder="/mnt/projects/…">
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Link to project</label>
+            <select id="f-asset-project" class="cis-select">
+              <option value="">— global (no project) —</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Category</label>
+            <input id="f-asset-category" class="cis-input" type="text" placeholder="e.g. WIAS domain, topic, subject">
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Description / notes</label>
+        <textarea id="f-asset-notes" class="cis-textarea" placeholder="What is this? Why does it matter?" style="min-height:50px"></textarea>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Tags</label>
+        <input id="f-asset-tags" class="cis-input" type="text" placeholder="Comma-separated tags">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-blue" onclick="addAsset()">+ Add to DAM</button>
+        <button class="btn" onclick="document.getElementById('asset-form-card').style.display='none'">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Asset grid -->
+  <div id="asset-grid" class="asset-grid"></div>
+</div>
+
+<script>
+// ── DAM storage ──
+let assets = JSON.parse(localStorage.getItem('cis_assets') || '[]')
+
+function showAddAsset() {
+  const card = document.getElementById('asset-form-card')
+  card.style.display = card.style.display === 'none' ? 'block' : 'none'
+  // Load projects
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+  const sel = document.getElementById('f-asset-project')
+  sel.innerHTML = '<option value="">— global (no project) —</option>' +
+    projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+  // Also populate project filter
+  const filterSel = document.getElementById('dam-project-filter')
+  filterSel.innerHTML = '<option value="">All projects</option>' +
+    projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+}
+
+function addAsset() {
+  const name = document.getElementById('f-asset-name').value.trim()
+  if (!name) { alert('Asset name is required'); return }
+
+  const asset = {
+    id: 'asset_' + Date.now(),
+    name,
+    type: document.getElementById('f-asset-type').value,
+    url: document.getElementById('f-asset-url').value.trim(),
+    path: document.getElementById('f-asset-path').value.trim(),
+    projectId: document.getElementById('f-asset-project').value,
+    category: document.getElementById('f-asset-category').value.trim(),
+    notes: document.getElementById('f-asset-notes').value.trim(),
+    tags: document.getElementById('f-asset-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    status: 'draft',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  }
+  assets.push(asset)
+  localStorage.setItem('cis_assets', JSON.stringify(assets))
+  filterAssets()
+  document.getElementById('asset-form-card').style.display = 'none'
+  document.getElementById('f-asset-name').value = ''
+  document.getElementById('f-asset-url').value = ''
+  document.getElementById('f-asset-path').value = ''
+  document.getElementById('f-asset-category').value = ''
+  document.getElementById('f-asset-notes').value = ''
+  document.getElementById('f-asset-tags').value = ''
+}
+
+function filterAssets() {
+  const q = document.getElementById('dam-search').value.toLowerCase()
+  const typeFilter = document.getElementById('dam-type-filter').value
+  const projectFilter = document.getElementById('dam-project-filter').value
+  const statusFilter = document.getElementById('dam-status-filter').value
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+
+  let filtered = assets.filter(a => {
+    if (typeFilter && a.type !== typeFilter) return false
+    if (projectFilter && a.projectId !== projectFilter) return false
+    if (statusFilter && a.status !== statusFilter) return false
+    if (q) {
+      const haystack = (a.name + ' ' + a.notes + ' ' + a.category + ' ' + (a.tags||[]).join(' ') + ' ' + a.type).toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    return true
+  })
+
+  filtered.sort((a,b) => new Date(b.updated || b.created) - new Date(a.updated || a.created))
+  document.getElementById('asset-count').textContent = filtered.length + ' asset' + (filtered.length !== 1 ? 's' : '')
+  renderAssets(filtered, projects)
+}
+
+function renderAssets(filtered, projects) {
+  const grid = document.getElementById('asset-grid')
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state">No assets match your filters.</div>'
+    return
+  }
+  const typeIcons = { research:'🔬', reference:'📎', learning:'🎓', template:'📋', checklist:'✅', output:'📦', note:'📝' }
+  const typeColors = { research:'var(--blue)', reference:'var(--purple)', learning:'var(--green)', template:'var(--amber)', checklist:'var(--green)', output:'var(--cyan)', note:'var(--t3)' }
+
+  grid.innerHTML = filtered.map(a => {
+    const p = projects.find(x => x.id === a.projectId)
+    const statusColor = a.status === 'approved' ? 'var(--green)' : a.status === 'reviewed' ? 'var(--blue)' : a.status === 'deprecated' ? 'var(--red)' : 'var(--amber)'
+    return `<div class="asset-card" onclick="openAsset('${a.id}')">
+      <div class="asset-icon" style="color:${typeColors[a.type] || 'var(--t3)'}">${typeIcons[a.type] || '📄'}</div>
+      <div class="asset-body">
+        <div class="asset-name">${a.name}</div>
+        <div class="asset-meta">
+          <span class="tag" style="border-color:${typeColors[a.type] || 'var(--border)'};color:${typeColors[a.type]}">${a.type}</span>
+          ${a.category ? `<span class="tag">${a.category}</span>` : ''}
+          ${p ? `<span class="tag-domain ${p.domain}">${p.name}</span>` : '<span class="tag" style="color:var(--t3)">global</span>'}
+          <span class="asset-status" style="color:${statusColor}">${a.status}</span>
+        </div>
+        ${a.notes ? `<div class="asset-desc">${a.notes.slice(0,120)}${a.notes.length > 120 ? '…' : ''}</div>` : ''}
+        ${a.tags && a.tags.length ? `<div class="asset-tags">${a.tags.map(t => '<span class="tag">#'+t+'</span>').join('')}</div>` : ''}
+        ${a.url ? `<div class="asset-link">🔗 ${a.url}</div>` : ''}
+      </div>
+    </div>`
+  }).join('')
+}
+
+function openAsset(id) {
+  const a = assets.find(x => x.id === id)
+  if (!a) return
+  const projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+  const p = projects.find(x => x.id === a.projectId)
+
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <div class="modal-title">${a.name}</div>
+      <button class="btn" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="det-row">
+        <div class="det-field"><label>Type</label><span class="asset-val">${a.type}</span></div>
+        <div class="det-field"><label>Status</label>
+          <select class="cis-select" onchange="updateAssetStatus('${a.id}', this.value)" style="width:auto;min-width:100px">
+            <option value="draft" ${a.status==='draft'?'selected':''}>Draft</option>
+            <option value="reviewed" ${a.status==='reviewed'?'selected':''}>Reviewed</option>
+            <option value="approved" ${a.status==='approved'?'selected':''}>Approved</option>
+            <option value="locked" ${a.status==='locked'?'selected':''}>Locked</option>
+            <option value="deprecated" ${a.status==='deprecated'?'selected':''}>Deprecated</option>
+          </select>
+        </div>
+      </div>
+      ${a.url ? `<div class="det-field"><label>URL</label><div class="asset-link" style="margin-top:3px">🔗 <a href="${a.url}" target="_blank" style="color:var(--blue)">${a.url}</a></div></div>` : ''}
+      ${a.path ? `<div class="det-field"><label>File path</label><div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:3px">${a.path}</div></div>` : ''}
+      ${p ? `<div class="det-field"><label>Project</label><div style="color:var(--t1);margin-top:3px">${p.name}</div></div>` : ''}
+      ${a.notes ? `<div class="det-field"><label>Notes</label><div style="margin-top:3px;font-size:12px;color:var(--t2);line-height:1.5">${a.notes}</div></div>` : ''}
+      ${a.tags && a.tags.length ? `<div class="det-field"><label>Tags</label><div style="display:flex;gap:4px;margin-top:4px">${a.tags.map(t => '<span class="tag">#'+t+'</span>').join('')}</div></div>` : ''}
+    </div>
+    <div class="modal-footer">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">${a.id} · ${new Date(a.created).toLocaleDateString()}</span>
+      <button class="btn btn-red" onclick="deleteAsset('${a.id}',this)">Delete</button>
+    </div>
+  </div>`
+  document.body.appendChild(overlay)
+  overlay.onclick = () => overlay.remove()
+}
+
+function updateAssetStatus(id, status) {
+  const a = assets.find(x => x.id === id)
+  if (!a) return
+  a.status = status
+  a.updated = new Date().toISOString()
+  localStorage.setItem('cis_assets', JSON.stringify(assets))
+  filterAssets()
+}
+
+function deleteAsset(id, btn) {
+  if (!confirm('Delete this asset?')) return
+  assets = assets.filter(a => a.id !== id)
+  localStorage.setItem('cis_assets', JSON.stringify(assets))
+  btn.closest('.modal-overlay').remove()
+  filterAssets()
+}
+
+// ── Init ──
+showAddAsset() // just populates selectors but doesn't show form
+filterAssets()
+</script>
+
+<style>
+.asset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:8px; margin-top:0 }
+.asset-card {
+  display:flex; gap:10px; padding:12px; border-radius:6px;
+  background:var(--bg-surface); border:1px solid var(--border); cursor:pointer;
+  transition:all .12s;
+}
+.asset-card:hover { border-color:var(--border-hi); background:var(--bg-raised) }
+.asset-icon { font-size:22px; line-height:1; padding-top:2px }
+.asset-body { flex:1; min-width:0 }
+.asset-name { font-family:var(--cond); font-size:13px; font-weight:600; color:var(--t1); margin-bottom:3px }
+.asset-meta { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:4px; align-items:center }
+.asset-status { font-family:var(--mono); font-size:9px; text-transform:uppercase }
+.asset-desc { font-size:11px; color:var(--t3); line-height:1.4; margin-bottom:4px }
+.asset-tags { display:flex; gap:3px; flex-wrap:wrap; margin-bottom:3px }
+.asset-link { font-family:var(--mono); font-size:9px; color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.asset-val { font-size:12px; color:var(--t1) }
+</style>

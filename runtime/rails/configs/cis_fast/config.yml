@@ -1,0 +1,13 @@
+# NeMo Guardrails config for CIS Fast No-Guessing Rail
+# Fast routes through NeMo on port 8800 before hitting deepseek-v4-flash on 8642.
+# No rails.config here — config_id comes from directory name + --default-config-id.
+
+models:
+ - type: main
+   engine: openai
+   model: deepseek-v4-flash
+   parameters:
+     base_url: http://127.0.0.1:8642/v1
+     api_key: 5a51effab04a740206e3038ec23da119e154a534b80ad39d
+
+# Actions auto-discovered from actions.py in this directory.

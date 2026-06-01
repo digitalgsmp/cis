@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/ADRs/ADR-041_Artifact_Registry_Schema.md

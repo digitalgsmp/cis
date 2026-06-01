@@ -1,0 +1,63 @@
+<div class="hdr"><div class="hdr-title">Infrastructure</div><div class="hdr-sub">Hardware, software, services, and storage on this machine</div></div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">⚙️ Hardware</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:var(--t3);width:100px">CPU</td><td style="padding:6px 0;color:var(--t1)">AMD Ryzen 9 7950X · 16C/32T</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">RAM</td><td style="padding:6px 0;color:var(--t1)">47 GiB DDR5</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">GPU</td><td style="padding:6px 0;color:var(--t1)">NVIDIA RTX 4090 · 24 GB VRAM</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Driver</td><td style="padding:6px 0;color:var(--t1)">560.126.09</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">OS</td><td style="padding:6px 0;color:var(--t1)">Ubuntu 24.04.4 LTS · kernel 6.17.0</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💾 Storage</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:var(--t3);width:100px">vda</td><td style="padding:6px 0;color:var(--t1)">500 GB · system disk</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">vdb</td><td style="padding:6px 0;color:var(--t1)">250 GB · /mnt/projects</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">vdc</td><td style="padding:6px 0;color:var(--t1)">9.1 TB · /mnt/archive (88% full)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">vdd</td><td style="padding:6px 0;color:var(--t1)">112 GB · /mnt/cache</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">vde</td><td style="padding:6px 0;color:var(--t1)">233 GB · /mnt/models</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">vdf</td><td style="padding:6px 0;color:var(--t1)">233 GB · /mnt/models2</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🧰 Software</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:var(--t3);width:120px">Blender</td><td style="padding:6px 0;color:var(--t1)">4.0.2</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Python</td><td style="padding:6px 0;color:var(--t1)">3.12.3 (system) · 3.11.15 (hermes venv)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Node</td><td style="padding:6px 0;color:var(--t1)">22.22.2</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Git</td><td style="padding:6px 0;color:var(--t1)">2.43.0</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Sunshine</td><td style="padding:6px 0;color:var(--t1)">2025.924 (installed, not running)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Ollama</td><td style="padding:6px 0;color:var(--t1)">running as service</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Hermes</td><td style="padding:6px 0;color:var(--t1)">main agent (this session)</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧠 Models</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:var(--t3);width:120px">vLLM Slot 1</td><td style="padding:6px 0;color:var(--t1)">Qwen3-32B-AWQ (slot1-qwen3-32b)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Ollama</td><td style="padding:6px 0;color:var(--t1)">local models available</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Qwen3.6 GGUF</td><td style="padding:6px 0;color:var(--t1)">/mnt/models2/Qwen3.6-GGUF/ (never deployed)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">Qwen3-VL GGUF</td><td style="padding:6px 0;color:var(--t1)">/mnt/models/Qwen3-VL-GGUF/</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">HuggingFace</td><td style="padding:6px 0;color:var(--t1)">/mnt/models/huggingface/ (model cache)</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔌 Running Services</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:var(--t3);width:120px">:5000</td><td style="padding:6px 0;color:var(--t1)">CIS Flask app (dashboard + kernel UI)</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">:7998</td><td style="padding:6px 0;color:var(--t1)">DeepSeek TUI HTTP bridge</td></tr>
+        <tr><td style="padding:6px 0;color:var(--t3)">:8001</td><td style="padding:6px 0;color:var(--t1)">vLLM Slot 1 (Qwen3-32B) — check health</td></tr>
+      </table>
+    </div>
+  </div>
+</div>

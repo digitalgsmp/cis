@@ -1,0 +1,246 @@
+<div class="hdr"><div class="hdr-title">Session Record</div><div class="hdr-sub">Current session status, breadcrumb trail, infrastructure state, and decisions captured in real time</div></div>
+
+<div class="row">
+  <!-- Left column: Status & Breadcrumb -->
+  <div class="col">
+<div class="card">
+  <div class="card-title">Session Breadcrumb</div>
+  <div id="session-breadcrumb" style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:11px">
+    <span style="color:var(--t3)">Loading trail...</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Current Branch</div>
+  <div id="current-branch" style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:5px">
+      <span style="color:var(--amber);font-family:var(--mono);font-size:14px">↳</span>
+      <div>
+        <div style="font-size:12px;color:var(--t1);font-weight:600" id="branch-topic">UI contrast fix — upload server styling</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:2px" id="branch-status">● active — 3 iterations, completed</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--t3);padding:4px 0" id="branch-return">
+      <span style="color:var(--blue)">▸ Return to main thread:</span> CIS build plan — session record page, extraction indexing research, workbench iteration
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Session Status</div>
+      <div style="font-family:var(--mono);font-size:11px;line-height:1.6" id="session-status">
+        <span style="color:var(--t3)">Loading session data...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Infrastructure</div>
+      <div style="font-family:var(--mono);font-size:11px;line-height:1.8" id="infra-status">
+        <span style="color:var(--t3)">Checking...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Breadcrumb — Decision Trail</div>
+      <div id="decision-trail" style="display:flex;flex-direction:column;gap:6px">
+        <span style="color:var(--t3);font-size:11px;font-family:var(--mono)">No decisions recorded this session yet.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Ideas captured & Next actions -->
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Ideas & Decisions (This Session)</div>
+      <div id="session-ideas" style="display:flex;flex-direction:column;gap:6px">
+        <span style="color:var(--t3);font-size:11px;font-family:var(--mono)">Loading scratchpad...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Next Actions</div>
+      <div id="next-actions" style="display:flex;flex-direction:column;gap:6px">
+        <span style="color:var(--t3);font-size:11px;font-family:var(--mono)">Loading...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Extraction Index Status</div>
+      <div id="extraction-status" style="font-family:var(--mono);font-size:11px;line-height:1.6">
+        <span style="color:var(--t3)">Checking...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Session breadcrumb — build trail from recent sessions ──────────────
+async function loadBreadcrumb() {
+  const el = document.getElementById('session-breadcrumb')
+  try {
+    const r = await fetch('/api/session/recent')
+    const sessions = await r.json()
+    if (!sessions || sessions.length === 0) {
+      el.innerHTML = '<span style="color:var(--t3)">No session history yet.</span>'
+      return
+    }
+    // Show last 5 sessions as a trail
+    const trail = sessions.slice(0, 5).reverse()
+    el.innerHTML = trail.map((s, i) => {
+      const isLatest = i === trail.length - 1
+      const icon = isLatest ? '●' : '○'
+      const color = isLatest ? 'var(--blue)' : 'var(--t3)'
+      const focus = s.focus.length > 60 ? s.focus.substring(0, 60) + '…' : s.focus
+      return `<div style="display:flex;align-items:center;gap:6px">
+        <span style="color:${color};font-size:10px">${icon}</span>
+        <span style="color:${color};font-size:10px">${s.session_date}</span>
+        <span style="color:var(--t2);font-size:10px;flex:1">${focus}</span>
+      </div>`
+    }).join('')
+    // Arrow connecting them
+    el.innerHTML += '<div style="margin-top:4px;padding-left:16px;color:var(--t3);font-size:9px">↑ earlier · · · · · · · · · · latest ↓</div>'
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--red)">Failed to load trail.</span>'
+  }
+}
+
+// ── Load session log from API ──────────────────────────────────────────
+async function loadSessionData() {
+  const statusEl = document.getElementById('session-status')
+  try {
+    const r = await fetch('/api/session/recent')
+    const sessions = await r.json()
+    if (!sessions || sessions.length === 0) {
+      statusEl.innerHTML = '<span style="color:var(--t3)">No session history found.</span>'
+      return
+    }
+    const latest = sessions[0]
+    statusEl.innerHTML = `
+      <div style="margin-bottom:8px"><span style="color:var(--blue)">▼ Latest Session</span> <span style="color:var(--t3)">· ${latest.session_date}</span></div>
+      <div><span style="color:var(--t3)">Focus:</span> ${latest.focus}</div>
+      <div style="margin-top:6px"><span style="color:var(--green)">✓ Completed:</span></div>
+      <div style="color:var(--t2);padding-left:12px;white-space:pre-wrap">${latest.completed}</div>
+      <div style="margin-top:8px"><span style="color:var(--amber)">▸ Next:</span></div>
+      <div style="color:var(--t2);padding-left:12px;white-space:pre-wrap">${latest.next_steps}</div>
+    `
+
+    // Populate next actions from latest session
+    const nextEl = document.getElementById('next-actions')
+    const steps = latest.next_steps.split('\\n').filter(s => s.trim())
+    if (steps.length > 0) {
+      nextEl.innerHTML = steps.map(s =>
+        `<div style="display:flex;align-items:start;gap:8px;padding:6px 8px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border)">
+          <span style="color:var(--amber);font-family:var(--mono);font-size:9px">▸</span>
+          <span style="font-size:11px;color:var(--t1)">${s}</span>
+        </div>`
+      ).join('')
+    } else {
+      nextEl.innerHTML = '<span style="color:var(--t3);font-size:11px;font-family:var(--mono)">No next steps recorded.</span>'
+    }
+  } catch(e) {
+    statusEl.innerHTML = '<span style="color:var(--red)">Failed to load session data.</span>'
+  }
+}
+
+// ── Infrastructure check ───────────────────────────────────────────────
+async function loadInfraStatus() {
+  const el = document.getElementById('infra-status')
+  const checks = [
+    { name: 'Flask API',   url: '/api/system/health', label: 'CIS API' },
+    { name: 'Vision Model', url: 'http://127.0.0.1:8002/health', label: 'Qwen3-VL port 8002' },
+  ]
+  const results = []
+  for (const c of checks) {
+    try {
+      const r = await fetch(c.url)
+      const ok = r.ok ? '<span style="color:var(--green)">●</span>' : '<span style="color:var(--red)">●</span>'
+      results.push(`<div>${ok} ${c.label}</div>`)
+    } catch(e) {
+      results.push(`<div><span style="color:var(--red)">●</span> ${c.label} <span style="color:var(--t3)">(offline)</span></div>`)
+    }
+  }
+  // Queue worker status
+  try {
+    const r = await fetch('/api/queue/status')
+    const d = await r.json()
+    const state = d.state || 'unknown'
+    const color = state === 'running' || state === 'idle' ? 'var(--green)' : 'var(--red)'
+    results.push(`<div><span style="color:${color}">●</span> Queue Worker (${state})</div>`)
+  } catch(e) {
+    results.push(`<div><span style="color:var(--red)">●</span> Queue Worker (offline)</div>`)
+  }
+  el.innerHTML = results.join('')
+}
+
+// ── Extraction index status ────────────────────────────────────────────
+async function loadExtractionStatus() {
+  const el = document.getElementById('extraction-status')
+  // Query counts from the filesystem rather than an API
+  try {
+    const r = await fetch('/api/system/extraction-stats')
+    const d = await r.json()
+    el.innerHTML = `
+      <div>CIS extractions: <span style="color:var(--blue)">${d.cis || '?'}</span> files</div>
+      <div>SWA extractions: <span style="color:var(--blue)">${d.swa || '?'}</span> files</div>
+      <div style="margin-top:6px"><span style="color:var(--t3)">Indexed:</span> ${d.indexed ? '<span style="color:var(--green)">● ready</span>' : '<span style="color:var(--amber)">○ not yet indexed</span>'}</div>
+    `
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--t3)">Extraction stats unavailable.</span>'
+  }
+}
+
+// ── Load scratchpad ideas from file ────────────────────────────────────
+async function loadScratchpadIdeas() {
+  const el = document.getElementById('session-ideas')
+  try {
+    const r = await fetch('/api/system/scratchpad')
+    const d = await r.json()
+    if (d.ideas && d.ideas.length > 0) {
+      el.innerHTML = d.ideas.map(item =>
+        `<div style="display:flex;align-items:start;gap:8px;padding:6px 8px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border)">
+          <span style="color:var(--blue);font-family:var(--mono);font-size:9px">◉</span>
+          <span style="font-size:11px;color:var(--t1)">${item}</span>
+        </div>`
+      ).join('')
+    } else {
+      el.innerHTML = '<span style="color:var(--t3);font-size:11px;font-family:var(--mono)">No ideas captured yet this session.</span>'
+    }
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--t3);font-size:11px;font-family:var(--mono)">Scratchpad unavailable.</span>'
+  }
+}
+
+// ── Load decisions from live_sessions ──────────────────────────────────
+async function loadDecisionTrail() {
+  const el = document.getElementById('decision-trail')
+  try {
+    const r = await fetch('/api/live/sessions')
+    const sessions = await r.json()
+    if (sessions && sessions.length > 0) {
+      const resolved = sessions.filter(s => s.status === 'resolved').slice(0, 5)
+      el.innerHTML = resolved.map(s =>
+        `<div style="display:flex;align-items:start;gap:8px;padding:6px 8px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border)">
+          <span style="color:var(--green);font-family:var(--mono);font-size:9px">◆</span>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--t1)">${s.topic}</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--mono);margin-top:2px">${s.solution ? s.solution.substring(0, 100) + '…' : ''}</div>
+          </div>
+        </div>`
+      ).join('')
+    } else {
+      el.innerHTML = '<span style="color:var(--t3);font-size:11px;font-family:var(--mono)">No decisions recorded yet.</span>'
+    }
+  } catch(e) {
+    // Fallback to static if API fails
+    el.innerHTML = '<span style="color:var(--t3);font-size:11px;font-family:var(--mono)">Decision log unavailable.</span>'
+  }
+}
+
+// ── Init ────────────────────────────────────────────────────────────────
+loadBreadcrumb()
+loadSessionData()
+loadInfraStatus()
+loadExtractionStatus()
+loadScratchpadIdeas()
+loadDecisionTrail()
+</script>

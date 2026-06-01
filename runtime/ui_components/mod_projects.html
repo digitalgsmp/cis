@@ -1,0 +1,397 @@
+<div class="module-content">
+  <div class="hdr">
+    <div class="hdr-title">Projects</div>
+    <div class="hdr-sub">Manage active projects — create, track status, link assets</div>
+  </div>
+
+  <!-- Create Project panel -->
+  <div class="card" id="create-project-card">
+    <div class="card-title">New Project</div>
+    <form id="project-form" onsubmit="return false;" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Project name</label>
+            <input id="f-proj-name" class="cis-input" type="text" placeholder="Project name" required>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Owner</label>
+            <input id="f-proj-owner" class="cis-input" type="text" placeholder="Owner / creator">
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Start date</label>
+            <input id="f-proj-start" class="cis-input" type="date">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Due date</label>
+            <input id="f-proj-due" class="cis-input" type="date">
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">User level</label>
+            <select id="f-proj-level" class="cis-select">
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="pro">Professional</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Project type</label>
+            <select id="f-proj-type" class="cis-select">
+              <option value="">— select —</option>
+              <option value="new">New creation</option>
+              <option value="iteration">Iteration / Revision</option>
+              <option value="research">Research / Investigation</option>
+              <option value="learning">Learning / Study</option>
+              <option value="infrastructure">Infrastructure / System</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="archive">Archive / Documentation</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Project goal</label>
+            <select id="f-proj-goal" class="cis-select">
+              <option value="">— select —</option>
+              <option value="explore">Explore / Experiment</option>
+              <option value="create">Create / Produce</option>
+              <option value="learn">Learn / Master</option>
+              <option value="solve">Solve / Fix</option>
+              <option value="document">Document / Preserve</option>
+              <option value="connect">Connect / Share</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-row">
+            <label class="field-label">Domain</label>
+            <select id="f-proj-domain" class="cis-select">
+              <option value="creative">Creative Production</option>
+              <option value="socialcare">Social Care / Work</option>
+              <option value="personal">Personal / Life</option>
+              <option value="technical">Technical / Infrastructure</option>
+              <option value="learning">Learning / Education</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Idea source</label>
+        <select id="f-proj-idea" class="cis-select">
+          <option value="">— standalone project (no source idea) —</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Description / goal statement</label>
+        <textarea id="f-proj-desc" class="cis-textarea" placeholder="What is this project about? What does done look like?" style="min-height:60px"></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-blue" onclick="createProject()">+ Create Project</button>
+        <button class="btn" onclick="clearProjectForm()" type="button">Clear</button>
+      </div>
+      <div id="project-status" style="font-family:var(--mono);font-size:10px;color:var(--t3);min-height:18px"></div>
+    </form>
+  </div>
+
+  <!-- Filter & sort bar -->
+  <div class="card">
+    <div class="card-title">All Projects</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn" style="font-size:9px;padding:4px 8px" onclick="sortProjects('active')" data-sort="active">Active</button>
+      <button class="btn" style="font-size:9px;padding:4px 8px" onclick="sortProjects('all')" data-sort="all">All</button>
+      <button class="btn" style="font-size:9px;padding:4px 8px" onclick="sortProjects('recent')" data-sort="recent">Recent</button>
+      <button class="btn" style="font-size:9px;padding:4px 8px" onclick="sortProjects('name')" data-sort="name">Name</button>
+      <span style="flex:1"></span>
+      <select class="cis-select" style="width:auto;min-width:140px" id="domain-filter" onchange="filterProjects()">
+        <option value="">All domains</option>
+        <option value="creative">Creative</option>
+        <option value="socialcare">Social Care</option>
+        <option value="personal">Personal</option>
+        <option value="technical">Technical</option>
+        <option value="learning">Learning</option>
+      </select>
+      <span id="project-count" style="font-family:var(--mono);font-size:10px;color:var(--t3);align-self:center">0 projects</span>
+    </div>
+
+    <!-- Status flow (XLSB-derived state vocabulary) -->
+    <div id="status-filters" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="stat-btn" data-status="" onclick="filterByStatus('')" style="background:transparent;color:var(--t2)">All</button>
+      <button class="stat-btn" data-status="captured" onclick="filterByStatus('captured')">Captured</button>
+      <button class="stat-btn" data-status="initiated" onclick="filterByStatus('initiated')">Initiated</button>
+      <button class="stat-btn" data-status="active" onclick="filterByStatus('active')">Active</button>
+      <button class="stat-btn" data-status="blocked" onclick="filterByStatus('blocked')">Blocked</button>
+      <button class="stat-btn" data-status="review" onclick="filterByStatus('review')">Review</button>
+      <button class="stat-btn" data-status="complete" onclick="filterByStatus('complete')">Complete</button>
+    </div>
+
+    <div id="project-list"></div>
+  </div>
+</div>
+
+<script>
+// ── Projects storage ──
+let projects = JSON.parse(localStorage.getItem('cis_projects') || '[]')
+let currentSort = 'active'
+let currentStatusFilter = ''
+
+// ── Load unattached ideas into the source selector ──
+function refreshIdeaSource() {
+  const sel = document.getElementById('f-proj-idea')
+  const ideas = JSON.parse(localStorage.getItem('cis_ideas') || '[]')
+  const unattached = ideas.filter(i => i.status !== 'promoted')
+  sel.innerHTML = '<option value="">— standalone project (no source idea) —</option>' +
+    unattached.map(i => `<option value="${i.id}">${i.name} (${i.category || 'no category'})</option>`).join('')
+}
+
+function createProject() {
+  const name = document.getElementById('f-proj-name').value.trim()
+  if (!name) { document.getElementById('project-status').textContent = '⚠ Project name is required'; return }
+
+  const proj = {
+    id: 'proj_' + Date.now(),
+    name,
+    owner: document.getElementById('f-proj-owner').value.trim() || 'self',
+    startDate: document.getElementById('f-proj-start').value || '',
+    dueDate: document.getElementById('f-proj-due').value || '',
+    level: document.getElementById('f-proj-level').value,
+    type: document.getElementById('f-proj-type').value,
+    goal: document.getElementById('f-proj-goal').value,
+    domain: document.getElementById('f-proj-domain').value,
+    description: document.getElementById('f-proj-desc').value.trim(),
+    sourceIdea: document.getElementById('f-proj-idea').value,
+    status: 'initiated',
+    progress: 0,
+    linkedResearch: [],
+    linkedReferences: [],
+    linkedLearning: [],
+    linkedTemplates: [],
+    linkedChecklists: [],
+    scheduleSlots: [],
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  }
+
+  // Mark source idea as promoted
+  if (proj.sourceIdea) {
+    const ideas = JSON.parse(localStorage.getItem('cis_ideas') || '[]')
+    const idea = ideas.find(i => i.id === proj.sourceIdea)
+    if (idea) { idea.status = 'promoted'; localStorage.setItem('cis_ideas', JSON.stringify(ideas)) }
+  }
+
+  projects.unshift(proj)
+  localStorage.setItem('cis_projects', JSON.stringify(projects))
+  renderProjects()
+  clearProjectForm()
+  refreshIdeaSource()
+  document.getElementById('project-status').textContent = '✓ Created: ' + proj.name
+}
+
+function clearProjectForm() {
+  ['f-proj-name','f-proj-owner','f-proj-desc'].forEach(id => document.getElementById(id).value = '')
+  document.getElementById('f-proj-start').value = ''
+  document.getElementById('f-proj-due').value = ''
+  document.getElementById('f-proj-level').value = 'beginner'
+  document.getElementById('f-proj-type').value = ''
+  document.getElementById('f-proj-goal').value = ''
+  document.getElementById('f-proj-domain').value = 'creative'
+  document.getElementById('f-proj-idea').value = ''
+}
+
+// ── Rendering ──
+const STATUS_ORDER = ['captured','initiated','active','blocked','review','complete']
+
+function renderProjects() {
+  let filtered = [...projects]
+  const domainFilter = document.getElementById('domain-filter').value
+  if (domainFilter) filtered = filtered.filter(p => p.domain === domainFilter)
+  if (currentStatusFilter) filtered = filtered.filter(p => p.status === currentStatusFilter)
+
+  if (currentSort === 'active') filtered.sort((a,b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status))
+  else if (currentSort === 'recent') filtered.sort((a,b) => new Date(b.created) - new Date(a.created))
+  else if (currentSort === 'name') filtered.sort((a,b) => a.name.localeCompare(b.name))
+
+  const el = document.getElementById('project-list')
+  document.getElementById('project-count').textContent = filtered.length + ' project' + (filtered.length !== 1 ? 's' : '')
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state">No projects match this filter.</div>'
+    return
+  }
+
+  el.innerHTML = filtered.map(p => {
+    const statusColor = p.status === 'complete' ? 'var(--green)' : p.status === 'blocked' ? 'var(--red)' : p.status === 'active' ? 'var(--blue)' : 'var(--amber)'
+    return `<div class="proj-card" onclick="openProject('${p.id}')">
+      <div class="proj-hdr">
+        <div class="proj-name">${p.name}</div>
+        <span class="proj-status" style="border-color:${statusColor};color:${statusColor}">${p.status}</span>
+      </div>
+      <div class="proj-meta">
+        <span class="tag-domain ${p.domain}">${p.domain}</span>
+        ${p.type ? `<span class="tag">${p.type}</span>` : ''}
+        ${p.goal ? `<span class="tag">${p.goal}</span>` : ''}
+        <span class="date">${p.startDate || '—'} → ${p.dueDate || '—'}</span>
+      </div>
+      ${p.description ? `<div class="proj-desc">${p.description.slice(0,160)}${p.description.length > 160 ? '…' : ''}</div>` : ''}
+      <div class="prog-bar"><div class="prog-fill" style="width:${p.progress}%"></div></div>
+    </div>`
+  }).join('')
+}
+
+function sortProjects(mode) { currentSort = mode; renderProjects() }
+function filterByStatus(status) {
+  currentStatusFilter = status
+  document.querySelectorAll('.stat-btn').forEach(b => b.style.background = b.dataset.status === status ? 'rgba(74,158,255,.15)' : 'transparent')
+  renderProjects()
+}
+function filterProjects() { renderProjects() }
+
+// ── Project detail / management modal ──
+function openProject(id) {
+  const p = projects.find(x => x.id === id)
+  if (!p) return
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <div class="modal-title">${p.name}</div>
+      <button class="btn" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="det-row">
+        <div class="det-field"><label>Status</label>
+          <select class="cis-select det-edit" data-field="status" data-id="${p.id}" onchange="updateProjectField(this)">
+            <option value="captured" ${p.status==='captured'?'selected':''}>Captured</option>
+            <option value="initiated" ${p.status==='initiated'?'selected':''}>Initiated</option>
+            <option value="active" ${p.status==='active'?'selected':''}>Active</option>
+            <option value="blocked" ${p.status==='blocked'?'selected':''}>Blocked</option>
+            <option value="review" ${p.status==='review'?'selected':''}>In Review</option>
+            <option value="complete" ${p.status==='complete'?'selected':''}>Complete</option>
+          </select>
+        </div>
+        <div class="det-field"><label>Progress</label><input class="cis-input det-edit" type="number" min="0" max="100" value="${p.progress}" data-field="progress" data-id="${p.id}" onchange="updateProjectField(this)" style="width:80px"></div>
+        <div class="det-field"><label>Owner</label><input class="cis-input det-edit" type="text" value="${p.owner}" data-field="owner" data-id="${p.id}" onchange="updateProjectField(this)"></div>
+      </div>
+      <div class="det-row">
+        <div class="det-field"><label>Start</label><input class="cis-input det-edit" type="date" value="${p.startDate}" data-field="startDate" data-id="${p.id}" onchange="updateProjectField(this)"></div>
+        <div class="det-field"><label>Due</label><input class="cis-input det-edit" type="date" value="${p.dueDate}" data-field="dueDate" data-id="${p.id}" onchange="updateProjectField(this)"></div>
+        <div class="det-field"><label>Level</label><select class="cis-select det-edit" data-field="level" data-id="${p.id}" onchange="updateProjectField(this)">
+          ${['beginner','intermediate','advanced','pro'].map(l => `<option value="${l}" ${p.level===l?'selected':''}>${l}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="det-row">
+        <div class="det-field"><label>Type</label><input class="cis-input det-edit" type="text" value="${p.type}" data-field="type" data-id="${p.id}" onchange="updateProjectField(this)"></div>
+        <div class="det-field"><label>Goal</label><input class="cis-input det-edit" type="text" value="${p.goal}" data-field="goal" data-id="${p.id}" onchange="updateProjectField(this)"></div>
+      </div>
+      <div class="det-field"><label>Description</label><textarea class="cis-textarea det-edit" data-field="description" data-id="${p.id}" onchange="updateProjectField(this)" style="min-height:60px">${p.description||''}</textarea></div>
+      <div class="det-field" style="margin-top:12px"><label>Linked Assets</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <span class="tag">📚 ${p.linkedResearch.length} research</span>
+          <span class="tag">📎 ${p.linkedReferences.length} references</span>
+          <span class="tag">🎓 ${p.linkedLearning.length} learning</span>
+          <span class="tag">📋 ${p.linkedTemplates.length} templates</span>
+          <span class="tag">✅ ${p.linkedChecklists.length} checklists</span>
+          <span class="tag">📅 ${p.scheduleSlots.length} schedule slots</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">${p.id} · created ${new Date(p.created).toLocaleDateString()}</span>
+      <button class="btn btn-red" onclick="deleteProject('${p.id}',this)">Delete project</button>
+    </div>
+  </div>`
+  document.body.appendChild(overlay)
+  overlay.onclick = () => overlay.remove()
+}
+
+function updateProjectField(el) {
+  const id = el.dataset.id
+  const field = el.dataset.field
+  const p = projects.find(x => x.id === id)
+  if (!p) return
+  p[field] = el.value || (el.type === 'number' ? parseInt(el.value) || 0 : '')
+  p.updated = new Date().toISOString()
+  localStorage.setItem('cis_projects', JSON.stringify(projects))
+  renderProjects()
+}
+
+function deleteProject(id, btn) {
+  if (!confirm('Delete this project?')) return
+  projects = projects.filter(p => p.id !== id)
+  localStorage.setItem('cis_projects', JSON.stringify(projects))
+  btn.closest('.modal-overlay').remove()
+  renderProjects()
+}
+
+// ── Listen for idea promotions ──
+window.addEventListener('idea-promoted', e => {
+  refreshIdeaSource()
+  const { detail: idea } = e
+  document.getElementById('f-proj-name').value = idea.name
+  document.getElementById('f-proj-desc').value = idea.description || ''
+  document.getElementById('f-proj-idea').value = idea.id
+  // Pre-fill domain match if available
+  const domainMap = { creative:'creative', socialcare:'socialcare', personal:'personal', technical:'technical', learning:'learning' }
+  if (domainMap[idea.domain]) document.getElementById('f-proj-domain').value = domainMap[idea.domain]
+  // Scroll to create form
+  document.getElementById('create-project-card').scrollIntoView({ behavior: 'smooth' })
+})
+
+// ── Init ──
+refreshIdeaSource()
+renderProjects()
+</script>
+
+<style>
+.proj-card {
+  padding:12px 14px; margin-bottom:6px; border-radius:5px;
+  background:var(--bg-surface); border:1px solid var(--border); cursor:pointer;
+  transition:all .12s;
+}
+.proj-card:hover { border-color:var(--border-hi); background:var(--bg-raised) }
+.proj-hdr { display:flex; align-items:center; gap:8px; margin-bottom:4px }
+.proj-name { font-family:var(--cond); font-size:15px; font-weight:600; color:var(--t1); flex:1 }
+.proj-status { font-family:var(--mono); font-size:9px; padding:2px 8px; border-radius:10px; border:1px solid; text-transform:uppercase }
+.proj-meta { display:flex; gap:4px; flex-wrap:wrap; align-items:center; margin-bottom:4px }
+.proj-desc { font-size:11px; color:var(--t3); line-height:1.4; margin:4px 0 8px }
+.prog-bar { height:3px; background:var(--bg-base); border-radius:2px; overflow:hidden }
+.prog-fill { height:100%; background:var(--blue); border-radius:2px; transition:width .3s }
+.stat-btn {
+  font-family:var(--mono); font-size:9px; padding:3px 8px; border-radius:12px;
+  border:1px solid var(--border); cursor:pointer; transition:all .12s; color:var(--t2); background:transparent
+}
+.stat-btn:hover { border-color:var(--border-hi) }
+.modal-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7);
+  display:flex; align-items:center; justify-content:center; z-index:1000;
+}
+.modal {
+  background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;
+  width:90%; max-width:640px; max-height:85vh; overflow-y:auto;
+}
+.modal-hdr { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border) }
+.modal-title { flex:1; font-family:var(--cond); font-weight:700; font-size:18px; color:var(--t1) }
+.modal-body { padding:16px }
+.modal-footer { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--border) }
+.det-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px }
+.det-field { flex:1; min-width:120px }
+.det-field label { font-family:var(--cond); font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); display:block; margin-bottom:3px }
+.det-edit { transition:border-color .12s }
+.empty-state { text-align:center; padding:30px; color:var(--t3); font-size:12px }
+.btn-red { background:rgba(255,74,106,.1); border-color:rgba(255,74,106,.3); color:var(--red) }
+.btn-red:hover { background:rgba(255,74,106,.2) }
+</style>

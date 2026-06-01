@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/architecture_atlas/original_CISChats/architecture_atlas_prompt.md

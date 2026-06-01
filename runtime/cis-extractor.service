@@ -1,0 +1,18 @@
+[Unit]
+Description=CIS Extractor — auto-restart on interrupt
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eric
+Environment=DEEPSEEK_API_KEY=sk-ba0b06b597c54bb9be63846d66b4f37d
+WorkingDirectory=/mnt/projects/cis/runtime
+ExecStart=/usr/bin/python3 /mnt/projects/cis/runtime/extractor_daemon.sh
+Restart=always
+RestartSec=30
+StandardOutput=append:/mnt/projects/cis/logs/extractor_daemon.log
+StandardError=append:/mnt/projects/cis/logs/extractor_daemon.log
+
+[Install]
+WantedBy=multi-user.target

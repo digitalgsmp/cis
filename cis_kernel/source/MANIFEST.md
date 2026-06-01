@@ -1,0 +1,874 @@
+# CIS Kernel v1 — Source Manifest
+Generated: 2026-05-13 08:58:03
+Kernel root: /mnt/projects/cis/cis_kernel
+
+## Summary
+
+| Group | Count | Priority | Description |
+|-------|-------|----------|-------------|
+| adrs | 5 | LOW | Architecture Decision Records — governance artifacts |
+| architecture_maps | 6 | HIGH | Architecture maps, cross-references, topology documents |
+| build_plans | 8 | HIGH | Build sequences and roadmaps |
+| extraction_analyses | 21 | MEDIUM | Model-written extraction summaries of chat sessions |
+| handoffs | 12 | SITUATIONAL | Session handoff documents |
+| obsidian_vault | 114 | REFERENCE | Obsidian vault — git mirrored CIS documentation |
+| other_docs | 439 | SITUATIONAL | Other documents throughout the docs folder |
+| runtime_code | 68 | REFERENCE | Running application code and UI |
+| session_logs | 7 | SITUATIONAL | Session logs and minutes records |
+| transcripts_claude | 79 | MEDIUM | Claude & ChatGPT transcripts — raw exploration |
+| transcripts_original | 17 | MEDIUM | Original CIS chats — early development |
+| vision | 37 | HIGH | LegacyBuildFiles — ground truth, written WITH Eric |
+
+**Total: 813 source files registered**
+
+## Files by Group
+
+### adrs (5 files, priority: LOW)
+
+- [?] /mnt/projects/cis/docs/ADRs/ADR-041_Artifact_Registry_Schema.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-045_Execution_Queue_Ownership_Layer.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-047_SCOPE_PREDRAFT.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-048_SCOPE_PREDRAFT.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-048_Staged_Draft_Intake_Layer.md
+
+### architecture_maps (6 files, priority: HIGH)
+
+- [?] /mnt/projects/cis/docs/CIS_CONFLICT_REGISTER.md
+- [?] /mnt/projects/cis/docs/CIS_FILE_MAP.md
+- [?] /mnt/projects/cis/docs/YOUR_DOCUMENT_MAP.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/architecture_atlas_prompt.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/13_RUNTIME_TOPOLOGY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/insights/INTEGRATED_VISION_CIS_CORE_ARCHITECTURE.md
+
+### build_plans (8 files, priority: HIGH)
+
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/CIS_Pivot_Chain of Thought.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/_mnt_projects_cis_.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/teach me something about claude.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/vLLM _ Qwen VL Evaluation (April 12, 2026)_Full.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_Canonical_Build_Sequence.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_Plain_Language_Build_Roadmap.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_build_dependency_graph.svg
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/cis_mockup.html
+
+### extraction_analyses (21 files, priority: MEDIUM)
+
+- [?] /mnt/projects/cis/docs/architecture_atlas/architecture_atlas_prompt_wias_project_manager_version_1_xlsb_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_build_plan_v_2_memory_capture_strategy_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_canonical_build_sequence_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_canonical_build_sequence_plain_language_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_001_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_001_rantwiceby accident_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_002_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_003_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_004_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_005_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_006_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_007_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_008_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_009_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_010_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_011_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_012_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_013_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_014_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_015_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_016_extraction_analysis.md
+
+### handoffs (12 files, priority: SITUATIONAL)
+
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/# CIS HANDOFF — Phase D Automation Start.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/00A_Phase 1 — Core Structure (lock system logic first).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Current Position.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Phase D.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Visual Intelligence + Record System (Post-Phase D Extension).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — vLLM _ Qwen VL Evaluation (April 12, 2026).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS WORKLOG — Phase D Architecture & Visual Benchmark.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS_LegacyBuildFiles_Consolidation.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/Clean update pack, organized by document.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_How You Work With These Files (CIS Operating Model).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_What You SHOULD Pass to a New Chat (Minimal + Complete).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_Where Phases Are Defined (Current State).md
+
+### obsidian_vault (114 files, priority: REFERENCE)
+
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Build_Sequence/README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/CIS_LIVE.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/ADRs.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-18_0740.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-21_1418.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-21_1446.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0336.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0348.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0350.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0410.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0416.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0547.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0618.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0817.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0819.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0824.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-23_0139.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-23_0434.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-24_0530.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-25_1551.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_0722.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_1714.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_1901.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_0408.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_0710.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_2152.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-28_0239.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-28_0553.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-29_0015.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-29_0836.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-30_0509.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-30_1852.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-01_0548.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-02_0558.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-04_0214.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-04_0413.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0323.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0427.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0625.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Dashboard_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Insight_Capture_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Review_Command_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/adversarial_review.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/architect.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/context_compression.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/implementation.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/AI Harness Engineering - Future of AI.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS Formal Phased Construction Plan.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Creative_Intelligence_System_v1.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Manual _Mode _v1.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_Pre-Development System_ChatGTP.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_Pre-Development System_Gemini .md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_PreDev_Infrastructure_Plan_Claude.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CISv1_Handoffs/🧾 CIS HANDOFF_4.13.2026.0.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/CISv1_Boorstrap_files_README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/Memory.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/READ ME.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/State.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__ADVENTURE_INTO_FEAR_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__AMERICAN_VAMPIRE_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__BEFORE_WATCHMEN_005__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SILVER_SURFER_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SPIRIT__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VALKERIA_CHRONICLES_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VAMPIRELLA_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_002__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__001/KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__002/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__XMEN_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/knowledge__doc__color__visual_dictionary__001/record.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/IMAGE__WEIRD_WAR_TALES_COVER__001/KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/knowledge__doc__color__visual_dictionary__001/record.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/memory_additions_20260420.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-18_0740.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-21_1418.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-21_1446.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0336.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0348.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0350.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0410.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0416.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0547.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0618.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0817.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0819.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0824.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-23_0139.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-23_0434.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-24_0530.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-25_1551.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_0722.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_1714.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_1901.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_0408.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_0710.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_2152.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-28_0239.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-28_0553.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-29_0015.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-29_0836.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-30_0509.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-30_1852.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-01_0548.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-02_0558.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-04_0214.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-04_0413.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-05_0323.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-05_0427.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Master_Handoff_2026-04-17.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/POST-COMMIT ADDENDUM — 2026-04-18.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/2_CIS_REORIENTATION.md
+
+### other_docs (439 files, priority: SITUATIONAL)
+
+- [?] /mnt/projects/cis/docs/ADRs/ADR-041_Artifact_Registry_Schema.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-045_Execution_Queue_Ownership_Layer.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-047_SCOPE_PREDRAFT.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-048_SCOPE_PREDRAFT.md
+- [?] /mnt/projects/cis/docs/ADRs/ADR-048_Staged_Draft_Intake_Layer.md
+- [?] /mnt/projects/cis/docs/CIS_CONFLICT_REGISTER.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/app.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/appearance.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/community-plugins.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/core-plugins.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/graph.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/plugins/obsidian-git/data.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/plugins/obsidian-git/manifest.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/.obsidian/workspace.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Build_Sequence/README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/CIS_LIVE.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/ADRs.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-18_0740.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-21_1418.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-21_1446.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0336.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0348.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0350.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0410.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0416.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0547.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0618.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0817.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0819.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-22_0824.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-23_0139.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-23_0434.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-24_0530.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-25_1551.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_0722.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_1714.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-26_1901.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_0408.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_0710.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-27_2152.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-28_0239.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-28_0553.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-29_0015.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-29_0836.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-30_0509.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-04-30_1852.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-01_0548.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-02_0558.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-04_0214.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-04_0413.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0323.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0427.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Handoff_2026-05-05_0625.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Dashboard_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Insight_Capture_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/CIS_Master_Handoff_files/CIS_Handoff_Review_Command_Session.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/adversarial_review.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/architect.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/context_compression.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/Phase_PD/skills/implementation.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/AI Harness Engineering - Future of AI.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS Formal Phased Construction Plan.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Creative_Intelligence_System_v1.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Manual _Mode _v1.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_Pre-Development System_ChatGTP.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_Pre-Development System_Gemini .md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CIS_Pre-Development System/CIS_PreDev_Infrastructure_Plan_Claude.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/CISv1_Handoffs/🧾 CIS HANDOFF_4.13.2026.0.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/CISv1_Boorstrap_files_README.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/Memory.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/READ ME.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/State.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/streamdeck_01.png
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/_archive/v1_Bootstrap_files/streamdeck_02.png
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__ADVENTURE_INTO_FEAR_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__ADVENTURE_INTO_FEAR_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__AMERICAN_VAMPIRE_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__AMERICAN_VAMPIRE_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__BEFORE_WATCHMEN_005__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__BEFORE_WATCHMEN_005__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SILVER_SURFER_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SILVER_SURFER_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SPIRIT__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__THE_SPIRIT__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VALKERIA_CHRONICLES_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VALKERIA_CHRONICLES_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VAMPIRELLA_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__VAMPIRELLA_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_002__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_002__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__001/KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__002/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__WEIRD_WAR_TALES_COVER__002/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__XMEN_001__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/IMAGE__XMEN_001__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/analysis/008 Amazing Adventures 015 Cover_analysis.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/analysis/008 Amazing Adventures 015 Cover_retrieval.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/record.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/source/008 Amazing Adventures 015 Cover.png
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/Weird_War_Tales_/analysis/Weird_War_Tales_cover_analysis.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/knowledge__doc__color__visual_dictionary__001/record.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/knowledge__doc__color__visual_dictionary__001/source/output.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/IMAGE__WEIRD_WAR_TALES_COVER__001/KNOWLEDGE__IMAGE__WEIRD_WAR_TALES_COVER__001__001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/IMAGE__WEIRD_WAR_TALES_COVER__001/record_001.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/analysis/008 Amazing Adventures 015 Cover_analysis.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/analysis/008 Amazing Adventures 015 Cover_retrieval.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/record.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/KNOWLEDGE__DOC__COMICS__amazing_adventures_015__001/source/008 Amazing Adventures 015 Cover.png
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/Weird_War_Tales_/analysis/Weird_War_Tales_cover_analysis.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/knowledge__doc__color__visual_dictionary__001/record.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/knowledge_records/records/knowledge__doc__color__visual_dictionary__001/source/output.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/memory_additions_20260420.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-18_0740.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-21_1418.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-21_1446.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0336.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0348.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0350.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0410.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0416.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0547.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0618.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0817.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0819.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-22_0824.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-23_0139.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-23_0434.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-24_0530.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-25_1551.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_0722.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_1714.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-26_1901.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_0408.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_0710.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-27_2152.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-28_0239.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-28_0553.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-29_0015.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-29_0836.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-30_0509.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-04-30_1852.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-01_0548.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-02_0558.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-04_0214.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-04_0413.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-05_0323.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Handoff_2026-05-05_0427.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/CIS_Master_Handoff_2026-04-17.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/POST-COMMIT ADDENDUM — 2026-04-18.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/projects/PROJECT__CIS__BUILD__V1/project__cis__build__v1.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/2_CIS_REORIENTATION.md
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/last_manifest.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/prompts/ingest_text.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/prompts/tagging.txt
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/schemas/knowledge_spine_v1.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/schemas/knowledge_v1.json
+- [?] /mnt/projects/cis/docs/CIS_Creative_Intelligence_System_v1/runtime_scripts/runtime/schemas/spine_node_v1.json
+- [?] /mnt/projects/cis/docs/CIS_FILE_MAP.md
+- [?] /mnt/projects/cis/docs/HANDOFF_SCHEMA.md
+- [?] /mnt/projects/cis/docs/X_02_MEMORY.md
+- [?] /mnt/projects/cis/docs/YOUR_DOCUMENT_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/Blender 2.80 Fundamentals Transcripts (Copy 2).md
+- [?] /mnt/projects/cis/docs/_archive/Blender 2.80 Fundamentals Transcripts (Copy).md
+- [?] /mnt/projects/cis/docs/_archive/Blender 2.80 Fundamentals Transcripts.md
+- [?] /mnt/projects/cis/docs/_archive/CIS EXPERIMENT RECORD.txt
+- [?] /mnt/projects/cis/docs/_archive/CIS Formal Phased Construction Plan.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/CIS_Pivot_Chain of Thought.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/_mnt_projects_cis_.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/teach me something about claude.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/3 Platform Chat/vLLM _ Qwen VL Evaluation (April 12, 2026)_Full.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_Canonical_Build_Sequence.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_Plain_Language_Build_Roadmap.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Canonical_Build_Sequence/CIS_build_dependency_graph.svg
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/# CIS HANDOFF — Phase D Automation Start.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/00A_Phase 1 — Core Structure (lock system logic first).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Current Position.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Phase D.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Visual Intelligence + Record System (Post-Phase D Extension).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — vLLM _ Qwen VL Evaluation (April 12, 2026).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS WORKLOG — Phase D Architecture & Visual Benchmark.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS_LegacyBuildFiles_Consolidation.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/Clean update pack, organized by document.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_How You Work With These Files (CIS Operating Model).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_What You SHOULD Pass to a New Chat (Minimal + Complete).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_Where Phases Are Defined (Current State).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_00A WORKING METHOD md.txt
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_00_OPERATOR_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_01_SYSTEM_BLUEPRINT.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_02_MEMORY.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_03_STATE.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_04_MASTER_ARCHITECTURE_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_05_Core Tool Stream.md.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_06_Intelligence Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_07_Knowledge Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_08_Workflow Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_09_Agent Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_10_Application Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_11_Sound Stream — Expanded.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS ROUTER SPEC_Intelligence Routing & Model Orchestration.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_ WORKFLOW_EXECUTION SPEC v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_CRITICAL ADDITION.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_DISCOVERY_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_EXECUTION_LAYER.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_REINFORCEMENT_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_RELATIONSHIP_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_RUNTIME_SPEC_v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CONTROL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/_CIS_The pattern across the CIS docs.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS Discovery Workbench v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS Intake + Knowledge Workbench v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS_WORKBENCH_V1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Handoff_2026-04-23_0434_ChAT.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_LIVE_HANDOFF (1).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_LIVE_HANDOFF.md
+- [?] /mnt/projects/cis/docs/_archive/ChatGTP’s response to vscode, obsidian and github.md
+- [?] /mnt/projects/cis/docs/_archive/ChatGTP’s response to_ CIS_PreDev_Infrastructure_Plan.md
+- [?] /mnt/projects/cis/docs/_archive/Gemini’s response to_ CIS_PreDev_Infrastructure_Plan.md
+- [?] /mnt/projects/cis/docs/_archive/Github.png
+- [?] /mnt/projects/cis/docs/_archive/PreDev Infrastructure Plan and the Phase PD Build Plan/CIS Project — New Session Handoff.md
+- [?] /mnt/projects/cis/docs/_archive/PreDev Infrastructure Plan and the Phase PD Build Plan/CIS_Phase_PD_Build_Plan.docx.md
+- [?] /mnt/projects/cis/docs/_archive/PreDev Infrastructure Plan and the Phase PD Build Plan/CIS_PreDev_Infrastructure_Plan.docx.md
+- [?] /mnt/projects/cis/docs/_archive/Refactoring CIS application into modular structure.md
+- [?] /mnt/projects/cis/docs/_archive/VScode.png
+- [?] /mnt/projects/cis/docs/_archive/_LXC container to sandbox the CIS_LIVE.md
+- [?] /mnt/projects/cis/docs/_archive/generated_script_artifacts/042926_Project_Primer.txt
+- [?] /mnt/projects/cis/docs/_archive/obsidian.png
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/_archive/orientation_backups_20260430/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/_screenshots/Screenshot from 2026-05-12 21-41-58.png
+- [?] /mnt/projects/cis/docs/_screenshots/Screenshot from 2026-05-12 21-48-46.png
+- [?] /mnt/projects/cis/docs/architecture_atlas/architecture_atlas_prompt_wias_project_manager_version_1_xlsb_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_build_plan_v_2_memory_capture_strategy_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_canonical_build_sequence_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_canonical_build_sequence_plain_language_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_001_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_001_rantwiceby accident_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_002_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_003_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_004_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_005_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_006_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_007_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_008_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_009_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_010_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_011_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_012_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_013_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_014_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_015_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/cis_chat_2026_04_016_extraction_analysis.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Canonical_Build_Sequence.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Canonical_Build_Sequence_Plain_Language.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_001.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_002.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_003.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_004.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_005.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_006.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_007.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_008.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_009.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_010.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_011.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_012.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_013.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_014.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_015.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_016.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/Ingest the prompt the.txt
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/architecture_atlas_prompt.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/architecture_atlas_prompt_WIAS Project Manager (version 1).xlsb.xlsx
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/cis_build_plan_v_2_memory_capture_strategy.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/example_CIS_Chat_2026-04_004_topo03.png
+- [?] /mnt/projects/cis/docs/cis_kernel_file_structure.md
+- [?] /mnt/projects/cis/docs/cis_kernel_source_registry.md
+- [?] /mnt/projects/cis/docs/cis_kernel_source_topology.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-14_Choosing an AI platform for professional project guidance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-16_CIS Creative Intelligence System architecture handoff.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-16_CIS canonical build sequence and architectural dependencies.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-17_Hand off evaluation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_CIS session data synchronization checklist.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_Phase 1 intelligence extraction priorities.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_Session execution and image pipeline setup.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-19_LXC sandboxing vs CIS root folder for file hosting.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_AI memory capabilities.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_Refactoring CIS application into modular structure.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_Resuming creative VM work.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_App showing black screen after code change.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_Proxmox VM snapshot creation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_Session close and handoff process clarification.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-22_CIS build continuation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-22_Model registry API implementation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-23_Starting a new session.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-23_Video preprocessing schema definition setup.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-24_CIS phase 1 intelligence extraction handoff.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-24_Retry attempt taking longer than expected.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-25_Verification mechanism for completed work.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-26_New chatSearchChatsProjectsCodeCustomizeDesignMoreRecentsHidePhase.txt
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/CIS Session Transcript Extraction Contract v1.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/12_CONTRACT_AUTHORITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/13_RUNTIME_TOPOLOGY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/14_GOVERNANCE_GLOSSARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/15_INHERITANCE_INDEX.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/Current State Updated.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/PRIMER_UPDATE_COMPLETION_REPORT_2026-05-02.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/PROJECT_PRIMER_UPDATE_CONSTITUTIONAL_MEMORY_GOVERNANCE_REVISION.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-04-28_operator_layer_pivot.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-04-29_operator_layer_pivot_and_pd5_governance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-05-02_constitutional_memory_governance_primer_rewrite.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/apply_manifest_20260502_0047.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260503_1926/apply_manifest_20260503_1926.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/apply_manifest_20260505_0058.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0119/13_RUNTIME_TOPOLOGY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0119/apply_manifest_20260505_0119.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/Do NOT include conversational.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/PROJECT_PRIMER_UPDATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-28_operator_layer_pivot.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-29_operator_layer_pivot_and_pd5_governance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-30_primer_stabilization_and_intake_architecture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/_update_staging/SESSION_DISTILLATIONS/2026-04-30_primer_stabilization_and_intake_architecture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/Do NOT include conversational.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer_backup_20260501_012957/archive/Project_Primer_Update.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/Phase 0.5 Replan Orchestrator.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/RUNTIME IMPLEMENTATION CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-16_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-17_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-17_002.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-18_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-18_002.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-18_003.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-19_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-20_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-21_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-21_002.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-21_003.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-22_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-22_002.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-23_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/SESSION_INSIGHT_RECORD_2026-04-24_001.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/_Automation_Discussion_ChatGTP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/_FOUNDATIONAL CONTROL CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/_adversarial_review.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/Chat_Extraction_first_try/insights_First_Try/_all_insights.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/TRIANGULATION_WORKFLOW.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/captures/2026-05-12_cis_kernel_session_capture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/captures/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/data-b54cc197-2936-43cc-93f1-5af9ef76f02a-1777182749-2fd949a4-batch-0000/conversations.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/data-b54cc197-2936-43cc-93f1-5af9ef76f02a-1777182749-2fd949a4-batch-0000/memories.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/data-b54cc197-2936-43cc-93f1-5af9ef76f02a-1777182749-2fd949a4-batch-0000/projects.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/data-b54cc197-2936-43cc-93f1-5af9ef76f02a-1777182749-2fd949a4-batch-0000/users.json
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/drive-download-20260426T063855Z-3-001/Karpathy LLM Knowledge Bases.txt
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/drive-download-20260426T063855Z-3-001/https_g.co_ge.txt
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/insights/INTEGRATED_VISION_CIS_CORE_ARCHITECTURE.md
+- [?] /mnt/projects/cis/docs/contracts/CIS Processing Profile Contract.md
+- [?] /mnt/projects/cis/docs/contracts/CIS Review States Contract.md
+- [?] /mnt/projects/cis/docs/contracts/CIS Session Transcript Extraction Contract v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS Source Manifest Contract.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Automation_Reduction_Contract_v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Execution_Layer_Contract_v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_PD5_Operational_Governance_Contract_v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Primer_Update_Governance_Contract_Dicussion.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Primer_Update_Governance_Contract_v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Verification_Layer_Contract_v1.md
+- [?] /mnt/projects/cis/docs/contracts/CIS_Verification_Layer_Contract_v1_Addendum_A.md
+- [?] /mnt/projects/cis/docs/contracts/PROJECT_PRIMER_UPDATE_CONSTITUTIONAL_MEMORY_GOVERNANCE_REVISION.md
+- [?] /mnt/projects/cis/docs/references/Why the Future of AI is a File System .md
+
+### runtime_code (68 files, priority: REFERENCE)
+
+- [?] /mnt/projects/cis/runtime/_archive/cis_dashboard_monolith_20260420.py
+- [?] /mnt/projects/cis/runtime/_archive/config.py
+- [?] /mnt/projects/cis/runtime/_archive/live_db.py
+- [?] /mnt/projects/cis/runtime/api/__init__.py
+- [?] /mnt/projects/cis/runtime/api/captures.py
+- [?] /mnt/projects/cis/runtime/api/decisions.py
+- [?] /mnt/projects/cis/runtime/api/drafts.py
+- [?] /mnt/projects/cis/runtime/api/extraction_runs.py
+- [?] /mnt/projects/cis/runtime/api/gpt.py
+- [?] /mnt/projects/cis/runtime/api/live.py
+- [?] /mnt/projects/cis/runtime/api/models.py
+- [?] /mnt/projects/cis/runtime/api/operator.py
+- [?] /mnt/projects/cis/runtime/api/pipeline.py
+- [?] /mnt/projects/cis/runtime/api/projects.py
+- [?] /mnt/projects/cis/runtime/api/queue.py
+- [?] /mnt/projects/cis/runtime/api/records.py
+- [?] /mnt/projects/cis/runtime/api/session.py
+- [?] /mnt/projects/cis/runtime/api/system.py
+- [?] /mnt/projects/cis/runtime/api/tasks.py
+- [?] /mnt/projects/cis/runtime/app.py
+- [?] /mnt/projects/cis/runtime/cis_classify.py
+- [?] /mnt/projects/cis/runtime/cis_conflict_append.py
+- [?] /mnt/projects/cis/runtime/cis_convert_export.py
+- [?] /mnt/projects/cis/runtime/cis_dashboard.html
+- [?] /mnt/projects/cis/runtime/cis_download_watcher.py
+- [?] /mnt/projects/cis/runtime/cis_extract.py
+- [?] /mnt/projects/cis/runtime/cis_intake.py
+- [?] /mnt/projects/cis/runtime/cis_migrate_041.py
+- [?] /mnt/projects/cis/runtime/cis_normalize.py
+- [?] /mnt/projects/cis/runtime/cis_preprocess.py
+- [?] /mnt/projects/cis/runtime/cis_review.py
+- [?] /mnt/projects/cis/runtime/cis_slot1_healthcheck.py
+- [?] /mnt/projects/cis/runtime/cis_test_queue.py
+- [?] /mnt/projects/cis/runtime/cis_verify.py
+- [?] /mnt/projects/cis/runtime/cis_verify_jobs.py
+- [?] /mnt/projects/cis/runtime/cis_verify_semantic.py
+- [?] /mnt/projects/cis/runtime/config.py
+- [?] /mnt/projects/cis/runtime/connection.py
+- [?] /mnt/projects/cis/runtime/db/__init__.py
+- [?] /mnt/projects/cis/runtime/db/connection.py
+- [?] /mnt/projects/cis/runtime/db/live_db.py
+- [?] /mnt/projects/cis/runtime/extractor.py
+- [?] /mnt/projects/cis/runtime/gpt_gateway.py
+- [?] /mnt/projects/cis/runtime/last_manifest.json
+- [?] /mnt/projects/cis/runtime/librarian.py
+- [?] /mnt/projects/cis/runtime/migrate_execution_jobs.py
+- [?] /mnt/projects/cis/runtime/minutes_agent.py
+- [?] /mnt/projects/cis/runtime/primer_update_v2.py
+- [?] /mnt/projects/cis/runtime/primer_update_v3.py
+- [?] /mnt/projects/cis/runtime/queue_worker.py
+- [?] /mnt/projects/cis/runtime/schemas/knowledge_spine_v1.json
+- [?] /mnt/projects/cis/runtime/schemas/knowledge_v1.json
+- [?] /mnt/projects/cis/runtime/schemas/spine_node_v1.json
+- [?] /mnt/projects/cis/runtime/ui_components/mod_agents.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_buildplan.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_files.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_knowledge.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_management.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_project.html
+- [?] /mnt/projects/cis/runtime/ui_components/mod_research.html
+- [?] /mnt/projects/cis/runtime/ui_mockups/cis_kernel_v1.html
+- [?] /mnt/projects/cis/runtime/ui_mockups/cis_kernel_v2.html
+- [?] /mnt/projects/cis/runtime/ui_mockups/cis_kernel_v3.html
+- [?] /mnt/projects/cis/runtime/ui_mockups/cis_live_panel.html
+- [?] /mnt/projects/cis/runtime/ui_mockups/cis_mockup.html
+- [?] /mnt/projects/cis/runtime/utils/__init__.py
+- [?] /mnt/projects/cis/runtime/utils/helpers.py
+- [?] /mnt/projects/cis/runtime/utils/project_helpers.py
+
+### session_logs (7 files, priority: SITUATIONAL)
+
+- [?] /mnt/projects/cis/logs/queue_test_log.md
+- [?] /mnt/projects/cis/logs/session_2026-05-12_engineering_log.md
+- [?] /mnt/projects/cis/logs/session_records/2026-05-12_session_complete.md
+- [?] /mnt/projects/cis/logs/session_records/minutes_20260513_005931.json
+- [?] /mnt/projects/cis/logs/session_records/raw_chat_2026-05-12.md
+- [?] /mnt/projects/cis/logs/system_log.md
+- [?] /mnt/projects/cis/logs/verification_log.md
+
+### transcripts_claude (79 files, priority: MEDIUM)
+
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-14_Choosing an AI platform for professional project guidance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-16_CIS Creative Intelligence System architecture handoff.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-16_CIS canonical build sequence and architectural dependencies.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-17_Hand off evaluation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_CIS session data synchronization checklist.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_Phase 1 intelligence extraction priorities.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-18_Session execution and image pipeline setup.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-19_LXC sandboxing vs CIS root folder for file hosting.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_AI memory capabilities.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_Refactoring CIS application into modular structure.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-20_Resuming creative VM work.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_App showing black screen after code change.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_Proxmox VM snapshot creation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-21_Session close and handoff process clarification.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-22_CIS build continuation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-22_Model registry API implementation.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-23_Starting a new session.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-23_Video preprocessing schema definition setup.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-24_CIS phase 1 intelligence extraction handoff.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-24_Retry attempt taking longer than expected.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/2026-04-25_Verification mechanism for completed work.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/12_CONTRACT_AUTHORITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/13_RUNTIME_TOPOLOGY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/14_GOVERNANCE_GLOSSARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/15_INHERITANCE_INDEX.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/Current State Updated.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/PRIMER_UPDATE_COMPLETION_REPORT_2026-05-02.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/PROJECT_PRIMER_UPDATE_CONSTITUTIONAL_MEMORY_GOVERNANCE_REVISION.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-04-28_operator_layer_pivot.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-04-29_operator_layer_pivot_and_pd5_governance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/2026-05-02_constitutional_memory_governance_primer_rewrite.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/SESSION_DISTILLATIONS/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260502_0047/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0058/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/_backups/20260505_0119/13_RUNTIME_TOPOLOGY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/00_START_HERE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/01_CURRENT_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/02_NEXT_BUILD_TARGET.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/03_SYSTEM_MAP.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/04_ACTIVE_COMPONENTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/05_ADR_SUMMARY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/06_FOUNDATIONAL_CONTROL_CONTRACTS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/07_KNOWN_RISKS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/08_OPEN_QUESTIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/09_GOVERNANCE_STATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/10_OPERATIONAL_REALITY.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/11_TRANSITIONAL_IMPLEMENTATIONS.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/Do NOT include conversational.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/PROJECT_PRIMER_UPDATE.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-28_operator_layer_pivot.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-29_operator_layer_pivot_and_pd5_governance.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/2026-04-30_primer_stabilization_and_intake_architecture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/SESSION_DISTILLATIONS/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/ChatGTP_Project_Primer/archive/_update_staging/SESSION_DISTILLATIONS/2026-04-30_primer_stabilization_and_intake_architecture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/captures/2026-05-12_cis_kernel_session_capture.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/captures/README.md
+- [?] /mnt/projects/cis/docs/claude_chat_transcripts/insights/INTEGRATED_VISION_CIS_CORE_ARCHITECTURE.md
+
+### transcripts_original (17 files, priority: MEDIUM)
+
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_001.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_002.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_003.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_004.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_005.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_006.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_007.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_008.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_009.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_010.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_011.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_012.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_013.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_014.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_015.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/CIS_Chat_2026-04_016.md
+- [?] /mnt/projects/cis/docs/architecture_atlas/original_CISChats/architecture_atlas_prompt.md
+
+### vision (37 files, priority: HIGH)
+
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/# CIS HANDOFF — Phase D Automation Start.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/00A_Phase 1 — Core Structure (lock system logic first).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Current Position.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Phase D.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — Visual Intelligence + Record System (Post-Phase D Extension).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — vLLM _ Qwen VL Evaluation (April 12, 2026).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS WORKLOG — Phase D Architecture & Visual Benchmark.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS_LegacyBuildFiles_Consolidation.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/Clean update pack, organized by document.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_How You Work With These Files (CIS Operating Model).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_What You SHOULD Pass to a New Chat (Minimal + Complete).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/X_Where Phases Are Defined (Current State).md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_00_OPERATOR_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_01_SYSTEM_BLUEPRINT.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_02_MEMORY.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_03_STATE.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_04_MASTER_ARCHITECTURE_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_05_Core Tool Stream.md.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_06_Intelligence Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_07_Knowledge Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_08_Workflow Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_09_Agent Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_10_Application Stream.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_11_Sound Stream — Expanded.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS ROUTER SPEC_Intelligence Routing & Model Orchestration.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_ WORKFLOW_EXECUTION SPEC v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_CRITICAL ADDITION.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_DISCOVERY_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_EXECUTION_LAYER.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_REINFORCEMENT_MODEL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_RELATIONSHIP_MAP.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CIS_RUNTIME_SPEC_v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_CONTROL.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/_CIS_The pattern across the CIS docs.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS Discovery Workbench v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS Intake + Knowledge Workbench v1.md
+- [?] /mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/x_CIS_WORKBENCH_V1.md
+

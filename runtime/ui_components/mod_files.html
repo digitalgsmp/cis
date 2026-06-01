@@ -1,0 +1,52 @@
+<div class="hdr"><div class="hdr-title">File System</div><div class="hdr-sub">The file tree IS the project state. Files move through directories as work progresses.</div></div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">CIS Kernel / Directory Tree</div>
+      <div class="fs-list">
+        <div class="fs-item source"><span style="color:var(--amber)">●</span> identity/ <span style="color:var(--t3)">— project definition</span></div>
+        <div class="fs-item source" style="margin-left:16px">concept.md <span style="color:var(--green);font-size:9px">✓ defined</span></div>
+        <div class="fs-item source" style="margin-left:16px">intent.md <span style="color:var(--green);font-size:9px">✓ defined</span></div>
+        <div class="fs-item source"><span style="color:var(--amber)">●</span> source/ <span style="color:var(--t3)">— 77 files registered</span></div>
+        <div class="fs-item source" style="margin-left:16px">vision/ <span style="color:var(--t3)">38 files</span></div>
+        <div class="fs-item source" style="margin-left:16px">transcripts/ <span style="color:var(--t3)">38 files</span></div>
+        <div class="fs-item source" style="margin-left:16px">captures/ <span style="color:var(--t3)">1 file</span></div>
+        <div class="fs-item extract"><span style="color:var(--blue)">●</span> extraction/ <span style="color:var(--t3)">— empty</span></div>
+        <div class="fs-item extract" style="margin-left:16px">functional_intents/ <span style="color:var(--t3)">0 files</span></div>
+        <div class="fs-item extract" style="margin-left:16px">patterns/ <span style="color:var(--t3)">0 files</span></div>
+        <div class="fs-item extract" style="margin-left:16px">gaps/ <span style="color:var(--t3)">0 files</span></div>
+        <div class="fs-item research"><span style="color:var(--purple)">●</span> research/ <span style="color:var(--t3)">— empty</span></div>
+        <div class="fs-item design"><span style="color:var(--cyan)">●</span> design/ <span style="color:var(--t3)">— 1 mockup</span></div>
+        <div class="fs-item build"><span style="color:var(--green)">●</span> build/ <span style="color:var(--t3)">— empty</span></div>
+        <div class="fs-item" style="border-left-color:var(--t3)"><span style="color:var(--t3)">●</span> polish/ <span style="color:var(--t3)">— not started</span></div>
+        <div class="fs-item" style="border-left-color:var(--t3)"><span style="color:var(--t3)">●</span> release/ <span style="color:var(--t3)">— not started</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Topological Survey</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div class="pl-item"><span class="pl-icon">📄</span><div class="pl-info"><div class="pl-title">Vision Docs</div><div class="pl-meta">38 — the only ground truth</div></div><span class="tag tag-green">high</span></div>
+        <div class="pl-item"><span class="pl-icon">💬</span><div class="pl-info"><div class="pl-title">Chat Transcripts</div><div class="pl-meta">38 — raw exploration</div></div><span class="tag tag-amber">medium</span></div>
+        <div class="pl-item"><span class="pl-icon">🔍</span><div class="pl-info"><div class="pl-title">Extraction Analyses</div><div class="pl-meta">21 — model summaries</div></div><span class="tag tag-amber">medium</span></div>
+        <div class="pl-item"><span class="pl-icon">🏗️</span><div class="pl-info"><div class="pl-title">Build Plans</div><div class="pl-meta">67 — construction sequences</div></div><span class="tag">reference</span></div>
+        <div class="pl-item"><span class="pl-icon">📐</span><div class="pl-info"><div class="pl-title">Architecture Maps</div><div class="pl-meta">10 — topology, cross-refs</div></div><span class="tag">reference</span></div>
+        <div class="pl-item"><span class="pl-icon">📋</span><div class="pl-info"><div class="pl-title">ADRs</div><div class="pl-meta">5 — enterprise drift</div></div><span class="tag" style="border-color:rgba(255,74,106,.3);color:var(--red)">review</span></div>
+        <div class="pl-item"><span class="pl-icon">⚙️</span><div class="pl-info"><div class="pl-title">Code</div><div class="pl-meta">57 — runtime backend</div></div><span class="tag">implement</span></div>
+        <div class="pl-item"><span class="pl-icon">📦</span><div class="pl-info"><div class="pl-title">Other</div><div class="pl-meta">155 — misc, backups, refs</div></div><span class="tag">noise</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Actions</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-amber" style="width:100%">Create Directory Structure</button>
+        <button class="btn btn-blue" style="width:100%">Register All Source to project</button>
+        <button class="btn" style="width:100%">Scan for New Files</button>
+      </div>
+    </div>
+  </div>
+</div>

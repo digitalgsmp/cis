@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/X_01_SYSTEM_BLUEPRINT.md

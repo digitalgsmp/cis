@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles/Hand-offs/CIS HANDOFF — vLLM _ Qwen VL Evaluation (April 12, 2026).md

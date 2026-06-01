@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/ADRs/ADR-047_SCOPE_PREDRAFT.md

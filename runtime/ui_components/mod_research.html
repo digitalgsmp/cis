@@ -1,0 +1,54 @@
+<div class="hdr"><div class="hdr-title">Research & References</div><div class="hdr-sub">Source documents categorized by type. Agents read and sort. The directory structure IS the organization.</div></div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Directory Structure</div>
+      <div style="font-family:var(--mono);font-size:11px;line-height:1.8;color:var(--t2)">
+        <span style="color:var(--amber)">cis_kernel/</span><br>
+        <span style="color:var(--t3)">├──</span> identity/<br>
+        <span style="color:var(--t3)">├──</span> <span style="color:var(--green)">source/</span><br>
+        <span style="color:var(--t3)">│   ├──</span> vision/ <span style="color:var(--t3);font-size:9px">38 files</span><br>
+        <span style="color:var(--t3)">│   ├──</span> transcripts/ <span style="color:var(--t3);font-size:9px">38 files</span><br>
+        <span style="color:var(--t3)">│   ├──</span> references/ <span style="color:var(--t3);font-size:9px">XLSB, PDFs</span><br>
+        <span style="color:var(--t3)">│   └──</span> captures/ <span style="color:var(--t3);font-size:9px">1 session</span><br>
+        <span style="color:var(--t3)">├──</span> <span style="color:var(--t3)">extraction/</span> <span style="color:var(--t3);font-size:9px">— not started</span><br>
+        <span style="color:var(--t3)">│   ├──</span> functional_intents/<br>
+        <span style="color:var(--t3)">│   ├──</span> patterns/<br>
+        <span style="color:var(--t3)">│   └──</span> gaps/<br>
+        <span style="color:var(--t3)">├──</span> <span style="color:var(--t3)">research/</span> <span style="color:var(--t3);font-size:9px">— not started</span><br>
+        <span style="color:var(--t3)">│   ├──</span> references/<br>
+        <span style="color:var(--t3)">│   ├──</span> solutions/<br>
+        <span style="color:var(--t3)">│   └──</span> experiments/<br>
+        <span style="color:var(--t3)">├──</span> design/<br>
+        <span style="color:var(--t3)">├──</span> build/<br>
+        <span style="color:var(--t3)">├──</span> polish/<br>
+        <span style="color:var(--t3)">└──</span> release/
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-amber" onclick="alert('Would create directory structure on disk')">Create Directories</button>
+        <button class="btn" onclick="alert('Would move source files into cis_kernel/source/')">Register Source Files</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <div class="card-title">Documents by Priority</div>
+      <div class="pl-item"><span class="pl-icon">🔴</span><div class="pl-info"><div class="pl-title">Vision Docs</div><div class="pl-meta">38 files · ground truth · extract first</div></div><span class="tag" style="border-color:rgba(255,74,106,.3);color:var(--red)">priority</span></div>
+      <div class="pl-item"><span class="pl-icon">🟡</span><div class="pl-info"><div class="pl-title">Chat Transcripts</div><div class="pl-meta">38 files · raw exploration</div></div><span class="tag" style="border-color:rgba(255,184,48,.3);color:var(--amber)">next</span></div>
+      <div class="pl-item"><span class="pl-icon">🟢</span><div class="pl-info"><div class="pl-title">Extraction Analyses</div><div class="pl-meta">21 files · pre-processed</div></div><span class="tag">reference</span></div>
+      <div class="pl-item"><span class="pl-icon">🔵</span><div class="pl-info"><div class="pl-title">Build Plans</div><div class="pl-meta">67 files · for consolidation</div></div><span class="tag">reference</span></div>
+      <div class="pl-item"><span class="pl-icon">⚪</span><div class="pl-info"><div class="pl-title">Code & ADRs</div><div class="pl-meta">62 files · exploration artifacts</div></div><span class="tag">noise</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Agent Actions</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-blue" style="width:100%">▶ Read & Sort Vision Docs</button>
+        <button class="btn" style="width:100%">▶ Read & Sort Transcripts</button>
+        <button class="btn" style="width:100%">▶ Categorize All Source</button>
+      </div>
+    </div>
+  </div>
+</div>

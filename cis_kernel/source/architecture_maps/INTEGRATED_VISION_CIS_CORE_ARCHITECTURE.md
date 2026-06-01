@@ -1,0 +1,1 @@
+/mnt/projects/cis/docs/claude_chat_transcripts/insights/INTEGRATED_VISION_CIS_CORE_ARCHITECTURE.md

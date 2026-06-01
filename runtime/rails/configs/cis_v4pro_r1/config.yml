@@ -1,0 +1,19 @@
+# NeMo Guardrails config for CIS V4-Pro R1 / Proposal Author.
+# Routes through NeMo on port 8801 before hitting deepseek-v4-pro on 8645.
+# Reasoning/thinking parameters are passed through to the downstream gateway.
+# No rails.config here — config_id comes from directory name + --default-config-id.
+
+models:
+ - type: main
+   engine: openai
+   model: deepseek-v4-pro
+   parameters:
+     base_url: http://127.0.0.1:8645/v1
+     api_key: 6b7aab086cddc720699d72c4d00c33779c39b7a492df4be0
+     # Pass thinking/reasoning to downstream DeepSeek V4-Pro
+     extra_body:
+       thinking:
+         type: enabled
+     reasoning_effort: high
+
+# Actions auto-discovered from actions.py in this directory.
