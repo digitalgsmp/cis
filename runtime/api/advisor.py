@@ -1290,6 +1290,7 @@ def _standard_response(data, db, proposal_id, dispatch_id=None,
     return {
         "proposal_id": proposal_id,
         "session_id": data.get('session_id', 'unknown'),
+        "source_actor": data.get('source_actor', 'eric'),
         "dispatch_id": dispatch_id,
         "lifecycle_state": get_current_state(proposal_id, db),
         "response_message_id": response_message_id,
@@ -1308,10 +1309,11 @@ def _standard_response(data, db, proposal_id, dispatch_id=None,
     }
 
 
-def _state_conflict_response(proposal_id, current_state, expected_state, action):
+def _state_conflict_response(proposal_id, current_state, expected_state, action, source_actor='eric'):
     """Build state conflict 409 response."""
     return {
         "proposal_id": proposal_id,
+        "source_actor": source_actor,
         "lifecycle_state": current_state,
         "expected_state": expected_state,
         "status": "STATE_CONFLICT",
@@ -1373,6 +1375,7 @@ def handle_reviewer_dispatch(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
@@ -1499,6 +1502,7 @@ def handle_approve_draft(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
@@ -1593,6 +1597,7 @@ def handle_reject_proposal(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
@@ -1641,6 +1646,7 @@ def handle_confirm_directive(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
@@ -1690,6 +1696,7 @@ def handle_revise_directive(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
@@ -1716,6 +1723,7 @@ def handle_execute_directive(data, db):
             DirectiveHashMismatchError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR",
                         "retry": False}), 403
@@ -1748,6 +1756,7 @@ def handle_execute_directive(data, db):
     except (LifecycleStateError, LifecycleTransitionError) as e:
         db.close()
         return jsonify({"error": str(e),
+                        "source_actor": data.get('source_actor', 'eric'),
                         "status": "ERROR",
                         "lifecycle_state": "ERROR"}), 409
 
