@@ -7,6 +7,17 @@ import http.client
 from datetime import datetime
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 
+# ALLOV1-BE-001: Lifecycle observability imports
+from api.orchestration import (
+    generate_proposal_id, get_current_state, transition_state,
+    create_dispatch, update_dispatch_inflight, complete_dispatch,
+    fail_dispatch, abort_dispatch, freeze_directive,
+    validate_directive_hash, LifecycleStateError,
+    LifecycleTransitionError, DirectiveHashMismatchError,
+    UnauthorizedDispatchError, AuthFailureError
+)
+import hashlib
+
 logger = logging.getLogger(__name__)
 
 advisor_bp = Blueprint('advisor', __name__)
@@ -398,6 +409,106 @@ def _save_message(conn, thread_id, agent_name, role, model, content, batch_id=No
         (thread_id, agent_name, role, model, content, batch_id, thread_id, datetime.utcnow().isoformat())
     )
     return cur.lastrowid
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  ALLOV1-BE-001: Authorization enforcement functions
+# ──────────────────────────────────────────────────────────────────────
+
+def assert_authorized_dispatch(source_actor, target_port,
+                                proposal_id, action_type, db):
+    """
+    Enforce Rule 5 (corrected per v1.1):
+    Dispatch is permitted only when:
+      (a) source_actor = 'eric', or
+      (b) source_actor = 'orchestrator' AND the current lifecycle
+          state is one of the allowed automatic orchestration
+          transitions defined in Section 5 of the spec.
+    Hermes agents may never be source_actor for lateral dispatch.
+    Raises UnauthorizedDispatchError on violation.
+    """
+    if source_actor == 'eric':
+        return  # always permitted
+
+    if source_actor == 'orchestrator':
+        current_state = get_current_state(proposal_id, db)
+        allowed_auto_states = {
+            'RESEARCH_HANDOFF',
+            'REVISE_REQUESTED',
+            'ROUTING',
+            'EXECUTION_COMPLETE',
+        }
+        if current_state in allowed_auto_states:
+            return  # allowed automatic orchestration transition
+        raise UnauthorizedDispatchError(
+            f"Orchestrator dispatch rejected: lifecycle state "
+            f"'{current_state}' does not permit automatic lateral "
+            f"dispatch. Eric action required."
+        )
+
+    # source_actor is a Hermes agent label — always rejected
+    raise UnauthorizedDispatchError(
+        f"Lateral dispatch from '{source_actor}' is not permitted. "
+        f"source_actor must be 'eric' or 'orchestrator'."
+    )
+
+
+def assert_implementer_authorized(proposal_id,
+                                   directive_text, db):
+    """
+    Enforce Rules 2, 3, 4 for V4 Implementer dispatch.
+    All three checks required. Raises on first failure.
+    """
+    # Rule 2: FINAL_DIRECTIVE prefix required
+    if not directive_text.strip().startswith('FINAL_DIRECTIVE'):
+        raise UnauthorizedDispatchError(
+            "Implementer dispatch rejected: payload does not begin "
+            "with FINAL_DIRECTIVE prefix."
+        )
+    # Rule 3: lifecycle state must be DIRECTIVE_READY
+    current = get_current_state(proposal_id, db)
+    if current != 'DIRECTIVE_READY':
+        raise LifecycleStateError(
+            f"Implementer dispatch rejected: current lifecycle state "
+            f"is '{current}', expected 'DIRECTIVE_READY'."
+        )
+    # Rule 3: eric_approved must be 1 in most recent row
+    row = db.execute(
+        """SELECT eric_approved FROM lifecycle_events
+           WHERE proposal_id=? ORDER BY id DESC LIMIT 1""",
+        (proposal_id,)
+    ).fetchone()
+    if not row or not row['eric_approved']:
+        raise UnauthorizedDispatchError(
+            "Implementer dispatch rejected: Eric approval not "
+            "recorded in lifecycle_events for this proposal."
+        )
+    # Rule 4: directive_hash must match frozen hash
+    if not validate_directive_hash(proposal_id,
+                                    directive_text, db):
+        raise DirectiveHashMismatchError(
+            "Implementer dispatch rejected: directive text hash "
+            "does not match frozen hash in lifecycle_events."
+        )
+
+
+def handle_auth_failure(dispatch_id, error_message,
+                         http_status_code, db):
+    """
+    Section 12: Auth failure stops immediately.
+    Logs FAILED. Returns structured error for UI surface.
+    No retry. No key search. No fallback.
+    """
+    fail_dispatch(dispatch_id, http_status_code,
+                  error_message, db)
+    return {
+        "status": "ERROR",
+        "error": (f"Dispatch failed: HTTP {http_status_code} "
+                  f"— {error_message}"),
+        "dispatch_id": dispatch_id,
+        "lifecycle_state": "ERROR",
+        "retry": False
+    }
 
 
 @advisor_bp.route('/api/advisor/agents', methods=['GET'])
@@ -1184,21 +1295,81 @@ def route_message():
     if not message:
         return jsonify({"error": "message required"}), 400
 
+    # ── ALLOV1-BE-001 enforcement ────────────────────────────────────
+    db = get_db()
+    proposal_id = data.get('proposal_id') or generate_proposal_id()
+    session_id = data.get('session_id', 'unknown')
+    source_actor = data.get('source_actor', 'eric')
+
     routing = classify_route(message, override)
     _persist_routing(routing, message, thread_id, override)
+
+    # Resolve target port from routing decision
+    target_port = routing.get('port')
+    target_agent_label = routing.get('agent', 'unknown')
+    target_endpoint = f"http://127.0.0.1:{target_port}" if target_port else "unknown"
+
+    # Implementer gate (port 8646)
+    if target_port == 8646:
+        try:
+            assert_implementer_authorized(
+                proposal_id, message, db)
+        except (UnauthorizedDispatchError,
+                LifecycleStateError,
+                DirectiveHashMismatchError) as e:
+            db.close()
+            return jsonify({
+                "error": str(e),
+                "status": "ERROR",
+                "lifecycle_state": "ERROR",
+                "retry": False
+            }), 403
+
+    # Lateral dispatch gate
+    try:
+        assert_authorized_dispatch(
+            source_actor, target_port,
+            proposal_id, 'dispatch', db)
+    except UnauthorizedDispatchError as e:
+        db.close()
+        return jsonify({
+            "error": str(e),
+            "status": "ERROR",
+            "lifecycle_state": "ERROR",
+            "retry": False
+        }), 403
+    # ── end enforcement ──────────────────────────────────────────────
 
     if classify_only:
         routing["classify_only"] = True
         routing["agent_response"] = None
+        db.close()
         return jsonify(routing), 200
 
     if routing["route"] == "blocked" or routing.get("qwen_blocked"):
         routing["agent_response"] = None
+        db.close()
         return jsonify(routing), 200
 
     agent_response          = None
     preflight_response_text = None
     final_route             = routing["route"]
+    dispatch_id             = None
+    response_message_id     = None
+
+    # ── Create dispatch record ───────────────────────────────────────
+    dispatch_id = create_dispatch(
+        proposal_id=proposal_id,
+        source_actor=source_actor,
+        target_agent=target_agent_label,
+        target_endpoint=target_endpoint,
+        lifecycle_state_at=get_current_state(proposal_id, db) or 'ROUTING',
+        payload=message,
+        initiated_by=source_actor,
+        eric_approved=1 if source_actor == 'eric' else 0,
+        db=db
+    )
+    update_dispatch_inflight(dispatch_id, db)
 
     try:
         if routing.get("multihop"):
@@ -1234,13 +1405,42 @@ def route_message():
         elif routing["route"] == "qwen":
             agent_response = _call_routing_qwen(message)
 
+    except requests.exceptions.ConnectionError as e:
+        fail_dispatch(dispatch_id, 0, str(e), db)
+        db.close()
+        return jsonify(handle_auth_failure(
+            dispatch_id, str(e), 0, db)), 502
+
     except Exception as e:
         routing["dispatch_error"] = str(e)
         agent_response = None
+        fail_dispatch(dispatch_id, 0, str(e), db)
+
+    else:
+        # Complete dispatch on success
+        response_body = (agent_response.get('content', '')
+                         if isinstance(agent_response, dict)
+                         else str(agent_response or ''))
+        try:
+            response_message_id = complete_dispatch(
+                dispatch_id, 200, response_body, db)
+        except Exception as e:
+            logger.warning("complete_dispatch failed: %s", e)
 
     routing["agent_response"] = agent_response
     routing["final_route"]    = final_route
     if preflight_response_text:
         routing["preflight_response"] = preflight_response_text
 
+    # ALLOV1-BE-001 response fields
+    routing["proposal_id"] = proposal_id
+    routing["dispatch_id"] = dispatch_id
+    routing["lifecycle_state"] = get_current_state(proposal_id, db)
+    routing["response_message_id"] = response_message_id
+    routing["research_message_id"] = data.get('research_message_id')
+    routing["reviewer_message_id"] = None
+    routing["directive_hash"] = None
+    routing["eric_approved"] = 1 if source_actor == 'eric' else 0
+
+    db.close()
     return jsonify(routing), 200
