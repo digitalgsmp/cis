@@ -1,18 +1,11 @@
 # Next Actions — CIS
-Last updated: 2026-05-31 (Phase 0 Recovery)
+Last updated: 2026-06-01 (UI-002 Complete)
 
 ## Current Next Action
 
-**Phase 0 recovery complete.** Git versioning protects source.
-All gateways healthy and context-aware.
-
-**Phase 1 — Minimal Orchestrator Scaffold:**
-Build orchestrator.py state machine with Drafter→Reviewer deliberation
-loop only. No Judge, no Verifier, no UI changes. Goal: remove Eric from
-manual relay.
-
-After Phase 1: Phase 2 (NeMo/Python Judge), Phase 3 (Post-Execution
-Verifier), then Phase 4B (knowledge base extraction, deferred).
+**UI-003 readability/layout pass** — AdvisorChat UI polish: font sizing,
+panel spacing, lifecycle badge readability, dispatch log styling.
+No backend changes. No new features.
 
 ## Completed
 - Phase 0 — Boundary docs ✅
@@ -23,13 +16,21 @@ Verifier), then Phase 4B (knowledge base extraction, deferred).
 - Gates 2-7D — V4-Pro gateway, NeMo, Tavily, Advisor routing ✅
 - Router v0.1 — AdvisorChat input router ✅
 - Phase 0 Recovery — Git versioning + gateway repair + context injection ✅
+- ALLOV1-BE-001 — Backend lifecycle observability enforcement ✅
+- ALLOV1-BE-002 — 6 lifecycle action handlers + 10 tests ✅
+- ALLOV1-BE-002A — source_actor response normalization ✅
+- ALLOV1-BE-002B — target_agent / target_endpoint response normalization ✅
+- ALLOV1-UI-002 — Full interactive lifecycle UI + visibility fixes ✅
+- OQ-009 — Gateway HERMES_HOME corrected to /home/eric/.hermes ✅
+- hermes-gateway.service tracked at runtime/config/systemd/ ✅
+
+## Deferred
+- ALLOV1-BE-003 — Verifier (after UI-003)
+- Phase 4B — Knowledge base extraction (deferred until infra stable)
 
 ## Do Not Start Yet
 - Pass 5 implementation
 - Unified memory build
-- UI redesign
 - VDB pipeline rebuild
 - Discord/Telegram gateway
-- Knowledge base extraction (Phase 4B, deferred)
-- Judge implementation (Phase 2, after orchestrator)
-- Verifier implementation (Phase 3, after Judge)
+- Judge implementation (architecturally blocked)

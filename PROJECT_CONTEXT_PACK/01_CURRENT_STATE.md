@@ -1,48 +1,57 @@
 # CIS Current State
-Version: 2.5
-Date: 2026-05-31 (Phase 0 Recovery)
+Version: 2.6
+Date: 2026-06-01 (UI-002 Complete)
 Authority: Eric (Architect)
 
 ---
 
 ## Current Objective
 
-Phase 0 recovery complete. GitHub private repo exists at
-https://github.com/digitalgsmp/cis. All three V4 Pro gateways
-(Drafter/Reviewer/Implementer) are healthy, context-aware, and correctly
-modeled as deepseek-v4-pro with xhigh reasoning. Qwen is paused.
-R1/DeepSeek Reasoner is retired from active assumptions.
+Backend lifecycle observability (BE-001, BE-002, BE-002A, BE-002B) and
+full interactive lifecycle UI (UI-002) are complete. All six lifecycle
+action handlers (reviewer_dispatch, approve_draft_directive,
+reject_proposal, confirm_directive, revise_directive, execute_directive)
+are implemented and tested (14/14 passing).
 
-Next objective: minimal orchestrator scaffold (orchestrator.py state machine)
-to remove Eric from the manual relay role.
+Gateway issue OQ-009 resolved: hermes-gateway.service had incorrect
+HERMES_HOME pointing to v4impl profile. Corrected to /home/eric/.hermes.
+Service file now tracked in repo at runtime/config/systemd/.
 
-## Model Roles (Corrected Phase 0)
+Next: UI-003 readability/layout pass. Verifier BE-003 deferred.
+
+## Model Roles
 
 | Role | Port | Model | Reasoning | NeMo? | Function |
 |------|------|-------|-----------|-------|----------|
-| Flash/Research | 8642→8800 | deepseek-v4-flash | — | Yes | Fast context, research |
+| Flash/Research | 8642 | deepseek-v4-flash | — | Yes | Fast context, research |
 | V4 Drafter | 8645 | deepseek-v4-pro | xhigh | No | Proposal/directive author |
 | V4 Reviewer | 8643 | deepseek-v4-pro | xhigh | No | Adversarial reviewer |
 | V4 Implementer | 8646 | deepseek-v4-pro | xhigh | No | Bounded executor |
-| Judge | NeMo 8800 | no model | none | IS NeMo | Deterministic PASS/FAIL checklist |
-| Orchestrator | orchestrator.py | no model | none | No | Backend state machine |
-
-**Important:** Judge is NOT a reasoning model. NOT Qwen. NOT Flash.
-Orchestrator is NOT Flash. `hermes-gateway-r1` is a stale service name
-only — actual role is V4 Reviewer. Qwen is paused.
+| Judge | NeMo 8800 | no model | none | IS NeMo | Future — deferred |
+| Orchestrator | orchestrator.py | no model | none | No | Future — deferred |
 
 ## System State
 
-- GitHub: private repo at https://github.com/digitalgsmp/cis, commit b1bcf7d
-- V4 Drafter: 8645 healthy, context-aware
-- V4 Reviewer: 8643 healthy, context-aware
-- V4 Implementer: 8646 healthy, context-aware
-- Flash/Research: 8642→NeMo 8800, running
+- GitHub: private repo at https://github.com/digitalgsmp/cis
+- All five gateways healthy (8642, 8643, 8644, 8645, 8646) + NeMo 8800
+- hermes-gateway.service: HERMES_HOME=/home/eric/.hermes (corrected)
+- Service file tracked: runtime/config/systemd/hermes-gateway.service
 - Qwen: 8644, running but paused
-- Context briefing: all four gateway profiles have HERMES_CIS_BRIEFING_PATH
+- Context briefing: all gateway profiles have HERMES_CIS_BRIEFING_PATH
 - NeMo: port 8800, cis_fast config
+
+## Completed Directives
+
+| Directive | Description | Commit |
+|-----------|-------------|--------|
+| BE-001 | Backend lifecycle observability enforcement | 83b8f7d |
+| BE-002 | 6 lifecycle action handlers + 10 tests | 0ed9221 |
+| BE-002A | source_actor response normalization | 3cdcfaf |
+| BE-002B | target_agent / target_endpoint normalization | 97dd767 |
+| UI-002 | Full interactive lifecycle UI + visibility fixes | 2caf40f |
+| OQ-009 | Gateway HERMES_HOME fix + service tracking | cabd096 |
 
 ## Next Safe Phase
 
-Minimal orchestrator scaffold (orchestrator.py state machine with
-Drafter→Reviewer deliberation loop only). No Judge, no Verifier, no UI changes.
+UI-003 — AdvisorChat readability/layout polish. Font sizing, panel spacing,
+lifecycle badge readability, dispatch log styling. No backend changes.
