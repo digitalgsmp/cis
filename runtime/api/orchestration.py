@@ -36,6 +36,7 @@ ALLOWED_TRANSITIONS = {
     ('DRAFT_READY',         'REVIEW_PENDING'),
     ('DRAFT_READY',         'DRAFTING'),
     ('DRAFT_READY',         'ERIC_APPROVAL_GATE'),
+    ('DRAFT_READY',         'REJECTED'),
     ('DRAFT_READY',         'IDLE'),
     ('REVIEW_PENDING',      'REVIEWING'),
     ('REVIEW_PENDING',      'ERROR'),

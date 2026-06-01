@@ -3,6 +3,7 @@ import logging
 import os
 import sqlite3
 import urllib.request
+import requests
 import http.client
 from datetime import datetime
 from flask import Blueprint, jsonify, request, Response, stream_with_context
@@ -1275,6 +1276,542 @@ def _call_routing_qwen(message):
     return {"content": text} if text else {"content": ""}
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  ALLOV1-BE-002: Action Handlers
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _standard_response(data, db, proposal_id, dispatch_id=None,
+                       response_message_id=None, reviewer_message_id=None,
+                       directive_hash=None, directive_text=None,
+                       eric_approved=1, eric_bypass=0, revision_count=0,
+                       verdict=None, critique=None, required_changes=None,
+                       action=None, notes=None):
+    """Build the standard lifecycle response shape (Section D)."""
+    return {
+        "proposal_id": proposal_id,
+        "session_id": data.get('session_id', 'unknown'),
+        "dispatch_id": dispatch_id,
+        "lifecycle_state": get_current_state(proposal_id, db),
+        "response_message_id": response_message_id,
+        "research_message_id": data.get('research_message_id'),
+        "reviewer_message_id": reviewer_message_id,
+        "directive_hash": directive_hash,
+        "directive_text": directive_text,
+        "eric_approved": eric_approved,
+        "eric_bypass": eric_bypass,
+        "revision_count": revision_count,
+        "verdict": verdict,
+        "critique": critique,
+        "required_changes": required_changes,
+        "action": action,
+        "notes": notes,
+    }
+
+
+def _state_conflict_response(proposal_id, current_state, expected_state, action):
+    """Build state conflict 409 response."""
+    return {
+        "proposal_id": proposal_id,
+        "lifecycle_state": current_state,
+        "expected_state": expected_state,
+        "status": "STATE_CONFLICT",
+        "error": f"Expected state '{expected_state}', current state is '{current_state}'.",
+        "action": action,
+    }
+
+
+def _post_to_agent(agent_name, port, payload, timeout=180):
+    """POST payload to a Hermes gateway and return response dict."""
+    agent = get_agent(agent_name)
+    if not agent:
+        raise Exception(f"Agent {agent_name} not found or inactive")
+    api_key = read_api_key(agent['env_path'])
+    if not api_key:
+        raise Exception(f"API_SERVER_KEY not found for {agent_name}")
+
+    gateway_url = f"http://127.0.0.1:{port}"
+    messages = [{"role": "user", "content": payload}]
+
+    result = _call_gateway_with_reasoning(
+        gateway_url, agent['model'], api_key, messages,
+        max_tokens=2000, timeout=timeout
+    )
+    return result
+
+
+# ── C1: handle_reviewer_dispatch ───────────────────────────────────────
+
+def handle_reviewer_dispatch(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+    source_actor = data.get('source_actor', 'eric')
+
+    # Step 1: Authorization
+    try:
+        assert_authorized_dispatch(source_actor, 8643,
+                                    proposal_id, 'dispatch', db)
+    except UnauthorizedDispatchError:
+        current = get_current_state(proposal_id, db)
+        return jsonify(_state_conflict_response(
+            proposal_id, current, 'DRAFT_READY',
+            'reviewer_dispatch')), 409
+
+    # Step 2: State check
+    current = get_current_state(proposal_id, db)
+    if current != 'DRAFT_READY':
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current, 'DRAFT_READY',
+            'reviewer_dispatch')), 409
+
+    # Step 3: Transition to REVIEW_PENDING
+    try:
+        transition_state(proposal_id, session_id,
+            'DRAFT_READY', 'REVIEW_PENDING',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    # Step 4-5: Create dispatch
+    payload = data.get('payload', '')
+    dispatch_id = create_dispatch(
+        proposal_id=proposal_id,
+        source_actor='orchestrator',
+        target_agent='hermes-r1',
+        target_endpoint='http://127.0.0.1:8643',
+        lifecycle_state_at='REVIEW_PENDING',
+        payload=payload,
+        initiated_by='orchestrator',
+        eric_approved=1,
+        db=db
+    )
+    update_dispatch_inflight(dispatch_id, db)
+
+    # Step 6: POST to reviewer
+    verdict = 'MALFORMED'
+    critique = None
+    required_changes = None
+    response_message_id = None
+
+    try:
+        result = _post_to_agent('hermes-r1', 8643, payload)
+        response_body = result.get('content', '')
+        response_message_id = complete_dispatch(
+            dispatch_id, 200, response_body, db)
+
+        # Step 7: Parse verdict from response
+        try:
+            verdict_json = json.loads(response_body)
+            verdict = verdict_json.get('verdict', 'MALFORMED')
+            critique = verdict_json.get('critique')
+            required_changes = verdict_json.get('required_changes')
+            response_message_id = verdict_json.get(
+                'reviewer_message_id', response_message_id)
+        except (json.JSONDecodeError, TypeError):
+            verdict = 'MALFORMED'
+
+    except Exception as e:
+        fail_dispatch(dispatch_id, 0, str(e), db)
+        db.close()
+        return jsonify(handle_auth_failure(
+            dispatch_id, str(e), 0, db)), 502
+
+    # Step 9-10: State transitions
+    try:
+        transition_state(proposal_id, session_id,
+            'REVIEW_PENDING', 'REVIEWING',
+            initiated_by='orchestrator', gate_type='automatic',
+            db=db)
+        transition_state(proposal_id, session_id,
+            'REVIEWING', 'REVIEW_COMPLETE',
+            initiated_by='orchestrator', gate_type='automatic',
+            reviewer_message_id=response_message_id,
+            db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        logger.warning("reviewer_dispatch state transition failed: %s", e)
+
+    # Step 11: Return
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        dispatch_id=dispatch_id,
+        response_message_id=response_message_id,
+        reviewer_message_id=response_message_id,
+        verdict=verdict,
+        critique=critique,
+        required_changes=required_changes,
+        action='reviewer_dispatch',
+        notes=f"Reviewer verdict: {verdict}"
+    )), 200
+
+
+# ── C2: handle_approve_draft ───────────────────────────────────────────
+
+def handle_approve_draft(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+    eric_bypass = data.get('eric_bypass', 0)
+
+    # Step 1: State check
+    current = get_current_state(proposal_id, db)
+    if current not in ('REVIEW_COMPLETE', 'DRAFT_READY'):
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current,
+            'REVIEW_COMPLETE or DRAFT_READY',
+            'approve_draft_directive')), 409
+
+    # Step 2: Reviewer evidence check (unless bypass)
+    reviewer_message_id = None
+    if current == 'REVIEW_COMPLETE' and not eric_bypass:
+        row = db.execute(
+            """SELECT reviewer_message_id FROM lifecycle_events
+               WHERE proposal_id=? AND reviewer_message_id IS NOT NULL
+               ORDER BY id DESC LIMIT 1""",
+            (proposal_id,)
+        ).fetchone()
+        reviewer_message_id = row['reviewer_message_id'] if row else None
+        if not reviewer_message_id:
+            db.close()
+            return jsonify({
+                "proposal_id": proposal_id,
+                "lifecycle_state": current,
+                "status": "STATE_CONFLICT",
+                "error": "Reviewer evidence required. Set eric_bypass=1 to override.",
+                "action": "approve_draft_directive",
+            }), 409
+
+    # Step 3-4: State transitions
+    try:
+        transition_state(proposal_id, session_id,
+            current, 'ERIC_APPROVAL_GATE',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, eric_bypass=eric_bypass,
+            reviewer_message_id=reviewer_message_id,
+            db=db)
+        transition_state(proposal_id, session_id,
+            'ERIC_APPROVAL_GATE', 'DIRECTIVE_DRAFTING',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    # Step 5: POST to Drafter
+    # Get original proposal text
+    proposal_text = data.get('original_proposal', '')
+    if not proposal_text:
+        row = db.execute(
+            """SELECT payload_summary FROM dispatch_log
+               WHERE proposal_id=? ORDER BY id DESC LIMIT 1""",
+            (proposal_id,)
+        ).fetchone()
+        if row and row['payload_summary']:
+            proposal_text = row['payload_summary']
+
+    drafting_prompt = (
+        f"Compose a FINAL_DIRECTIVE block for the following proposal. "
+        f"Include clear OBJECTIVE, SCOPE, FILES TO MODIFY, "
+        f"VERIFICATION STEPS, and DO NOT boundaries.\n\n"
+        f"PROPOSAL:\n{proposal_text}"
+    )
+
+    directive_text = None
+    directive_hash = None
+    dispatch_id = None
+    response_message_id = None
+
+    try:
+        result = _post_to_agent('hermes-v4pro', 8645, drafting_prompt)
+        response_body = result.get('content', '')
+
+        # Step 6: Extract FINAL_DIRECTIVE candidate
+        if 'FINAL_DIRECTIVE' in response_body:
+            idx = response_body.index('FINAL_DIRECTIVE')
+            directive_text = response_body[idx:].strip()
+        else:
+            directive_text = response_body.strip()
+
+        # Step 7: Freeze directive
+        directive_hash = freeze_directive(
+            proposal_id, session_id, directive_text, db)
+
+    except Exception as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 502
+
+    # Step 8: Return
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        dispatch_id=dispatch_id,
+        response_message_id=response_message_id,
+        reviewer_message_id=reviewer_message_id,
+        directive_hash=directive_hash,
+        directive_text=directive_text,
+        eric_bypass=eric_bypass,
+        action='approve_draft_directive',
+        notes='Directive authored and frozen.'
+    )), 200
+
+
+# ── C3: handle_reject_proposal ─────────────────────────────────────────
+
+def handle_reject_proposal(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+
+    # Step 1: State check
+    current = get_current_state(proposal_id, db)
+    allowed = {'DRAFT_READY', 'REVIEW_COMPLETE', 'ERIC_APPROVAL_GATE',
+               'DIRECTIVE_AUTHORED', 'DIRECTIVE_READY'}
+    if current not in allowed:
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current,
+            'DRAFT_READY, REVIEW_COMPLETE, ERIC_APPROVAL_GATE, '
+            'DIRECTIVE_AUTHORED, or DIRECTIVE_READY',
+            'reject_proposal')), 409
+
+    # Step 3-4: State transitions
+    try:
+        transition_state(proposal_id, session_id,
+            current, 'REJECTED',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, notes='Proposal rejected by Eric.',
+            db=db)
+        transition_state(proposal_id, session_id,
+            'REJECTED', 'IDLE',
+            initiated_by='orchestrator', gate_type='automatic',
+            db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        action='reject_proposal',
+        notes='Proposal rejected by Eric.'
+    )), 200
+
+
+# ── C4: handle_confirm_directive ───────────────────────────────────────
+
+def handle_confirm_directive(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+    directive_text = data.get('directive_text', '')
+    directive_hash = data.get('directive_hash', '')
+
+    # Step 1: State check
+    current = get_current_state(proposal_id, db)
+    if current != 'DIRECTIVE_AUTHORED':
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current, 'DIRECTIVE_AUTHORED',
+            'confirm_directive')), 409
+
+    # Step 2: Hash validation
+    if not validate_directive_hash(proposal_id, directive_text, db):
+        db.close()
+        return jsonify({
+            "proposal_id": proposal_id,
+            "lifecycle_state": current,
+            "status": "STATE_CONFLICT",
+            "error": ("Directive hash mismatch. Text may have been "
+                      "modified since approval."),
+            "action": "confirm_directive",
+        }), 409
+
+    # Step 4: Transition
+    try:
+        transition_state(proposal_id, session_id,
+            'DIRECTIVE_AUTHORED', 'DIRECTIVE_READY',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, directive_hash=directive_hash,
+            db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        directive_hash=directive_hash,
+        directive_text=directive_text,
+        action='confirm_directive',
+        notes='Directive confirmed and ready for execution.'
+    )), 200
+
+
+# ── C5: handle_revise_directive ────────────────────────────────────────
+
+def handle_revise_directive(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+    revision_notes = data.get('revision_notes')
+
+    # Step 1: State check
+    current = get_current_state(proposal_id, db)
+    if current not in ('DIRECTIVE_AUTHORED', 'DIRECTIVE_READY'):
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current,
+            'DIRECTIVE_AUTHORED or DIRECTIVE_READY',
+            'revise_directive')), 409
+
+    # Step 3: Get current revision count
+    row = db.execute(
+        """SELECT revision_count FROM lifecycle_events
+           WHERE proposal_id=? ORDER BY id DESC LIMIT 1""",
+        (proposal_id,)
+    ).fetchone()
+    previous_count = row['revision_count'] if row else 0
+    new_count = previous_count + 1
+
+    # Step 4-5: Transition
+    try:
+        transition_state(proposal_id, session_id,
+            current, 'DIRECTIVE_DRAFTING',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1,
+            revision_count=new_count,
+            notes=revision_notes,
+            db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        revision_count=new_count,
+        action='revise_directive',
+        notes=revision_notes or 'Directive revision requested.'
+    )), 200
+
+
+# ── C6: handle_execute_directive ───────────────────────────────────────
+
+def handle_execute_directive(data, db):
+    proposal_id = data['proposal_id']
+    session_id = data.get('session_id', 'unknown')
+    directive_text = data.get('directive_text', '')
+    directive_hash = data.get('directive_hash', '')
+
+    # Step 1: Implementer authorization
+    try:
+        assert_implementer_authorized(proposal_id, directive_text, db)
+    except (UnauthorizedDispatchError, LifecycleStateError,
+            DirectiveHashMismatchError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR",
+                        "retry": False}), 403
+
+    # Step 2: State check
+    current = get_current_state(proposal_id, db)
+    if current != 'DIRECTIVE_READY':
+        db.close()
+        return jsonify(_state_conflict_response(
+            proposal_id, current, 'DIRECTIVE_READY',
+            'execute_directive')), 409
+
+    # Step 3: Hash validation
+    if not validate_directive_hash(proposal_id, directive_text, db):
+        db.close()
+        return jsonify({
+            "proposal_id": proposal_id,
+            "lifecycle_state": current,
+            "status": "STATE_CONFLICT",
+            "error": "Directive hash mismatch.",
+            "action": "execute_directive",
+        }), 409
+
+    # Step 4: Transition to EXECUTING
+    try:
+        transition_state(proposal_id, session_id,
+            'DIRECTIVE_READY', 'EXECUTING',
+            initiated_by='eric', gate_type='human',
+            eric_approved=1, db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        db.close()
+        return jsonify({"error": str(e),
+                        "status": "ERROR",
+                        "lifecycle_state": "ERROR"}), 409
+
+    # Step 5-6: Create dispatch
+    dispatch_id = create_dispatch(
+        proposal_id=proposal_id,
+        source_actor='orchestrator',
+        target_agent='hermes-v4impl',
+        target_endpoint='http://127.0.0.1:8646',
+        lifecycle_state_at='EXECUTING',
+        payload=directive_text,
+        initiated_by='orchestrator',
+        eric_approved=1,
+        directive_hash=directive_hash,
+        db=db
+    )
+    update_dispatch_inflight(dispatch_id, db)
+
+    # Step 7: POST to implementer
+    response_message_id = None
+    try:
+        result = _post_to_agent('hermes-v4impl', 8646, directive_text,
+                                timeout=600)
+        response_body = result.get('content', '')
+        response_message_id = complete_dispatch(
+            dispatch_id, 200, response_body, db)
+    except Exception as e:
+        fail_dispatch(dispatch_id, 0, str(e), db)
+        db.close()
+        return jsonify(handle_auth_failure(
+            dispatch_id, str(e), 0, db)), 502
+
+    # Step 9: Transition to EXECUTION_COMPLETE
+    try:
+        transition_state(proposal_id, session_id,
+            'EXECUTING', 'EXECUTION_COMPLETE',
+            initiated_by='orchestrator', gate_type='automatic',
+            db=db)
+    except (LifecycleStateError, LifecycleTransitionError) as e:
+        logger.warning("execute_directive final transition failed: %s", e)
+
+    return jsonify(_standard_response(
+        data, db, proposal_id,
+        dispatch_id=dispatch_id,
+        response_message_id=response_message_id,
+        directive_hash=directive_hash,
+        directive_text=directive_text,
+        action='execute_directive',
+        notes='Execution complete. Awaiting verification.'
+    )), 200
+
+
+# ── Action dispatch map ────────────────────────────────────────────────
+
+ACTION_HANDLERS = {
+    'reviewer_dispatch':       handle_reviewer_dispatch,
+    'approve_draft_directive': handle_approve_draft,
+    'reject_proposal':         handle_reject_proposal,
+    'confirm_directive':       handle_confirm_directive,
+    'revise_directive':        handle_revise_directive,
+    'execute_directive':       handle_execute_directive,
+}
+
+
 # ── Router endpoint ──────────────────────────────────────────────────────
 
 @advisor_bp.route('/api/advisor/route', methods=['POST'])
@@ -1287,6 +1824,27 @@ def route_message():
 
     _ensure_routing_table()
     data          = request.get_json() or {}
+
+    # ── ALLOV1-BE-002: Action dispatch ────────────────────────────────
+    action = data.get('action')
+    if action and action in ACTION_HANDLERS:
+        db = get_db()
+        try:
+            handler = ACTION_HANDLERS[action]
+            result = handler(data, db)
+            db.close()
+            return result
+        except Exception as e:
+            db.close()
+            logger.exception("Action handler %s failed", action)
+            return jsonify({
+                "error": f"Action handler '{action}' failed: {str(e)}",
+                "status": "ERROR",
+                "lifecycle_state": "ERROR",
+                "action": action,
+            }), 500
+    # ── end action dispatch ──────────────────────────────────────────
+
     message       = (data.get("message") or "").strip()
     thread_id     = data.get("thread_id")
     override      = data.get("override")
