@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
+import { useLifecycle } from "../../hooks/useLifecycle";
 
 const AGENTS = [
   { name: "hermes-prime",  label: "Research / Evidence (Flash)", route: "fast",           role: "Evidence gathering / research preflight", color: "#f59e0b", model: "deepseek-v4-flash" },
@@ -483,6 +484,358 @@ export default function AdvisorChat() {
   const [routerLoading, setRouterLoading] = useState(false);
   const [routerPanelContents, setRouterPanelContents] = useState({});
 
+  // ALLOV1-UI-002: Lifecycle observability hook
+  const lifecycle = useLifecycle();
+  const [dispatchLogExpanded, setDispatchLogExpanded] = useState(false);
+
+  // ── Lifecycle Sub-Components ──────────────────────────────────────────
+
+  const STATE_COLORS = {
+    IDLE: "#6b7280", ROUTING: "#6b7280",
+    RESEARCH_ACTIVE: "#3b82f6", RESEARCH_HANDOFF: "#3b82f6",
+    DRAFTING: "#3b82f6", DIRECTIVE_DRAFTING: "#3b82f6",
+    REVIEWING: "#3b82f6", EXECUTING: "#3b82f6",
+    DRAFT_READY: "#eab308", RESEARCH_COMPLETE: "#eab308",
+    DIRECTIVE_AUTHORED: "#eab308", DIRECTIVE_READY: "#eab308",
+    REVIEW_COMPLETE: "#eab308", EXECUTION_COMPLETE: "#eab308",
+    ERIC_APPROVAL_GATE: "#f97316",
+    PASS: "#22c55e",
+    FAIL: "#ef4444", REJECTED: "#ef4444", ERROR: "#ef4444",
+    ABORTED: "#f59e0b", UNVERIFIED: "#f59e0b",
+    REVISE_REQUESTED: "#a855f7",
+  };
+
+  function LifecycleBadge({ state, revisionCount }) {
+    const color = STATE_COLORS[state] || "#6b7280";
+    const label = state || "IDLE";
+    const revLabel = revisionCount > 0 ? ` (rev ${revisionCount})` : "";
+    return (
+      <span style={{
+        padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+        background: color + "22", border: `1px solid ${color}44`, color: color,
+        display: "inline-block", whiteSpace: "nowrap", minHeight: 28,
+        lineHeight: "20px", boxSizing: "border-box",
+      }}>
+        {label}{revLabel}
+      </span>
+    );
+  }
+
+  function StopButton() {
+    return (
+      <button onClick={lifecycle.abort} style={{
+        padding: "8px 14px", background: "#ef4444", border: "none",
+        borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600,
+        cursor: lifecycle.inFlight ? "pointer" : "default",
+        whiteSpace: "nowrap", minWidth: 60,
+        visibility: lifecycle.inFlight ? "visible" : "hidden",
+      }}>Stop</button>
+    );
+  }
+
+  function DispatchLogToggle({ n, expanded, onClick }) {
+    return (
+      <button onClick={onClick} style={{
+        background: "none", border: "none", color: "#64748b",
+        fontSize: 12, cursor: "pointer", padding: 0,
+      }}>
+        {expanded ? "▼" : "▶"} Dispatch Log ({n})
+      </button>
+    );
+  }
+
+
+  function ResearchHandoffNotice() {
+    if (!lifecycle.researchMessageId) return null;
+    return (
+      <div style={{
+        padding: "6px 10px", background: "#06b6d422", border: "1px solid #06b6d444",
+        borderRadius: 4, fontSize: 10, color: "#22d3ee", marginBottom: 8,
+      }}>
+        Research context received: {lifecycle.researchMessageId.slice(0, 8)}
+      </div>
+    );
+  }
+
+  function ReviewRequestCard() {
+    const dt = lifecycle.drafterResponseText;
+    if (!dt) return null;
+    let card = null;
+    try {
+      const match = dt.match(/\{[\s\S]*"type"\s*:\s*"REVIEW_REQUEST"[\s\S]*\}/);
+      if (match) card = JSON.parse(match[0]);
+    } catch (_) {}
+
+    if (!card) return null;
+
+    const reviewed = lifecycle.reviewerMessageId != null;
+    const canSend = lifecycle.lifecycleState === 'DRAFT_READY' && !reviewed;
+    const dispatching = lifecycle.lifecycleState === 'REVIEW_PENDING' ||
+      lifecycle.lifecycleState === 'REVIEWING';
+
+    return (
+      <div style={{
+        marginTop: 8, padding: 10, background: "#8b5cf622",
+        border: "1px solid #8b5cf644", borderRadius: 6, fontSize: 11,
+      }}>
+        <div style={{ color: "#8b5cf6", fontWeight: 700, marginBottom: 6 }}>
+          REVIEW REQUEST
+        </div>
+        <div style={{ color: "#cbd5e1", marginBottom: 4, maxHeight: 80, overflowY: "auto" }}>
+          {(card.payload || "").slice(0, 300)}
+        </div>
+        <div style={{ color: "#94a3b8", fontSize: 10, marginBottom: 6 }}>
+          {card.reason || ""}
+        </div>
+        <div style={{ color: "#64748b", fontSize: 10, marginBottom: 6 }}>
+          {reviewed
+            ? `Reviewed: ${lifecycle.reviewerMessageId.slice(0, 8)}`
+            : dispatching
+            ? "Dispatching to Reviewer..."
+            : "Awaiting your dispatch"}
+        </div>
+        {canSend && (
+          <button onClick={() => lifecycle.postAction('reviewer_dispatch', {
+            payload: dt,
+          })} disabled={lifecycle.inFlight} style={{
+            padding: "4px 12px", background: "#8b5cf6", border: "none",
+            borderRadius: 4, color: "#fff", fontSize: 11, cursor: "pointer",
+            opacity: lifecycle.inFlight ? 0.5 : 1,
+          }}>Send to Reviewer</button>
+        )}
+      </div>
+    );
+  }
+
+  function ReviewerPanelContent() {
+    const st = lifecycle.lifecycleState;
+    const rid = lifecycle.reviewerMessageId;
+    if (![ 'REVIEWING','REVIEW_PENDING','REVIEW_COMPLETE' ].includes(st) && !rid) {
+      return <div style={{ color: "#334155", fontSize: 12, textAlign: "center", marginTop: 40 }}>
+        No reviewer response this session.
+      </div>;
+    }
+    if (st === 'REVIEWING' || st === 'REVIEW_PENDING') {
+      return <div style={{
+        display: "flex", alignItems: "center", gap: 8, padding: 16, color: "#6366f1", fontSize: 12,
+      }}>
+        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%",
+          background: "#6366f1", animation: "pulse 1s ease-in-out infinite" }} />
+        Reviewing...
+      </div>;
+    }
+    const vc = { PASS: "#22c55e", REVISE: "#f59e0b", REJECT: "#ef4444", MALFORMED: "#6b7280" };
+    const v = lifecycle.verdict;
+    return (
+      <div style={{ padding: 10, fontSize: 11 }}>
+        <span style={{
+          padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 600,
+          background: (vc[v] || "#6b7280") + "22",
+          border: `1px solid ${(vc[v] || "#6b7280")}44`,
+          color: vc[v] || "#6b7280",
+        }}>{v || "UNKNOWN"}</span>
+        <div style={{ color: "#64748b", fontSize: 10, marginTop: 4 }}>
+          Message ID: {rid ? rid.slice(0, 8) : "—"}
+        </div>
+        <div style={{ color: "#cbd5e1", marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+          {v === 'MALFORMED' ? (
+            <><span style={{ color: "#f59e0b" }}>
+              Reviewer response received but verdict format is invalid. Raw response shown below.
+            </span><br/></>
+          ) : null}
+          {lifecycle.critique || "—"}
+        </div>
+        {lifecycle.requiredChanges && lifecycle.requiredChanges.length > 0 && (
+          <ul style={{ marginTop: 6, paddingLeft: 18, color: "#f59e0b" }}>
+            {lifecycle.requiredChanges.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  function EricApprovalGate() {
+    const st = lifecycle.lifecycleState;
+    const show = (st === 'REVIEW_COMPLETE' && lifecycle.verdict === 'PASS') ||
+      (st === 'DRAFT_READY' && lifecycle.ericBypass);
+    if (!show) return null;
+
+    return (
+      <div style={{
+        margin: "8px 12px", padding: "12px 14px",
+        background: "#f9731622", border: "1px solid #f9731644",
+        borderRadius: 6, fontSize: 11,
+      }}>
+        <div style={{ color: "#f97316", fontWeight: 700, marginBottom: 6 }}>
+          Eric Approval Gate
+        </div>
+        {lifecycle.ericBypass ? (
+          <>
+            <div style={{ color: "#cbd5e1" }}>Review was bypassed.</div>
+            <div style={{ color: "#64748b", fontSize: 10 }}>Reviewer message: None</div>
+          </>
+        ) : (
+          <>
+            <div style={{ color: "#cbd5e1" }}>
+              Reviewer has returned PASS. Review the Reviewer panel before approving directive drafting.
+            </div>
+            <div style={{ color: "#64748b", fontSize: 10, marginBottom: 8 }}>
+              Reviewer message: {lifecycle.reviewerMessageId
+                ? lifecycle.reviewerMessageId.slice(0, 8) : "—"}
+            </div>
+          </>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => lifecycle.postAction('approve_draft_directive', {
+            eric_bypass: lifecycle.ericBypass ? 1 : 0,
+          })} disabled={lifecycle.inFlight} style={{
+            padding: "5px 14px", background: "#22c55e", border: "none",
+            borderRadius: 4, color: "#fff", fontSize: 11, cursor: "pointer",
+            opacity: lifecycle.inFlight ? 0.5 : 1,
+          }}>Approve — Draft Directive</button>
+          <button onClick={() => lifecycle.postAction('reject_proposal')}
+            disabled={lifecycle.inFlight} style={{
+              padding: "5px 14px", background: "#ef4444", border: "none",
+              borderRadius: 4, color: "#fff", fontSize: 11, cursor: "pointer",
+              opacity: lifecycle.inFlight ? 0.5 : 1,
+            }}>Reject</button>
+        </div>
+      </div>
+    );
+  }
+
+  function DirectiveAuthoredDisplay() {
+    if (lifecycle.lifecycleState !== 'DIRECTIVE_AUTHORED') return null;
+    return (
+      <div style={{ padding: 10, fontSize: 11 }}>
+        <div style={{ color: "#eab308", fontWeight: 700, marginBottom: 4 }}>
+          FINAL DIRECTIVE — FROZEN
+        </div>
+        <textarea readOnly value={lifecycle.directiveText || ""} rows={10} style={{
+          width: "100%", background: "#0f172a", border: "1px solid #334155",
+          borderRadius: 4, color: "#e2e8f0", fontSize: 11, fontFamily: "monospace",
+          padding: 8, resize: "vertical",
+        }} />
+        <div style={{ color: "#64748b", fontSize: 10, marginTop: 4 }}>
+          SHA-256: {(lifecycle.directiveHash || "").slice(0, 16)}...
+        </div>
+        <div style={{ color: "#94a3b8", fontSize: 10, marginBottom: 8 }}>
+          This text is frozen. Implementer will receive exactly this.
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => lifecycle.postAction('confirm_directive', {
+            directive_text: lifecycle.directiveText,
+            directive_hash: lifecycle.directiveHash,
+          })} disabled={lifecycle.inFlight} style={{
+            padding: "5px 14px", background: "#22c55e", border: "none",
+            borderRadius: 4, color: "#fff", fontSize: 11, cursor: "pointer",
+            opacity: lifecycle.inFlight ? 0.5 : 1,
+          }}>Confirm Directive</button>
+          <button onClick={() => lifecycle.postAction('revise_directive')}
+            disabled={lifecycle.inFlight} style={{
+              padding: "5px 14px", background: "#f59e0b", border: "none",
+              borderRadius: 4, color: "#000", fontSize: 11, cursor: "pointer",
+              opacity: lifecycle.inFlight ? 0.5 : 1,
+            }}>Revise — Return to Drafter</button>
+        </div>
+      </div>
+    );
+  }
+
+  function DirectiveReadyDisplay() {
+    if (lifecycle.lifecycleState !== 'DIRECTIVE_READY') return null;
+    return (
+      <div style={{ padding: 10, fontSize: 11 }}>
+        <textarea readOnly value={lifecycle.directiveText || ""} rows={10} style={{
+          width: "100%", background: "#0f172a", border: "1px solid #334155",
+          borderRadius: 4, color: "#e2e8f0", fontSize: 11, fontFamily: "monospace",
+          padding: 8, resize: "vertical",
+        }} />
+        <div style={{ color: "#64748b", fontSize: 10, marginTop: 4 }}>
+          SHA-256: {(lifecycle.directiveHash || "").slice(0, 16)}... — verified
+        </div>
+        <div style={{
+          marginTop: 8, padding: 8, border: "1px solid #ef4444",
+          borderRadius: 4, color: "#ef4444", fontSize: 10,
+        }}>
+          Execution is irreversible for file system operations.
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button onClick={() => lifecycle.postAction('execute_directive', {
+            directive_text: lifecycle.directiveText,
+            directive_hash: lifecycle.directiveHash,
+          })} disabled={lifecycle.inFlight} style={{
+            padding: "5px 14px", background: "#ef4444", border: "none",
+            borderRadius: 4, color: "#fff", fontSize: 11, cursor: "pointer",
+            fontWeight: 600,
+            opacity: lifecycle.inFlight ? 0.5 : 1,
+          }}>Execute</button>
+          <button onClick={() => lifecycle.postAction('revise_directive')}
+            disabled={lifecycle.inFlight} style={{
+              padding: "5px 14px", background: "#f59e0b", border: "none",
+              borderRadius: 4, color: "#000", fontSize: 11, cursor: "pointer",
+              opacity: lifecycle.inFlight ? 0.5 : 1,
+            }}>Revise</button>
+        </div>
+      </div>
+    );
+  }
+
+  function UnverifiedBanner() {
+    const st = lifecycle.lifecycleState;
+    if (st === 'PASS') return (
+      <div style={{
+        padding: "8px 12px", background: "#22c55e22", border: "1px solid #22c55e44",
+        borderRadius: 4, color: "#22c55e", fontSize: 11, fontWeight: 600,
+      }}>PASS — Execution verified.</div>
+    );
+    if (st === 'FAIL') return (
+      <div style={{
+        padding: "8px 12px", background: "#ef444422", border: "1px solid #ef444444",
+        borderRadius: 4, color: "#ef4444", fontSize: 11, fontWeight: 600,
+      }}>FAIL — Verification failed.</div>
+    );
+    if ([ 'EXECUTION_COMPLETE', 'VERIFICATION', 'UNVERIFIED' ].includes(st)) {
+      const interrupted = st === 'UNVERIFIED';
+      return (
+        <div style={{
+          padding: "8px 12px", background: "#fef9c3", border: "1px solid #eab308",
+          borderRadius: 4, color: "#1f2937", fontSize: 11, fontWeight: 600,
+        }}>
+          {interrupted
+            ? "Execution was interrupted. File system state is unknown. Manual verification required."
+            : "UNVERIFIED — Execution complete. Verification pending."}
+        </div>
+      );
+    }
+    return null;
+  }
+
+  function ErrorBanner() {
+    if (lifecycle.lifecycleState !== 'ERROR' || !lifecycle.lastError) return null;
+    const e = lifecycle.lastError;
+    const agent = e.action === 'reviewer_dispatch' ? 'hermes-r1' :
+      [ 'approve_draft_directive','confirm_directive','revise_directive' ].includes(e.action)
+        ? 'hermes-v4pro' : e.action === 'execute_directive'
+        ? 'hermes-v4impl' : 'unknown';
+    return (
+      <div style={{
+        padding: "10px 12px", background: "#ef444422", border: "1px solid #ef444444",
+        borderRadius: 6, fontSize: 11, margin: "8px 12px",
+      }}>
+        <div style={{ color: "#ef4444", fontWeight: 700, marginBottom: 4 }}>
+          Dispatch failed: {agent}
+        </div>
+        <div style={{ color: "#cbd5e1" }}>
+          HTTP {e.http_status_code}: {e.error}
+        </div>
+        <div style={{ color: "#64748b", fontSize: 10, marginTop: 2 }}>
+          Dispatch ID: {(e.dispatch_id || "unknown").slice(0, 16)}
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     fetch("/api/advisor/threads")
       .then(r => r.json())
@@ -726,6 +1079,7 @@ export default function AdvisorChat() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      lifecycle.processResponse(data);
       setRouterResponse(data);
 
       if (!routerThreadId && data.message_id) {
@@ -887,6 +1241,51 @@ export default function AdvisorChat() {
         <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>
           Router Input — messages are classified and sent to the appropriate agent.
         </span>
+        {/* ALLOV1-UI-002-FIX: Dedicated badge row */}
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          minHeight: 28, padding: "2px 0",
+        }}>
+          <LifecycleBadge state={lifecycle.lifecycleState} revisionCount={lifecycle.revisionCount} />
+          <DispatchLogToggle
+            n={lifecycle.dispatchLog.length}
+            expanded={dispatchLogExpanded}
+            onClick={() => setDispatchLogExpanded(!dispatchLogExpanded)}
+          />
+        </div>
+        {dispatchLogExpanded && (
+          <div style={{
+            padding: 8, background: "#0f172a", border: "1px solid #1e293b",
+            borderRadius: 6, fontSize: 10, color: "#94a3b8", maxHeight: 200,
+            overflowY: "auto",
+          }}>
+            {lifecycle.dispatchLog.length === 0 ? (
+              <div style={{ color: "#475569", textAlign: "center" }}>No dispatch entries yet.</div>
+            ) : (
+              [...lifecycle.dispatchLog].reverse().map((entry, i) => {
+                const port = entry.target_endpoint
+                  ? entry.target_endpoint.split(":").pop() || "—" : "—";
+                const ts = entry.timestamp_initiated
+                  ? new Date(entry.timestamp_initiated).toTimeString().slice(0, 8) : "—";
+                return (
+                  <div key={i} style={{
+                    padding: "3px 0", borderBottom: "1px solid #1e293b",
+                    display: "flex", gap: 8, flexWrap: "wrap",
+                  }}>
+                    <span style={{ color: "#60a5fa" }}>{(entry.dispatch_id || "—").slice(0, 8)}</span>
+                    <span>{entry.source_actor || "—"} → {entry.target_agent || "—"}</span>
+                    <span>:{port}</span>
+                    <span style={{ color: STATE_COLORS[entry.current_status] || "#6b7280" }}>
+                      {entry.current_status || "—"}</span>
+                    <span>{ts}</span>
+                    <span>{(entry.response_message_id || "—").slice(0, 8)}</span>
+                    <span>{(entry.error_message || "").slice(0, 60) || "—"}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
         <textarea
           value={routerInput}
@@ -916,6 +1315,7 @@ export default function AdvisorChat() {
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        <StopButton />
         <button
           onClick={sendRouter}
           disabled={routerLoading || !routerInput.trim()}
@@ -944,6 +1344,9 @@ export default function AdvisorChat() {
         )}
         </div>
       </div>
+
+      <EricApprovalGate />
+      <ErrorBanner />
 
       {/* Routing Banner */}
       {routerResponse && !routerResponse.error && (
@@ -1107,7 +1510,15 @@ export default function AdvisorChat() {
         minHeight: 0, overflow: "hidden"
       }}>
         {AGENTS.map(agent => (
-          <AgentPanel
+          <div key={agent.name} style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+            {/* Lifecycle panel content per agent */}
+            {agent.route === "v4_drafter" && <ResearchHandoffNotice />}
+            {agent.route === "v4_drafter" && <ReviewRequestCard />}
+            {agent.route === "v4_reviewer" && <ReviewerPanelContent />}
+            {agent.route === "v4_implementer" && <UnverifiedBanner />}
+            {agent.route === "v4_implementer" && <DirectiveAuthoredDisplay />}
+            {agent.route === "v4_implementer" && <DirectiveReadyDisplay />}
+            <AgentPanel
             key={agent.name}
             agent={agent}
             threadId={activeThread}
@@ -1118,6 +1529,7 @@ export default function AdvisorChat() {
             onEscalate={handleEscalate}
             routerContent={routerPanelContents[agent.route] || null}
           />
+          </div>
         ))}
       </div>
 
