@@ -1285,12 +1285,15 @@ def _standard_response(data, db, proposal_id, dispatch_id=None,
                        directive_hash=None, directive_text=None,
                        eric_approved=1, eric_bypass=0, revision_count=0,
                        verdict=None, critique=None, required_changes=None,
-                       action=None, notes=None):
+                       action=None, notes=None,
+                       target_agent=None, target_endpoint=None):
     """Build the standard lifecycle response shape (Section D)."""
     return {
         "proposal_id": proposal_id,
         "session_id": data.get('session_id', 'unknown'),
         "source_actor": data.get('source_actor', 'eric'),
+        "target_agent": target_agent,
+        "target_endpoint": target_endpoint,
         "dispatch_id": dispatch_id,
         "lifecycle_state": get_current_state(proposal_id, db),
         "response_message_id": response_message_id,
@@ -1314,6 +1317,8 @@ def _state_conflict_response(proposal_id, current_state, expected_state, action,
     return {
         "proposal_id": proposal_id,
         "source_actor": source_actor,
+        "target_agent": None,
+        "target_endpoint": None,
         "lifecycle_state": current_state,
         "expected_state": expected_state,
         "status": "STATE_CONFLICT",
@@ -1447,7 +1452,9 @@ def handle_reviewer_dispatch(data, db):
         critique=critique,
         required_changes=required_changes,
         action='reviewer_dispatch',
-        notes=f"Reviewer verdict: {verdict}"
+        notes=f"Reviewer verdict: {verdict}",
+        target_agent='hermes-r1',
+        target_endpoint='http://127.0.0.1:8643'
     )), 200
 
 
@@ -1561,7 +1568,9 @@ def handle_approve_draft(data, db):
         directive_text=directive_text,
         eric_bypass=eric_bypass,
         action='approve_draft_directive',
-        notes='Directive authored and frozen.'
+        notes='Directive authored and frozen.',
+        target_agent='hermes-v4pro',
+        target_endpoint='http://127.0.0.1:8645'
     )), 200
 
 
@@ -1805,7 +1814,9 @@ def handle_execute_directive(data, db):
         directive_hash=directive_hash,
         directive_text=directive_text,
         action='execute_directive',
-        notes='Execution complete. Awaiting verification.'
+        notes='Execution complete. Awaiting verification.',
+        target_agent='hermes-v4impl',
+        target_endpoint='http://127.0.0.1:8646'
     )), 200
 
 
