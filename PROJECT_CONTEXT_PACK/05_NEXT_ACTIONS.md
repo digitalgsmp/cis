@@ -1,46 +1,35 @@
-# Next Actions — Hermes Harness / CIS
-Last updated: 2026-05-31 (Gate 7 closeout)
+# Next Actions — CIS
+Last updated: 2026-05-31 (Phase 0 Recovery)
 
 ## Current Next Action
 
-**Gate 7 closeout is complete.** The Advisor loop is verified end-to-end:
-Fast/NeMo → V4-Pro R1 → V4-Pro R2 → V4-Pro R1 → Qwen Worker → Qwen Judge
+**Phase 0 recovery complete.** Git versioning protects source.
+All gateways healthy and context-aware.
 
-Next session should:
-1. Review updated handoff
-2. Decide between: AdvisorChat UI usability test, Phase 4B knowledge base extraction, or deterministic verifier DAG planning
+**Phase 1 — Minimal Orchestrator Scaffold:**
+Build orchestrator.py state machine with Drafter→Reviewer deliberation
+loop only. No Judge, no Verifier, no UI changes. Goal: remove Eric from
+manual relay.
 
-**Phase 4B — Extract Eric's intent from Google Drive chat transcripts** remains
-the canonical next build objective. 12 files (3.4MB) downloaded, not yet extracted.
+After Phase 1: Phase 2 (NeMo/Python Judge), Phase 3 (Post-Execution
+Verifier), then Phase 4B (knowledge base extraction, deferred).
 
-## Completed (Phases 0-7D)
+## Completed
 - Phase 0 — Boundary docs ✅
 - Phase 1 — Proxmox snapshot fix ✅
-- Phase 2 — Gateway verification and repair ✅
-- Phase 3A — Automatic Context Loader ✅
-- Phase 3B — Automated Session Continuation ✅
-- Phase 4A — Deterministic Freshness Verifier ✅
-- Phase 4A Integration — Wrapper Freshness Gate ✅
-- Gates 2-6 — V4-Pro Gateway, NeMo Guardrails, Tavily ✅
-- Gate 7A — V4-Pro Preflight Evidence Injection ✅
-- Gate 7B — Qwen Worker/Judge Gate ✅
-- Gate 7C — Mixed Prompt Classification Tuning ✅
-- Gate 7D — Full Advisor Loop Smoke Test ✅
-
-## Immediate Queue
-1. AdvisorChat UI usability test (verify full loop in browser)
-2. Phase 4B — Knowledge Base Extraction
-3. Deterministic verifier DAG planning (Archon-style)
-4. Phase 5 — Notes and Open Items
+- Phase 2 — Gateway verification ✅
+- Phase 3A/3B — Context loader + auto-continuation ✅
+- Phase 4A — Freshness verifier + wrapper gate ✅
+- Gates 2-7D — V4-Pro gateway, NeMo, Tavily, Advisor routing ✅
+- Router v0.1 — AdvisorChat input router ✅
+- Phase 0 Recovery — Git versioning + gateway repair + context injection ✅
 
 ## Do Not Start Yet
 - Pass 5 implementation
 - Unified memory build
-- Model routing changes
-- Briefing Center UI redesign
+- UI redesign
 - VDB pipeline rebuild
 - Discord/Telegram gateway
-- Schedule field-use work
-
-## Build Order Rationale
-Boundary docs → Storage safety → Gateway distinctness → Context loading → Advisor routing → Knowledge base → Verifier DAG → Notes/Open Items → VDB
+- Knowledge base extraction (Phase 4B, deferred)
+- Judge implementation (Phase 2, after orchestrator)
+- Verifier implementation (Phase 3, after Judge)

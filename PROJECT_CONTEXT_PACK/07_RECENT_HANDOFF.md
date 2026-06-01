@@ -1,34 +1,47 @@
-# Recent Handoff — Gate 7 Closeout
+# Recent Handoff — Phase 0 Recovery
 Date: 2026-05-31
 Session: Prime (deepseek-v4-pro)
 
-## What Was Accomplished (Gate 7A-7D)
+## What Was Accomplished
 
-### Advisor Routing Overhaul
-- Fast/NeMo evidence firewall complete (5 Colang intents, 4 actions)
-- V4-Pro R1/R2 preflight evidence injection (NeMo evidence → V4-Pro direct)
-- Qwen Worker/Judge gate (FINAL_DIRECTIVE + JUDGE_REQUEST only)
-- Mixed prompt classification tuned (creative + current-facts triggers Tavily)
-- Full advisor loop smoke test passed (all 6 steps)
+### Git Versioning
+- `.gitignore` created: 629 source files tracked, 74GB excluded (databases, venvs, archives, transcripts, secrets)
+- Initial commit `b1bcf7d` — full CIS source tree
+- Private GitHub repo: https://github.com/digitalgsmp/cis
+- GitHub CLI installed and authenticated
 
-### Route Table (Final)
-- hermes-prime / Fast → 8800 NeMo → 8642 deepseek-v4-flash
-- hermes-v4pro / V4-Pro R1 → 8645 direct deepseek-v4-pro thinking
-- hermes-r1 / V4-Pro R2-Critic → 8643 direct deepseek-v4-pro thinking
-- hermes-qwen / Qwen Worker-Judge → 8644 direct local Qwen
+### Gateway Recovery
+- V4 Drafter (8645): model deepseek-v4-pro, xhigh reasoning, context-aware
+- V4 Reviewer (8643): model deepseek-v4-pro, xhigh reasoning, context-aware
+- V4 Implementer (8646): model deepseek-v4-pro, xhigh reasoning, context-aware
+- Stale r1 process (PID 249591) killed, service restarted
+- All gateways pass health checks
 
-### Evidence Flow
-- Fast: NeMo intercepts system config, external facts, execution claims
-- V4-Pro: advisor.py preflights NeMo, injects evidence as system message, calls direct
-- Qwen: gated — only tagged FINAL_DIRECTIVE or JUDGE_REQUEST accepted
+### Context Briefing Injection
+- `HERMES_CIS_BRIEFING_PATH` added to all four gateway .env files
+- All three active V4 roles verified to load and answer from the briefing
+- CLI + gateway context injection now complete
 
-## Key Files Changed
-- runtime/api/advisor.py — preflight, reasoning capture, Qwen gate, execute route
-- runtime/rails/configs/cis_fast/rails/main.co — 5 intents with tuned patterns
-- runtime/rails/configs/cis_fast/actions.py — 3 guard actions + pass_through_query
-- docs/CIS_CURRENT_STATE.md — v2.2 → v2.3
-- cis_kernel/build/CIS_SCRATCHPAD.md — Gate 7A-7D entries
+### Architecture Clarifications
+- Judge = deterministic NeMo/Python checklist gate (not a reasoning model, not Qwen)
+- Orchestrator = backend state machine (not Flash)
+- Qwen is paused / out of active implementation
+- R1/DeepSeek Reasoner retired from active assumptions
+- `hermes-gateway-r1` is stale service name only; actual role is V4 Reviewer
+
+### Docs Updated
+- CIS_CURRENT_STATE.md (v2.4 → v2.5)
+- CIS_SCRATCHPAD.md
+- PROJECT_CONTEXT_PACK/01, 05, 07, 08
+
+## Corrected Architecture
+
+User prompt → Orchestrator → Flash (optional research) → V4 Drafter
+→ V4 Reviewer (adversarial challenge, max 3 cycles) → NeMo Judge
+(deterministic PASS/FAIL) → Human approval (H1) → V4 Implementer
+→ Post-Execution Verifier
 
 ## Immediate Next Action
-Closeout complete. Next session: review handoff → choose UI test, Phase 4B, or verifier DAG.
-Phase 4B (knowledge base extraction) remains canonical next build objective.
+
+Minimal orchestrator scaffold (orchestrator.py state machine with
+Drafter→Reviewer deliberation loop). No Judge, no Verifier, no UI yet.

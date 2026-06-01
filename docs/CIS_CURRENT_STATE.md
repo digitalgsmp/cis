@@ -1,5 +1,5 @@
 # CIS Current State
-Version: 2.4
+Version: 2.5
 Date: 2026-05-31
 Authority: Eric (Architect)
 Maintained by: Updated at start of each session by the active advisor
@@ -9,16 +9,16 @@ Status: LIVE — update when state changes, never let this go stale
 
 ## Current Objective
 
-Infrastructure stabilization before Phase 4B. The AdvisorChat.jsx truncation
-event proved that git versioning is now a blocking infrastructure need.
-Immediate priority: GitHub/git versioning, then UI layout/readability
-improvements, then router usability validation, then Archon-style verifier
-DAG planning. Phase 4B knowledge base extraction is deferred until the tool
-is stable enough to work beyond infrastructure.
+Phase 0 recovery complete. GitHub private repo exists at
+https://github.com/digitalgsmp/cis with initial commit `b1bcf7d`.
+All three V4 Pro gateways (Drafter/Reviewer/Implementer) are healthy,
+context-aware via HERMES_CIS_BRIEFING_PATH, and correctly modeled as
+deepseek-v4-pro with xhigh reasoning. Qwen is paused. R1/DeepSeek Reasoner
+is retired from active assumptions.
 
-**AdvisorChat Input Router v0.1 is COMPLETE.** The routing layer now
-automatically classifies user prompts and dispatches to the correct agent.
-The user is no longer the manual API between agents.
+Next objective: minimal orchestrator scaffold (orchestrator.py state machine)
+to remove Eric from the manual relay role. Judge (deterministic NeMo/Python
+checklist) and Verifier (post-execution evidence check) follow after.
 
 **Verification-hardening rule (2026-05-31):** V4 Implementer self-report is not
 a source of truth. Completion is accepted only after deterministic evidence
@@ -32,44 +32,46 @@ evidence → status remains UNVERIFIED.
 
 ---
 
-## Model Roles (Router v0.1 — 2026-05-31)
+## Model Roles (Corrected — 2026-05-31 Phase 0)
 
-| Label | Agent | Gateway | Port | Model | Function | Boundaries |
-|-------|-------|---------|------|-------|----------|------------|
-| Research / Evidence | hermes-prime | NeMo → 8642 | 8800 | deepseek-v4-flash | Evidence firewall + current-facts search | No code, no files, no terminal |
-| V4 Drafter | hermes-v4pro | Direct | 8645 | deepseek-v4-pro (thinking) | Proposal author, directive drafter | No execution, no file edits |
-| V4 Reviewer | hermes-r1 | Direct | 8643 | deepseek-v4-pro (thinking) | Adversarial reviewer, validator | No execution, no code generation |
-| V4 Implementer | hermes-v4impl | Direct | 8646 | deepseek-v4-pro (thinking, xhigh) | Execute FINAL_DIRECTIVE only | No deliberation, no architecture proposals |
+| Role | Agent | Gateway | Port | Model | Reasoning | NeMo? | Function |
+|------|-------|---------|------|-------|-----------|-------|----------|
+| Flash / Research | hermes-prime | NeMo → 8642 | 8800 | deepseek-v4-flash | — | Yes | Fast context, research, brainstorming |
+| V4 Drafter | hermes-v4pro | Direct | 8645 | deepseek-v4-pro | xhigh | No | Proposal author, directive drafter |
+| V4 Reviewer | hermes-r1 | Direct | 8643 | deepseek-v4-pro | xhigh | No | Adversarial reviewer, PASS/FAIL with critique |
+| V4 Implementer | hermes-v4impl | Direct | 8646 | deepseek-v4-pro | xhigh | No | Bounded executor, FINAL_DIRECTIVE only |
+| **Judge** | — | NeMo 8800 | — | — | — | IS NeMo | Deterministic checklist gate, PASS/FAIL only |
+| **Orchestrator** | — | `orchestrator.py` | — | — | — | No | Backend state machine, not a model |
 
-**Qwen (hermes-qwen)** remains active on port 8644 but is removed from the main
-AdvisorChat UI and routing flow. Deferred from implementation work. JUDGE_REQUEST
-remains backend-capable but not exposed in the UI.
+**Important naming corrections:**
+- `hermes-gateway-r1` is a stale service/profile name only. Actual role is V4 Reviewer.
+- R1/DeepSeek Reasoner is retired from active assumptions.
+- Qwen (hermes-qwen, port 8644) is paused / out of active implementation.
+- Judge is NOT a reasoning model. NOT Qwen. NOT Flash. Deterministic NeMo + Python action only.
+- Orchestrator is NOT Flash. Backend Python state machine. Rule-based transitions only.
 
-### Advisor Loop Architecture (Router v0.1 verified)
+### Advisor Loop Architecture (Designed — Not Yet Implemented)
 
 ```
 User prompt
-  → classify_route() — 8-pass classifier
-     ├─ Research signals → Research/Evidence (NeMo:8800 → Flash:8642)
-     ├─ Drafter signals → V4 Drafter (8645)
-     ├─ Reviewer signals → V4 Reviewer (8643)
-     ├─ Research + Drafter → multihop (NeMo preflight → V4 Drafter)
-     ├─ FINAL_DIRECTIVE prefix → V4 Implementer (8646, deterministic)
-     ├─ JUDGE_REQUEST prefix → Qwen (8644, deterministic, backend)
-     └─ Ambiguous → V4 Drafter (8645, low confidence)
-
-  → POST /api/advisor/route (auth-gated, X-CIS-API-Key)
-  → routing_decisions table — all routes logged
+  → Orchestrator decides: research needed?
+     ├─ YES → Flash/Research (NeMo:8800 → Flash:8642) gathers context
+     └─ NO  → skip directly to Drafter
+  → V4 Drafter (8645) — proposes structured directive
+  → V4 Reviewer (8643) — adversarial challenge
+     ├─ FAIL → return critique to Drafter (max 3 cycles)
+     ├─ DEADLOCK (3 cycles) → human-in-the-loop (H2)
+     └─ PASS → converged directive
+  → NeMo Judge (8800) — deterministic PASS/FAIL checklist
+     ├─ FAIL → return failed criteria to Drafter/Reviewer
+     └─ PASS → pending human approval (H1)
+  → Human approves → V4 Implementer (8646) — FINAL_DIRECTIVE
+  → Post-Execution Verifier — deterministic evidence check (H3 if FAIL)
 ```
-
-**Architecture principle:** NeMo is the behavioral/evidence firewall. The
-classify_route() 8-pass classifier is the routing gate. V4 Implementer is the
-execution gate. Qwen is deferred — future judge/evaluator role only.
 
 **Why V4 Drafter/Reviewer/Implementer are direct (not through NeMo):** NeMo's
 response pipeline strips `reasoning_content` and `reasoning_tokens` from
-DeepSeek thinking models (Gate 5C). NeMo preflight is used for evidence
-collection, then calls go direct.
+DeepSeek thinking models (Gate 5C).
 
 Claude and ChatGPT: Tier 3 escalation — pass/fail review when deliberation
 does not satisfy Eric. No direct execution authority.
@@ -86,23 +88,26 @@ does not satisfy Eric. No direct execution authority.
 - Snapshot status: RESOLVED — cis-snapshot deployed on root@wander (CIS-INFRA-STORAGE-001)
 - Backup status: local archive at /mnt/archive/cis_backup_20260524_112430.tar.gz
 - Google Drive backup integrity: UNVERIFIED
+- **GitHub versioning: COMPLETE** — private repo at https://github.com/digitalgsmp/cis, commit `b1bcf7d`
 
-### Advisor Gateways (Router v0.1 COMPLETE — all gates + router)
+### Advisor Gateways (Phase 0 Recovery COMPLETE)
 
-| Gateway | Port | HERMES_HOME | Model | Guardrails | Status |
-|---------|------|-------------|-------|------------|--------|
-| Research/Evidence (prime) | 8642 → NeMo 8800 | /home/eric/.hermes | deepseek-v4-flash | NeMo native on 8800 | Running |
-| V4 Drafter (v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro (thinking) | Direct (NeMo incompatible) | Running |
-| V4 Reviewer (r1) | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro (thinking) | Direct (NeMo incompatible) | Running |
-| V4 Implementer (v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro (thinking, xhigh) | Direct (NeMo incompatible) | Running |
-| Qwen Worker/Judge | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b (local) | None | Running (deferred from UI) |
+| Gateway | Port | HERMES_HOME | Model | Reasoning | NeMo? | Status |
+|---------|------|-------------|-------|-----------|-------|--------|
+| Flash/Research (prime) | 8642 → NeMo 8800 | /home/eric/.hermes | deepseek-v4-flash | — | Yes | Running |
+| V4 Drafter (v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | Direct | Running, context-aware |
+| V4 Reviewer (r1) | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro | xhigh | Direct | Running, context-aware |
+| V4 Implementer (v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | Direct | Running, context-aware |
+| Qwen (paused) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b (local) | — | None | Running but paused |
+
+**Context briefing:** All four gateway profiles now have `HERMES_CIS_BRIEFING_PATH` in their `.env` files. All three active V4 roles verified to load and answer from the briefing.
 
 Service files (all user-mode systemd):
-- `hermes-gateway.service` — Research/Evidence (HERMES_HOME=/home/eric/.hermes — OQ-009 anomaly)
-- `hermes-gateway-r1.service` — V4 Reviewer (HERMES_HOME=/home/eric/.hermes-r1)
-- `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen)
+- `hermes-gateway.service` — Flash/Research (HERMES_HOME=/home/eric/.hermes)
+- `hermes-gateway-r1.service` — V4 Reviewer (stale name: "r1", HERMES_HOME=/home/eric/.hermes-r1)
+- `hermes-gateway-qwen.service` — Qwen (paused, HERMES_HOME=/home/eric/.hermes-qwen)
 - `hermes-gateway-v4pro.service` — V4 Drafter (HERMES_HOME=/home/eric/.hermes-v4pro)
-- `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl, NEW)
+- `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl)
 - `nemo-fast.service` — NeMo Guardrails on port 8800
 
 NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `configs/`)
@@ -174,62 +179,49 @@ NeMo patch (Gate 5C):
 
 1. Google Drive backup integrity unverified
 2. ~~No automatic session-start context loading~~ — RESOLVED (Phase 3B/4A)
-3. No notes capture mechanism
-4. Claude and ChatGPT sessions not imported to SQLite
-5. ~~R1 role description stale~~ — RESOLVED (Gate 3: R1 now deepseek-v4-pro Critic)
-6. Qwen lacks CIS-specific context injection
-7. Shared knowledge base for adversarial deliberation not yet built (current)
-8. ~~Advisor Chat Deliberate button UNTESTED~~ — RESOLVED (Gate 3: reconciliation works)
-9. ~~Model role enforcement not automated~~ — RESOLVED (Gate 7: Advisor loop enforces roles via preflight/gating)
-10. V4-Pro and R1 cannot pass through NeMo (architecture incompatible with thinking models — accepted limitation)
+3. ~~GitHub/git versioning~~ — RESOLVED (2026-05-31, Phase 0)
+4. ~~Context briefing missing from gateway profiles~~ — RESOLVED (2026-05-31, Phase 0)
+5. No notes capture mechanism
+6. Claude and ChatGPT sessions not imported to SQLite
+7. ~~R1 role description stale~~ — RESOLVED (Phase 0: r1 is V4 Reviewer; Reasoner retired)
+8. ~~Qwen role confusion~~ — RESOLVED (Qwen is paused/out of active implementation)
+9. Shared knowledge base for adversarial deliberation not yet built
+10. V4-Pro cannot pass through NeMo (architecture incompatible with thinking models — accepted limitation)
 11. ~~NeMo Fast missing Tavily API key~~ — RESOLVED (Gate 6B)
 12. ~~Execution-claim blocking not implemented~~ — RESOLVED (Gate 6C-7D)
-13. ~~NeMo pattern matching too greedy~~ — RESOLVED (Gate 6C/7C/7D: pass-through intents tuned)
-14. NeMo semantic intent classifier requires manual compensation for new query types (accepted limitation)
-15. Deterministic Archon-style verifier DAG not yet implemented
-16. DeepEval regression/semantic testing layer not yet implemented
-17. Handoff generator source hierarchy has known gap around scratchpad/next_actions (OQ-010 partial)
-
----
+13. ~~NeMo pattern matching too greedy~~ — RESOLVED (Gate 6C/7C/7D)
+14. NeMo semantic intent classifier requires manual compensation (accepted limitation)
+15. Orchestrator state machine not yet built (next phase)
+16. Deterministic Judge (NeMo/Python checklist) not yet built
+17. Deterministic Verifier (post-execution evidence check) not yet built
+18. DeepEval regression/semantic testing layer not yet implemented
 
 ## Next Safe Action
 
-**Router v0.1 is complete.** The Advisor loop is verified end-to-end with automatic
-routing, evidence firewall, and adversarial review. Corrected next session queue:
+**Phase 0 recovery complete.** Git versioning protects the source tree.
+All gateways are healthy and context-aware. Correct architecture designed.
 
-1. GitHub/git versioning — protect CIS source files before further edits (blocking)
-2. Post-implementation verification gate design — evidence-based completion checks
-3. AdvisorChat UI layout/readability improvements
-4. Router usability validation — confirm one-input workflow
-5. Archon-style verifier DAG planning (deferred until verification gate is designed)
-6. Phase 4B — knowledge base extraction from Google Drive transcripts (deferred)
+Next safe phase: **minimal orchestrator scaffold** (orchestrator.py state machine
+with Drafter→Reviewer deliberation loop). No Judge, no Verifier, no UI changes.
+The goal is to remove Eric from the manual API relay role.
 
-**Phase 4B** — 12 files (3.4MB) downloaded at
-/mnt/projects/ai_execution_infrastructure/03_CHAT_CAPTURE/raw/drive_imports/,
-not yet extracted. Deferred until infrastructure is stable and verification
-gates are in place.
+Judge (deterministic NeMo/Python checklist) and Verifier (post-execution
+evidence check) follow after the orchestrator scaffold is stable.
+
+**Phase 4B** — 12 files (3.4MB) downloaded, knowledge base extraction deferred
+until infrastructure is stable and verification gates are in place.
 
 ---
 
-## Accepted Limitations (Gate 7)
+## Accepted Limitations (Phase 0)
 
-- **NeMo semantic classifier:** Uses embedding-based intent matching. When new query
-  types appear that are incorrectly routed, pass-through intents must be manually added.
-- **V4-Pro direct routing:** V4-Pro R1/R2 cannot pass through NeMo because NeMo strips
-  `reasoning_content` and `reasoning_tokens` from DeepSeek thinking models.
-- **Preflight evidence only:** V4-Pro preflight uses NeMo for evidence collection,
-  then calls V4-Pro direct. NeMo does not validate V4-Pro's output.
-- **V4 Implementer self-report not trusted:** Implementer completion claims are not
-  accepted as truth. A separate deterministic verification gate must confirm results
-  against directive scope using git diff, test output, DB queries, endpoint responses,
-  service health, browser/UI state, or independent reviewer pass/fail before
-  marking any implementation work as PASS.
-- **No deterministic verifier:** Archon-style DAG verification not yet built.
-  Current verification relies on human review + adversarial critique.
-- **No DeepEval:** Regression and semantic testing deferred.
-- **Handoff generator gap:** Generator reads CIS_CURRENT_STATE.md as primary authority
-  but scratchpad/next_actions may hold more current information (OQ-010 partial).
-  Generator improved in Gate 7E to cover more sources but gap remains.
+- **NeMo semantic classifier:** Uses embedding-based intent matching. Pass-through intents must be manually added for new query types.
+- **V4-Pro direct routing:** V4 Drafter/Reviewer/Implementer cannot pass through NeMo because NeMo strips `reasoning_content` and `reasoning_tokens` from DeepSeek thinking models.
+- **V4 Implementer self-report not trusted:** A separate deterministic verification gate must confirm results against directive scope before marking any implementation work as PASS.
+- **No orchestrator yet:** Eric still manually relays between agents. Orchestrator state machine (Phase 1) will remove this.
+- **No deterministic Judge yet:** Pre-execution directive validation is not automated.
+- **No deterministic Verifier yet:** Post-execution evidence checking is manual.
+- **Stale service names:** `hermes-gateway-r1` and `hermes-gateway-qwen` have names that no longer match their actual roles.
 
 ---
 
@@ -237,14 +229,17 @@ gates are in place.
 
 - Pass 5 implementation (project promotion, schema migration)
 - Unified memory build
-- Wiring V4-Pro/R1 through NeMo (architecturally blocked)
+- Wiring V4-Pro through NeMo (architecturally blocked)
 - Briefing Center UI redesign
 - Notes/Open Items database implementation
 - VDB pipeline rebuild
 - Discord/Telegram gateway
 - Schedule field-use work
-- CIS Foundation Build Plan Phases 1–3 (gateway config, KB wiring, UI reorganization)
+- CIS Foundation Build Plan Phases 1–3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
+- Orchestrator implementation (approved next phase, not started)
+- Judge implementation
+- Verifier implementation
 
 ---
 
@@ -270,22 +265,12 @@ gates are in place.
 **Gate 7C — Mixed Prompt Classification Tuning** ✅ COMPLETE (2026-05-31)
 **Gate 7D — Full Advisor Loop Smoke Test** ✅ COMPLETE (2026-05-31)
 **Router v0.1 — AdvisorChat Input Router** ✅ COMPLETE (2026-05-31)
-**Stabilization — Git versioning, verification gate, UI layout, router validation, verifier DAG** ← CURRENT
-**Phase 4B — Knowledge Base Extraction & Role Enforcement** (deferred until infrastructure is stable)
+**Phase 0 Recovery — GitHub Versioning + Gateway Repair + Context Injection** ✅ COMPLETE (2026-05-31)
+**Phase 1 — Minimal Orchestrator Scaffold (orchestrator.py)** ← NEXT
+**Phase 2 — Deterministic NeMo/Python Judge**
+**Phase 3 — Deterministic Post-Execution Verifier**
+**Phase 4B — Knowledge Base Extraction** (deferred)
 **Phase 5 — Notes and Open Items**
-
----
-
-## Open Questions
-
-| ID | Question | Status |
-|----|----------|--------|
-| OQ-003 | Is the Google Drive backup intact? | Open |
-| OQ-006 | R1 role/context loading — when to inject CIS role knowledge? | Open |
-| OQ-007 | Claude/ChatGPT API capture design for unified memory | Open |
-| OQ-008 | Hermes capabilities audit scope | Open |
-| OQ-009 | hermes-gateway.service HERMES_HOME anomaly | Open |
-| OQ-010 | Generator source hierarchy vs Project Context Pack | RESOLVED (2026-05-30) |
 
 ---
 
