@@ -75,8 +75,14 @@ Thumbs.db
 /drafts/
 /knowledge/
 
-# Generated context packs (redundant with canonical PROJECT_CONTEXT_PACK/)
-/PROJECT_CONTEXT_PACK_UPLOAD/
+# External advisor HCP packet — tracked for cross-model audit (transitional: target generated export Phase F)
+# HCP_*.md + READ_FIRST_HERMES_CONTEXT.md are the active external advisor packet
+# Non-HCP files in this directory are stale and ignored
+/PROJECT_CONTEXT_PACK_UPLOAD/*
+!/PROJECT_CONTEXT_PACK_UPLOAD/HCP_*.md
+!/PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md
+
+# Generated context packs — DB export previews, not canonical. Do not promote.
 /PROJECT_CONTEXT_PACK_GENERATED/
 /PROJECT_CONTEXT_PACK_UPLOAD_GENERATED/
 
