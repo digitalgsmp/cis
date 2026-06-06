@@ -1,5 +1,5 @@
 # Terms and Naming — CIS Advisor Loop
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
+Last updated: 2026-06-06 (Tier 0/1 complete — Tier 2 next)
 
 ## Agents
 
@@ -13,25 +13,36 @@ Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
 
 ## Key Terms
 
-- **NeMo / NeMo Guardrails**: NVIDIA guardrail framework on port 8800. Evidence firewall for RESEARCH lane.
-- **classify_route()**: 8-pass classifier. Routes prompts and creates Kanban cards.
-- **CONSENSUS_REACHED**: Structured Reviewer signal indicating no material objections remain and the proposal is ready for Eric Gate.
-- **FINAL_DIRECTIVE**: Approved implementation instruction accepted by V4 Implementer only. Deterministic routing by prefix.
-- **pipeline run**: One tracked CIS workflow from idea/research through verified state update or failure.
-- **state-write worker**: Gated worker/event that writes verified results into the project state spine only after verifier PASS.
-- **bidirectional spine**: Verified project state that both briefs future pipeline runs and receives verified outputs from completed runs.
-- **gate scripts**: Deterministic bash/Python checks that decide objective PASS/FAIL conditions. No LLM.
-- **blackboard**: Shared task/pipeline artifact space where Research, Drafter, Reviewer, Implementer, and Verifier exchange structured artifacts.
-- **Eric Gate**: Human sanity/output gate after CONSENSUS_REACHED and before FINAL_DIRECTIVE. Not bypassable.
+- **CONSENSUS_REACHED**: Structured Reviewer signal. No material objections remain.
+- **FINAL_DIRECTIVE**: Approved instruction for V4 Implementer only.
+- **pipeline run**: One tracked CIS workflow from research through verified state update.
+- **state-write worker**: Writes verified results to SQLite spine only after VERIFY PASS.
+- **bidirectional spine**: Verified project state that briefs pipeline and receives verified outputs.
+- **gate scripts**: Deterministic bash/Python checks. Exit 0 = PASS, non-zero = FAIL. No LLM.
+- **blackboard**: Shared artifact space for Research/Drafter/Reviewer/Implementer/Verifier exchange.
+- **Eric Gate**: Human sanity gate after CONSENSUS_REACHED, before FINAL_DIRECTIVE.
+
+## Kanban Coordination Layer (Phase A Verified)
+
+- **shared Kanban**: All Hermes profiles coordinate through one kanban.db. Achieved by setting `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME` to the same shared path in every profile `.env`. Coordinates work (tasks, lanes, assignments). Distinct from the SQLite state spine which stores verified knowledge.
+- **HERMES_KANBAN_DB**: Env var that pins the kanban database file path. Required for cross-profile sharing. Set to `/mnt/projects/cis/data/kanban.db`.
+- **HERMES_KANBAN_HOME**: Env var that pins the kanban root directory (board metadata, workspaces, logs). Required for cross-profile sharing because board registration is stored under `kanban_home()/kanban/boards/`. Set to `/mnt/projects/cis/data`.
+- **kanban_home()**: Hermes function that resolves the kanban root. Defaults to `get_default_hermes_root()`. Overridden by `HERMES_KANBAN_HOME`.
+- **Kanban coordination layer**: The shared Kanban board managing CIS pipeline task flow across profiles. Triage → Research → Draft → Review → Consensus → Implement → Verify → State Write. Coordinates work; does not store verified knowledge.
+- **state spine**: SQLite database (`cis_memory.db`) storing verified project knowledge. Written only after VERIFY PASS. Distinct from Kanban coordination layer.
+
+## Tier 0/1 Built Artifacts
+
+- **orchestrator**: `runtime/orchestrator.py` — Python state machine that runs Drafter→Reviewer deliberation loop. Removes Eric from manual API relay. Bounded by timeouts and input truncation. Test mode for bounded execution.
+- **orchestrator config**: `runtime/orchestrator_config.yaml` — drafter/reviewer timeouts, max rounds, input truncation limits.
+- **gate scripts**: Standalone bash scripts at `tools/gates/` that exit 0 (PASS) or non-zero (FAIL). Deterministic. No LLM. Five base gates: git_state, service_health, endpoint, no_secrets, file_exists.
+- **gate runner**: `tools/gates/gate_runner.sh` — chains base gates in sequence. Exits on first failure. Configurable via environment variables.
+- **Dependency Graph Build Plan**: `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — canonical build-order reference. Defines Tier 0–10 artifact ordering. Committed at `0ef6177`.
 
 ## Architecture Terms
 
 - **Hermes-native context root**: AGENTS.md auto-loaded by all profiles. Replaces transitional HERMES_CIS_BRIEFING_PATH.
-- **Deterministic state spine**: SQLite schema organized around workflow events, not HCP document structure.
-- **Generated HCP export**: HCP_ files produced by deterministic script from state spine. Not manually edited. Not canonical.
-- **External advisor packet**: HCP_ files exported for ChatGPT and Claude. Read-only for external advisors.
-- **Context-source correction**: Session (2026-06-01) where five competing context realities were identified.
-- **Stale context failure**: Context that is out of sync with the state spine must fail verification.
-- **Unified shared knowledge foundation**: The pipeline + spine + export system. Pipeline is the product. Knowledge is downstream of deterministic gates.
-- **Verification gate**: Post-implementation check confirming results using deterministic evidence.
-- **Kanban contingency**: If kanban.db is profile-scoped, fall back to Flask/CIS database task tables.
+- **Deterministic state spine**: SQLite schema organized around workflow events.
+- **Generated HCP export**: HCP_ files from deterministic script. Not manually edited.
+- **External advisor packet**: HCP_ files for ChatGPT and Claude. Read-only.
+- **Kanban contingency**: If shared Kanban fails in gateway context, fall back to Flask/CIS database task tables. Downgraded from primary to fallback after Phase A verification.

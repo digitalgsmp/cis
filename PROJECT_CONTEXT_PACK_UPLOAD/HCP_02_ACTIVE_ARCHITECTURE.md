@@ -1,5 +1,5 @@
 # Active Architecture — Hermes Harness / CIS
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
+Last updated: 2026-06-06 (Tier 0/1 complete — Tier 2 next)
 
 ## Current Architecture (Router v0.1)
 
@@ -75,6 +75,48 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 | EXPORT | generate_all.py | AGENTS.md (Hermes) + HCP_ files (ChatGPT/Claude) | Generated, not manual |
 | DONE | — | Pipeline run complete. Spine enriched | — |
 
+### Shared Kanban Configuration (Phase A Verified)
+
+### Tier 0/1 — Built Artifacts (2026-06-05/06)
+
+**Tier 0 — Orchestrator (`9d84351`):**
+- `runtime/orchestrator.py` (444 lines) — Drafter→Reviewer deliberation loop
+- `runtime/orchestrator_config.yaml` (49 lines) — timeouts, truncation, max rounds
+- Test mode (`--test`) for bounded execution
+- Acceptance: CONSENSUS_REACHED in Round 2 (~256s)
+
+**Tier 1 — Gate Suite (`bc49beb`–`635a646`):**
+- `tools/gates/gate_git_state.sh` — working tree verification
+- `tools/gates/gate_service_health.sh` — port health check
+- `tools/gates/gate_endpoint.sh` — HTTP endpoint string match
+- `tools/gates/gate_no_secrets.sh` — pre-commit secret blocker
+- `tools/gates/gate_file_exists.sh` — file + line count check
+- `tools/gates/gate_runner.sh` — sequential gate orchestrator
+
+**Build order authority:** `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` (`0ef6177`)
+
+Kanban is the cross-profile coordination layer for pipeline tasks.
+All profiles share one board via two env vars in each profile's `.env`:
+
+```
+HERMES_KANBAN_DB=/mnt/projects/cis/data/kanban.db
+HERMES_KANBAN_HOME=/mnt/projects/cis/data
+```
+
+**Both are required.** `HERMES_KANBAN_DB` alone is insufficient — board metadata
+(which boards exist) is stored under `kanban_home()/kanban/boards/`, not in the
+database file. `HERMES_KANBAN_HOME` makes board registration shared.
+
+**Phase A evidence:** Canary card created from prime profile was visible from
+v4pro and r1 profiles with both env vars set. CLI confirmed.
+
+**Gateway note:** Running gateway processes must be restarted before they pick
+up these env vars. Phase C task.
+
+**Kanban coordinates work; SQLite spine stores verified truth.**
+They serve different layers. Kanban manages tasks, lanes, assignments.
+The spine persists verified decisions, proposals, and project state.
+
 ### Bidirectional Spine
 The state spine is bidirectional:
 - **Briefs the pipeline:** Each Drafter session starts with accumulated project knowledge from AGENTS.md (prior decisions, resolved proposals, active blockers, project state)
@@ -121,6 +163,10 @@ The state spine is bidirectional:
 - /mnt/projects/cis/runtime/app.py — Flask entry point
 - /mnt/projects/cis/runtime/api/advisor.py — routing + agent dispatch
 - /mnt/projects/cis/runtime/api/collab_rounds.py — collab lifecycle
+- /mnt/projects/cis/runtime/orchestrator.py — Tier 0 deliberation loop
+- /mnt/projects/cis/runtime/orchestrator_config.yaml — Tier 0 config
+- /mnt/projects/cis/tools/gates/ — Tier 1 gate suite + runner
+- /mnt/projects/cis/docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md — build order authority
 - /mnt/projects/cis/runtime/ui/src/pages/infra/AdvisorChat.jsx — 4-panel UI
 - /mnt/projects/cis/tools/generate_context_briefing.py — context briefing generator
 - /mnt/projects/cis/docs/CIS_CURRENT_STATE.md — canonical state doc

@@ -1,52 +1,48 @@
 # Next Actions — Hermes Harness / CIS
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
+Last updated: 2026-06-06 (Tier 0/1 complete — Tier 2 next per build plan)
 
 ## Current Next Action
 
-**Phase A — Hermes substrate verification.** Run verification commands and return raw terminal output.
+**Tier 2 — Kanban Coordination Layer.** Per Dependency Graph Build Plan v2.0
+(`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, committed `0ef6177`). Not started.
 
-Phase A checks:
-- `hermes --version` — confirm installed version and Kanban support
-- `hermes kanban --help` — confirm Kanban CLI availability
-- `hermes kanban boards list` — check existing boards
-- Find `kanban.db` under all HERMES_HOME paths — confirm shared vs profile-scoped
-- AGENTS.md canary loading test from `/mnt/projects/cis`
-- Grep `HERMES_CIS_BRIEFING_PATH` across all profile `.env` files
-- Verify Kanban dependency/assignment/worktree/gate features if available
-- Verify git worktree status
+Scope: shared Kanban board creation, lane configuration, profile wiring, gateway
+restart to pick up `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME` env vars.
 
-**Hard stop:** No code build begins until Phase A raw output is reviewed and Kanban scoping is confirmed or contingency (Flask/CIS DB task tables) is selected.
+**Judge checklist is NOT next.** The plan says Tier 2 Kanban before Tier 3 Judge.
+Only re-approval changes this ordering.
 
 ## Approved Build Order
 
-| Phase | Description | Gated On |
-|-------|-------------|----------|
-| Phase A | Hermes substrate verification | ← CURRENT |
-| Phase B | Deterministic gate scripts | Phase A PASS |
-| Phase C | Kanban board + profile configuration | Phase B |
-| Phase D | SQLite spine schema (workflow-event organized) | Phase C |
-| Phase E | AGENTS.md export pipeline (Hermes-native context) | Phase D |
-| Phase F | HCP export pipeline (ChatGPT/Claude) | Phase E |
-| Phase G | Router reclassification | Phase F |
-| Phase H | MCP bridge (later) | Phase G |
-| Phase I | Chroma/VDB (later) | Phase H |
+| Tier | Description | Status | Commit |
+|------|-------------|--------|--------|
+| Tier 0 | Orchestrator scaffold | ✅ COMPLETE | `9d84351` (2026-06-05) |
+| Tier 1 | Deterministic gate suite + runner | ✅ COMPLETE | `bc49beb`–`635a646` (2026-06-06) |
+| Tier 2 | Kanban coordination layer | ← CURRENT | Not started |
+| Tier 3 | Judge checklist | Gated on 2 | — |
+| Tier 4 | Verifier | Gated on 3 | — |
+| Tier 5 | SQLite spine schema | Gated on 4 | — |
+| Tier 6 | AGENTS.md export pipeline | Gated on 5 | — |
+| Tier 7 | HCP export pipeline | Gated on 6 | — |
+| Tier 8 | Router reclassification | Gated on 7 | — |
+| Tier 9 | MCP bridge | Later | — |
+| Tier 10 | Chroma/VDB | Later | — |
 
-## Sequencing Rules
-- Nothing in Phase C or later begins until Phase A verification commands return known-good results.
-- Nothing writes to the spine until Phase B gates exist and pass.
-- Do not build unified knowledge before the deterministic gates.
+## Tier 0/1 Key Deliverables
 
-## Current State
-- GitHub/git versioning ✅ COMPLETE
-- Context-source correction ✅ COMPLETE
-- Claude proposal v1.0 ✅ COMPLETE
-- ChatGPT + Claude deliberation converged ✅ COMPLETE
-- Phase A substrate verification ← CURRENT
+- `runtime/orchestrator.py` + `runtime/orchestrator_config.yaml` — Drafter→Reviewer loop
+- `tools/gates/gate_git_state.sh` — working tree verification
+- `tools/gates/gate_service_health.sh` — port health check
+- `tools/gates/gate_endpoint.sh` — HTTP endpoint string match
+- `tools/gates/gate_no_secrets.sh` — pre-commit secret blocker
+- `tools/gates/gate_file_exists.sh` — file + line count check
+- `tools/gates/gate_runner.sh` — sequential gate orchestrator
 
 ## Do Not Start Yet
-- Phase B–I (all gated on Phase A)
-- UI-003 layout pass
-- Any SQLite schema creation
-- Any gate script creation
-- Any Kanban configuration
+
+- Tier 3 Judge checklist (gated on Tier 2)
+- Tier 4–10 (all gated on predecessor)
+- SQLite schema creation
+- Gateway service restarts (Tier 2)
 - Retirement of HERMES_CIS_BRIEFING_PATH
+- UI changes

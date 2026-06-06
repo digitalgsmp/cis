@@ -1,35 +1,36 @@
 # Files Changed Recently
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision closeout)
+Last updated: 2026-06-06 (Tier 0/1 complete — HCP reconciliation)
 
-## CIS Deterministic Pipeline Decision — HCP Closeout (2026-06-01)
+## Tier 1 Gate Suite + Runner — Build Session (2026-06-06)
 
-### PROJECT_CONTEXT_PACK_UPLOAD — All HCP_ Files Updated
-- HCP_00_README_START_HERE.md — updated
-- HCP_01_CURRENT_STATE.md — pipeline objective, architecture, build order, execution order
-- HCP_02_ACTIVE_ARCHITECTURE.md — CIS pipeline lanes, bidirectional spine, AGENTS.md transitional
-- HCP_03_DECISIONS_LOG.md — ADR-051 through ADR-054 added
-- HCP_04_OPEN_QUESTIONS.md — OQ-012/OQ-004 resolved, OQ-016 added
-- HCP_05_NEXT_ACTIONS.md — Phase A substrate verification, approved build order
-- HCP_06_MODEL_ROLES_AND_PROTOCOL.md — pipeline roles, Kanban contingency
-- HCP_07_RECENT_HANDOFF.md — CIS Deterministic Pipeline Decision handoff
-- HCP_08_FILES_CHANGED_RECENTLY.md — this file
-- HCP_09_TERMS_AND_NAMING.md — CONSENSUS_REACHED, pipeline run, state-write worker, bidirectional spine, gate scripts, blackboard, Eric Gate
+### tools/gates/ — New Files
+- `tools/gates/gate_endpoint.sh` — HTTP endpoint verification gate (`14fd08d`)
+- `tools/gates/gate_no_secrets.sh` — pre-commit secret blocker gate (`82b506a`)
+- `tools/gates/gate_file_exists.sh` — file existence/line count gate (`dac9d6a`)
+- `tools/gates/gate_runner.sh` — sequential gate orchestrator (`635a646`)
 
-**Documentation only.** Confirmed:
-- No application source files modified
-- No gate scripts created yet
-- No SQLite schema created yet
-- No Kanban board configured yet
-- Phase A substrate verification has NOT started
-- HERMES_CIS_BRIEFING_PATH has NOT been retired
+### docs/ — New File
+- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — canonical build-order reference (`0ef6177`)
 
-## Previous Sessions
+### PROJECT_CONTEXT_PACK_UPLOAD/ — HCP Reconciliation (uncommitted)
+- `HCP_01_CURRENT_STATE.md` — Tier 0/1 status, Tier labels, build plan reference
+- `HCP_02_ACTIVE_ARCHITECTURE.md` — Tier 0/1 built artifacts, plan reference
+- `HCP_04_OPEN_QUESTIONS.md` — OQ-017 (Tier ordering), OQ-018 (plan authority)
+- `HCP_05_NEXT_ACTIONS.md` — Tier 2 next per plan
+- `HCP_07_RECENT_HANDOFF.md` — Tier 0/1 completion handoff
+- `HCP_08_FILES_CHANGED_RECENTLY.md` — this file
+- `HCP_09_TERMS_AND_NAMING.md` — orchestrator, gate suite terms
 
-### Context-Source Correction — HCP Closeout (2026-06-01)
-All 10 HCP_ files updated to v2.5. Identified five competing context realities.
-Decided HCP files become generated exports from Hermes-native state spine.
+**Build artifacts committed. Documentation reconciliation in progress.**
 
-### Phase 0 Recovery (2026-05-31)
-- .gitignore, git init, commit b1bcf7d → github.com/digitalgsmp/cis
-- Gateway .env files: HERMES_CIS_BRIEFING_PATH added to all profiles
-- CIS_CURRENT_STATE.md v2.4→v2.5
+## Previous: Tier 0 Orchestrator (2026-06-05)
+`runtime/orchestrator.py` + `runtime/orchestrator_config.yaml` committed (`9d84351`).
+
+## Previous: Tier 1 Gate Suite Foundation (2026-06-05)
+`tools/gates/gate_git_state.sh` (`bc49beb`) and `tools/gates/gate_service_health.sh` (`a5b123a`) committed.
+
+## Previous: Phase A Substrate Verification HCP Closeout (2026-06-01)
+HCP files updated. Phase A findings documented. Phase B gate scripts identified.
+
+## Previous: CIS Deterministic Pipeline Decision (2026-06-01)
+All 10 HCP_ files updated. Pipeline architecture documented.

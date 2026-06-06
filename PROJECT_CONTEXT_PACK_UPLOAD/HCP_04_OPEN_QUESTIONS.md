@@ -1,5 +1,5 @@
 # Open Questions — Hermes Harness / CIS
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
+Last updated: 2026-06-06 (Tier 0/1 complete — Tier 2 next)
 
 ## OQ-003 — VDB pipeline rebuild
 Previous hybrid SQLite/ChromaDB attempt produced low-signal output.
@@ -46,8 +46,23 @@ requires manifest hash comparison (Phase F).
 Status: OPEN — Phase F.
 
 ## OQ-016 — Is kanban.db shared across profiles on the installed Hermes version?
-Phase A substrate verification must determine whether Kanban can coordinate across
-~/.hermes, ~/.hermes-v4pro, ~/.hermes-r1, ~/.hermes-v4impl, and ~/.hermes-qwen.
-If Kanban is profile-scoped or unavailable, contingency is Flask/CIS database
-task tables instead.
-Status: OPEN — Phase A substrate verification will answer.
+Resolution: Kanban IS shareable by setting both HERMES_KANBAN_DB and HERMES_KANBAN_HOME
+in all profile .env files. Phase A verified: canary card created from prime was
+visible from v4pro and r1. HERMES_KANBAN_DB alone is insufficient (board metadata
+is stored under kanban_home()/kanban/boards/). Both env vars required.
+Remaining: gateway restart needed before env takes effect in service context (Phase C).
+Status: PARTIALLY RESOLVED (2026-06-01) — CLI verified; gateway restart pending.
+
+## OQ-017 — Tier 2/3 artifact ordering
+The Dependency Graph Build Plan v2.0 (`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, `0ef6177`)
+specifies Tier 2 (Kanban Coordination) before Tier 3 (Judge Checklist). A closeout
+report recommended `tools/judge/judge_checklist.py` as next, contradicting the plan.
+Resolution: Dependency graph plan is the authority. Tier 2 Kanban is next unless
+explicitly re-approved.
+Status: RESOLVED (2026-06-06) — plan is the authority.
+
+## OQ-018 — Dependency graph plan as single source of truth
+The plan was previously untracked. Committed at `0ef6177`.
+Question: should all build-order references in HCP files redirect to this plan
+rather than duplicate phase lists?
+Status: OPEN — context reconciliation in progress.

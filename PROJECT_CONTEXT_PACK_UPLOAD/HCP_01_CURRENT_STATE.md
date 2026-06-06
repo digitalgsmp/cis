@@ -1,6 +1,6 @@
 # CIS Current State
-Version: 2.5
-Date: 2026-06-01
+Version: 2.6
+Date: 2026-06-06
 Authority: Eric (Architect)
 Maintained by: Updated at start of each session by the active advisor
 Status: LIVE — update when state changes, never let this go stale
@@ -9,7 +9,29 @@ Status: LIVE — update when state changes, never let this go stale
 
 ## Current Objective
 
-**Build CIS deterministic pipeline — Phase A substrate verification.**
+**Build CIS deterministic pipeline — Tier 0/1 complete. Tier 2 next.**
+
+**Tier 0 — Orchestrator (committed `9d84351`):** `runtime/orchestrator.py` +
+`runtime/orchestrator_config.yaml`. Drafter→Reviewer deliberation loop functional.
+Acceptance test: PASS (CONSENSUS_REACHED in Round 2, ~256s). Removes Eric from
+manual API relay role. Bounded: per-agent timeouts, input truncation, test mode.
+
+**Tier 1 — Deterministic Gate Suite (committed `bc49beb`–`635a646`):**
+Five base gates + runner at `tools/gates/`. All executable, syntax-clean, individually
+tested. Runner chains gates in sequence, exits on first failure. Gates: git state,
+service health, endpoint, no-secrets, file existence.
+
+**Tier 2 — Kanban Coordination Layer (next, not started):** Per Dependency Graph
+Build Plan v2.0 (`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, committed `0ef6177`).
+Board creation, profile configuration, gateway restart.
+
+**Phase A findings (2026-06-01):**
+- Hermes Agent v0.13.0 (2026.5.7, 1969 commits behind) — Kanban fully available
+- Kanban appeared profile-scoped but is shareable via `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME`
+- Cross-profile Kanban visibility confirmed: prime-created card visible from v4pro and r1
+- AGENTS.md auto-loaded by all four active profiles from git root
+- `HERMES_CIS_BRIEFING_PATH` present in all profiles — transitional, target Phase E retirement
+- Preferred architecture: shared Kanban (coordination) + gate scripts (verification) + SQLite spine (knowledge) + AGENTS.md (context) + HCP export (external advisors)
 
 CIS is a Hermes-native adversarial deliberation engine. The pipeline is the product.
 The state spine is bidirectional: it briefs the pipeline from verified history and
@@ -222,36 +244,28 @@ NeMo patch (Gate 5C):
 
 ## Next Safe Action
 
-**Phase A — Hermes substrate verification.** Run verification commands and
-return raw terminal output. No code build begins until Phase A output is reviewed.
+**Tier 2 — Kanban Coordination Layer.** Per Dependency Graph Build Plan v2.0
+(`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, committed `0ef6177`). Not started.
 
-Phase A checks:
-- `hermes --version` — confirm installed version and Kanban support
-- `hermes kanban --help` — confirm Kanban CLI availability
-- `hermes kanban boards list` — check existing boards
-- Find `kanban.db` under all HERMES_HOME paths — confirm shared vs profile-scoped
-- AGENTS.md canary loading test from `/mnt/projects/cis`
-- Grep `HERMES_CIS_BRIEFING_PATH` across all profile `.env` files
-- Verify Kanban dependency/assignment/worktree/gate features if available
-- Verify git worktree status
+Tier 2 scope: shared Kanban board creation, lane configuration, profile wiring,
+gateway restart to pick up `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME` env vars.
 
-**Hard stop:** No Phase B–I build begins until Phase A raw output is reviewed
-and Kanban scoping is confirmed or contingency (Flask/CIS DB task tables) is selected.
+**Judge checklist (`tools/judge/judge_checklist.py`) is NOT the next artifact**
+unless explicitly re-approved. The Dependency Graph Build Plan says Tier 2
+Kanban comes before Tier 3 Judge.
 
 **Approved build order:**
-1. Phase A — Substrate verification ← CURRENT
-2. Phase B — Deterministic gate scripts
-3. Phase C — Kanban board + profile configuration
-4. Phase D — SQLite spine schema (workflow-event organized)
-5. Phase E — AGENTS.md export pipeline (Hermes-native context)
-6. Phase F — HCP export pipeline (ChatGPT/Claude)
-7. Phase G — Router reclassification
-8. Phase H — MCP bridge (later)
-9. Phase I — Chroma/VDB (later)
-
-**Sequencing rule:** Nothing in Phase C or later begins until Phase A
-verification commands return known-good results. Nothing writes to the spine
-until Phase B gates exist and pass.
+1. Tier 0 — Orchestrator scaffold ✅ COMPLETE (`9d84351`, 2026-06-05)
+2. Tier 1 — Deterministic gate suite ✅ COMPLETE (`bc49beb`–`635a646`, 2026-06-06)
+3. Tier 2 — Kanban coordination layer ← CURRENT (not started)
+4. Tier 3 — Judge checklist (Python/NeMo deterministic checklist)
+5. Tier 4 — Verifier (post-execution evidence gating)
+6. Tier 5 — SQLite spine schema (workflow-event organized)
+7. Tier 6 — AGENTS.md export pipeline (Hermes-native context)
+8. Tier 7 — HCP export pipeline (ChatGPT/Claude)
+9. Tier 8 — Router reclassification
+10. Tier 9 — MCP bridge (later)
+11. Tier 10 — Chroma/VDB (later)
 
 ---
 
@@ -270,31 +284,34 @@ until Phase B gates exist and pass.
 - **Multiple context sources diverge:** `HERMES_CIS_BRIEFING_PATH` is transitional.
   Target: AGENTS.md auto-loaded by all profiles (Phase E).
 - **V4 Implementer self-report:** Not a source of truth. Completion requires
-  deterministic evidence (verification-hardening rule).
-- **Kanban profile-scoping unverified:** Phase A must confirm whether `kanban.db`
-  is shared across all profiles or siloed per-profile. If Kanban is unavailable
-  or profile-scoped, the existing Flask/CIS database serves as the coordination
-  layer for pipeline tasks.
+- **No deterministic verifier:** Verifier (Tier 4) not yet built. Gate scripts (Tier 1)
+  provide point checks; end-to-end verifier is gated on Tier 3 Judge.
+- **Kanban profile-scoping:** RESOLVED. Kanban IS shareable via env vars
+  (HERMES_KANBAN_DB + HERMES_KANBAN_HOME). Phase A verified. Gateway restart pending (Tier 2).
+- **Gateway restart required for env vars:** `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME`
+  have been added to all profile `.env` files but running gateway processes have not
+  been restarted. Kanban sharing will not take effect in gateway context until Phase C
+  restart. CLI testing confirmed the mechanism works.
 
 ---
 
 ## Do Not Start Yet
 
-- Phase B gate scripts (Phase A first)
-- Phase C Kanban configuration (Phase A first)
-- Phase D SQLite spine schema (Phase B gates first)
-- Phase E AGENTS.md export (Phase D spine first)
-- Phase F HCP export pipeline (Phase E AGENTS.md first)
-- Phase G Router reclassification
-- Phase H MCP bridge
-- Phase I Chroma/VDB
+- Tier 2 Kanban coordination (approved next, not started)
+- Tier 3–10 (all gated on predecessor Tier)
+- SQLite schema creation (Tier 5)
+- Gateway service restarts (part of Tier 2)
+- Retirement of HERMES_CIS_BRIEFING_PATH (Tier 6)
+- Judge checklist unless explicitly re-approved (Tier 3, gated on Tier 2)
+- UI changes
 - Pass 5 implementation
 - Unified memory build (after pipeline foundation)
 - Wiring V4-Pro through NeMo (architecturally blocked)
 - Briefing Center UI redesign
 - Notes/Open Items database implementation
 - Discord/Telegram gateway
-- UI-003 layout pass (after pipeline foundation)
+- Kanban configuration without dependency graph plan reference
+- Any artifact not in the approved Dependency Graph Build Plan v2.0
 
 ---
 
@@ -324,15 +341,19 @@ until Phase B gates exist and pass.
 **Context-Source Correction — HCP update, architecture principle** ✅ COMPLETE (2026-06-01)
 **Claude Proposal — Unified Shared Knowledge Foundation** ✅ COMPLETE (2026-06-01)
 **CIS Deterministic Pipeline Decision — Deliberation converged** ✅ COMPLETE (2026-06-01)
-**Phase A — Hermes Substrate Verification** ← CURRENT
-**Phase B — Deterministic Gate Scripts** (next, gated on Phase A)
-**Phase C — Kanban Board + Profile Configuration** (gated on Phase B)
-**Phase D — SQLite Spine Schema** (workflow-event organized, gated on Phase C)
-**Phase E — AGENTS.md Export Pipeline** (gated on Phase D)
-**Phase F — HCP Export Pipeline** (gated on Phase E)
-**Phase G — Router Reclassification** (gated on Phase F)
-**Phase H — MCP Bridge** (later)
-**Phase I — Chroma/VDB** (later)
+**Phase A — Hermes Substrate Verification** ✅ COMPLETE (2026-06-01)
+**Tier 0 — Orchestrator scaffold** ✅ COMPLETE (`9d84351`, 2026-06-05)
+**Tier 1 — Deterministic gate suite (5 gates + runner)** ✅ COMPLETE (`bc49beb`–`635a646`, 2026-06-06)
+**Dependency Graph Build Plan v2.0 committed** ✅ COMPLETE (`0ef6177`, 2026-06-06)
+**Tier 2 — Kanban Coordination Layer** (next, not started)
+**Tier 3 — Judge Checklist** (gated on Tier 2)
+**Tier 4 — Verifier** (gated on Tier 3)
+**Tier 5 — SQLite Spine Schema** (gated on Tier 4)
+**Tier 6 — AGENTS.md Export Pipeline** (gated on Tier 5)
+**Tier 7 — HCP Export Pipeline** (gated on Tier 6)
+**Tier 8 — Router Reclassification** (gated on Tier 7)
+**Tier 9 — MCP Bridge** (later)
+**Tier 10 — Chroma/VDB** (later)
 
 ---
 

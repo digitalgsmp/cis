@@ -1,41 +1,41 @@
-# Recent Handoff — CIS Deterministic Pipeline Decision
-Date: 2026-06-01
-Session: Context-Source Correction → Claude Proposal → Pipeline Decision
+# Recent Handoff — Tier 0/1 Complete, Tier 2 Next
+Date: 2026-06-06
+Session: Tier 1.3–1.5 base gates → Tier 1 closeout runner → dependency plan commit → HCP reconciliation
 
-## CIS Deterministic Pipeline Decision — 2026-06-01
+## Tier 0/1 Completion — 2026-06-05/06
 
-### Deliberation Converged
-Claude + ChatGPT reached agreement: the next build is the CIS deterministic pipeline
-foundation, not generic unified memory. The pipeline is the product.
+### Tier 0 — Orchestrator (`9d84351`, 2026-06-05)
+- Built `runtime/orchestrator.py` (444 lines) + `runtime/orchestrator_config.yaml` (49 lines)
+- Drafter (hermes-v4pro) → Reviewer (hermes-r1) deliberation loop
+- Detects CONSENSUS_REACHED / OBJECTIONS. Bounded execution with timeouts.
+- Acceptance test: CONSENSUS_REACHED in Round 2 (~256s). PASS with limitations.
 
-### Key Decisions
-- CIS is a Hermes-native adversarial deliberation engine
-- Pipeline: TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE → IMPLEMENT → VERIFY → STATE_WRITE → EXPORT → DONE
-- State spine is bidirectional: briefs pipeline from verified history, receives verified outputs
-- Gate scripts are the sole write authority for objective state
-- AGENTS.md is target context path (Phase E); HERMES_CIS_BRIEFING_PATH is transitional
-- Kanban is preferred only if shared across profiles is proven locally (Phase A)
-- Flask/CIS database task queue is contingency if Kanban is siloed or unavailable
+### Tier 1 — Gate Suite (`bc49beb`–`635a646`, 2026-06-06)
+Five base gates + runner built and individually tested:
+- `gate_git_state.sh` — working tree verification (`bc49beb`)
+- `gate_service_health.sh` — port health check (`a5b123a`)
+- `gate_endpoint.sh` — HTTP endpoint string match (`14fd08d`)
+- `gate_no_secrets.sh` — pre-commit secret blocker (`82b506a`)
+- `gate_file_exists.sh` — file + line count check (`dac9d6a`)
+- `gate_runner.sh` — sequential gate orchestrator (`635a646`)
 
-### Approved Build Order
-Phase A (substrate verification) → Phase B (gate scripts) → Phase C (Kanban) → Phase D (SQLite spine) → Phase E (AGENTS.md) → Phase F (HCP export) → Phase G (router) → Phase H (MCP) → Phase I (Chroma/VDB)
+Runner correctly short-circuits on first failure. Dirty-tree failure at gate_git_state
+is expected when uncommitted docs exist. All gates exit 0=PASS, 1=FAIL, 2=ERROR.
 
-### Next Single Action
-Phase A — run Hermes substrate verification commands and return raw terminal output.
-No code build begins until Phase A output is reviewed.
+### Dependency Graph Build Plan (`0ef6177`, 2026-06-06)
+- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` committed as canonical build-order reference
+- Defines Tier 0 → Tier 10 ordering
+- Resolves Judge-before-Kanban ordering error
 
-## Previous: Context-Source Correction (2026-06-01)
+### Next Action
+Tier 2 — Kanban Coordination Layer. Not started.
 
-Identified five competing context realities. Decided HCP files become generated exports,
-not manually maintained canonical source. Updated all 10 HCP_ files.
+## Previous: Phase A Substrate Verification (2026-06-01)
+Hermes v0.13.0 verified. Kanban shareable via HERMES_KANBAN_DB + HERMES_KANBAN_HOME.
+Cross-profile visibility confirmed. AGENTS.md loaded by all profiles.
+
+## Previous: CIS Deterministic Pipeline Decision (2026-06-01)
+Claude + ChatGPT deliberation converged. Pipeline is the product.
 
 ## Previous: Phase 0 Recovery (2026-05-31)
-- Git versioning: github.com/digitalgsmp/cis, commit b1bcf7d
-- Gateway repair: all V4 Pro gateways healthy, context-aware
-- Context injection: HERMES_CIS_BRIEFING_PATH added to all profile .env files
-- R1 corrected to V4 Reviewer; Qwen confirmed paused
-
-## Previous: Router v0.1 (2026-05-31)
-- classify_route() 8-pass classifier in advisor.py
-- 4-panel AdvisorChat UI with shared input + routing banner
-- V4 Implementer profile on port 8646
+Git versioning at github.com/digitalgsmp/cis. Gateway repair. Context injection.
