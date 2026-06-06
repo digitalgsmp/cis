@@ -127,3 +127,6 @@ docs/architecture_atlas/original_CISChats/
 
 # Explicit database exclusions (no file extension)
 /runtime/db/cis_memory_db
+
+# Kanban runtime data (not source code)
+data/
