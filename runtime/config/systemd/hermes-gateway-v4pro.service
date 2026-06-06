@@ -1,0 +1,26 @@
+[Unit]
+Description=Hermes Agent Gateway (V4-Pro Reasoner) - DeepSeek V4-Pro Thinking
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/home/eric/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run
+WorkingDirectory=/home/eric/.hermes/hermes-agent
+Environment="PATH=/home/eric/.hermes/hermes-agent/venv/bin:/home/eric/.hermes/node/bin:/home/eric/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="VIRTUAL_ENV=/home/eric/.hermes/hermes-agent/venv"
+Environment="HERMES_HOME=/home/eric/.hermes-v4pro"
+EnvironmentFile=/home/eric/.hermes-v4pro/.env
+Restart=always
+RestartSec=5
+RestartMaxDelaySec=300
+RestartSteps=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=210
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

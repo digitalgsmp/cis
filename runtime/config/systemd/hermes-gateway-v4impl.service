@@ -1,0 +1,14 @@
+[Unit]
+Description=Hermes Gateway — V4 Implementer (port 8646)
+After=network.target
+
+[Service]
+Type=simple
+Environment=HERMES_HOME=/home/eric/.hermes-v4impl
+EnvironmentFile=/home/eric/.hermes-v4impl/.env
+ExecStart=/home/eric/.local/bin/hermes gateway run
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
