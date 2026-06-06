@@ -216,3 +216,12 @@ Five base gates + runner committed:
 - `0ef6177` — add dependency graph build plan
 
 All gates individually tested. Runner chains in sequence, exits on first failure.
+
+## 2026-06-06 09:59:46
+
+Extractor run complete.
+- Files processed: 1
+- Failed: 0
+- Source groups: all project folders (cis/, ai_execution_infrastructure/, blender/, resolve/, unreal/)
+- Output directory: /mnt/projects/cis/cis_kernel/extraction/functional_intents
+- Estimated cost: $0.0028
