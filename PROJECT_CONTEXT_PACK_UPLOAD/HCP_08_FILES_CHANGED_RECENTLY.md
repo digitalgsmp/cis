@@ -1,36 +1,45 @@
 # Files Changed Recently
-Last updated: 2026-06-06 (Tier 0/1 complete — HCP reconciliation)
+Last updated: 2026-06-06 (Tier 0–4 complete — HCP reconciliation)
 
-## Tier 1 Gate Suite + Runner — Build Session (2026-06-06)
+## Tier 4 — SQLite Spine (2026-06-06)
 
-### tools/gates/ — New Files
-- `tools/gates/gate_endpoint.sh` — HTTP endpoint verification gate (`14fd08d`)
-- `tools/gates/gate_no_secrets.sh` — pre-commit secret blocker gate (`82b506a`)
-- `tools/gates/gate_file_exists.sh` — file existence/line count gate (`dac9d6a`)
-- `tools/gates/gate_runner.sh` — sequential gate orchestrator (`635a646`)
+### runtime/schema/ — New
+- `runtime/schema/spine_schema.sql` — workflow_runs + deliberation_rounds DDL (`88ea25f`)
 
-### docs/ — New File
-- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — canonical build-order reference (`0ef6177`)
+### runtime/db/ — New
+- `runtime/db/database.py` — write/read layer with allowlist validation (`0c19b4d`)
 
-### PROJECT_CONTEXT_PACK_UPLOAD/ — HCP Reconciliation (uncommitted)
-- `HCP_01_CURRENT_STATE.md` — Tier 0/1 status, Tier labels, build plan reference
-- `HCP_02_ACTIVE_ARCHITECTURE.md` — Tier 0/1 built artifacts, plan reference
-- `HCP_04_OPEN_QUESTIONS.md` — OQ-017 (Tier ordering), OQ-018 (plan authority)
-- `HCP_05_NEXT_ACTIONS.md` — Tier 2 next per plan
-- `HCP_07_RECENT_HANDOFF.md` — Tier 0/1 completion handoff
-- `HCP_08_FILES_CHANGED_RECENTLY.md` — this file
-- `HCP_09_TERMS_AND_NAMING.md` — orchestrator, gate suite terms
+### tools/gates/ — New
+- `tools/gates/gate_db_state.py` — deterministic DB verification gate (`ec14615`)
 
-**Build artifacts committed. Documentation reconciliation in progress.**
+### data/ — Runtime (gitignored)
+- `data/cis_memory.db` — seeded with smoke test data
 
-## Previous: Tier 0 Orchestrator (2026-06-05)
-`runtime/orchestrator.py` + `runtime/orchestrator_config.yaml` committed (`9d84351`).
+## Tier 2–3 — Kanban + Smoke Test (2026-06-06)
 
-## Previous: Tier 1 Gate Suite Foundation (2026-06-05)
-`tools/gates/gate_git_state.sh` (`bc49beb`) and `tools/gates/gate_service_health.sh` (`a5b123a`) committed.
+### .gitignore
+- Added `data/` and `proposals/` rules
 
-## Previous: Phase A Substrate Verification HCP Closeout (2026-06-01)
-HCP files updated. Phase A findings documented. Phase B gate scripts identified.
+### docs/
+- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — updated for lane limitation, card schema (`2989c5b`)
 
-## Previous: CIS Deterministic Pipeline Decision (2026-06-01)
-All 10 HCP_ files updated. Pipeline architecture documented.
+### runtime/config/systemd/ — New
+- Gateway service templates (5 files) — backed up with EnvironmentFile= (`b7e920c`)
+- `ENV_MANIFEST.md` — documented required env vars per profile (`26d2ee5`)
+
+### ~/.config/systemd/user/ — Live (outside repo)
+- Four service files updated with EnvironmentFile=
+- Prime HERMES_HOME corrected (OQ-009 resolved)
+
+### Kanban Runtime — gitignored
+- `cis-pipeline` board created on shared kanban.db
+- Canary card `t_e7ed2d7b` and smoke card `t_5bde980a` (archived)
+
+## Previous: Tier 0/1 (2026-06-05/06)
+- `runtime/orchestrator.py` + `runtime/orchestrator_config.yaml` (`9d84351`)
+- `tools/gates/gate_git_state.sh` (`bc49beb`)
+- `tools/gates/gate_service_health.sh` (`a5b123a`)
+- `tools/gates/gate_endpoint.sh` (`14fd08d`)
+- `tools/gates/gate_no_secrets.sh` (`82b506a`)
+- `tools/gates/gate_file_exists.sh` (`dac9d6a`)
+- `tools/gates/gate_runner.sh` (`635a646`)

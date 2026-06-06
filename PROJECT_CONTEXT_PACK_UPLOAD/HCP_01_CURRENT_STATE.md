@@ -9,7 +9,7 @@ Status: LIVE — update when state changes, never let this go stale
 
 ## Current Objective
 
-**Build CIS deterministic pipeline — Tier 0/1 complete. Tier 2 next.**
+**Build CIS deterministic pipeline — Tier 0–4 complete. Tier 5 next.**
 
 **Tier 0 — Orchestrator (committed `9d84351`):** `runtime/orchestrator.py` +
 `runtime/orchestrator_config.yaml`. Drafter→Reviewer deliberation loop functional.
@@ -18,12 +18,30 @@ manual API relay role. Bounded: per-agent timeouts, input truncation, test mode.
 
 **Tier 1 — Deterministic Gate Suite (committed `bc49beb`–`635a646`):**
 Five base gates + runner at `tools/gates/`. All executable, syntax-clean, individually
-tested. Runner chains gates in sequence, exits on first failure. Gates: git state,
-service health, endpoint, no-secrets, file existence.
+tested. Runner chains gates in sequence, exits on first failure.
 
-**Tier 2 — Kanban Coordination Layer (next, not started):** Per Dependency Graph
-Build Plan v2.0 (`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, committed `0ef6177`).
-Board creation, profile configuration, gateway restart.
+**Tier 2 — Kanban Coordination Layer (committed `2989c5b`):**
+Gateway env normalization, shared `cis-pipeline` board created, systemd templates
+backed up to `runtime/config/systemd/`, ENV_MANIFEST.md documented. Kanban cross-profile
+visibility confirmed. Limitation: Hermes v0.13 has no custom lanes — CIS stages encoded
+in card title/body metadata.
+
+**Tier 3 — Pipeline Smoke Test (PASS_WITH_LIMITATIONS):**
+Smoke card created with Tier 2.8 schema. Orchestrator completed 3 DRAFT→REVIEW rounds.
+Result: ESCALATE with substantive unresolved objections (Research gateway missing, role
+boundary violation, deadlock breaker). gate_runner.sh: all 5 gates PASS. No manual relay.
+
+**Tier 4 — SQLite Spine (committed `88ea25f`, `0c19b4d`, `ec14615`):**
+Two-table minimum schema: `workflow_runs` + `deliberation_rounds`. `database.py` write/read
+layer with allowlist validation. `gate_db_state.py` deterministic verification gate.
+DB at `data/cis_memory.db` (gitignored). Smoke test seeded with real data.
+
+**Known limitation:** Orchestrator `--output` preserves only final-round detail.
+Per-round output preservation is Tier 6 backlog.
+
+**Tier 5 — Context Export Pipeline (next, not started):** Per Dependency Graph
+Build Plan v2.0 (`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`). AGENTS.md generation,
+canary test, HERMES_CIS_BRIEFING_PATH retirement.
 
 **Phase A findings (2026-06-01):**
 - Hermes Agent v0.13.0 (2026.5.7, 1969 commits behind) — Kanban fully available
@@ -244,28 +262,26 @@ NeMo patch (Gate 5C):
 
 ## Next Safe Action
 
-**Tier 2 — Kanban Coordination Layer.** Per Dependency Graph Build Plan v2.0
-(`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`, committed `0ef6177`). Not started.
-
-Tier 2 scope: shared Kanban board creation, lane configuration, profile wiring,
-gateway restart to pick up `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME` env vars.
+**Tier 5 — Context Export Pipeline.** Per Dependency Graph Build Plan v2.0.
+Not started. Scope: `generate_agents_md.py`, AGENTS.md canary test, retirement
+of HERMES_CIS_BRIEFING_PATH, `generate_hcp.py`, HCP export verification.
 
 **Judge checklist (`tools/judge/judge_checklist.py`) is NOT the next artifact**
-unless explicitly re-approved. The Dependency Graph Build Plan says Tier 2
-Kanban comes before Tier 3 Judge.
+unless explicitly re-approved. The Dependency Graph Build Plan says Tier 5
+Context Export before Tier 6 Pipeline Integration.
 
 **Approved build order:**
 1. Tier 0 — Orchestrator scaffold ✅ COMPLETE (`9d84351`, 2026-06-05)
 2. Tier 1 — Deterministic gate suite ✅ COMPLETE (`bc49beb`–`635a646`, 2026-06-06)
-3. Tier 2 — Kanban coordination layer ← CURRENT (not started)
-4. Tier 3 — Judge checklist (Python/NeMo deterministic checklist)
-5. Tier 4 — Verifier (post-execution evidence gating)
-6. Tier 5 — SQLite spine schema (workflow-event organized)
-7. Tier 6 — AGENTS.md export pipeline (Hermes-native context)
-8. Tier 7 — HCP export pipeline (ChatGPT/Claude)
-9. Tier 8 — Router reclassification
-10. Tier 9 — MCP bridge (later)
-11. Tier 10 — Chroma/VDB (later)
+3. Tier 2 — Kanban coordination layer ✅ COMPLETE (`2989c5b`, 2026-06-06)
+4. Tier 3 — Pipeline smoke test ✅ PASS_WITH_LIMITATIONS (2026-06-06)
+5. Tier 4 — SQLite spine schema + DB layer + DB gate ✅ COMPLETE (`88ea25f`, `0c19b4d`, `ec14615`, 2026-06-06)
+6. Tier 5 — Context Export Pipeline ← CURRENT (not started)
+7. Tier 6 — Pipeline Integration (gated on Tier 5)
+8. Tier 7 — Router Reclassification (gated on Tier 6)
+9. Tier 8 — MCP Bridge (later)
+10. Tier 9 — Chroma/VDB (later)
+11. Tier 10 — CIS UI/custom display views (later)
 
 ---
 
@@ -297,20 +313,14 @@ Kanban comes before Tier 3 Judge.
 
 ## Do Not Start Yet
 
-- Tier 2 Kanban coordination (approved next, not started)
-- Tier 3–10 (all gated on predecessor Tier)
-- SQLite schema creation (Tier 5)
-- Gateway service restarts (part of Tier 2)
-- Retirement of HERMES_CIS_BRIEFING_PATH (Tier 6)
-- Judge checklist unless explicitly re-approved (Tier 3, gated on Tier 2)
+- Tier 5 Context Export Pipeline (approved next, not started)
+- Tier 6–10 (all gated on predecessors)
+- Judge checklist unless explicitly re-approved (Tier 6, gated on Tier 5)
+- SQLite schema expansion (Tier 6 integration)
+- Orchestrator per-round output preservation (Tier 6 backlog)
+- Retirement of HERMES_CIS_BRIEFING_PATH (Tier 5)
 - UI changes
 - Pass 5 implementation
-- Unified memory build (after pipeline foundation)
-- Wiring V4-Pro through NeMo (architecturally blocked)
-- Briefing Center UI redesign
-- Notes/Open Items database implementation
-- Discord/Telegram gateway
-- Kanban configuration without dependency graph plan reference
 - Any artifact not in the approved Dependency Graph Build Plan v2.0
 
 ---
@@ -345,15 +355,18 @@ Kanban comes before Tier 3 Judge.
 **Tier 0 — Orchestrator scaffold** ✅ COMPLETE (`9d84351`, 2026-06-05)
 **Tier 1 — Deterministic gate suite (5 gates + runner)** ✅ COMPLETE (`bc49beb`–`635a646`, 2026-06-06)
 **Dependency Graph Build Plan v2.0 committed** ✅ COMPLETE (`0ef6177`, 2026-06-06)
-**Tier 2 — Kanban Coordination Layer** (next, not started)
-**Tier 3 — Judge Checklist** (gated on Tier 2)
-**Tier 4 — Verifier** (gated on Tier 3)
-**Tier 5 — SQLite Spine Schema** (gated on Tier 4)
-**Tier 6 — AGENTS.md Export Pipeline** (gated on Tier 5)
-**Tier 7 — HCP Export Pipeline** (gated on Tier 6)
-**Tier 8 — Router Reclassification** (gated on Tier 7)
-**Tier 9 — MCP Bridge** (later)
-**Tier 10 — Chroma/VDB** (later)
+**Tier 2 — Kanban Coordination Layer** ✅ COMPLETE (`2989c5b`, 2026-06-06)
+**Tier 3 — Pipeline Smoke Test** ✅ PASS_WITH_LIMITATIONS (2026-06-06)
+**Tier 4.1 — SQLite Spine Schema** ✅ COMPLETE (`88ea25f`, 2026-06-06)
+**Tier 4.2 — database.py Write/Read Layer** ✅ COMPLETE (`0c19b4d`, 2026-06-06)
+**Tier 4.3 — gate_db_state.py Verification Gate** ✅ COMPLETE (`ec14615`, 2026-06-06)
+**SESSION_LOG automated extraction** ✅ COMPLETE (`13d28a3`, 2026-06-06)
+**Tier 5 — Context Export Pipeline** (next, not started)
+**Tier 6 — Pipeline Integration** (gated on Tier 5)
+**Tier 7 — Router Reclassification** (gated on Tier 6)
+**Tier 8 — MCP Bridge** (later)
+**Tier 9 — Chroma/VDB** (later)
+**Tier 10 — CIS UI/Custom Display Views** (later)
 
 ---
 
