@@ -1,0 +1,49 @@
+# orchestrator_config.yaml — Tier 0 Deliberation Engine Configuration
+# CIS Dependency Graph Build Plan v2.0 — Artifact 0.2
+
+# Maximum deliberation rounds before ESCALATE
+# Consensus is the Reviewer's signal, not round count
+max_rounds: 3
+
+# Agent names for deliberation loop
+drafter_agent: hermes-v4pro
+reviewer_agent: hermes-r1
+
+# Reviewer output signals (orchestrator detects these in Review response text)
+consensus_signal: CONSENSUS_REACHED
+escalation_signal: ESCALATE
+
+# If true, Reviewer must include the structured format for consensus:
+#   CONSENSUS_REACHED
+#   remaining_objections: none
+#   requires_eric_review: true
+# If false, any text containing "CONSENSUS_REACHED" counts.
+require_structured_reviewer_signal: true
+
+# Objections detection: lines starting with "- " after "OBJECTIONS" header
+objections_header: OBJECTIONS
+
+# CIS API endpoint
+api_base_url: http://127.0.0.1:5000
+chat_endpoint: /api/advisor/chat
+
+# API key for CIS (same as CIS_API_KEY env var)
+# Override with ORCHESTRATOR_API_KEY env var
+api_key: ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd
+
+# Request timeout in seconds (global fallback)
+request_timeout: 300
+
+# Per-agent timeout overrides (seconds). Leave commented or null to use request_timeout.
+# drafter_timeout: 180
+# reviewer_timeout: 120
+
+# Max input characters (topic truncation). null = unlimited.
+# max_input_chars: 2000
+
+# Max Drafter output characters sent to Reviewer (prevents Reviewer context overload)
+max_reviewer_input_chars: 4000
+
+# Test mode: prepends "[TEST MODE] Respond in 3 sentences or fewer." to all prompts.
+# Enable via --test flag or set to true here.
+test_mode: false
