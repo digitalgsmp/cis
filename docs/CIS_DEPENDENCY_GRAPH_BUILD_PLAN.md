@@ -32,9 +32,11 @@ These facts are confirmed and all subsequent tiers assume them:
 | AGENTS.md auto-loaded by all 4 active profiles from git root | A4 |
 | HERMES_CIS_BRIEFING_PATH present in all 5 profiles (transitional) | A5 |
 | Gateway restart pending — Kanban env vars not active in gateway context | A3 |
+| **Gateway restart COMPLETE (2026-06-06)** — all 5 gateways have KANBAN vars in process env. OQ-009 resolved. | Tier 2.2 |
 | 4 active gateways: prime (8800), v4pro (8645), r1 (8643), v4impl (8646) | Phase 0 |
 | Qwen paused on 8644 | Phase 0 |
 | /api/advisor/route classifies and dispatches to correct gateway | Router v0.1 |
+| **Hermes Kanban v0.13: no custom lanes/columns.** Built-in statuses only. | Tier 2.6 |
 
 ---
 
@@ -118,6 +120,12 @@ confirming expected output files changed.
 doing or what pipeline state a topic is in. Kanban provides a shared board that all
 profiles can see and claim from.
 
+**What Kanban is NOT:** Kanban is not the full CIS pipeline display. It lacks custom
+lanes in Hermes v0.13 and cannot represent the 11-stage deliberation pipeline as
+columns. Kanban is the shared coordination layer and human-readable active work area.
+Custom lane displays are the responsibility of SQLite spine (Tier 4) and later CIS UI
+views (Tier 6+).
+
 **Note:** Tier 2 gates on Tier 0 (orchestrator) because the Kanban board tracks
 orchestrator runs. It does NOT gate on Tier 1 (gates exist but Kanban doesn't
 depend on them — gates will verify Kanban operations after Tier 2 is built).
@@ -126,29 +134,83 @@ depend on them — gates will verify Kanban operations after Tier 2 is built).
 
 | # | Artifact | Description | Dependencies |
 |---|----------|-------------|--------------|
-| 2.1 | Gateway restart | Restart all 5 gateway services so HERMES_KANBAN_DB + HERMES_KANBAN_HOME take effect in service context | HERMES_KANBAN_* set in .env files (done) |
-| 2.2 | Kanban board: cis-pipeline | `hermes kanban boards create cis-pipeline --switch` | Gateway restart, shared kanban.db |
-| 2.3 | Kanban lanes (10 columns) | TRIAGE → RESEARCH → DRAFT → REVIEW → CONSENSUS → ERIC_GATE → IMPLEMENT → VERIFY → STATE_WRITE → EXPORT → DONE | Board exists |
-| 2.4 | `gate_closeout_complete.sh` (v1) | Master gate — runs all 5 Tier 1 gates. Exits 0 if all pass, 2 if any fail. | All Tier 1 gates exist |
+| 2.1 | Gateway readiness check | Verify all 5 gateway services have HERMES_KANBAN_DB + HERMES_KANBAN_HOME in process env. Identify restart gaps. | HERMES_KANBAN_* set in .env files (done) |
+| 2.2 | Gateway restart + env normalization | Add EnvironmentFile= to 4 service files matching v4impl pattern. Restart gateways. Verify all 5 processes have Kanban env vars. Fix prime HERMES_HOME anomaly (OQ-009). | 2.1 |
+| 2.3 | Kanban board: cis-pipeline | `hermes kanban boards create cis-pipeline --switch`. Add data/ to .gitignore. | 2.2, shared kanban.db |
+| 2.4 | Systemd template backup | Copy sanitized service files to runtime/config/systemd/. Commit. | 2.3 |
+| 2.5 | Environment manifest | ENV_MANIFEST.md documenting required vars per profile. No secrets. | 2.4 |
+| 2.6 | Kanban lane compatibility confirmed | **11-lane structure REJECTED** — Hermes Kanban v0.13 has no custom lanes/columns. Built-in statuses only: triage, todo, ready, running, blocked, done, archived. | 2.3 |
+| 2.7 | `gate_runner.sh` (replaces gate_closeout_complete.sh) | Chains all 5 Tier 1 gates in sequence. Exits on first failure. | All Tier 1 gates exist |
+| 2.8 | CIS Kanban card schema | Define minimal card format using supported fields: title (with stage prefix), body (structured markdown), tenant (domain namespace), parent (dependencies), assignee, workspace. | 2.6 |
 
-**Lane-to-profile assignments:**
-| Lane | Profile | HERMES_HOME | Gate to advance |
-|------|---------|-------------|-----------------|
-| TRIAGE | Eric or router | — | Research artifact attached |
-| RESEARCH | hermes-prime | ~/.hermes | Research artifact + evidence |
-| DRAFT | hermes-v4pro | ~/.hermes-v4pro | Proposal artifact |
-| REVIEW | hermes-r1 | ~/.hermes-r1 | CONSENSUS_REACHED or loop back |
-| CONSENSUS | holding lane | — | Eric approval |
-| ERIC_GATE | Eric action | — | FINAL_DIRECTIVE generated |
-| IMPLEMENT | hermes-v4impl | ~/.hermes-v4impl | Implementation artifact |
-| VERIFY | bash gate scripts | — | All gates PASS |
-| STATE_WRITE | hermes-prime | ~/.hermes | Spine written, exports generated |
-| EXPORT | generate_all.py | — | Export manifest matches |
-| DONE | terminal | — | — |
+**Kanban card schema (Tier 2.8):**
 
-**Acceptance test:** One card manually created, manually moved through all lanes.
-Cross-profile visibility confirmed from prime, v4pro, r1, v4impl. gate_closeout_complete.sh
-runs and exits with known code.
+Hermes Kanban v0.13 supports these fields per card:
+- `title` (required) — string
+- `body` (optional) — markdown
+- `assignee` — profile name
+- `parent` — parent task IDs (repeatable, for dependencies)
+- `workspace` — scratch | worktree | dir:<path>
+- `tenant` — tenant namespace
+- `priority` — priority tiebreaker
+- `--triage` — flag, parks in triage status
+- `idempotency-key` — dedup key
+- `max-runtime` — per-task runtime cap
+- `created-by` — author name
+- `skill` — skills to load (repeatable)
+- `max-retries` — retry count
+- Built-in statuses: triage, todo, ready, running, blocked, done, archived
+
+**Proposed CIS card convention:**
+
+Title prefix encodes CIS stage: `[TRIAGE]`, `[RESEARCH]`, `[DRAFT]`, `[REVIEW]`,
+`[CONSENSUS]`, `[ERIC_GATE]`, `[IMPLEMENT]`, `[VERIFY]`, `[STATE_WRITE]`, `[EXPORT]`,
+`[DONE]`.
+
+Body is structured markdown:
+```
+## Directive
+<what the agent should do>
+
+## Context
+<relevant state, decisions, blockers>
+
+## Evidence
+<research artifacts, gate results>
+
+## Handoff
+<previous card ID, consensus signal>
+```
+
+Tenant encodes the project/domain (e.g., `cis-infra`, `cis-pipeline`).
+
+Parent encodes card dependencies (e.g., DRAFT card has RESEARCH as parent).
+
+Assignments follow the card-to-profile mapping:
+- RESEARCH → hermes-prime
+- DRAFT → hermes-v4pro
+- REVIEW → hermes-r1
+- IMPLEMENT → hermes-v4impl
+- VERIFY → (gate scripts, unassigned or hermes-prime)
+
+**Card lifecycle (Kanban statuses mapped to CIS stages):**
+
+| CIS Stage | Kanban Status | Action |
+|-----------|---------------|--------|
+| TRIAGE | triage | Topic enters, awaiting classification |
+| RESEARCH | todo | Prime investigates, attaches evidence |
+| DRAFT | todo | v4pro drafts proposal from research |
+| REVIEW | todo | r1 reviews, emits OBJECTIONS or CONSENSUS |
+| CONSENSUS | ready | Awaiting Eric review |
+| ERIC_GATE | ready | Eric approves, FINAL_DIRECTIVE generated |
+| IMPLEMENT | running | v4impl executes FINAL_DIRECTIVE |
+| VERIFY | running | Gate scripts run, check evidence |
+| STATE_WRITE | done | Results written to SQLite spine |
+| EXPORT | done | AGENTS.md + HCP generated |
+| DONE | archived | Pipeline run complete |
+
+**Acceptance test:** One canary card created with CIS schema format. Readable from
+prime, v4pro, and r1 profiles. gate_runner.sh runs and exits with known code.
 
 ---
 
@@ -162,10 +224,12 @@ early, when the stack is smallest.
 
 | # | Artifact | Description | Dependencies |
 |---|----------|-------------|--------------|
-| 3.1 | Smoke test run | One topic → orchestrator runs DRAFT/REVIEW → CONSENSUS_REACHED → Eric approves → card created in Kanban → moved through all lanes manually → verified by gate_closeout_complete.sh | Tier 0, Tier 2 |
+| 3.1 | Smoke test run | One topic → orchestrator runs DRAFT/REVIEW → CONSENSUS_REACHED → Eric approves → card created in Kanban → pipeline stage changes recorded in card title/body metadata; Kanban status reflects only Hermes built-in lifecycle state → verified by gate_runner.sh | Tier 0, Tier 2 |
 
-**Acceptance test:** Full run completes. Card moves through all lanes. All 5 Tier 1
-gates pass. Eric only touches the CONSENSUS and ERIC_GATE lanes — no relay between
+**Acceptance test:** Full run completes. Pipeline stage changes are recorded in card
+title/body metadata; Kanban status (triage/todo/ready/running/done/archived) reflects
+only Hermes built-in lifecycle state, not CIS pipeline stages. All 5 Tier 1
+gates pass. Eric only touches the CONSENSUS and ERIC_GATE stage transitions — no relay between
 Drafter and Reviewer.
 
 ---
@@ -224,14 +288,14 @@ detected by gate_export_agreement.sh (exits 1).
 
 **What it solves:** Currently orchestrator.py runs independently, Kanban is populated
 manually, and gates run manually. Tier 6 connects them — orchestrator writes to Kanban,
-gates run automatically on lane transitions, verified outputs flow to spine.
+gates run automatically on stage transitions, verified outputs flow to spine.
 
 **Artifacts:**
 
 | # | Artifact | Description | Dependencies |
 |---|----------|-------------|--------------|
 | 6.1 | `gate_closeout_complete.sh` (v2) | Updated to run all gates: 5 Tier 1 + gate_db_state + gate_export_agreement + pipeline-transition gates. | All gates exist |
-| 6.2 | Orchestrator Kanban integration | orchestrator.py claims cards from Kanban lanes instead of being called directly. Writes artifacts to Kanban card attachments. | Tier 3 smoke test passing, Kanban board |
+| 6.2 | Orchestrator Kanban integration | orchestrator.py claims cards from the Kanban board instead of being called directly. Writes artifacts to Kanban card attachments. | Tier 3 smoke test passing, Kanban board |
 | 6.3 | Pipeline-transition gates | gate_research_artifact_present, gate_proposal_schema_valid, gate_review_round_valid, gate_consensus_signal_valid, gate_final_directive_valid, gate_eric_approval_present, gate_implementation_artifact_present | Schema exists, CONSENSUS_REACHED JSON schema defined |
 | 6.4 | End-to-end pipeline run | Router routes to Kanban → agents claim and process → verification gates auto-run → state writes to spine → exports generated. Eric only at ERIC_GATE. | All above |
 
@@ -295,6 +359,7 @@ Truth flows from verified pipeline runs, not semantic search.
 | gate_file_exists.sh as closeout-only | Included in Tier 1 as generally useful verification. Not a closeout dependency. |
 | Swarm topology definition in Phase C | Swarm not available in Hermes v0.13.0. Deferred. Kanban card claiming replaces swarm for now. |
 | HCP file updates before Phase A verification | HCP updates deferred until Tier 6 when exports are generated from spine. Manual HCP editing ends then. |
+| 11-lane custom Kanban column structure | **REJECTED (2026-06-06).** Hermes Kanban v0.13 has no custom lane/column support. Immutable built-in statuses only: triage, todo, ready, running, blocked, done, archived. CIS pipeline stage is encoded in card title prefix + body metadata, not custom lanes. Full 11-stage custom display moves to SQLite spine (Tier 4) + later CIS UI views. |
 
 ## Consensus Questions for ChatGPT and Claude
 
@@ -305,7 +370,7 @@ Truth flows from verified pipeline runs, not semantic search.
    with only git/curl/grep/filesystem?
 
 3. Is the Kanban board ahead of SQLite correct? Or does the spine schema need to exist
-   before Kanban lanes can be meaningfully defined?
+   before Kanban card conventions can be meaningfully defined?
 
 4. Is the smoke test (Tier 3) correctly placed? Could it be combined with Tier 2?
 
