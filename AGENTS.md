@@ -1,0 +1,131 @@
+# CIS — AGENTS.md
+Generated: 2026-06-07 04:12 UTC | Latest run: run-05b24781207e
+Source: SQLite spine + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
+
+## 1. Current Build Phase
+Tier 4.4 COMPLETE. Tier 5 Context Export Pipeline — IN PROGRESS.
+Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
+
+## 2. Do Not Start
+- Pass 5 implementation (project promotion, schema migration)
+- Unified memory build
+- Wiring V4-Pro through NeMo (architecturally blocked)
+- Briefing Center UI redesign
+- Notes/Open Items database implementation
+- VDB pipeline rebuild
+- Discord/Telegram gateway
+- Schedule field-use work (SWA)
+- CIS Foundation Build Plan Phases 1-3
+- Snapshot trigger work (CIS-INFRA-STORAGE-002)
+- Judge implementation (gated on Tier 6)
+- Tier 6 Pipeline Integration (gated on Tier 5)
+- Tier 7 Router Reclassification (gated on Tier 6)
+- Tier 8 MCP Bridge (gated on Tier 7)
+- Tier 9 Chroma/VDB (gated on Tier 8)
+- Tier 10 CIS UI/custom display views (gated on Tier 9)
+- Any artifact not in the approved Dependency Graph Build Plan v2.0
+
+## 3. Active Architecture
+
+### Infrastructure
+- proxmox_host: wander at 192.168.1.200, PVE 9.1.6
+- primary_vm: creative-vm (VM 100), Ubuntu 24.04, 192.168.1.15
+- storage: virtio0 500G local-lvm, virtio1 250G local-lvm
+- passthrough: virtio2 10TB archive, virtio3/5/6 SSDs
+- snapshot_status: RESOLVED — cis-snapshot deployed on root@wander
+- backup_status: local archive at /mnt/archive/cis_backup_20260524_112430.tar.gz
+- github_repo: https://github.com/digitalgsmp/cis
+
+### Gateways
+| Label | Profile | Port | Model | Reasoning | NeMo | Status |
+|-------|---------|------|-------|-----------|------|--------|
+| Flash/Research | hermes-prime | 8642 → NeMo 8800 | deepseek-v4-flash | none | Yes | Running |
+| V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running |
+| V4 Reviewer | hermes-r1 | 8643 | deepseek-v4-pro | xhigh | No | Running |
+| V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running |
+| Qwen | hermes-qwen | 8644 | qwen3-vl-30b | none | No | Paused |
+
+### Hermes Source Patches
+- /home/eric/.hermes/hermes-agent/run_agent.py:9782 — Added api.deepseek.com to _supports_reasoning_extra_body() allowlist
+- /home/eric/.hermes/hermes-agent/plugins/model-providers/deepseek/__init__.py — DeepSeekProfile with build_api_kwargs_extras() for thinking params
+- /home/eric/.hermes/hermes-agent/gateway/platforms/api_server.py:1255 — Extracts reasoning_content from agent result, surfaces in API response
+- /home/eric/.hermes/hermes-agent/agent/usage_pricing.py:731 — Added completion_tokens_details.reasoning_tokens fallback
+
+## 4. Active Decisions
+- [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use numbered migration files under runtime/schema/migrations/. Verified artifacts are never rewritten.
+- [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active profiles. Not before.
+- [ADR-SEED-004] Browser role enforcement at router layer: Role badge derived from gateway endpoint/profile only. Implementation directives route only to hermes-v4impl port 8646. Drafter and Reviewer endpoints blocked from execution actions. Enforced at Tier 7.
+- [ADR-SEED-003] Role identity must be runtime-derived: Hermes role identity must come from HERMES_HOME and gateway endpoint, not from briefing text or model self-description. Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
+- [ADR-SEED-002] Verification-hardening rule: V4 Implementer self-report is not a source of truth. Completion accepted only after deterministic evidence: git diff, test output, DB queries, endpoint responses, service health, browser/UI state, independent reviewer pass/fail.
+- [ADR-SEED-001] Dependency graph build order: CIS is built tier by tier per CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md. Nothing built before its dependencies exist.
+
+## 5. Open Questions
+- [OQ-SEED-003] Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or be done manually before Tier 5 build begins?
+- [OQ-SEED-002] hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric/.hermes but service file may differ
+- [OQ-SEED-001] Google Drive backup integrity unverified
+
+## 6. Next Actions
+- [NA-SEED-001] (Tier 5) Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars
+- [NA-SEED-002] (Tier 5) Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule
+- [NA-SEED-003] (Tier 5) Run Tier 5.2: AGENTS.md canary test across all 4 active profiles
+- [NA-SEED-004] (Tier 5) Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes
+- [NA-SEED-005] (Tier 5) Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09
+- [NA-SEED-006] (Tier 5) Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256
+- [NA-SEED-007] (Tier 5) Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest
+
+## 7. Active Blockers
+- [BLK-SEED-004] Google Drive backup integrity unverified
+- [BLK-SEED-003] Terminal sessions have no visible role identity — model infers role from briefing, not runtime environment
+- [BLK-SEED-002] HCP files manually maintained — LLM file writes are the same mechanism that caused file corruption
+- [BLK-SEED-001] AGENTS.md does not exist — all 4 profiles context-blind without HERMES_CIS_BRIEFING_PATH
+
+## 8. Recent Pipeline Runs (last 5)
+- [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
+
+## 9. Verification Hardening Rule
+V4 Implementer self-report is not a source of truth.
+Completion is accepted only after deterministic evidence verifies the result.
+Accepted evidence:
+  1. git diff / file system state
+  2. build and test command output
+  3. database queries
+  4. endpoint/curl responses
+  5. service health checks
+  6. browser/UI verification
+  7. independent reviewer/verifier pass/fail
+Implementer reports claimed changes → separate verification gate checks
+deterministic evidence → PASS only if evidence matches directive scope.
+Missing/ambiguous/self-reported evidence → status remains UNVERIFIED.
+
+## 10. Role Identity Rule
+Hermes role identity must be derived from HERMES_HOME and gateway endpoint,
+not from briefing text or model self-description.
+Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
+Browser app: role badge derived from gateway endpoint/profile only.
+Implementation directives route only to hermes-v4impl port 8646.
+
+## 11. Seed Intent — Eric's Own Words
+Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim.
+
+Source: session_20260520_215551_16187f.json
+> I don't want summaries, I am trying to build a system that works from the raw files.
+> let me explain what I am trying to do. yesterday I installed three hermes folders one
+> for deepseek v4, one for deepseek r1 and one for qwen 30b MOE. then made a ui interface
+> with a chat for each so that I can have the models verify each others opinions on topics
+> and check the code thats written since they all have different training data and different
+> blind spots. I then was to build a knowledge base in the sqlite db that will vectorized
+> and saved to a vdb.
+
+Source: session_20260525_232304_b2d3b2.json
+> the LLMs are the tools, I am trying to get LLMs to help me think by contributing
+> factual information and expertise. when I sit down and interact with the LLMs they
+> don't remember anything and the overall vision is not apparent to combine the vision
+> of where I am trying to get to, to why we are working on the immediate task.
+
+Source: session_20260518_203801_265262.json
+> I need checks and balance, I am not a coder and if I don't trust something one of
+> you says I have to be able to paste it for another model to evaluate and give me
+> independent analysis. that is what claude and chatgpt did to each other. I need a
+> worker who is constrained to my working methods and two objective reviewers as
+> expert advisors.
