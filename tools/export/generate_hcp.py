@@ -204,6 +204,10 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
     status_line = " | ".join(status_parts) if status_parts else shared["current_phase"]
     lines.append(f"Status: {status_line}")
     lines.append("")
+    # Generation stamp
+    for st in stamp:
+        lines.append(st)
+    lines.append("")
     lines.append("---")
     lines.append("")
 
@@ -778,6 +782,10 @@ def render_hcp_07(stamp, hcp_static, latest_run, actions):
     lines.append("Session: Tier 5.4 generate_hcp.py implementation")
     lines.append("")
     lines.append(f"HEAD: `{head_short or 'unknown'}`")
+    lines.append("")
+    # Generation stamp
+    for st in stamp:
+        lines.append(st)
     lines.append("")
 
     # Most recent session — Tier 5.4

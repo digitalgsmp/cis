@@ -5,7 +5,7 @@ Reads SQLite spine + config/agents_static.yaml.
 Writes /mnt/projects/cis/AGENTS.md.
 Output must stay under 20,000 characters.
 
-Usage: python3 tools/export/generate_agents_md.py [--db PATH] [--config PATH] [--out PATH] [--dry-run]
+Usage: python3 tools/export/generate_agents_md.py [--db PATH] [--config PATH] [--out PATH] [--run-id ID] [--dry-run]
 """
 
 import argparse
@@ -63,13 +63,14 @@ def query_spine(db_path):
     return runs, decisions, questions, actions, blockers
 
 
-def render(static, runs, decisions, questions, actions, blockers):
+def render(static, runs, decisions, questions, actions, blockers, run_id=None):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     latest_run_id = runs[0]["id"] if runs else "none"
+    rid = run_id or "none"
 
     lines = []
     lines.append("# CIS — AGENTS.md")
-    lines.append(f"Generated: {now} | Latest run: {latest_run_id}")
+    lines.append(f"Generated: {now} | Run: {rid} | Latest pipeline: {latest_run_id}")
     lines.append("Source: SQLite spine + config/agents_static.yaml")
     lines.append("DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py")
     lines.append("")
@@ -168,6 +169,7 @@ def main():
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--dry-run", action="store_true",
                         help="Print output instead of writing file")
+    parser.add_argument("--run-id", default=None, help="Pipeline run ID for stamp")
     args = parser.parse_args()
 
     if not Path(args.db).exists():
@@ -179,7 +181,7 @@ def main():
 
     static = load_static(args.config)
     runs, decisions, questions, actions, blockers = query_spine(args.db)
-    output = render(static, runs, decisions, questions, actions, blockers)
+    output = render(static, runs, decisions, questions, actions, blockers, run_id=args.run_id)
 
     char_count = len(output)
     if char_count > CHAR_LIMIT:

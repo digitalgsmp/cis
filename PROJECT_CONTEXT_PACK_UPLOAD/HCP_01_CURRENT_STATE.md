@@ -4,13 +4,17 @@ Date: 2026-06-07
 Authority: Eric (Architect)
 Status: Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule | Run Tier 5.2: AGENTS.md canary test across all 4 active profiles | Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes | Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 | Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 | Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest | Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. | Build Tier 5 context export pipeline
 
+Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
 ---
 
 ## Current Objective
 
 **Tier 5 Context Export Pipeline — IN PROGRESS.**
 
-**HEAD:** `3e34dd2`.
+**HEAD:** `0f3d80e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -253,15 +257,15 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 Depends on: Tier 4.4 complete
 
 **Approved build order:**
-255. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ⬜ PENDING
-256. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ⬜ PENDING
-257. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ⬜ PENDING
-258. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ⬜ PENDING
-259. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ⬜ PENDING
-260. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ⬜ PENDING
-261. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ⬜ PENDING
-262. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ⬜ PENDING
-263. Tier 5 — Build Tier 5 context export pipeline ⬜ PENDING
+259. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ⬜ PENDING
+260. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ⬜ PENDING
+261. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ⬜ PENDING
+262. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ⬜ PENDING
+263. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ⬜ PENDING
+264. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ⬜ PENDING
+265. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ⬜ PENDING
+266. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ⬜ PENDING
+267. Tier 5 — Build Tier 5 context export pipeline ⬜ PENDING
 
 ---
 

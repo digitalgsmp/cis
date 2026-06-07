@@ -1,0 +1,116 @@
+{
+  "run_id": "run-22dd0fa379a6",
+  "generated_at": "2026-06-07T13:54:16Z",
+  "git_head": "0f3d80e",
+  "generator": "tools/export/generate_all.py",
+  "db_path": "/mnt/projects/cis/data/cis_memory.db",
+  "source_configs": [
+    "config/agents_static.yaml",
+    "config/hcp_static.yaml"
+  ],
+  "commands": [
+    "python3 tools/export/generate_agents_md.py --run-id run-22dd0fa379a6",
+    "python3 tools/export/generate_hcp.py --run-id run-22dd0fa379a6"
+  ],
+  "artifacts": [
+    {
+      "path": "AGENTS.md",
+      "type": "agents_context",
+      "generator": "tools/export/generate_agents_md.py",
+      "sha256": "1b32fe5a60865534cac1ea3c563825fe4b6576b489816b05615f86f217bf9fa7",
+      "size_bytes": 10039,
+      "char_count": 9993,
+      "line_count": 136
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "718a37921c1396d845827ceb3b59fcc70fe469590861dd002a87929598bd1962",
+      "size_bytes": 1897,
+      "char_count": 1885,
+      "line_count": 42
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "1b20d1ab9ce0821971b91c279ec1fb2402844284d744ee5bdda69a6391cbce26",
+      "size_bytes": 22294,
+      "char_count": 21966,
+      "line_count": 362
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "1f3f1f48d593b7655da2e5e65c96e63a0e41836df2a922cdc16f422ab3f3f4b1",
+      "size_bytes": 8882,
+      "char_count": 8716,
+      "line_count": 176
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "4fec0a3245d9d1d2fbacc55427c598fc0e9afb36a3638cdd64ce0d27349c5225",
+      "size_bytes": 2197,
+      "char_count": 2193,
+      "line_count": 17
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "45fb5d2ae43508d1777f26f5f0ea84488ac8b7c4df55b67632fbd19af3f79e27",
+      "size_bytes": 675,
+      "char_count": 661,
+      "line_count": 17
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "3c2fc587bb6ecd7c4dd11968870166901dc0bca9ffd4f031229e04ba4b35b968",
+      "size_bytes": 2477,
+      "char_count": 2459,
+      "line_count": 49
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "e0fe90fe0f6218a220544fadeeec01f30f6e74b74e85c07deebfbe18212796e7",
+      "size_bytes": 2919,
+      "char_count": 2903,
+      "line_count": 58
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "30136dc3abe320454777e0ff8c3cd379cd582df85b739e11838592538e0d3b32",
+      "size_bytes": 2708,
+      "char_count": 2668,
+      "line_count": 57
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "59f7b3487741b301e7141fc1c946bca5a9eb15de3c9f50db6c5ec64ececc80ee",
+      "size_bytes": 3601,
+      "char_count": 3597,
+      "line_count": 132
+    },
+    {
+      "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md",
+      "type": "hcp_context",
+      "generator": "tools/export/generate_hcp.py",
+      "sha256": "7da1b92faf00cabd3d99e5b15bf9311b501d4029850b3b92cb4f19e8cfe9d213",
+      "size_bytes": 4538,
+      "char_count": 4512,
+      "line_count": 57
+    }
+  ]
+}

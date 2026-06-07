@@ -1,7 +1,33 @@
 # Files Changed Recently
-Generated: 2026-06-07 13:34 UTC | Run: none
+Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 0f3d80e tier 5.4 generate_hcp.py — spine-driven HCP export replaces manual maintenance
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## config/hcp_static.yaml 
+
+## tools/export/generate_hcp.py 
 
 ## 3e34dd2 clarify hcp upload packet as external advisor interface
 
@@ -104,7 +130,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 2989c5b update kanban coordination model
 
 ## docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md 
-
-## efff168 ignore runtime kanban data
-
-## .gitignore 

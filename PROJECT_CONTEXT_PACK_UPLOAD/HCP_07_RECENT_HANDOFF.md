@@ -2,7 +2,11 @@
 Date: 2026-06-07
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `3e34dd2`
+HEAD: `0f3d80e`
+
+Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Tier 5.4 — generate_hcp.py (this session)
 - `config/hcp_static.yaml` — new: HCP-specific Layer B static config

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-07 04:12 UTC | Latest run: run-05b24781207e
+Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6 | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -59,6 +59,9 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [ADR-SEED-003] Role identity must be runtime-derived: Hermes role identity must come from HERMES_HOME and gateway endpoint, not from briefing text or model self-description. Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
 - [ADR-SEED-002] Verification-hardening rule: V4 Implementer self-report is not a source of truth. Completion accepted only after deterministic evidence: git diff, test output, DB queries, endpoint responses, service health, browser/UI state, independent reviewer pass/fail.
 - [ADR-SEED-001] Dependency graph build order: CIS is built tier by tier per CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md. Nothing built before its dependencies exist.
+- [ADR-SEED-009] HCP export is currently CIS-scoped: generate_hcp.py assumes the CIS infrastructure project, including CIS-specific static config, output packet location, and current single-project spine structure. Before CIS manages a second project, HCP export must be refactored to project-agnostic parameterization. The refactor is gated on a project isolation model decision: per-project repos/project roots with separate spines versus one shared spine with project_id filtering.
+- [ADR-SEED-008] External advisor packet remains permanent: PROJECT_CONTEXT_PACK_UPLOAD/HCP_* remains the canonical external-model context packet for ChatGPT, Claude, and other frontier-model escalation after Tier 5. AGENTS.md serves Hermes-native context; HCP serves external advisor context.
+- [ADR-SEED-007] AGENTS.md gateway loading mechanism: AGENTS.md is loaded from cwd or TERMINAL_CWD in gateway mode, not automatically from git root. Gateway processes require TERMINAL_CWD=/mnt/projects/cis to load CIS AGENTS.md. CLI sessions may load CIS AGENTS.md when launched from the CIS repo root.
 
 ## 5. Open Questions
 - [OQ-SEED-003] Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or be done manually before Tier 5 build begins?
@@ -73,12 +76,14 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [NA-SEED-005] (Tier 5) Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09
 - [NA-SEED-006] (Tier 5) Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256
 - [NA-SEED-007] (Tier 5) Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest
+- [NA-SEED-009] (Tier 5) Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified
 - [BLK-SEED-003] Terminal sessions have no visible role identity — model infers role from briefing, not runtime environment
 - [BLK-SEED-002] HCP files manually maintained — LLM file writes are the same mechanism that caused file corruption
 - [BLK-SEED-001] AGENTS.md does not exist — all 4 profiles context-blind without HERMES_CIS_BRIEFING_PATH
+- [BLK-SEED-005] hermes-gateway.service auto-overwrite mechanism may reintroduce service misconfiguration. Service was repaired at commit 353cef5 after being overwritten from Flash/Research profile to r1 profile. Manual service identity check recommended at session start until root cause is fixed.
 
 ## 8. Recent Pipeline Runs (last 5)
 - [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
