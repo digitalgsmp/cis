@@ -1,20 +1,17 @@
 # Project Context Pack — Hermes Harness / CIS
-Version: 2026-06-01 (CIS Deterministic Pipeline Decision)
-Maintained by: Hermes/DeepSeek (transitional — target: generated export Phase F)
+Version: 2026-06-06 (Tier 0–4 complete — Tier 5 next)
+Maintained by: Hermes/DeepSeek (manually reconciled — target: Tier 5 generated export)
 Reviewed by: Eric
 
-## IMPORTANT — Architecture Change (2026-06-01)
+## IMPORTANT — Architecture Change
 
 **CIS is a Hermes-native adversarial deliberation engine. The pipeline is the product.**
 
 HCP files are the external advisor packet for ChatGPT and Claude.
-They are transitioning from manually maintained markdown to generated exports
-from a Hermes-native deterministic state spine (SQLite).
+They are currently maintained manually. After Tier 5 Context Export Pipeline
+(`generate_hcp.py` from SQLite spine), they will be auto-generated.
 
-During this transition, these files are still manually updated.
-After Phase F (HCP export pipeline), they will be auto-generated.
-
-**HERMES_CIS_BRIEFING_PATH is transitional.** Target retirement: Phase E.
+**HERMES_CIS_BRIEFING_PATH is transitional.** Target retirement: Tier 5.
 Replacement: /mnt/projects/cis/AGENTS.md auto-loaded by all profiles natively.
 
 ## Purpose
