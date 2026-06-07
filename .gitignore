@@ -131,3 +131,6 @@ docs/architecture_atlas/original_CISChats/
 # Kanban runtime data (not source code)
 data/
 proposals/
+
+# Runtime live backups (pre-existing, not source code)
+/runtime/config/systemd/live_backups/
