@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6 | Latest pipeline: run-05b24781207e
+Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400 | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -67,16 +67,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-003] Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or be done manually before Tier 5 build begins?
 - [OQ-SEED-002] hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric/.hermes but service file may differ
 - [OQ-SEED-001] Google Drive backup integrity unverified
+- [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [NA-SEED-001] (Tier 5) Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars
-- [NA-SEED-002] (Tier 5) Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule
-- [NA-SEED-003] (Tier 5) Run Tier 5.2: AGENTS.md canary test across all 4 active profiles
-- [NA-SEED-004] (Tier 5) Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes
-- [NA-SEED-005] (Tier 5) Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09
-- [NA-SEED-006] (Tier 5) Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256
-- [NA-SEED-007] (Tier 5) Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest
 - [NA-SEED-009] (Tier 5) Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.
+- [NA-SEED-010] (Tier 6) Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified

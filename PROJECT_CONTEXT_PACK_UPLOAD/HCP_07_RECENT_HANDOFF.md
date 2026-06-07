@@ -2,9 +2,9 @@
 Date: 2026-06-07
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `0f3d80e`
+HEAD: `2cf6bcc`
 
-Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,4 +54,4 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars.
+Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure..

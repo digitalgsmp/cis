@@ -1,5 +1,5 @@
 # Open Questions — Hermes Harness / CIS
-Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,3 +15,6 @@ Status: OPEN
 ## OQ-T44-001 — Tier 4.4 migration applied cleanly?
 Verified by gate
 Status: RESOLVED
+
+## OQ-SEED-004 — Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/buil
+Status: OPEN

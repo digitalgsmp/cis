@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars.** Tier 4.4 complete
+**Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure..** ADR-SEED-009
 
 Do NOT start:
 
@@ -31,15 +31,17 @@ Do NOT start:
 
 | Tier | Description | Status | Commits |
 |------|-------------|--------|---------|
-| Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | PENDING |  |
-| Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | PENDING |  |
-| Tier 5 | Run Tier 5.2: AGENTS.md canary test across all 4 active profiles | PENDING |  |
-| Tier 5 | Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary pas | PENDING |  |
-| Tier 5 | Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 | PENDING |  |
-| Tier 5 | Build Tier 5.5: generate_all.py — runs both generators, writes export manifest w | PENDING |  |
-| Tier 5 | Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes mat | PENDING |  |
+| Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE |  |
+| Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE |  |
+| Tier 5 | Run Tier 5.2: AGENTS.md canary test across all 4 active profiles | COMPLETE |  |
+| Tier 5 | Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary pas | COMPLETE |  |
+| Tier 5 | Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 | COMPLETE |  |
+| Tier 5 | Build Tier 5.5: generate_all.py — runs both generators, writes export manifest w | COMPLETE |  |
+| Tier 5 | Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes mat | COMPLETE |  |
+| Tier 5 | Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD | COMPLETE |  |
 | Tier 5 | Decide project isolation model for future CIS-managed projects before onboarding | PENDING |  |
-| Tier 5 | Build Tier 5 context export pipeline | PENDING |  |
+| Tier 5 | Build Tier 5 context export pipeline | COMPLETE |  |
+| Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | PENDING |  |
 
 ## Known Limitations
 

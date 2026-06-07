@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-07
 Authority: Eric (Architect)
-Status: Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule | Run Tier 5.2: AGENTS.md canary test across all 4 active profiles | Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes | Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 | Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 | Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest | Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. | Build Tier 5 context export pipeline
+Status: Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. | Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).
 
-Generated: 2026-06-07 13:54 UTC | Run: run-22dd0fa379a6
+Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 5 Context Export Pipeline — IN PROGRESS.**
 
-**HEAD:** `0f3d80e`.
+**HEAD:** `2cf6bcc`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -24,7 +24,7 @@ HCP is not deprecated; manual drift is what Tier 5 eliminates by generating HCP 
 AGENTS.md is auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis.
 HERMES_CIS_BRIEFING_PATH is permanently retired from all 5 profile .env files.
 
-**Remaining Tier 5:** Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars → Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule → Run Tier 5.2: AGENTS.md canary test across all 4 active profiles → Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes → Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 → Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 → Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest → Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. → Build Tier 5 context export pipeline
+**Remaining Tier 5:** Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.
 
 Do NOT start Tier 6, Judge, UI, VDB/Chroma, router reclassification, or MCP.
 
@@ -253,19 +253,21 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars**
-Depends on: Tier 4.4 complete
+**Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.**
+Depends on: ADR-SEED-009
 
 **Approved build order:**
-259. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ⬜ PENDING
-260. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ⬜ PENDING
-261. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ⬜ PENDING
-262. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ⬜ PENDING
-263. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ⬜ PENDING
-264. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ⬜ PENDING
-265. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ⬜ PENDING
-266. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ⬜ PENDING
-267. Tier 5 — Build Tier 5 context export pipeline ⬜ PENDING
+259. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
+260. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
+261. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
+262. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
+263. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
+264. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
+265. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
+266. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
+267. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ⬜ PENDING
+268. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
+269. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ⬜ PENDING
 
 ---
 
@@ -314,15 +316,17 @@ Depends on: Tier 4.4 complete
 
 ## Execution Order
 
-**Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars** ⬜ PENDING
-**Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule** ⬜ PENDING
-**Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles** ⬜ PENDING
-**Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes** ⬜ PENDING
-**Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09** ⬜ PENDING
-**Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256** ⬜ PENDING
-**Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest** ⬜ PENDING
+**Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars** ✅ COMPLETE
+**Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule** ✅ COMPLETE
+**Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles** ✅ COMPLETE
+**Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes** ✅ COMPLETE
+**Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09** ✅ COMPLETE
+**Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256** ✅ COMPLETE
+**Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest** ✅ COMPLETE
+**Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active** ✅ COMPLETE
 **Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.** ⬜ PENDING
-**Tier 5 — Build Tier 5 context export pipeline** ⬜ PENDING
+**Tier 5 — Build Tier 5 context export pipeline** ✅ COMPLETE
+**Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).** ⬜ PENDING
 
 ---
 
@@ -334,6 +338,7 @@ Depends on: Tier 4.4 complete
 | OQ-SEED-002 | hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric | OPEN |
 | OQ-SEED-001 | Google Drive backup integrity unverified | OPEN |
 | OQ-T44-001 | Tier 4.4 migration applied cleanly? | RESOLVED (Verified by gate) |
+| OQ-SEED-004 | Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/buil | OPEN |
 
 ---
 
@@ -344,8 +349,8 @@ Depends on: Tier 4.4 complete
 | workflow_runs | 1 |
 | deliberation_rounds | 3 |
 | project_decisions | 10 |
-| open_questions | 4 |
-| next_actions | 9 |
+| open_questions | 5 |
+| next_actions | 11 |
 | active_blockers | 6 |
 
 ---
