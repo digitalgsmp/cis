@@ -1,13 +1,17 @@
 # Decisions Log — Hermes Harness / CIS
-Last updated: 2026-06-07 (Tier 5.3 closeout)
+Generated: 2026-06-07 13:34 UTC | Run: none
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
-| 2026-06-07 | ADR-SEED-008: External advisor packet remains permanent — PROJECT_CONTEXT_PACK_UPLOAD/HCP_* is the durable external-model context packet for ChatGPT, Claude, and frontier-model escalation after Tier 5 | AGENTS.md serves Hermes-native context; HCP serves external advisor context. Tier 5 converts HCP from manual to generated; does not delete it. Preserves Eric's adversarial workflow. | DECIDED | This session |
-| 2026-06-07 | ADR-SEED-007: AGENTS.md loaded from cwd/TERMINAL_CWD, not automatic git root | Tier 5.2 investigation found _load_agents_md checks cwd only; run_agent.py uses TERMINAL_CWD for gateway discovery | DECIDED | Tier 5.2 canary evidence, run_agent.py:6061, prompt_builder.py:1355 |
-| 2026-06-07 | HERMES_CIS_BRIEFING_PATH retired at Tier 5.3 | AGENTS.md canary passed 4/4 active gateways; retirement safe | DECIDED | Commit 80f934c |
-| 2026-06-07 | Service topology repair — hermes-gateway.service restored to Flash/Research | Auto-overwrite changed HERMES_HOME from .hermes to .hermes-r1 | DECIDED | Commit 353cef5 |
-| 2026-06-06 | AGENTS.md generator + static config committed | Tier 5.1: generate_agents_md.py from spine | DECIDED | Commit ee8eb25 |
-| 2026-06-06 | Context export state tables (4 new tables) | Tier 4.4: project_decisions, open_questions, next_actions, active_blockers | DECIDED | Commit b2e6c98 |
-| 2026-06-01 | HCP files become generated exports, not manually maintained canonical source | Multiple competing context sources; Hermes-native deterministic state must be root | DECIDED | Claude/ChatGPT deliberation |
-| 2026-05-31 | Verification-hardening rule: V4 Implementer self-report not source of truth | Implementer claimed changes must be verified by deterministic evidence | ACTIVE | 7 evidence sources defined |
+| 2026-06-07 | [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use num |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active  |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-004] Browser role enforcement at router layer: Role badge derived from gateway endpoint/profile only. Implemen |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-003] Role identity must be runtime-derived: Hermes role identity must come from HERMES_HOME and gateway endpoi |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-002] Verification-hardening rule: V4 Implementer self-report is not a source of truth. Completion accepted onl |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-001] Dependency graph build order: CIS is built tier by tier per CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md. Nothing b |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-T44-001] Tier 4.4 migration: Four tables added for Tier 5 export dependencies |  | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-009] HCP export is currently CIS-scoped: generate_hcp.py assumes the CIS infrastructure project, including CIS | Architecture debt logged proactively before multi-project expansion begins. | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-008] External advisor packet remains permanent: PROJECT_CONTEXT_PACK_UPLOAD/HCP_* remains the canonical extern | This preserves Eric's adversarial workflow: Hermes remains the internal operatin | DECIDED | spine record |
+| 2026-06-07 | [ADR-SEED-007] AGENTS.md gateway loading mechanism: AGENTS.md is loaded from cwd or TERMINAL_CWD in gateway mode, not au | Tier 5.2 investigation found _load_agents_md checks cwd only. run_agent.py uses  | DECIDED | spine record |

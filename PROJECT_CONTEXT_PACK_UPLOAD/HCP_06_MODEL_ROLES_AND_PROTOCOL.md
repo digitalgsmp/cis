@@ -1,5 +1,7 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Last updated: 2026-06-07 (Tier 5.3 closeout)
+Generated: 2026-06-07 13:34 UTC | Run: none
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Role Identity Rule
 
@@ -11,7 +13,8 @@ Implementation directives route only to hermes-v4impl port 8646.
 
 | Label | Profile | Port | Function |
 |-------|---------|------|----------|
-| Flash/Research | hermes-prime | 8642 | Evidence firewall (NeMo) + topic grounding |
+
+| Flash/Research | hermes-prime | 8642 → NeMo 8800 | Evidence firewall (NeMo) + topic grounding |
 | V4 Drafter | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
 | V4 Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
 | V4 Implementer | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
@@ -21,7 +24,8 @@ Implementation directives route only to hermes-v4impl port 8646.
 
 | Advisor | Role | Context Source | Authority |
 |---------|------|---------------|-----------|
-| Hermes | Root operator, pipeline engine | AGENTS.md (native, Phase E target) | Deterministic context owner |
+
+| Hermes | Root operator, pipeline engine | AGENTS.md (native) | Deterministic context owner |
 | ChatGPT | External advisor, escalation reviewer | Generated HCP exports | Review, consult. No execution |
 | Claude | External advisor, proposal author | Generated HCP exports | Review, consult, draft proposals when asked |
 
@@ -49,6 +53,6 @@ responses, service health, browser/UI state, independent reviewer pass/fail.
 
 ## Kanban Contingency
 
-Kanban is preferred for pipeline coordination. Phase A must confirm `kanban.db` is shared
+Kanban is preferred for pipeline coordination. `kanban.db` is shared
 across profiles. If Kanban is profile-scoped or unavailable, pipeline uses Flask/CIS
 database task tables as the coordination layer.

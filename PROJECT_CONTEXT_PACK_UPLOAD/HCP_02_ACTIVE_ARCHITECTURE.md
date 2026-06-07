@@ -1,5 +1,7 @@
 # Active Architecture — Hermes Harness / CIS
-Last updated: 2026-06-07 (Tier 5.3 COMPLETE)
+Generated: 2026-06-07 13:34 UTC | Run: none
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Architecture
 
@@ -19,17 +21,17 @@ terminal.cwd in config.yaml does not currently replace TERMINAL_CWD for context 
 - React + Vite frontend at /mnt/projects/cis/runtime/ui/
 - Flask backend at /mnt/projects/cis/runtime/app.py (port 5000)
 - SQLite databases: data/cis_memory.db (spine), data/kanban.db (coordination)
-- Git versioning: https://github.com/digitalgsmp/cis (HEAD: 80f934c)
+- Git versioning: https://github.com/digitalgsmp/cis
 
 ### Multi-Hermes Gateway Architecture (topology repaired 2026-06-07)
 
 | Service | Role | Port | HERMES_HOME | Model |
-|---------|------|------|-------------|-------|
-| hermes-gateway | Flash/Research | 8642 | /home/eric/.hermes | deepseek-v4-flash |
-| hermes-gateway-r1 | V4 Reviewer | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro |
+|------|------|------|------|------|
+| hermes-gateway | Flash/Research | 8642 → NeMo 8800 | /home/eric/.hermes | deepseek-v4-flash |
 | hermes-gateway-v4pro | V4 Drafter | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro |
+| hermes-gateway-r1 | V4 Reviewer | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro |
 | hermes-gateway-v4impl | V4 Implementer | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro |
-| hermes-gateway-qwen | Qwen (paused) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b |
+| hermes-gateway-qwen | Qwen | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b |
 | nemo-fast | NeMo Guardrails | 8800 | — | — |
 
 **Context:** AGENTS.md auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis. HERMES_CIS_BRIEFING_PATH retired at Tier 5.3.
@@ -49,7 +51,6 @@ User prompt
      ├─ Reviewer signals → V4 Reviewer (8643)
      ├─ Research + Drafter → multihop (NeMo preflight → V4 Drafter)
      ├─ FINAL_DIRECTIVE prefix → V4 Implementer (8646, deterministic)
-     ├─ JUDGE_REQUEST prefix → Qwen (8644, deterministic, backend)
      └─ Ambiguous → V4 Drafter (8645, low confidence)
 
   → POST /api/advisor/route (auth-gated, X-CIS-API-Key)
@@ -89,7 +90,26 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 
 ### Shared Kanban Configuration (Phase A Verified)
 
-### Tier 0/1 — Built Artifacts (2026-06-05/06)
+Kanban is the cross-profile coordination layer for pipeline tasks.
+All profiles share one board via two env vars in each profile's `.env`:
+
+```
+HERMES_KANBAN_DB=/mnt/projects/cis/data/kanban.db
+HERMES_KANBAN_HOME=/mnt/projects/cis/data
+```
+
+**Both are required.** `HERMES_KANBAN_DB` alone is insufficient — board metadata
+(which boards exist) is stored under `kanban_home()/kanban/boards/`, not in the
+database file. `HERMES_KANBAN_HOME` makes board registration shared.
+
+**Phase A evidence:** Canary card created from prime profile was visible from
+v4pro and r1 profiles with both env vars set.
+
+**Kanban coordinates work; SQLite spine stores verified truth.**
+They serve different layers. Kanban manages tasks, lanes, assignments.
+The spine persists verified decisions, proposals, and project state.
+
+### Tier 0/1 — Built Artifacts
 
 **Tier 0 — Orchestrator (`9d84351`):**
 - `runtime/orchestrator.py` (444 lines) — Drafter→Reviewer deliberation loop
@@ -105,43 +125,12 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 - `tools/gates/gate_file_exists.sh` — file + line count check
 - `tools/gates/gate_runner.sh` — sequential gate orchestrator
 
-**Build order authority:** `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` (`0ef6177`)
-
-Kanban is the cross-profile coordination layer for pipeline tasks.
-All profiles share one board via two env vars in each profile's `.env`:
-
-```
-HERMES_KANBAN_DB=/mnt/projects/cis/data/kanban.db
-HERMES_KANBAN_HOME=/mnt/projects/cis/data
-```
-
-**Both are required.** `HERMES_KANBAN_DB` alone is insufficient — board metadata
-(which boards exist) is stored under `kanban_home()/kanban/boards/`, not in the
-database file. `HERMES_KANBAN_HOME` makes board registration shared.
-
-**Phase A evidence:** Canary card created from prime profile was visible from
-v4pro and r1 profiles with both env vars set. CLI confirmed.
-
-**Gateway note:** Running gateway processes must be restarted before they pick
-up these env vars. Phase C task.
-
-**Kanban coordinates work; SQLite spine stores verified truth.**
-They serve different layers. Kanban manages tasks, lanes, assignments.
-The spine persists verified decisions, proposals, and project state.
+**Build order authority:** `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` (CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md)
 
 ### Bidirectional Spine
 The state spine is bidirectional:
 - **Briefs the pipeline:** Each Drafter session starts with accumulated project knowledge from AGENTS.md (prior decisions, resolved proposals, active blockers, project state)
 - **Receives from the pipeline:** Only verified outputs from completed runs are written to SQLite (STATE_WRITE lane, gated on VERIFY PASS)
-
-### Context Loading — Transitional
-- **Current (transitional):** `HERMES_CIS_BRIEFING_PATH` env var injects briefing into all profiles
-- **Target (Phase E):** `/mnt/projects/cis/AGENTS.md` auto-loaded by all profiles natively
-  - 20K char limit — fits full briefing
-  - No custom env var required
-  - Survives Hermes upgrades without patching
-- `HERMES_CIS_BRIEFING_PATH` is transitional and must not remain as a parallel long-term source.
-  Target retirement: Phase E, after AGENTS.md loading is verified across all active profiles.
 
 ### External Advisor Protocol
 - **Hermes** — root operator, deterministic context owner, pipeline engine
@@ -165,6 +154,7 @@ The state spine is bidirectional:
 - Session import via import_session.py
 
 ## Database Tables
+
 - collab_agents, collab_status, collab_activity
 - collab_rounds, collab_exchanges, collab_final_directives
 - collab_session_imports, collab_session_messages
@@ -180,6 +170,7 @@ The state spine is bidirectional:
 - /mnt/projects/cis/tools/gates/ — Tier 1 gate suite + runner
 - /mnt/projects/cis/docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md — build order authority
 - /mnt/projects/cis/runtime/ui/src/pages/infra/AdvisorChat.jsx — 4-panel UI
-- /mnt/projects/cis/tools/generate_context_briefing.py — context briefing generator
+- /mnt/projects/cis/tools/export/generate_agents_md.py — AGENTS.md generator
+- /mnt/projects/cis/tools/export/generate_hcp.py — HCP_ file generator
 - /mnt/projects/cis/docs/CIS_CURRENT_STATE.md — canonical state doc
 - /mnt/projects/cis/cis_kernel/build/CIS_SCRATCHPAD.md — running log
