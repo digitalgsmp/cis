@@ -47,6 +47,7 @@ HEAD: `80f934c`
 - 8800 NeMo — nemo-fast.service
 
 ## Risks / Watch Items
+- HCP packet is the permanent external advisor interface for ChatGPT/Claude/frontier models. Until Tier 5.4–5.6 complete, it is manually synced. After Tier 5, generated and export-verified.
 - TERMINAL_CWD deprecated but functionally required for gateway AGENTS.md discovery
 - AGENTS.md loaded from cwd/TERMINAL_CWD, not git root
 - hermes-gateway.service auto-overwrite may reintroduce misconfiguration (BLK-SEED-005)

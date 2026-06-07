@@ -3,6 +3,7 @@ Last updated: 2026-06-07 (Tier 5.3 closeout)
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-06-07 | ADR-SEED-008: External advisor packet remains permanent — PROJECT_CONTEXT_PACK_UPLOAD/HCP_* is the durable external-model context packet for ChatGPT, Claude, and frontier-model escalation after Tier 5 | AGENTS.md serves Hermes-native context; HCP serves external advisor context. Tier 5 converts HCP from manual to generated; does not delete it. Preserves Eric's adversarial workflow. | DECIDED | This session |
 | 2026-06-07 | ADR-SEED-007: AGENTS.md loaded from cwd/TERMINAL_CWD, not automatic git root | Tier 5.2 investigation found _load_agents_md checks cwd only; run_agent.py uses TERMINAL_CWD for gateway discovery | DECIDED | Tier 5.2 canary evidence, run_agent.py:6061, prompt_builder.py:1355 |
 | 2026-06-07 | HERMES_CIS_BRIEFING_PATH retired at Tier 5.3 | AGENTS.md canary passed 4/4 active gateways; retirement safe | DECIDED | Commit 80f934c |
 | 2026-06-07 | Service topology repair — hermes-gateway.service restored to Flash/Research | Auto-overwrite changed HERMES_HOME from .hermes to .hermes-r1 | DECIDED | Commit 353cef5 |

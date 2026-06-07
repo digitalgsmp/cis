@@ -46,6 +46,8 @@ Do NOT start:
 2. Tier 5.5 — generate_all.py + export manifest with SHA256
 3. Tier 5.6 — gate_export_agreement.sh (hash verification)
 4. Tier 5.7 — stale context pack cleanup
+   - Remove/archive stale duplicate folders only (PROJECT_CONTEXT_PACK/, _GENERATED/, _UPLOAD_GENERATED/)
+   - PROJECT_CONTEXT_PACK_UPLOAD/ must NOT be deleted — it is the permanent external advisor packet
 
 ## Known Limitations
 

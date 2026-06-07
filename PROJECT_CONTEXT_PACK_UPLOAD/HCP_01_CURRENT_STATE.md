@@ -17,6 +17,8 @@ TERMINAL_CWD=/mnt/projects/cis required in all .env files for gateway AGENTS.md 
 **Remaining Tier 5:** Tier 5.4 generate_hcp.py → 5.5 generate_all.py → 5.6 gate_export_agreement.sh → 5.7 stale cleanup.
 Do NOT start Tier 6, Judge, UI, VDB/Chroma, router reclassification, or MCP before Tier 5.4–5.6 complete.
 
+**Context architecture:** AGENTS.md serves Hermes-native internal context for all 4 active gateways. HCP_* files in PROJECT_CONTEXT_PACK_UPLOAD/ are the permanent external advisor packet for ChatGPT, Claude, and frontier-model escalation. HCP is not deprecated; manual drift is what Tier 5 eliminates by generating HCP from spine.
+
 **Tier 0 — Orchestrator (committed `9d84351`):** `runtime/orchestrator.py` +
 `runtime/orchestrator_config.yaml`. Drafter→Reviewer deliberation loop functional.
 Acceptance test: PASS (CONSENSUS_REACHED in Round 2, ~256s). Removes Eric from

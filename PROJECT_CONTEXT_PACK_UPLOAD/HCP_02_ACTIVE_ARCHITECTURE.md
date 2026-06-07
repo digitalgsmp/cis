@@ -9,6 +9,12 @@ HERMES_CIS_BRIEFING_PATH is permanently retired from all 5 profiles.
 AGENTS.md discovery depends on cwd/TERMINAL_CWD in gateway mode, not automatic git-root discovery.
 terminal.cwd in config.yaml does not currently replace TERMINAL_CWD for context file discovery.
 
+### External Advisor Packet
+
+- **Internal context:** AGENTS.md — auto-loaded by all 4 active gateways via TERMINAL_CWD.
+- **External advisor context:** PROJECT_CONTEXT_PACK_UPLOAD/HCP_* — permanent packet for ChatGPT, Claude, and frontier-model escalation.
+- **After Tier 5.4–5.6:** HCP files generated from spine + static config, verified by gate_export_agreement.sh. Manual maintenance ends; the packet itself remains.
+
 ### Stack
 - React + Vite frontend at /mnt/projects/cis/runtime/ui/
 - Flask backend at /mnt/projects/cis/runtime/app.py (port 5000)
