@@ -93,6 +93,10 @@ else
     echo "   SKIP: GATE_FILE_EXISTS_PATH not set"
 fi
 
+# ── Gate 6: Export agreement (always runs) ─────────────────────────
+
+run_gate "gate_export_agreement" "${SCRIPT_DIR}/gate_export_agreement.sh" || exit $FAILED
+
 # ── All gates passed ────────────────────────────────────────────────
 
 echo ""
