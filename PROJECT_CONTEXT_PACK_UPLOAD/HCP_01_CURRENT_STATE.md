@@ -1,15 +1,21 @@
 # CIS Current State
-Version: 2.6
-Date: 2026-06-06
+Version: 2.7
+Date: 2026-06-07
 Authority: Eric (Architect)
-Maintained by: Updated at start of each session by the active advisor
-Status: LIVE — update when state changes, never let this go stale
+Status: TIER 5.3 COMPLETE — AGENTS.md is live context; HERMES_CIS_BRIEFING_PATH retired
 
 ---
 
 ## Current Objective
 
-**Build CIS deterministic pipeline — Tier 0–4 complete. Tier 5 next.**
+**Tier 4.4 COMPLETE. Tier 5 Context Export Pipeline — IN PROGRESS. Tier 5.3 retirement done.**
+
+**HEAD:** `80f934c`. All 4 active gateways load AGENTS.md as sole project context.
+HERMES_CIS_BRIEFING_PATH permanently removed from all 5 profile .env files.
+TERMINAL_CWD=/mnt/projects/cis required in all .env files for gateway AGENTS.md discovery.
+
+**Remaining Tier 5:** Tier 5.4 generate_hcp.py → 5.5 generate_all.py → 5.6 gate_export_agreement.sh → 5.7 stale cleanup.
+Do NOT start Tier 6, Judge, UI, VDB/Chroma, router reclassification, or MCP before Tier 5.4–5.6 complete.
 
 **Tier 0 — Orchestrator (committed `9d84351`):** `runtime/orchestrator.py` +
 `runtime/orchestrator_config.yaml`. Drafter→Reviewer deliberation loop functional.
@@ -43,13 +49,13 @@ Per-round output preservation is Tier 6 backlog.
 Build Plan v2.0 (`docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md`). AGENTS.md generation,
 canary test, HERMES_CIS_BRIEFING_PATH retirement.
 
-**Phase A findings (2026-06-01):**
-- Hermes Agent v0.13.0 (2026.5.7, 1969 commits behind) — Kanban fully available
-- Kanban appeared profile-scoped but is shareable via `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME`
-- Cross-profile Kanban visibility confirmed: prime-created card visible from v4pro and r1
-- AGENTS.md auto-loaded by all four active profiles from git root
-- `HERMES_CIS_BRIEFING_PATH` present in all profiles — transitional, target Phase E retirement
-- Preferred architecture: shared Kanban (coordination) + gate scripts (verification) + SQLite spine (knowledge) + AGENTS.md (context) + HCP export (external advisors)
+**Phase A findings (corrected 2026-06-07):**
+- Hermes Agent v0.13.0 — Kanban fully available
+- Kanban shareable via `HERMES_KANBAN_DB` + `HERMES_KANBAN_HOME` — confirmed
+- Cross-profile Kanban visibility confirmed
+- AGENTS.md loaded from cwd or TERMINAL_CWD in gateway mode, NOT automatically from git root. Gateway processes require TERMINAL_CWD=/mnt/projects/cis to load CIS AGENTS.md. CLI sessions load when launched from CIS repo root.
+- `HERMES_CIS_BRIEFING_PATH` RETIRED from all profiles at Tier 5.3 (commit `80f934c`)
+- Preferred architecture: AGENTS.md (context) + gate scripts (verification) + SQLite spine (knowledge) + HCP export (external advisors)
 
 CIS is a Hermes-native adversarial deliberation engine. The pipeline is the product.
 The state spine is bidirectional: it briefs the pipeline from verified history and
@@ -163,15 +169,15 @@ does not satisfy Eric. No direct execution authority.
 | V4 Implementer (v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | Direct | Running, context-aware |
 | Qwen (paused) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b (local) | — | None | Running but paused |
 
-**Context briefing:** All four gateway profiles now have `HERMES_CIS_BRIEFING_PATH` in their `.env` files. All three active V4 roles verified to load and answer from the briefing.
+**Context:** AGENTS.md auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis. HERMES_CIS_BRIEFING_PATH retired.
 
-Service files (all user-mode systemd):
-- `hermes-gateway.service` — Research/Evidence (HERMES_HOME=/home/eric/.hermes — OQ-009 anomaly)
-- `hermes-gateway-r1.service` — V4 Reviewer (HERMES_HOME=/home/eric/.hermes-r1)
-- `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen)
-- `hermes-gateway-v4pro.service` — V4 Drafter (HERMES_HOME=/home/eric/.hermes-v4pro)
-- `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl, NEW)
-- `nemo-fast.service` — NeMo Guardrails on port 8800 (Gate 6B: persistent, Tavily key from /home/eric/.config/cis-rails.env)
+Service files (all user-mode systemd — topology repaired 2026-06-07):
+- `hermes-gateway.service` — Flash/Research (HERMES_HOME=/home/eric/.hermes, port 8642)
+- `hermes-gateway-r1.service` — V4 Reviewer (HERMES_HOME=/home/eric/.hermes-r1, port 8643)
+- `hermes-gateway-v4pro.service` — V4 Drafter (HERMES_HOME=/home/eric/.hermes-v4pro, port 8645)
+- `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl, port 8646)
+- `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen, port 8644, paused)
+- `nemo-fast.service` — NeMo Guardrails on port 8800
 
 NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `configs/`)
 
@@ -357,11 +363,14 @@ Context Export before Tier 6 Pipeline Integration.
 **Dependency Graph Build Plan v2.0 committed** ✅ COMPLETE (`0ef6177`, 2026-06-06)
 **Tier 2 — Kanban Coordination Layer** ✅ COMPLETE (`2989c5b`, 2026-06-06)
 **Tier 3 — Pipeline Smoke Test** ✅ PASS_WITH_LIMITATIONS (2026-06-06)
-**Tier 4.1 — SQLite Spine Schema** ✅ COMPLETE (`88ea25f`, 2026-06-06)
-**Tier 4.2 — database.py Write/Read Layer** ✅ COMPLETE (`0c19b4d`, 2026-06-06)
-**Tier 4.3 — gate_db_state.py Verification Gate** ✅ COMPLETE (`ec14615`, 2026-06-06)
-**SESSION_LOG automated extraction** ✅ COMPLETE (`13d28a3`, 2026-06-06)
-**Tier 5 — Context Export Pipeline** (next, not started)
+**Tier 5.1 — AGENTS.md Generator + Static Config** ✅ COMPLETE (`ee8eb25`, 2026-06-06)
+**Tier 5.2 — AGENTS.md Canary** ✅ COMPLETE (4/4 PASS, 2026-06-07)
+**Tier 5.2E — Gateway Topology Repair** ✅ COMPLETE (`353cef5`, 2026-06-07)
+**Tier 5.3 — HERMES_CIS_BRIEFING_PATH Retirement** ✅ COMPLETE (`80f934c`, 2026-06-07)
+**Tier 5.4 — generate_hcp.py** ← NEXT, not started
+**Tier 5.5 — generate_all.py + export manifest** (gated on 5.4)
+**Tier 5.6 — gate_export_agreement.sh** (gated on 5.5)
+**Tier 5.7 — stale context pack cleanup** (gated on 5.6)
 **Tier 6 — Pipeline Integration** (gated on Tier 5)
 **Tier 7 — Router Reclassification** (gated on Tier 6)
 **Tier 8 — MCP Bridge** (later)
@@ -375,11 +384,24 @@ Context Export before Tier 6 Pipeline Integration.
 | ID | Question | Status |
 |----|----------|--------|
 | OQ-003 | Is the Google Drive backup intact? | Open |
-| OQ-006 | R1 role/context loading — when to inject CIS role knowledge? | Open |
-| OQ-007 | Claude/ChatGPT API capture design for unified memory | Open |
+| OQ-006 | R1 role/context loading | Open |
+| OQ-007 | Claude/ChatGPT API capture design | Open |
 | OQ-008 | Hermes capabilities audit scope | Open |
-| OQ-009 | hermes-gateway.service HERMES_HOME anomaly | Open |
-| OQ-010 | Generator source hierarchy vs Project Context Pack | RESOLVED (2026-05-30) |
+| OQ-009 | hermes-gateway.service HERMES_HOME anomaly | REOPENED (service repaired at 353cef5; auto-overwrite root cause unmitigated) |
+| OQ-010 | Generator source hierarchy vs Project Context Pack | RESOLVED |
+
+---
+
+## DB Spine State (2026-06-07)
+
+| Table | Rows |
+|-------|------|
+| workflow_runs | 1 |
+| deliberation_rounds | 3 |
+| project_decisions | 8 (7 seed + 1 test) |
+| open_questions | 4 |
+| next_actions | 8 |
+| active_blockers | 6 (5 seed + 1 test) |
 
 ---
 

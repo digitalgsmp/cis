@@ -1,26 +1,32 @@
 # Active Architecture — Hermes Harness / CIS
-Last updated: 2026-06-06 (Tier 0/1 complete — Tier 2 next)
+Last updated: 2026-06-07 (Tier 5.3 COMPLETE)
 
-## Current Architecture (Router v0.1)
+## Current Architecture
+
+**AGENTS.md-native context architecture.**
+AGENTS.md is the sole live context for all 4 active Hermes gateways.
+HERMES_CIS_BRIEFING_PATH is permanently retired from all 5 profiles.
+AGENTS.md discovery depends on cwd/TERMINAL_CWD in gateway mode, not automatic git-root discovery.
+terminal.cwd in config.yaml does not currently replace TERMINAL_CWD for context file discovery.
 
 ### Stack
 - React + Vite frontend at /mnt/projects/cis/runtime/ui/
 - Flask backend at /mnt/projects/cis/runtime/app.py (port 5000)
-- Flask runs as user systemd service: cis-flask.service
-- SQLite database: /mnt/projects/cis/runtime/db/cis_memory.db
-- Git versioning: private repo at https://github.com/digitalgsmp/cis
+- SQLite databases: data/cis_memory.db (spine), data/kanban.db (coordination)
+- Git versioning: https://github.com/digitalgsmp/cis (HEAD: 80f934c)
 
-### Multi-Hermes Gateway Architecture (Phase 0 verified)
+### Multi-Hermes Gateway Architecture (topology repaired 2026-06-07)
 
-| Agent | Role | Port | HERMES_HOME | Model | Reasoning | NeMo? |
-|-------|------|------|-------------|-------|-----------|-------|
-| hermes-prime | Flash/Research | 8642→8800 | ~/.hermes | deepseek-v4-flash | — | Yes |
-| hermes-v4pro | V4 Drafter | 8645 | ~/.hermes-v4pro | deepseek-v4-pro | xhigh | Direct |
-| hermes-r1 | V4 Reviewer | 8643 | ~/.hermes-r1 | deepseek-v4-pro | xhigh | Direct |
-| hermes-v4impl | V4 Implementer | 8646 | ~/.hermes-v4impl | deepseek-v4-pro | xhigh | Direct |
-| hermes-qwen | Qwen (paused) | 8644 | ~/.hermes-qwen | qwen3-vl-30b (local) | — | None |
+| Service | Role | Port | HERMES_HOME | Model |
+|---------|------|------|-------------|-------|
+| hermes-gateway | Flash/Research | 8642 | /home/eric/.hermes | deepseek-v4-flash |
+| hermes-gateway-r1 | V4 Reviewer | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro |
+| hermes-gateway-v4pro | V4 Drafter | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro |
+| hermes-gateway-v4impl | V4 Implementer | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro |
+| hermes-gateway-qwen | Qwen (paused) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b |
+| nemo-fast | NeMo Guardrails | 8800 | — | — |
 
-**Context briefing:** All gateway profiles load `HERMES_CIS_BRIEFING_PATH` at startup.
+**Context:** AGENTS.md auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis. HERMES_CIS_BRIEFING_PATH retired at Tier 5.3.
 
 ### NeMo Guardrails
 - nemo-fast.service on port 8800

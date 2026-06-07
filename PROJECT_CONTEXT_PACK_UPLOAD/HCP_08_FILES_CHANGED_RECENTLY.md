@@ -1,45 +1,31 @@
 # Files Changed Recently
-Last updated: 2026-06-06 (Tier 0–4 complete — HCP reconciliation)
+Last updated: 2026-06-07 (Tier 5.3 closeout)
 
-## Tier 4 — SQLite Spine (2026-06-06)
+## Tier 5.3 — Context Retirement (`80f934c`)
+- `runtime/config/systemd/hermes-gateway.service` — updated template backup
 
-### runtime/schema/ — New
-- `runtime/schema/spine_schema.sql` — workflow_runs + deliberation_rounds DDL (`88ea25f`)
+## Tier 5.2E — Gateway Repair (`353cef5`)
+- `runtime/config/systemd/hermes-gateway.service` — restored from repo backup (HERMES_HOME=/home/eric/.hermes)
 
-### runtime/db/ — New
-- `runtime/db/database.py` — write/read layer with allowlist validation (`0c19b4d`)
+## Tier 5.1 — AGENTS.md Generator (`ee8eb25`)
+- `tools/export/generate_agents_md.py` — new file
+- `config/agents_static.yaml` — new file
+- `AGENTS.md` — generated from spine, 8,384 bytes
 
-### tools/gates/ — New
-- `tools/gates/gate_db_state.py` — deterministic DB verification gate (`ec14615`)
+## Tier 4.4 — Context Export State Tables (`b2e6c98`)
+- `runtime/schema/migrations/0001_context_export_state.sql` — new file (4 tables)
+- `runtime/db/database.py` — extended (+4 constants, +4 insert functions, +migration check)
+- `tools/gates/gate_db_state.py` — extended (+4 tables, +12 columns)
 
-### data/ — Runtime (gitignored)
-- `data/cis_memory.db` — seeded with smoke test data
+### DB-only (no commit):
+- Spine seed: 6 decisions, 3 questions, 7 actions, 4 blockers
+- Corrections: ADR-SEED-007, BLK-SEED-005
 
-## Tier 2–3 — Kanban + Smoke Test (2026-06-06)
-
-### .gitignore
-- Added `data/` and `proposals/` rules
-
-### docs/
-- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — updated for lane limitation, card schema (`2989c5b`)
-
-### runtime/config/systemd/ — New
-- Gateway service templates (5 files) — backed up with EnvironmentFile= (`b7e920c`)
-- `ENV_MANIFEST.md` — documented required env vars per profile (`26d2ee5`)
-
-### ~/.config/systemd/user/ — Live (outside repo)
-- Four service files updated with EnvironmentFile=
-- Prime HERMES_HOME corrected (OQ-009 resolved)
-
-### Kanban Runtime — gitignored
-- `cis-pipeline` board created on shared kanban.db
-- Canary card `t_e7ed2d7b` and smoke card `t_5bde980a` (archived)
-
-## Previous: Tier 0/1 (2026-06-05/06)
-- `runtime/orchestrator.py` + `runtime/orchestrator_config.yaml` (`9d84351`)
-- `tools/gates/gate_git_state.sh` (`bc49beb`)
-- `tools/gates/gate_service_health.sh` (`a5b123a`)
-- `tools/gates/gate_endpoint.sh` (`14fd08d`)
-- `tools/gates/gate_no_secrets.sh` (`82b506a`)
-- `tools/gates/gate_file_exists.sh` (`dac9d6a`)
-- `tools/gates/gate_runner.sh` (`635a646`)
+## Tier 0–4 Pre-T5 (prior to this session)
+- `runtime/orchestrator.py` + config (`9d84351`)
+- `tools/gates/` — 6 gate scripts (`bc49beb`–`ec14615`)
+- `runtime/schema/spine_schema.sql` — 2-table minimum (`88ea25f`)
+- `runtime/db/database.py` — write/read layer (`0c19b4d`)
+- `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` (`0ef6177`, amended `2989c5b`)
+- `runtime/config/systemd/` — service templates (`b7e920c`)
+- `.gitignore` — data/ + proposals/ (`3f8bf1c`, `efff168`)

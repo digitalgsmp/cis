@@ -1,19 +1,21 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Last updated: 2026-06-01 (CIS Deterministic Pipeline Decision)
+Last updated: 2026-06-07 (Tier 5.3 closeout)
+
+## Role Identity Rule
+
+**Role identity must be derived from HERMES_HOME and gateway endpoint, not from briefing text or model self-description.**
+Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
+Implementation directives route only to hermes-v4impl port 8646.
 
 ## CIS Pipeline Roles
 
-| Label | Agent | Port | Model | Pipeline Lane | Function |
-|-------|-------|------|-------|---------------|----------|
-| Flash / Research | hermes-prime | 8642→8800 | deepseek-v4-flash | RESEARCH | Evidence firewall (NeMo) + topic grounding |
-| V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro (xhigh) | DRAFT | Proposal author from research + spine briefing |
-| V4 Reviewer | hermes-r1 | 8643 | deepseek-v4-pro (xhigh) | REVIEW | Adversarial challenge. Emits OBJECTIONS or CONSENSUS_REACHED |
-| V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro (xhigh) | IMPLEMENT | Executes FINAL_DIRECTIVE only. No deliberation |
-| Verifier | Bash/Python | — | — | VERIFY | Deterministic gate scripts. PASS or FAIL. No LLM |
-| State-Write | Gated worker | — | — | STATE_WRITE | Writes verified results to SQLite spine |
-
-**Qwen (hermes-qwen)** remains active on port 8644 but paused from active pipeline.
-Future judge/evaluator role.
+| Label | Profile | Port | Function |
+|-------|---------|------|----------|
+| Flash/Research | hermes-prime | 8642 | Evidence firewall (NeMo) + topic grounding |
+| V4 Drafter | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
+| V4 Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
+| V4 Implementer | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
+| Qwen (paused) | hermes-qwen | 8644 | Future judge/evaluator role |
 
 ## External Advisor Protocol
 

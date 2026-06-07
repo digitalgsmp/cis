@@ -1,49 +1,57 @@
-# Recent Handoff — Tier 0–4 Complete, Tier 5 Next
-Date: 2026-06-06
-Session: Tier 2 Kanban → Tier 3 smoke test → Tier 4 SQLite spine → HCP reconciliation
+# Recent Handoff — Tier 5.3 COMPLETE
+Date: 2026-06-07
+Session: Tier 5.1 AGENTS.md → 5.2 canary + gateway repair → 5.3 briefing retirement → HCP closeout sync
 
-## Tier 4 — SQLite Spine (2026-06-06)
+HEAD: `80f934c`
 
-### Tier 4.1 — Spine Schema (`88ea25f`)
-- `runtime/schema/spine_schema.sql` — two-table minimum: workflow_runs + deliberation_rounds
-- CHECK constraints on result, reviewer_signal, requires_eric_review
-- UNIQUE(run_id, round_number), FK with ON DELETE CASCADE
-- kanban_card_id + kanban_board linkage on workflow_runs
-- max_consecutive_revisions for deadlock tracking
+## Tier 5.3 — HERMES_CIS_BRIEFING_PATH Retirement (`80f934c`)
+- Permanently removed from all 5 profile .env files
+- TERMINAL_CWD=/mnt/projects/cis retained in all .env files for gateway AGENTS.md discovery
+- All 4 active gateways pass AGENTS.md canary
+- Service template backups updated
 
-### Tier 4.2 — Database Layer (`0c19b4d`)
-- `runtime/db/database.py` — 5 functions: init_db, insert_workflow_run, insert_deliberation_round, get_workflow_run, count_rounds
-- Allowlist validation: result, reviewer_signal, positive ints, booleans
-- Parameterized queries only — no raw SQL from callers
-- 14/14 tests passing
+## Tier 5.2E — Gateway Topology Repair (`353cef5`)
+- hermes-gateway.service was auto-overwritten to use r1 profile (HERMES_HOME=/home/eric/.hermes-r1)
+- Restored from repo backup: HERMES_HOME=/home/eric/.hermes, port 8642 (Flash/Research)
+- hermes-gateway-r1.service now binds 8643 correctly
+- Root cause (gateway auto-update of service file) unmitigated — BLK-SEED-005
 
-### Tier 4.3 — DB State Gate (`ec14615`)
-- `tools/gates/gate_db_state.py` — deterministic verification gate
-- Three commands: value, count, not-null with compound --where filters
-- Table/column allowlist enforcement
-- Exit codes: 0=PASS, 1=FAIL, 2=ERROR
-- 11/11 tests passing including G4 deterministic round-3 check
+## Tier 5.2 — AGENTS.md Canary (2026-06-07)
+- TERMINAL_CWD=/mnt/projects/cis set in all 5 .env files
+- HERMES_CIS_BRIEFING_PATH commented out for canary testing
+- 3/3 V4 gateways passed initially (8642 was down due to service misconfiguration)
+- After repair: 4/4 PASS
 
-### Database State
-- `data/cis_memory.db` — seeded with Tier 3 smoke test data (run-05b24781207e)
-- 1 workflow_run, 3 deliberation_rounds with real round-3 Drafter/Reviewer output
-- Rounds 1–2 marked as `[ACTUAL OUTPUT NOT RECOVERED]` (orchestrator --output limitation)
+## Tier 5.1 — AGENTS.md Generator (`ee8eb25`)
+- `tools/export/generate_agents_md.py` — reads spine + static config
+- `config/agents_static.yaml` — Layer B static content
+- AGENTS.md generated at 8,384 bytes (limit 20,000)
 
-## Tier 3 — Pipeline Smoke Test (2026-06-06, PASS_WITH_LIMITATIONS)
-- Smoke card `t_5bde980a` created with Tier 2.8 schema on cis-pipeline board
-- Orchestrator ran 3 DRAFT→REVIEW rounds without manual relay
-- Result: ESCALATE with 3 substantive unresolved objections
-- gate_runner.sh: all 5 gates PASS with clean tree
-- Card archived after evidence captured
+## Tier 4.4 — Context Export State Tables (`b2e6c98`)
+- `runtime/schema/migrations/0001_context_export_state.sql` — 4 new tables
+- project_decisions, open_questions, next_actions, active_blockers
+- database.py + gate_db_state.py extended
+- Spine seeded with 6 decisions, 3 questions, 7 actions, 4 blockers
 
-## Tier 2 — Kanban Coordination (2026-06-06)
-- Gateway env normalization: EnvironmentFile= added to 4 service files
-- OQ-009 resolved: prime HERMES_HOME corrected to /home/eric/.hermes
-- cis-pipeline board created, cross-profile visibility confirmed
-- Systemd templates backed up to runtime/config/systemd/
-- ENV_MANIFEST.md documented, proposals/ gitignored
-- Limitation: Hermes v0.13 has no custom lanes — CIS stages in card metadata
+## Database State
+- 1 workflow_run, 3 deliberation_rounds
+- 8 project_decisions (7 seed incl. ADR-SEED-007)
+- 6 active_blockers (5 seed incl. BLK-SEED-005)
 
-## Previous: Tier 0/1 — Orchestrator + Gates (2026-06-05/06)
-Tier 0 orchestrator at `9d84351`. Tier 1 base gates at `bc49beb`–`635a646`.
-Gate runner at `635a646`.
+## Gateway State (all active)
+- 8642 Flash/Research — hermes-gateway.service (/home/eric/.hermes)
+- 8643 V4 Reviewer — hermes-gateway-r1.service (/home/eric/.hermes-r1)
+- 8645 V4 Drafter — hermes-gateway-v4pro.service (/home/eric/.hermes-v4pro)
+- 8646 V4 Implementer — hermes-gateway-v4impl.service (/home/eric/.hermes-v4impl)
+- 8644 Qwen — hermes-gateway-qwen.service (paused)
+- 8800 NeMo — nemo-fast.service
+
+## Risks / Watch Items
+- TERMINAL_CWD deprecated but functionally required for gateway AGENTS.md discovery
+- AGENTS.md loaded from cwd/TERMINAL_CWD, not git root
+- hermes-gateway.service auto-overwrite may reintroduce misconfiguration (BLK-SEED-005)
+- HCP files manually maintained until Tier 5.4–5.6 complete
+- runtime/config/systemd/live_backups/ untracked in git
+
+## Exact Next Action
+Tier 5.4 generate_hcp.py — reads spine, writes HCP_00 through HCP_09.

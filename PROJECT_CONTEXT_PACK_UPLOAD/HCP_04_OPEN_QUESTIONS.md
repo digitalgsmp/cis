@@ -11,10 +11,12 @@ Resolution: generated context/HCP export should be triggered by verifier PASS
 on completed pipeline run / state-write event. Not by arbitrary "significant task."
 Status: RESOLVED (2026-06-01).
 
-## OQ-009 — Verify hermes-gateway.service HERMES_HOME target
-Status: OPEN.
-Note: hermes-gateway.service (Flash/Research) confirmed using HERMES_HOME=/home/eric/.hermes.
-The stale "r1" name in hermes-gateway-r1.service refers to V4 Reviewer, not deepseek-reasoner.
+## OQ-009 — hermes-gateway.service HERMES_HOME anomaly
+Status: REOPENED (2026-06-07).
+Service was repaired at commit 353cef5 — hermes-gateway.service restored to HERMES_HOME=/home/eric/.hermes.
+However, the gateway process auto-overwrite mechanism may reintroduce the misconfiguration.
+Root cause unmitigated. Manual service identity check recommended at session start.
+BLK-SEED-005 tracks this as an active blocker.
 
 ## OQ-010 — Generator source hierarchy vs Project Context Pack
 Resolution: Both Hermes briefing and HCP files must derive from a single SQLite spine.
