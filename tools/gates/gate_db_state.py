@@ -29,14 +29,27 @@ DEFAULT_DB = "/mnt/projects/cis/data/cis_memory.db"
 ALLOWED_TABLES = {
     "workflow_runs",
     "deliberation_rounds",
+    "project_decisions",
+    "open_questions",
+    "next_actions",
+    "active_blockers",
 }
 
 ALLOWED_COLUMNS = {
+    # workflow_runs
     "id", "kanban_card_id", "kanban_board", "topic", "result",
     "requires_eric_review", "max_rounds", "max_consecutive_revisions",
     "rounds_completed", "final_objections_json", "created_at", "completed_at",
+    # deliberation_rounds
     "run_id", "round_number", "drafter_role", "drafter_output",
     "reviewer_role", "reviewer_signal", "objections_json", "revision_number",
+    # project_decisions
+    "label", "decision", "reason", "status", "decided_at", "superseded_by",
+    # open_questions
+    "question", "resolution", "opened_at", "resolved_at",
+    # next_actions
+    "tier", "description", "depends_on", "updated_at",
+    # active_blockers (id, description, status, resolution, created_at, resolved_at covered above)
 }
 
 

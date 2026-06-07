@@ -13,6 +13,10 @@ SCHEMA_PATH = "/mnt/projects/cis/runtime/schema/spine_schema.sql"
 
 ALLOWED_RESULTS = {"CONSENSUS_REACHED", "ESCALATE", "ERROR"}
 ALLOWED_SIGNALS = {"OBJECTIONS", "CONSENSUS_REACHED", "ESCALATE", "ERROR"}
+ALLOWED_DECISION_STATUSES = {"DECIDED", "OPEN", "SUPERSEDED"}
+ALLOWED_QUESTION_STATUSES = {"OPEN", "RESOLVED", "DEFERRED"}
+ALLOWED_ACTION_STATUSES = {"PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED", "DEFERRED"}
+ALLOWED_BLOCKER_STATUSES = {"ACTIVE", "RESOLVED"}
 
 
 def init_db(db_path=None):
@@ -27,6 +31,13 @@ def init_db(db_path=None):
     if cursor.fetchone() is None:
         schema_sql = Path(SCHEMA_PATH).read_text()
         conn.executescript(schema_sql)
+    # Apply Tier 4.4 migration if not yet applied
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_decisions'"
+    )
+    if cursor.fetchone() is None:
+        migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0001_context_export_state.sql"
+        conn.executescript(migration_path.read_text())
     return conn
 
 
@@ -159,3 +170,52 @@ def count_rounds(conn, run_id):
         "SELECT COUNT(*) FROM deliberation_rounds WHERE run_id = ?", (run_id,)
     ).fetchone()
     return row[0]
+
+
+def insert_project_decision(conn, id, label, decision, reason=None, status="DECIDED", decided_at=None, superseded_by=None):
+    if status not in ALLOWED_DECISION_STATUSES:
+        raise ValueError(f"Invalid status '{status}'.")
+    from datetime import datetime, timezone
+    conn.execute(
+        """INSERT INTO project_decisions
+           (id, label, decision, reason, status, decided_at, superseded_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (id, label, decision, reason, status, decided_at or datetime.now(timezone.utc).isoformat(), superseded_by),
+    )
+
+
+def insert_open_question(conn, id, question, status="OPEN", resolution=None, opened_at=None, resolved_at=None):
+    if status not in ALLOWED_QUESTION_STATUSES:
+        raise ValueError(f"Invalid status '{status}'.")
+    from datetime import datetime, timezone
+    conn.execute(
+        """INSERT INTO open_questions
+           (id, question, status, resolution, opened_at, resolved_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (id, question, status, resolution, opened_at or datetime.now(timezone.utc).isoformat(), resolved_at),
+    )
+
+
+def insert_next_action(conn, id, description, tier=None, status="PENDING", depends_on=None, created_at=None, updated_at=None):
+    if status not in ALLOWED_ACTION_STATUSES:
+        raise ValueError(f"Invalid status '{status}'.")
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """INSERT INTO next_actions
+           (id, tier, description, status, depends_on, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (id, tier, description, status, depends_on, created_at or now, updated_at or now),
+    )
+
+
+def insert_active_blocker(conn, id, description, status="ACTIVE", resolution=None, created_at=None, resolved_at=None):
+    if status not in ALLOWED_BLOCKER_STATUSES:
+        raise ValueError(f"Invalid status '{status}'.")
+    from datetime import datetime, timezone
+    conn.execute(
+        """INSERT INTO active_blockers
+           (id, description, status, resolution, created_at, resolved_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (id, description, status, resolution, created_at or datetime.now(timezone.utc).isoformat(), resolved_at),
+    )
