@@ -545,6 +545,31 @@ hcp_06:
     The verification-hardening rule is the V4 Implementer-specific application of
     this general principle.
 
+  exact_format_instruction_rule: |
+    **Exact-Format Instruction Rule**
+
+    When requesting evidence or verification from a CIS agent, do not include
+    optional labels or extra explanatory categories that can be interpreted as
+    alternatives to raw evidence. Use only the exact structure required.
+
+    Preferred evidence format:
+
+    COMMAND: <exact command>
+
+    OUTPUT: <full raw terminal output>
+
+    Repeat for each command.
+
+    FINAL: Proceed / Blocked — one sentence.
+
+    Do not ask for "interpretation," "summary," "result," "evidence reference,"
+    or "short explanation" when raw command output is required. Those words can
+    cause the agent to summarize instead of pasting evidence.
+
+    This rule ensures external advisors (ChatGPT, Claude) request evidence in a
+    format that produces machine-verifiable output rather than narrativized
+    summaries.
+
   build_method: |
     CIS is being built from the Dependency Graph Build Plan using minimal
     verified increments. The method is not to build a perfect full dependency

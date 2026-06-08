@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
+Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a7c59bc Add Tier 6.5 closeout commit integration
+
+## tools/closeout.sh 
+
+## tools/gates/gate_closeout_artifact.sh 
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 2d45d08 Record project-root isolation decision in generated context
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 5f43968 Add Evidence-Backed Response Rule to static sources and generators
 
@@ -124,13 +158,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/gates/gate_closeout_complete.sh 
 
 ## 89f8637 Fix closeout.sh missing/failure must exit 3, not 0
-
-## tools/gates/gate_closeout_complete.sh 
-
-## 839df05 Add GATE_GIT_EXPECTED_FILES env var passthrough to gate_closeout_complete.sh v2
-
-## tools/gates/gate_closeout_complete.sh 
-
-## 29b9e81 Add gate_closeout_complete.sh v2 (Tier 6.2)
 
 ## tools/gates/gate_closeout_complete.sh 

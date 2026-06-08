@@ -4,7 +4,7 @@ Date: 2026-06-08
 Authority: Eric (Architect)
 Status: Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).
 
-Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
+Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 5 Context Export Pipeline — IN PROGRESS.**
 
-**HEAD:** `5f43968`.
+**HEAD:** `a7c59bc`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.

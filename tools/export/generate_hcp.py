@@ -776,6 +776,13 @@ def render_hcp_06(stamp, hcp_static, agents_static):
         lines.append(line)
     lines.append("")
 
+    # Exact-Format Instruction Rule
+    lines.append("## Exact-Format Instruction Rule")
+    lines.append("")
+    for line in s["exact_format_instruction_rule"].strip().splitlines():
+        lines.append(line)
+    lines.append("")
+
     # Kanban Contingency
     lines.append("## Kanban Contingency")
     lines.append("")

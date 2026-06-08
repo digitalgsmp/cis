@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
+Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -70,6 +70,32 @@ commands unless Hermes lacks access, the command requires operator-only credenti
 or an external advisor explicitly requests independent human verification.
 The verification-hardening rule is the V4 Implementer-specific application of
 this general principle.
+
+## Exact-Format Instruction Rule
+
+**Exact-Format Instruction Rule**
+
+When requesting evidence or verification from a CIS agent, do not include
+optional labels or extra explanatory categories that can be interpreted as
+alternatives to raw evidence. Use only the exact structure required.
+
+Preferred evidence format:
+
+COMMAND: <exact command>
+
+OUTPUT: <full raw terminal output>
+
+Repeat for each command.
+
+FINAL: Proceed / Blocked — one sentence.
+
+Do not ask for "interpretation," "summary," "result," "evidence reference,"
+or "short explanation" when raw command output is required. Those words can
+cause the agent to summarize instead of pasting evidence.
+
+This rule ensures external advisors (ChatGPT, Claude) request evidence in a
+format that produces machine-verifiable output rather than narrativized
+summaries.
 
 ## Kanban Contingency
 
