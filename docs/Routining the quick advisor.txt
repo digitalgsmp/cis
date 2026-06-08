@@ -1,0 +1,247 @@
+● the quick advisor has provien useless because of the nemo blocks, it can't really do anything. 
+plus I don't thik the web search was ever set up in hermes. for me to move forward after teir 7 I 
+need cis and the hermes models built in to be able to scan the archives and find the logic of hwo 
+the app is suppose to work as stated in my own words or writing. how this need reflects on how the 
+router performs is beyond my understanding.
+
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────────────────────────╮
+    Let me verify what you're saying about the current state, then explain the connection to the router.
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         echo "=== Web search configured? ===" && grep -r "BRAVE_SEARCH\|web_search\|web_search_provider" /home/eric/.hermes/config.yaml /home/eric/.hermes/.env 2>/dev/null | grep -v "^#" | head -5 && echo "" && echo "=== NeMo blocks ===" && grep -c "execution.claim\|blocked" /mnt/projects/cis/runtime/rails/configs/*.yml 2>/dev/null | head -5 && echo "" && echo "=== Session files available ===" && ls /home/eric/.hermes-v4impl/sessions/*.json 2>/dev/null | wc -l && echo "session files in v4impl" && ls /home/eric/.hermes/sessions/*.json 2>/dev/null | wc -l && echo "session files in prime"  0.5s
+
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────────────────────────╮
+    Confirmed:
+    
+    - Web search: not configured. No BRAVE_SEARCH_API_KEY, no web_search_provider in any Hermes config.
+    - Session archive: 2,720 session files in prime, 170 in v4impl — massive corpus of your own words.
+    - NeMo: you're saying it blocks useful work. That matches the architecture — NeMo is an evidence firewall, not a general-purpose assistant.
+    
+    Here's how this connects to the router:
+    
+    The router today has 8 classification passes. All 8 route to AI agents that generate new responses. None of them search existing content. The word "search" appears in the RESEARCH_SIGNALS list — but it means "search the web for current facts," not "search my archives for my own words."
+    
+    There is no classification for the query you actually want to ask:
+    
+    > "What did I say about the social worker app?"
+    
+    That's not a RESEARCH query (prime/web search). It's not a DRAFT query (design something new). It's not a REVIEW query (critique something). It's a RETRIEVAL query — and the router has no path for it.
+    
+    If Tier 7 routes this to Prime via NeMo, NeMo blocks it (useless). If it routes to V4 Drafter, the Drafter invents an answer from training data instead of finding your words. Either way, you don't get what you need.
+    
+    What Tier 7 needs is one additional classification pass — before the existing 8 — that detects retrieval intent:
+    
+    
+    Pass 0 — Knowledge retrieval: "what did I say", "find my", "search my sessions",
+    "what was the decision", "where did we", "have we ever"
+    → query session files (grep or FTS) → return Eric's own words with session references
+    
+    
+    This doesn't require Chroma/VDB. It can be as simple as grep -r "social worker" /home/eric/.hermes/sessions/ with the top 5 matches returned. The 2,720 files already exist. The retrieval just needs to be wired into the router.
+    
+    The Tier 7 proposal I wrote assumes the router only routes to the pipeline. Your need adds a second path: route to retrieval for archive queries, route to pipeline for new work. Both paths live in the same router.
+    
+    Want me to revise the Tier 7 proposal to include this retrieval classification pass?
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+────────────────────────────────────────
+● it looks like I got a Tavily API Key at some point so we almost setup the websearch.
+────────────────────────────────────────
+
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         grep -r "TAVILY\|tavily" /mnt/projects/cis/runtime/rails/.env /mnt/projects/cis/runtime/rails/configs/ /home/eric/.hermes/.env /home/eric/.hermes-r1/.env 2>/dev/null | grep -v "^#" | grep -v "^Binary" | head -10  0.2s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         echo "=== TAVILY_API_KEY in NeMo env ===" && grep "TAVILY" /mnt/projects/cis/runtime/rails/.env 2>/dev/null | head -3 && echo "" && echo "=== TAVILY_API_KEY in nemo-fast systemd ===" && systemctl --user cat nemo-fast.service 2>/dev/null | grep -i tavily && echo "" && echo "=== TAVILY_API_KEY in hermes profiles ===" && grep "TAVILY" /home/eric/.hermes/.env /home/eric/.hermes-r1/.env /home/eric/.hermes-v4pro/.env /home/eric/.hermes-v4impl/.env 2>/dev/null  0.3s [error]
+
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────────────────────────╮
+    Tavily is wired in NeMo's code (runtime/rails/configs/cis_fast/actions.py) — the import, the client call, the error messages. But TAVILY_API_KEY is not set in any .env file or systemd unit. So research queries hit the NEEDS_TAVILY_API_KEY response. That's why the quick advisor is useless — every research query dead-ends at the missing key.
+    
+    This matters for Tier 7 because:
+    
+    The pipeline's RESEARCH stage routes through NeMo → Tavily. Without the key, the RESEARCH stage can't complete. The pipeline would stall at the first step.
+    
+    But more importantly: web search isn't what you need. Tavily finds external facts. What you need is archive retrieval — your own words from 2,720 sessions. Different tool, different data source, no API key required. The files are already on disk at /home/eric/.hermes/sessions/.
+    
+    For the Tier 7 proposal revision, the router needs two retrieval paths:
+    
+    Query type: Web research
+    What it searches: External facts
+    How: NeMo → Tavily
+    Status: Blocked: no API key
+    ────────────────────────────────────────
+    Query type: Archive retrieval
+    What it searches: Eric's own words
+    How: Grep/FTS over session files
+    Status: Ready: 2,720 files on disk
+    
+    The router needs to detect which one the query is asking for. "What is the current HIPAA rule?" → web research. "What did I say about the social worker app?" → archive retrieval.
+    
+    Want me to revise the Tier 7 proposal to include the archive retrieval classification pass? And separately — do you want to add the Tavily key to unblock web research, or is archive retrieval the priority?
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+────────────────────────────────────────
+● external is relevent in my use case because the archive tells us how to build the app. but once 
+the app is working, my clients need to be connected with external service providers
+────────────────────────────────────────
+
+
+Chatgtp
+
+That changes the recommendation.
+
+My earlier push for preserving “quick advisor” was based on the assumption that quick synchronous research was useful. If NeMo blocks make it useless, and Hermes web search is not actually working, then Tier 7 should not be designed around preserving quick advisor chat as the important path.
+
+Your real need is clearer:
+
+CIS needs to route serious prompts into a pipeline that can eventually search your own archive, recover your own stated logic, and turn that into app requirements for the social worker app.
+
+So the Tier 7 router question is not just:
+
+synchronous chat or Kanban card?
+
+It is:
+
+when I ask about the app, does CIS treat that as disposable chat, or as a structured work item that can later connect to archive retrieval, notes, transcripts, and implementation?
+
+For your use case, the answer should be: structured work item.
+
+Tier 7 should create the routing foundation for that. It does not need to build archive search yet, but it must not route those prompts into a dead quick-advisor lane.
+
+Send Hermes this correction:
+
+TIER 7 PROPOSAL REDIRECTION:
+
+Revise the Tier 7 Router Reclassification proposal based on Eric’s actual use case.
+
+Important correction:
+Do not optimize Tier 7 around preserving “quick advisor” behavior as a primary workflow. The quick advisor path has not been useful because NeMo blocks too much, and Hermes web search may not be functional. Direct chat may remain available as a fallback, but it is not the product path.
+
+Primary use case:
+Eric needs CIS/Hermes to help build the social worker app. To do that, CIS must eventually scan Eric’s archives, transcripts, notes, and prior writing to recover the logic of how the app is supposed to work in Eric’s own words. This likely depends on later knowledge/archive tiers, but Tier 7 must route toward that future instead of routing important app-design prompts into disposable synchronous chat.
+
+Required proposal revision:
+
+Reframe Tier 7’s purpose
+Tier 7 should make the router create durable work items for serious CIS/app-building prompts.
+
+The router should classify prompts into:
+
+pipeline work
+archive-discovery / requirements-recovery work
+direct fallback chat
+blocked / missing-capability notices
+Add an Archive / Requirements Discovery route category
+Add a proposed route type for prompts like:
+“find where I described how the social worker app should work”
+“scan my transcripts for my own words about client schedules”
+“recover the logic of the app from my notes”
+“what did I previously say about recovery plans, team meetings, assessments?”
+“use my archive to build requirements”
+
+If archive retrieval is not built yet, the router should not pretend it can do it. It should create a Kanban card marked BLOCKED_ON_KNOWLEDGE_LAYER or REQUIREMENTS_DISCOVERY_PENDING, with the missing dependency clearly stated.
+
+Do not send archive/app-logic prompts to quick NeMo research
+Research-only quick chat is not sufficient for this use case.
+If web search and NeMo are unreliable or blocked, research-only routing should be treated as secondary/fallback, not the main workflow.
+Define what happens before archive search exists
+For Tier 7, if a prompt requires archive search and the retrieval layer is not built, the correct behavior should be:
+create a durable Kanban card
+classify it as archive-discovery / requirements-recovery
+attach the original prompt
+mark missing dependency: transcript import / notes capture / retrieval layer
+return card_id and dependency status to the UI
+
+This preserves the request instead of losing it in chat.
+
+UI behavior
+When Eric submits an app-building or archive-recovery prompt, the UI should show:
+card_id
+route classification
+whether it can proceed now
+what dependency blocks it, if blocked
+next planned stage
+
+The UI should not imply that CIS searched archives if it did not.
+
+Direct chat remains but is not central
+Keep direct chat endpoints if easy, but do not design Tier 7 around them.
+The main path should be durable pipeline routing.
+Connection to future tiers
+Explain how Tier 7 prepares for:
+notes capture
+Claude/ChatGPT transcript import
+archive search / retrieval
+MCP bridge
+Chroma/VDB or hybrid FTS5 + Chroma
+eventual social worker app requirements extraction
+Proposal must explicitly answer:
+How does Tier 7 handle prompts that require Eric’s archive before archive search exists?
+Does the router preserve those prompts as durable work items?
+What route label is used?
+What blocker/dependency is shown?
+What will Eric see in the UI?
+What later tier unlocks actual archive scanning?
+
+Do not implement yet.
+Revise the proposal first.
+
+Final answer:
+Tier 7 proposal revised / blocked, with one-sentence reason.
+
+This is the important shift:
+
+Tier 7 should not be “make chat asynchronous.”
+It should be “make important work durable and routable, especially work that depends on Eric’s archive and future retrieval.”
+
+That moves CIS toward the app you actually need.
+
+
+Claude
+
+This is an important clarification that changes the priority order after Tier 7. Let me break it down.
+
+What you're actually describing
+
+You have approximately 1,367 session files in the archive. Those files contain your own words — your reasoning about how the social worker app should work, decisions you've already made, problems you've already solved, patterns you've already established. Right now that knowledge is inaccessible. Every new session starts blind. You re-explain things you've already worked out. Models make suggestions that contradict decisions you made six months ago because nobody can see those decisions.
+
+What you need is: ask a question, get back the relevant excerpt from your own archive in your own words, with enough context to know when and why it was said.
+
+That's the actual capability gap. Everything else is infrastructure serving that goal.
+
+On the NeMo/Research gateway problem
+
+You're right that it's been underperforming. NeMo's behavioral firewall was designed to block the Research gateway from guessing or hallucinating current facts — force it to use Tavily web search instead. But if web search was never properly configured in Hermes, the Research gateway has been blocked from guessing AND blocked from searching, leaving it able to do almost nothing useful. That's not a useful agent — it's a gate with no exit.
+
+This needs to be confirmed: does Hermes have a working web search integration right now? If Tavily was never wired, the Research gateway is effectively disabled for its primary purpose. That's a blocker for the archive retrieval use case too, because Research is the profile that's supposed to ground queries in evidence.
+
+How this affects the router and the tier sequence
+
+Tier 7 as proposed routes structured work into a Kanban pipeline. That's still the right architecture. But the pipeline's Research stage — the first stage every substantive task goes through — currently can't search anything external or internal. It can only work with what's in AGENTS.md context.
+
+For archive retrieval to work, you need:
+
+First, the archive indexed. The 1,367 session files need to be importable and searchable. That's the transcript import work from the Foundation Plan (currently classified as deferred-unscheduled) plus Chroma/VDB at Tier 9. But Chroma is overkill for a first pass — a flat SQLite FTS5 table over the session files would give you lexical search in your own words immediately, without vector infrastructure.
+
+Second, the Research gateway needs a working retrieval tool. Either web search (Tavily) for external facts, or an internal search endpoint for the archive, or both. Without at least one of these, the Research stage of the pipeline produces nothing useful.
+
+Third, the router needs to know when a query is asking about archive content vs asking for new work. That's a classifier signal — "what did I decide about X" routes to archive retrieval, "design Y" routes to the drafting pipeline.
+
+What this means practically for sequencing
+
+Tier 7 (Router Reclassification) still makes sense as specified — it wires the router to the pipeline and that infrastructure is needed regardless. But between Tier 7 and Tier 8, there's a prerequisite that isn't currently scheduled:
+
+Fix the Research gateway — confirm or establish working web search in Hermes, and determine whether NeMo's blocking behavior is helping or just creating a dead end.
+
+Then before Tier 8 (MCP Bridge), import the archive into a searchable form. FTS5 over session files is a realistic Tier 7.5 — self-contained, no vector infrastructure required, immediate value. You ask "how did I say the intake form should work" and get back the session excerpt where you said it.
+
+The social worker app can't be built without that retrieval capability. Not because the code is hard, but because the decisions about how it should work are locked in those archives. Without retrieval, every design session starts from scratch and risks contradicting prior decisions.
+
+The direct answer to your question about the router
+
+Tier 7 as proposed doesn't need to change based on this. The router's job is to classify intent and dispatch to the right pipeline stage. Whether the Research stage behind it uses web search, archive retrieval, or both is a Research gateway concern, not a router concern. The router just needs to know that "archive" queries exist as a signal class — and that's a classifier addition, not a router architecture change.
+
+What should change is the work scheduled after Tier 7. The current sequence is Tier 7 → Tier 8 MCP Bridge → Tier 9 Chroma/VDB. Given what you've described, a more useful sequence is:
+
+Tier 7 → Fix Research gateway (web search confirmation) → Tier 7.5 Archive import + FTS5 search → Tier 8 MCP Bridge → Tier 9 Chroma/VDB
+
+That gives you access to your own archive before you build the social worker app, which is when you actually need it.
