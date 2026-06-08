@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-06-08 22:59 UTC | Run: run-ce329f7361f9
+Generated: 2026-06-08 23:32 UTC | Run: run-0f52471c07ee
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 58fe147 Preserve quick advisor routing deliberation artifact
+
+## docs/Routining the quick advisor.txt
+
+## 1cd4b41 Add Tier 7.5a corpus audit
+
+## docs/audits/corpus_audit_2026-06-08.md 
+
+## tools/audit/corpus_audit.py 
+
+## de44757 Regenerate context after Tier 7.1 Router Reclassification
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 8a8c99f Implement Tier 7 Router Reclassification
 
@@ -198,33 +234,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 871ebf7 Add minimal state write executor
 
 ## tools/state_write.py 
-
-## b76a79b Add build method and advisor role context rules
-
-## config/agents_static.yaml 
-
-## config/hcp_static.yaml 
-
-## d7ae7fe Add Tier 6.4 pipeline transition gates
-
-## tools/gates/_gate_common.sh 
-
-## tools/gates/gate_consensus_signal_valid.sh 
-
-## tools/gates/gate_eric_approval_present.sh 
-
-## tools/gates/gate_implementation_artifact_present.sh 
-
-## tools/gates/gate_proposal_schema_valid.sh 
-
-## tools/gates/gate_research_artifact_present.sh 
-
-## tools/gates/gate_review_round_valid.sh 
-
-## tools/gates/test_tier_6_4_gates.sh 
-
-## b34c0ea Reconcile Tier 6.1 and 6.4 gate marker specs
-
-## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
-
-## docs/CIS_TIER_6_4_PIPELINE_TRANSITION_GATES_DESIGN.md 

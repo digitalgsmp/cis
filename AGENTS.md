@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-08 22:59 UTC | Run: run-ce329f7361f9 | Latest pipeline: run-05b24781207e
+Generated: 2026-06-08 23:32 UTC | Run: run-0f52471c07ee | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 7.1 COMPLETE. Tier 7.5 Archive Import + FTS5 Search next.
+Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
