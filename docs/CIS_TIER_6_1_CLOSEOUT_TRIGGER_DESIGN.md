@@ -259,17 +259,31 @@ Must be present. Must contain exactly ONE of:
 - `OBJECTIONS`
 - `ESCALATE`
 
-If `CONSENSUS_REACHED`, must also contain:
+Signal matching is **case-insensitive** (`consensus_reached`, `OBJECTIONS`,
+`Escalate` all match).
+
+Signal markers must be **standalone tokens** — appearing on a line by themselves
+or as the first word on a line, not embedded in incidental text. A Reviewer
+output stating "we did not reach CONSENSUS_REACHED" does NOT trigger the signal
+because `CONSENSUS_REACHED` is not a standalone token in that context.
+
+If `CONSENSUS_REACHED`, must also contain exactly:
 ```
 remaining_objections: none
 ```
+The value `none` is case-insensitive (`none`, `None`, `NONE` all pass).
+Does NOT accept `0`, `[]`, or any other variation. The canonical Reviewer
+output contract, enforced by the orchestrator's `normalize_review_section`,
+writes `remaining_objections: none` to Kanban cards.
 
 If `OBJECTIONS`, must contain at least one line starting with `- ` (bullet
-point) after the OBJECTIONS header.
+point) after the OBJECTIONS header. Only dash bullets (`- `) are accepted per
+the Reviewer prompt contract.
 
-**PASS:** Review heading present, exactly one signal present, required sub-fields
-present for that signal.
-**FAIL:** Heading missing, zero or multiple signals, required sub-field missing.
+**PASS:** Review heading present, exactly one standalone signal present, required
+sub-fields present for that signal.
+**FAIL:** Heading missing, zero or multiple signals, signal embedded in text
+(not standalone), required sub-field missing or incorrect value.
 
 ### 3.4 CONSENSUS — `gate_consensus_signal_valid.sh`
 
@@ -281,8 +295,17 @@ requires_eric_review: true
 ```
 
 All three lines must appear. Order is not enforced — they may appear anywhere
-within the Review section. The value `true` for `requires_eric_review` is
-case-insensitive (`true`, `True`, `TRUE` all pass).
+within the Review section.
+
+`CONSENSUS_REACHED` matching is **case-insensitive** and must be a **standalone
+token** (per §3.3 standalone rule). This gate and `gate_review_round_valid.sh`
+use identical matching logic for `remaining_objections`.
+
+`remaining_objections` value: exactly `none` (case-insensitive: `none`, `None`,
+`NONE` all pass). Does NOT accept `0`, `[]`, or any other variation.
+
+The value `true` for `requires_eric_review` is case-insensitive (`true`, `True`,
+`TRUE` all pass).
 
 **`requires_eric_review: true` is permanent CIS policy for Tier 6.**
 
