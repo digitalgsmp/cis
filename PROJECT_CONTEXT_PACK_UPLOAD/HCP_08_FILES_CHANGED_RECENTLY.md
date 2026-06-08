@@ -1,7 +1,79 @@
 # Files Changed Recently
-Generated: 2026-06-07 16:16 UTC | Run: run-653a40f1c400
+Generated: 2026-06-08 12:06 UTC | Run: run-435fc4ee2184
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 7295e92 Fix keep_section swap: Proposal write keeps Review, Review write keeps Proposal
+
+## runtime/orchestrator.py 
+
+## df3e814 Add Tier 6.3 Kanban integration design artifact
+
+## docs/CIS_TIER_6_3_ORCHESTRATOR_KANBAN_INTEGRATION_DESIGN.md 
+
+## 74c7923 Add Tier 6.3 Kanban integration to orchestrator
+
+## runtime/orchestrator.py 
+
+## runtime/orchestrator_config.yaml 
+
+## a73f1eb Fix JSON finalization order — finalize in closeout section, not Phase 2
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 89f8637 Fix closeout.sh missing/failure must exit 3, not 0
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 839df05 Add GATE_GIT_EXPECTED_FILES env var passthrough to gate_closeout_complete.sh v2
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 29b9e81 Add gate_closeout_complete.sh v2 (Tier 6.2)
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 2f988be Add Tier 6.1 and 6.2 design artifacts
+
+## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
+
+## docs/CIS_TIER_6_2_GATE_CLOSEOUT_COMPLETE_V2_DESIGN.md 
+
+## f7e476e Track Hermes CLI wrapper backup after Tier 5 startup gate repair
+
+## runtime/config/bin/hermes.wrapper 
+
+## 326de83 Retire legacy Phase 3/4 context briefing startup gate
+
+## tools/archive/generate_context_briefing.py 
+
+## tools/archive/verify_context_briefing_freshness.py 
+
+## e6be51f tier 5 final closeout — regenerate context + log closeout trigger design
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 2cf6bcc tier 5.7 add gitignore rule for live_backups
 
@@ -66,115 +138,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/export/generate_all.py 
 
 ## tools/export/generate_hcp.py 
-
-## 0f3d80e tier 5.4 generate_hcp.py — spine-driven HCP export replaces manual maintenance
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## config/hcp_static.yaml 
-
-## tools/export/generate_hcp.py 
-
-## 3e34dd2 clarify hcp upload packet as external advisor interface
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## 8951abb sync hcp upload packet after tier 5.3 closeout
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## 80f934c update service template backups after agents_md context retirement
-
-## runtime/config/systemd/hermes-gateway.service 
-
-## 353cef5 repair flash research gateway service topology
-
-## runtime/config/systemd/hermes-gateway.service 
-
-## ee8eb25 add tier 5.1 agents_md generator and static config
-
-## AGENTS.md 
-
-## config/agents_static.yaml 
-
-## tools/export/generate_agents_md.py 
-
-## b2e6c98 add tier 4.4 context export state tables
-
-## runtime/db/database.py 
-
-## runtime/schema/migrations/0001_context_export_state.sql 
-
-## tools/gates/gate_db_state.py 
-
-## e6cb0d8 update hcp readme for tier terminology
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## 03288f6 update context after tier 3 and tier 4
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## 13d28a3 track automated extraction run
-
-## cis_kernel/source/SESSION_LOG.md 
-
-## ec14615 add sqlite state gate
-
-## tools/gates/gate_db_state.py 
