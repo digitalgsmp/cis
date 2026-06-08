@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
+Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 5f43968 Add Evidence-Backed Response Rule to static sources and generators
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## config/agents_static.yaml 
+
+## config/hcp_static.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/export/generate_agents_md.py 
+
+## tools/export/generate_hcp.py 
 
 ## 42a4514 Add minimal closeout handoff writer
 
@@ -100,9 +134,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 29b9e81 Add gate_closeout_complete.sh v2 (Tier 6.2)
 
 ## tools/gates/gate_closeout_complete.sh 
-
-## 2f988be Add Tier 6.1 and 6.2 design artifacts
-
-## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
-
-## docs/CIS_TIER_6_2_GATE_CLOSEOUT_COMPLETE_V2_DESIGN.md 

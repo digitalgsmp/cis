@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
+Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure..** ADR-SEED-009
+**Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE)..** Tier 5 complete
 
 Do NOT start:
 
@@ -39,7 +39,7 @@ Do NOT start:
 | Tier 5 | Build Tier 5.5: generate_all.py — runs both generators, writes export manifest w | COMPLETE |  |
 | Tier 5 | Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes mat | COMPLETE |  |
 | Tier 5 | Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD | COMPLETE |  |
-| Tier 5 | Decide project isolation model for future CIS-managed projects before onboarding | PENDING |  |
+| Tier 5 | Decide project isolation model for future CIS-managed projects before onboarding | COMPLETE |  |
 | Tier 5 | Build Tier 5 context export pipeline | COMPLETE |  |
 | Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | PENDING |  |
 

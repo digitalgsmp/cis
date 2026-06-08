@@ -1,10 +1,11 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
+Generated: 2026-06-08 18:45 UTC | Run: run-8b78a8485005
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-06-08 | [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. Th | Eric Gate approved 2026-06-08 | DECIDED | spine record |
 | 2026-06-07 | [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use num |  | DECIDED | spine record |
 | 2026-06-07 | [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active  |  | DECIDED | spine record |
 | 2026-06-07 | [ADR-SEED-004] Browser role enforcement at router layer: Role badge derived from gateway endpoint/profile only. Implemen |  | DECIDED | spine record |
