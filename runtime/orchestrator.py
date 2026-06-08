@@ -517,7 +517,7 @@ def run_deliberation(topic, config, kanban_card_id=None):
             # ── Write ## Proposal to Kanban card ───────────────────
             try:
                 current_body, _ = _read_card_body_only(kanban_card_id)
-                cleaned = strip_orchestrator_sections(current_body, keep_section="proposal")
+                cleaned = strip_orchestrator_sections(current_body, keep_section="review")
                 new_body = cleaned + f"\n\n## Proposal\n\n{drafter_output}"
                 if new_body.startswith("\n"):
                     new_body = new_body.lstrip("\n")
@@ -609,7 +609,7 @@ def run_deliberation(topic, config, kanban_card_id=None):
             )
             try:
                 current_body, _ = _read_card_body_only(kanban_card_id)
-                cleaned = strip_orchestrator_sections(current_body, keep_section="review")
+                cleaned = strip_orchestrator_sections(current_body, keep_section="proposal")
                 new_body = cleaned + f"\n\n{review_section}"
                 if new_body.startswith("\n"):
                     new_body = new_body.lstrip("\n")
