@@ -25,6 +25,7 @@ STATE_WRITE_SCRIPT="${STATE_WRITE_SCRIPT:-${CIS_REPO}/tools/state_write.py}"
 CLOSEOUT_SCRIPT="${CLOSEOUT_SCRIPT:-${CIS_REPO}/tools/closeout.sh}"
 GENERATE_ALL_SCRIPT="${GENERATE_ALL_SCRIPT:-${CIS_REPO}/tools/export/generate_all.py}"
 EXPORT_MANIFEST_PATH="${EXPORT_MANIFEST_PATH:-${CIS_REPO}/runtime/manifests/EXPORT_MANIFEST.json}"
+DB_PATH="${DB_PATH:-${CIS_DB_PATH:-${CIS_REPO}/data/cis_memory.db}}"
 
 # ── CLI arg defaults ─────────────────────────────────────────────────
 RUN_ID=""
@@ -46,9 +47,11 @@ while [ $# -gt 0 ]; do
             NODE_DESCRIPTION="$2"; shift 2 ;;
         --skip-export)
             SKIP_EXPORT=true; shift ;;
+        --db-path)
+            DB_PATH="$2"; shift 2 ;;
         *)
             echo "ERROR: unknown argument: $1" >&2
-            echo "Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id> [--node-description <text>] [--skip-export]" >&2
+            echo "Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id> [--node-description <text>] [--skip-export] [--db-path <path>]" >&2
             exit 4
             ;;
     esac
@@ -101,6 +104,7 @@ init_results_file() {
     cat > "$GATE_RESULTS_FILE" <<JSONSTART
 {
   "run_id": "$(json_escape "$RUN_ID")",
+  "kanban_card_id": "$(json_escape "$KANBAN_CARD_ID")",
   "node_id": "$(json_escape "$NODE_ID")",
   "node_description": "$(json_escape "$NODE_DESCRIPTION")",
   "timestamp_started": "$TIMESTAMP_STARTED",
@@ -114,6 +118,10 @@ JSONSTART
 # Appends a JSON gate result object to the results file.
 # Handles comma placement: first entry gets no leading comma, subsequent do.
 append_gate_result() {
+    # No-op if results file already finalized
+    if [ "${GATE_RESULTS_FINALIZED:-false}" = "true" ]; then
+        return 0
+    fi
     local name="$1"
     local phase="$2"
     local command="$3"
@@ -152,9 +160,15 @@ JSONGATE
 
 # ── Helper: finalize_results_file ────────────────────────────────────
 finalize_results_file() {
+    # No-op if already finalized
+    if [ "${GATE_RESULTS_FINALIZED:-false}" = "true" ]; then
+        return 0
+    fi
+    GATE_RESULTS_FINALIZED=true
     cat >> "$GATE_RESULTS_FILE" <<JSONEND
 
-  ]
+  ],
+  "tier_6_4_markers": ${MARKERS_JSON}
 }
 JSONEND
 }
@@ -345,10 +359,29 @@ PIPELINE_GATES=(
     "GATE_IMPLEMENT:gate_implementation_artifact_present:${SCRIPT_DIR}/gate_implementation_artifact_present.sh"
 )
 
+# Initialize Tier 6.4 gate exit codes (2 = ERROR / not run)
+GATE_RESEARCH_EXIT=2
+GATE_PROPOSAL_EXIT=2
+GATE_REVIEW_EXIT=2
+GATE_CONSENSUS_EXIT=2
+GATE_ERIC_EXIT=2
+GATE_IMPLEMENT_EXIT=2
+
 for entry in "${PIPELINE_GATES[@]}"; do
     IFS=':' read -r env_var gate_name script_path <<< "$entry"
     if [ -n "${!env_var:-}" ]; then
-        run_optional_gate "$env_var" "$gate_name" "$script_path" "--kanban-card-id" "$KANBAN_CARD_ID" || PHASE1_FAILED=1
+        run_optional_gate "$env_var" "$gate_name" "$script_path" "--kanban-card-id" "$KANBAN_CARD_ID"
+        gate_rc=$?
+        [ $gate_rc -ne 0 ] && PHASE1_FAILED=1
+
+        case "$gate_name" in
+            gate_research_artifact_present) GATE_RESEARCH_EXIT=$gate_rc ;;
+            gate_proposal_schema_valid)     GATE_PROPOSAL_EXIT=$gate_rc ;;
+            gate_review_round_valid)        GATE_REVIEW_EXIT=$gate_rc ;;
+            gate_consensus_signal_valid)    GATE_CONSENSUS_EXIT=$gate_rc ;;
+            gate_eric_approval_present)      GATE_ERIC_EXIT=$gate_rc ;;
+            gate_implementation_artifact_present) GATE_IMPLEMENT_EXIT=$gate_rc ;;
+        esac
     else
         echo ""
         echo "━━━ GATE: ${gate_name} ━━━"
@@ -356,6 +389,47 @@ for entry in "${PIPELINE_GATES[@]}"; do
         append_gate_result "$gate_name" "pre" "$script_path --kanban-card-id $KANBAN_CARD_ID" 0 "SKIP" "SKIP: ${env_var} not set"
     fi
 done
+
+# ── Synthesize tier_6_4_markers JSON ─────────────────────────────────
+# Compute markers as a JSON string to inject into finalize_results_file.
+
+compute_tier_6_4_markers_json() {
+    export GATE_RESEARCH_EXIT GATE_PROPOSAL_EXIT GATE_REVIEW_EXIT
+    export GATE_CONSENSUS_EXIT GATE_ERIC_EXIT GATE_IMPLEMENT_EXIT
+    export GATE_RESULTS_FILE
+
+    python3 -c "
+import json, os
+
+# Derive boolean markers from exit codes (0 = PASS)
+markers = {
+    'research_present': os.environ.get('GATE_RESEARCH_EXIT','2') == '0',
+    'proposal_valid': os.environ.get('GATE_PROPOSAL_EXIT','2') == '0',
+    'consensus_valid': os.environ.get('GATE_CONSENSUS_EXIT','2') == '0',
+    'eric_approved': os.environ.get('GATE_ERIC_EXIT','2') == '0',
+    'implementation_present': os.environ.get('GATE_IMPLEMENT_EXIT','2') == '0',
+}
+
+# Derive review_signal from gate_review_round_valid output_excerpt
+review_signal = None
+try:
+    with open(os.environ['GATE_RESULTS_FILE']) as f:
+        # File is not yet closed; scan for review gate output
+        content = f.read()
+        for sig in ['CONSENSUS_REACHED', 'OBJECTIONS', 'ESCALATE']:
+            # Look for the signal in gate_review_round_valid output_excerpt pattern
+            if f'gate_review_round_valid' in content and sig in content:
+                review_signal = sig
+                break
+except Exception:
+    pass
+markers['review_signal'] = review_signal
+
+print(json.dumps(markers))
+"
+}
+
+MARKERS_JSON=$(compute_tier_6_4_markers_json)
 
 # ── Check Phase 1 result ─────────────────────────────────────────────
 
@@ -369,6 +443,9 @@ fi
 
 echo ""
 echo "Phase 1 PASSED — all pre-STATE_WRITE gates passed."
+
+# Finalize results file so state_write.py can consume valid JSON
+finalize_results_file
 
 # ══════════════════════════════════════════════════════════════════════
 # STATE_WRITE
@@ -393,10 +470,9 @@ STATE_WRITE_EXIT=0
 set +e
 STATE_WRITE_OUTPUT=$(python3 "$STATE_WRITE_SCRIPT" \
     --run-id "$RUN_ID" \
-    --node-id "$NODE_ID" \
-    --node-description "$NODE_DESCRIPTION" \
     --gate-results "$GATE_RESULTS_FILE" \
-    --git-head "$GIT_HEAD" 2>&1)
+    --db-path "$DB_PATH" \
+    --manifest-dir "${CIS_REPO}/runtime/manifests" 2>&1)
 STATE_WRITE_EXIT=$?
 set -e
 
