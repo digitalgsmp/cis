@@ -1,0 +1,404 @@
+# Corpus Audit — 2026-06-08
+
+**Tier:** 7.5a | **Tool:** `tools/audit/corpus_audit.py`
+**Total files scanned:** 3105
+
+---
+
+## Directory: /home/eric/.hermes/sessions
+
+- File count: 2734
+- Total size: 385.7 MB
+- Largest file: 1.6 MB (/home/eric/.hermes/sessions/session_20260524_003847_a0e8ba.json)
+- Extensions: .json (2731), .jsonl (2), .tmp (1)
+- Valid JSON: 2731/2731 (100%)
+- JSON structures: object: 2731
+- Roles distinguishable: 91/91 (sampled)
+- Content fields found: 'content': 91
+- Timestamps: filename: 2350
+- Date range: 2026-05-08 to 2026-06-08
+- Non-JSON formats: .jsonl: 2, .tmp: 1
+- Size distribution:
+  - 0-10KB: 1
+  - 10-100KB: 1988
+  - 100KB-1MB: 650
+  - 1MB+: 95
+- Immediately importable: 2731
+- Needs conversion: 3
+- **Recommendation: INCLUDE importable files (2731); DEFER conversion-needed (3)**
+
+## Directory: /home/eric/.hermes-v4impl/sessions
+
+- File count: 173
+- Total size: 115.1 MB
+- Largest file: 1.4 MB (/home/eric/.hermes-v4impl/sessions/session_20260608_070725_eb07b7.json)
+- Extensions: .json (173)
+- Valid JSON: 173/173 (100%)
+- JSON structures: object: 173
+- Roles distinguishable: 100/100 (sampled)
+- Content fields found: 'content': 100
+- Timestamps: filename: 155
+- Date range: 2026-05-31 to 2026-06-08
+- Size distribution:
+  - 0-10KB: 0
+  - 10-100KB: 8
+  - 100KB-1MB: 133
+  - 1MB+: 32
+- Immediately importable: 173
+- Needs conversion: 0
+- **Recommendation: INCLUDE in first import subset**
+
+## Directory: /home/eric/.hermes-r1/sessions
+
+- File count: 97
+- Total size: 30.7 MB
+- Largest file: 1.8 MB (/home/eric/.hermes-r1/sessions/session_20260530_231121_d6392d.json)
+- Extensions: .json (97)
+- Valid JSON: 97/97 (100%)
+- JSON structures: object: 97
+- Roles distinguishable: 97/97 (sampled)
+- Content fields found: 'content': 97
+- Timestamps: filename: 37
+- Date range: 2026-05-21 to 2026-06-03
+- Size distribution:
+  - 0-10KB: 0
+  - 10-100KB: 16
+  - 100KB-1MB: 74
+  - 1MB+: 7
+- Immediately importable: 97
+- Needs conversion: 0
+- **Recommendation: INCLUDE in first import subset**
+
+## Directory: /home/eric/.hermes-v4pro/sessions
+
+- File count: 70
+- Total size: 10.0 MB
+- Largest file: 0.4 MB (/home/eric/.hermes-v4pro/sessions/session_20260605_194544_eeb365.json)
+- Extensions: .json (70)
+- Valid JSON: 70/70 (100%)
+- JSON structures: object: 70
+- Roles distinguishable: 70/70 (sampled)
+- Content fields found: 'content': 70
+- Timestamps: filename: 10
+- Date range: 2026-05-31 to 2026-06-07
+- Size distribution:
+  - 0-10KB: 0
+  - 10-100KB: 24
+  - 100KB-1MB: 46
+  - 1MB+: 0
+- Immediately importable: 70
+- Needs conversion: 0
+- **Recommendation: INCLUDE in first import subset**
+
+## Directory: /mnt/projects/cis/docs/claude_chat_transcripts
+
+- File count: 31
+- Total size: 2.0 MB
+- Largest file: 0.4 MB (/mnt/projects/cis/docs/claude_chat_transcripts/2026-04-16_CIS canonical build sequence and architectural dependencies.md)
+- Extensions: .md (23), .txt (1)
+- Timestamps: none detected
+- Non-JSON formats: .md: 23, .txt: 1
+- Size distribution:
+  - 0-10KB: 7
+  - 10-100KB: 10
+  - 100KB-1MB: 7
+  - 1MB+: 0
+- Immediately importable: 0
+- Needs conversion: 24
+- **Recommendation: DEFER — no importable files**
+
+## Files Larger Than 1MB
+
+Total files over 1MB: 134
+
+- `/home/eric/.hermes-r1/sessions/session_20260530_152054_dc3c5a.json` — 1.75 MB — Hermes session (848 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_193811_99f70d.json` — 1.09 MB — Hermes session (426 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_201029_d7706f.json` — 1.34 MB — Hermes session (636 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_202739_b1bdb7.json` — 1.53 MB — Hermes session (700 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_203754_045a4b.json` — 1.62 MB — Hermes session (742 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_204654_ede25a.json` — 1.69 MB — Hermes session (791 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-r1/sessions/session_20260530_231121_d6392d.json` — 1.81 MB — Hermes session (850 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260531_153931_6b7a54.json` — 1.06 MB — Hermes session (437 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260601_132333_f26ac6.json` — 1.06 MB — Hermes session (494 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260601_170824_446ea0.json` — 1.03 MB — Hermes session (428 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260601_171951_fdd428.json` — 1.11 MB — Hermes session (474 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260601_173629_20d6ce.json` — 1.13 MB — Hermes session (501 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_004349_4cf635.json` — 1.13 MB — Hermes session (692 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_095051_1c9def.json` — 1.04 MB — Hermes session (586 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_095843_dc0315.json` — 1.09 MB — Hermes session (613 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_100112_4c9a5e.json` — 1.05 MB — Hermes session (617 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_100548_8d6b3a.json` — 1.1 MB — Hermes session (633 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_101358_54ac18.json` — 1.19 MB — Hermes session (685 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_201818_a17a41.json` — 1.14 MB — Hermes session (688 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_201859_667216.json` — 1.19 MB — Hermes session (698 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260606_202223_9ccd36.json` — 1.04 MB — Hermes session (429 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260607_075239_738cb3.json` — 1.08 MB — Hermes session (412 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260607_075859_0e25a8.json` — 1.1 MB — Hermes session (446 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260607_203110_2f0b39.json` — 1.33 MB — Hermes session (611 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260607_233334_3c2148.json` — 1.05 MB — Hermes session (398 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_000044_a2cce5.json` — 1.09 MB — Hermes session (433 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_000603_1c8c85.json` — 1.15 MB — Hermes session (473 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_003719_7247ef.json` — 1.22 MB — Hermes session (513 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_005520_5ad4ca.json` — 1.29 MB — Hermes session (559 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_062352_0721e6.json` — 1.25 MB — Hermes session (551 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_065112_daf795.json` — 1.33 MB — Hermes session (588 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_070725_eb07b7.json` — 1.4 MB — Hermes session (619 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_071251_03e6a3.json` — 1.28 MB — Hermes session (499 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_100913_a0d87d.json` — 1.06 MB — Hermes session (330 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_112718_dba2b7.json` — 1.28 MB — Hermes session (442 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_121054_4c7e0b.json` — 1.35 MB — Hermes session (487 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_121816_1411ef.json` — 1.35 MB — Hermes session (506 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_145109_b1caca.json` — 1.18 MB — Hermes session (534 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes-v4impl/sessions/session_20260608_175940_449e6d.json` — 1.12 MB — Hermes session (501 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260512_182319_4cf22a.json` — 1.03 MB — Hermes session (384 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260512_223318_c56972.json` — 1.02 MB — Hermes session (404 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260513_010755_ad956b.json` — 1.44 MB — Hermes session (1030 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260513_212529_ff6667.json` — 1.0 MB — Hermes session (626 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260513_213304_6ac761.json` — 1.06 MB — Hermes session (680 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260513_222756_f414a3.json` — 1.12 MB — Hermes session (712 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260513_231451_d043fd.json` — 1.18 MB — Hermes session (744 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_031935_009473.json` — 1.2 MB — Hermes session (836 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_032346_542a73.json` — 1.24 MB — Hermes session (852 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_033846_78f900.json` — 1.36 MB — Hermes session (946 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_034315_341c33.json` — 1.41 MB — Hermes session (991 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_034748_71cb63.json` — 1.31 MB — Hermes session (970 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_035141_295302.json` — 1.39 MB — Hermes session (1002 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_035922_3ca81b.json` — 1.47 MB — Hermes session (1043 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260514_145738_a5505b.json` — 1.39 MB — Hermes session (740 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_063105_78cee3.json` — 1.05 MB — Hermes session (389 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_063914_7050d6.json` — 1.09 MB — Hermes session (413 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_065859_7bc460.json` — 1.21 MB — Hermes session (462 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_070709_2ebacd.json` — 1.25 MB — Hermes session (560 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_071008_86f822.json` — 1.28 MB — Hermes session (609 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_072233_6d77af.json` — 1.18 MB — Hermes session (599 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_074709_fdb3c7.json` — 1.3 MB — Hermes session (676 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_075107_e92608.json` — 1.33 MB — Hermes session (711 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_075851_f40141.json` — 1.33 MB — Hermes session (718 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_081627_7085d2.json` — 1.42 MB — Hermes session (745 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_091520_2fe8d4.json` — 1.45 MB — Hermes session (997 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_212629_f376dc.json` — 1.11 MB — Hermes session (618 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_213240_afc982.json` — 1.12 MB — Hermes session (660 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_215013_dae87d.json` — 1.08 MB — Hermes session (661 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_215413_27f5a0.json` — 1.17 MB — Hermes session (695 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_220019_643984.json` — 1.2 MB — Hermes session (747 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_220821_bb9991.json` — 1.3 MB — Hermes session (817 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_232444_08439d.json` — 1.26 MB — Hermes session (843 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_233521_4e4353.json` — 1.46 MB — Hermes session (947 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_234522_cfc995.json` — 1.49 MB — Hermes session (987 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260515_235212_397710.json` — 1.51 MB — Hermes session (1015 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_005952_1bdd1f.json` — 1.5 MB — Hermes session (1103 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_093413_49501e.json` — 1.07 MB — Hermes session (544 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_094140_6a2703.json` — 1.02 MB — Hermes session (585 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_094915_b5bea3.json` — 1.2 MB — Hermes session (697 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_115130_201a9f.json` — 1.35 MB — Hermes session (773 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_115557_f8f58a.json` — 1.35 MB — Hermes session (829 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_120007_46b554.json` — 1.34 MB — Hermes session (875 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_133516_b12400.json` — 1.45 MB — Hermes session (922 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_133829_0b7f71.json` — 1.46 MB — Hermes session (969 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_134323_ac532a.json` — 1.44 MB — Hermes session (1005 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_134844_533467.json` — 1.62 MB — Hermes session (1091 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_135031_aa450a.json` — 1.49 MB — Hermes session (1085 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260516_203847_cd2b87.json` — 1.56 MB — Hermes session (1119 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_102257_58869e.json` — 1.17 MB — Hermes session (749 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_194621_402b4c.json` — 1.06 MB — Hermes session (625 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_201255_a348cf.json` — 1.07 MB — Hermes session (647 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_202654_0b8ddb.json` — 1.17 MB — Hermes session (703 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_204454_efeade.json` — 1.15 MB — Hermes session (709 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_205603_651546.json` — 1.22 MB — Hermes session (737 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260517_212000_831465.json` — 1.18 MB — Hermes session (759 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260518_134642_8af262.json` — 1.05 MB — Hermes session (611 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260518_170345_abce24.json` — 1.02 MB — Hermes session (519 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260518_174059_57d115.json` — 1.1 MB — Hermes session (561 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260518_175417_5341c2.json` — 1.24 MB — Hermes session (640 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260519_040559_9c4b96.json` — 1.02 MB — Hermes session (446 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260521_111406_19feb2.json` — 1.02 MB — Hermes session (392 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260522_194400_43dc87.json` — 1.02 MB — Hermes session (391 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260522_233636_3070ca.json` — 1.1 MB — Hermes session (379 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260523_071633_1f2529.json` — 1.52 MB — Hermes session (634 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260523_115906_f113de.json` — 1.07 MB — Hermes session (357 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260523_124245_b584e8.json` — 1.2 MB — Hermes session (440 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260523_225210_3b2392.json` — 1.37 MB — Hermes session (489 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260524_001255_1e1888.json` — 1.45 MB — Hermes session (546 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260524_002853_40acfe.json` — 1.52 MB — Hermes session (588 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260524_003847_a0e8ba.json` — 1.63 MB — Hermes session (626 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260526_201113_9fbd4f.json` — 1.06 MB — Hermes session (310 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260528_211750_857d99.json` — 1.07 MB — Hermes session (241 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260529_175838_e5d012.json` — 1.17 MB — Hermes session (247 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260529_180056_6bdd7d.json` — 1.1 MB — Hermes session (253 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260529_225005_889972.json` — 1.48 MB — Hermes session (234 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260529_234308_792224.json` — 1.03 MB — Hermes session (44 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_104358_b65e14.json` — 1.18 MB — Hermes session (76 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_105543_b8dc94.json` — 1.2 MB — Hermes session (108 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_110007_8a3e4f.json` — 1.12 MB — Hermes session (120 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_111130_8be66a.json` — 1.34 MB — Hermes session (151 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_112937_4dd141.json` — 1.46 MB — Hermes session (208 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_113949_3fa0a3.json` — 1.38 MB — Hermes session (216 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_120516_fafd22.json` — 1.59 MB — Hermes session (242 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260530_143222_341dcd.json` — 1.49 MB — Hermes session (237 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_015413_f3ea93.json` — 1.25 MB — Hermes session (434 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_032459_1eee0c.json` — 1.08 MB — Hermes session (302 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_041422_d6b9bd.json` — 1.15 MB — Hermes session (336 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_042334_dbe393.json` — 1.14 MB — Hermes session (360 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_043709_aa74cc.json` — 1.25 MB — Hermes session (400 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_044403_298773.json` — 1.33 MB — Hermes session (440 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260531_191608_2195b4.json` — 1.08 MB — Hermes session (394 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260601_001759_7abffb.json` — 1.09 MB — Hermes session (318 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260601_002853_b59b15.json` — 1.11 MB — Hermes session (354 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+- `/home/eric/.hermes/sessions/session_20260601_003938_ab509e.json` — 1.2 MB — Hermes session (376 messages, roles distinguishable)
+  - Recommendation: INCLUDE — valid session with distinguishable roles
+
+## Summary
+
+- Total files scanned: 3105
+- Immediately importable: 3071 (98%)
+- Requires conversion: 27 (0%)
+- Files over 1MB: 134
+- Large file recommendation: INVESTIGATE before import — see large files section above
+
+### First import subset recommendation
+- **Importable files across all directories: 3071**
+- **Conversion-needed files across all directories: 27**
+- **All directories with valid Hermes session JSON should be included.**
+- **Deferred formats:** .jsonl, .tmp, .md, .docx, .txt (Claude/ChatGPT transcripts)
+- **Include directories:** /home/eric/.hermes/sessions, /home/eric/.hermes-v4impl/sessions, /home/eric/.hermes-r1/sessions, /home/eric/.hermes-v4pro/sessions
+- **Defer directories (mixed/non-Hermes formats):** /mnt/projects/cis/docs/claude_chat_transcripts
+
+### Tier 7.5b readiness
+- **Tier 7.5b can proceed** with the importable subset.
+- **Caution:** Large files >1MB should be sampled before import.
+
+### User/model message separation
+- **User messages CAN be separated from model messages.** (358/358 sampled files have distinguishable roles)
