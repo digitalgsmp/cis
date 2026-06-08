@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-06-08 21:30 UTC | Run: run-c40ec6dce649
+Generated: 2026-06-08 22:59 UTC | Run: run-ce329f7361f9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 8a8c99f Implement Tier 7 Router Reclassification
+
+## runtime/api/advisor.py 
+
+## runtime/api/router.py 
+
+## runtime/ui/src/pages/infra/AdvisorChat.jsx 
+
+## 2cea834 Revise draft plan reconciliation after advisor review
+
+## docs/PLAN_RECONCILIATION.md 
+
+## e43c58c Regenerate context from canonical build state
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 71e7364 Add canonical build-state remediation layer
 
@@ -190,37 +228,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
 
 ## docs/CIS_TIER_6_4_PIPELINE_TRANSITION_GATES_DESIGN.md 
-
-## fe7b07f Refresh generated context after Tier 6 checkpoint
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 7295e92 Fix keep_section swap: Proposal write keeps Review, Review write keeps Proposal
-
-## runtime/orchestrator.py 
-
-## df3e814 Add Tier 6.3 Kanban integration design artifact
-
-## docs/CIS_TIER_6_3_ORCHESTRATOR_KANBAN_INTEGRATION_DESIGN.md 

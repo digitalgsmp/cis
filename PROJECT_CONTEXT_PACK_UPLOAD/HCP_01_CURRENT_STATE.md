@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-08
 Authority: Eric (Architect)
-Status: Tier 6.5 COMPLETE. Tier 7 Router Reclassification next.
+Status: Tier 7.1 COMPLETE. Tier 7.5 Archive Import + FTS5 Search next.
 
-Generated: 2026-06-08 21:30 UTC | Run: run-c40ec6dce649
+Generated: 2026-06-08 22:59 UTC | Run: run-ce329f7361f9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 6.5 COMPLETE. Tier 7 Router Reclassification next.**
+**Tier 7.1 COMPLETE. Tier 7.5 Archive Import + FTS5 Search next.**
 
-**HEAD:** `71e7364`.
+**HEAD:** `8a8c99f`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
