@@ -2,9 +2,9 @@
 Date: 2026-06-08
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `9d787df`
+HEAD: `71e7364`
 
-Generated: 2026-06-08 19:54 UTC | Run: run-f5021b48bb3e
+Generated: 2026-06-08 21:30 UTC | Run: run-c40ec6dce649
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,4 +54,4 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE)..
+(No pending actions)

@@ -1,7 +1,55 @@
 # Files Changed Recently
-Generated: 2026-06-08 19:54 UTC | Run: run-f5021b48bb3e
+Generated: 2026-06-08 21:30 UTC | Run: run-c40ec6dce649
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 71e7364 Add canonical build-state remediation layer
+
+## .gitignore 
+
+## config/hcp_static.yaml 
+
+## docs/PLAN_RECONCILIATION.md 
+
+## runtime/config/systemd/live_backups/hermes-gateway-r1.service.pre_tier5_2e_20260607_005129 
+
+## runtime/config/systemd/live_backups/hermes-gateway.service.pre_tier5_2e_20260607_005129 
+
+## runtime/db/database.py 
+
+## runtime/schema/migrations/0002_project_state.sql 
+
+## tools/export/generate_agents_md.py 
+
+## tools/export/generate_hcp.py 
+
+## tools/gates/gate_build_state_coherence.sh 
+
+## 635759e Refresh generated context after Tier 6.5 closeout integration
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 9d787df Add Exact-Format Instruction Rule to HCP advisor protocol context
 
@@ -176,13 +224,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## df3e814 Add Tier 6.3 Kanban integration design artifact
 
 ## docs/CIS_TIER_6_3_ORCHESTRATOR_KANBAN_INTEGRATION_DESIGN.md 
-
-## 74c7923 Add Tier 6.3 Kanban integration to orchestrator
-
-## runtime/orchestrator.py 
-
-## runtime/orchestrator_config.yaml 
-
-## a73f1eb Fix JSON finalization order — finalize in closeout section, not Phase 2
-
-## tools/gates/gate_closeout_complete.sh 
