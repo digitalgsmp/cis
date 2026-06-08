@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-08
 Authority: Eric (Architect)
-Status: Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).
+Status: Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). | Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section.
 
-Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8
+Generated: 2026-06-08 19:54 UTC | Run: run-f5021b48bb3e
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 5 Context Export Pipeline — IN PROGRESS.**
 
-**HEAD:** `a7c59bc`.
+**HEAD:** `9d787df`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -284,6 +284,7 @@ Depends on: Tier 5 complete
 283. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
 284. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
 285. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ⬜ PENDING
+286. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ⬜ PENDING
 
 ---
 
@@ -343,6 +344,7 @@ Depends on: Tier 5 complete
 **Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure.** ✅ COMPLETE
 **Tier 5 — Build Tier 5 context export pipeline** ✅ COMPLETE
 **Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).** ⬜ PENDING
+**Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section.** ⬜ PENDING
 
 ---
 
@@ -367,7 +369,7 @@ Depends on: Tier 5 complete
 | deliberation_rounds | 3 |
 | project_decisions | 11 |
 | open_questions | 6 |
-| next_actions | 11 |
+| next_actions | 12 |
 | active_blockers | 6 |
 
 ---

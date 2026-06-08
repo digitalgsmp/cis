@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8 | Latest pipeline: run-05b24781207e
+Generated: 2026-06-08 19:54 UTC | Run: run-f5021b48bb3e | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -73,6 +73,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 6. Next Actions
 - [NA-SEED-010] (Tier 6) Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).
+- [NA-SEED-011] (Tier 6) Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section.
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified

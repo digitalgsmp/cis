@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-08 19:39 UTC | Run: run-38bc43b972d8
+Generated: 2026-06-08 19:54 UTC | Run: run-f5021b48bb3e
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -42,6 +42,7 @@ Do NOT start:
 | Tier 5 | Decide project isolation model for future CIS-managed projects before onboarding | COMPLETE |  |
 | Tier 5 | Build Tier 5 context export pipeline | COMPLETE |  |
 | Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | PENDING |  |
+| Tier 6 | Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) | PENDING |  |
 
 ## Known Limitations
 
