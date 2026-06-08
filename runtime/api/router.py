@@ -18,6 +18,13 @@ REVIEWER_SIGNALS = [
     "challenge", "what's wrong", "missing", "weak", "counterargument",
     "devil's advocate", "push back", "check this", "tear apart", "poke holes"
 ]
+ARCHIVE_RETRIEVAL_SIGNALS = [
+    "what did i say", "what did i decide", "where did i", "find where i",
+    "search my sessions", "scan my archive", "recover my", "my own words",
+    "my prior", "my previous", "what i wrote", "from my notes",
+    "from my writing", "from my transcripts", "in my sessions",
+    "use my archive", "my stated logic", "how i described"
+]
 QWEN_PREFIXES = ("FINAL_DIRECTIVE", "JUDGE_REQUEST")
 ROUTER_AGENT_MAP = {
     "fast":        {"agent": "hermes-prime",  "port": 8800},
@@ -130,25 +137,25 @@ def classify_route(message: str, override: Optional[str] = None) -> Dict[str, an
 
 # SQL DDL for routing decisions table
 ROUTING_DDL = [
-    """CREATE TABLE IF NOT EXISTS routing_decisions ("
-    "id                        INTEGER PRIMARY KEY AUTOINCREMENT,"
-    "message_id                TEXT NOT NULL,"
-    "thread_id                 TEXT,"
-    "original_message          TEXT NOT NULL,"
-    "selected_route            TEXT NOT NULL,"
-    "selected_agent            TEXT,"
-    "matched_signals           TEXT,"
-    "confidence                TEXT NOT NULL,"
-    "override_used             TEXT,"
-    "multihop                  INTEGER DEFAULT 0,"
-    "qwen_blocked              INTEGER DEFAULT 0,"
-    "agent_response_message_id TEXT,"
-    "preflight_response        TEXT,"
-    "created_at                DATETIME DEFAULT CURRENT_TIMESTAMP"
-    ")""","
-    "CREATE INDEX IF NOT EXISTS idx_rd_thread  ON routing_decisions(thread_id)","
-    "CREATE INDEX IF NOT EXISTS idx_rd_route   ON routing_decisions(selected_route)","
-    "CREATE INDEX IF NOT EXISTS idx_rd_created ON routing_decisions(created_at)"
+    """CREATE TABLE IF NOT EXISTS routing_decisions (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id                TEXT NOT NULL,
+    thread_id                 TEXT,
+    original_message          TEXT NOT NULL,
+    selected_route            TEXT NOT NULL,
+    selected_agent            TEXT,
+    matched_signals           TEXT,
+    confidence                TEXT NOT NULL,
+    override_used             TEXT,
+    multihop                  INTEGER DEFAULT 0,
+    qwen_blocked              INTEGER DEFAULT 0,
+    agent_response_message_id TEXT,
+    preflight_response        TEXT,
+    created_at                DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_rd_thread  ON routing_decisions(thread_id)",
+    "CREATE INDEX IF NOT EXISTS idx_rd_route   ON routing_decisions(selected_route)",
+    "CREATE INDEX IF NOT EXISTS idx_rd_created ON routing_decisions(created_at)",
 ]
 
 # Ensure routing table exists

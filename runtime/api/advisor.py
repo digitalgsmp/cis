@@ -46,12 +46,25 @@ REVIEWER_SIGNALS = [
     "challenge", "what's wrong", "missing", "weak", "counterargument",
     "devil's advocate", "push back", "check this", "tear apart", "poke holes"
 ]
+# Tier 7: Archive retrieval signals — queries for Eric's own prior words/decisions
+ARCHIVE_RETRIEVAL_SIGNALS = [
+    "what did i say", "what did i decide", "where did i", "find where i",
+    "search my sessions", "scan my archive", "recover my", "my own words",
+    "my prior", "my previous", "what i wrote", "from my notes",
+    "from my writing", "from my transcripts", "in my sessions",
+    "use my archive", "my stated logic", "how i described"
+]
 ROUTER_AGENT_MAP = {
     "fast":           {"agent": "hermes-prime",  "port": 8800},
     "v4_drafter":     {"agent": "hermes-v4pro",  "port": 8645},
     "v4_reviewer":    {"agent": "hermes-r1",     "port": 8643},
     "v4_implementer": {"agent": "hermes-v4impl", "port": 8646},
     "qwen":           {"agent": "hermes-qwen",   "port": 8644},
+}
+# Tier 7: Blockers for routes that depend on future tiers
+ROUTER_BLOCKERS = {
+    "ARCHIVE_REQUIREMENTS_DISCOVERY": "BLOCKED_ON_ARCHIVE_INDEX",
+    "EXTERNAL_RESEARCH": "BLOCKED_ON_WEB_RESEARCH_CONFIG",
 }
 ROUTER_NEXT_ACTION = {
     "fast":           "Evidence returned — continue to V4 Drafter",
@@ -92,6 +105,13 @@ def classify_route(message, override=None):
         if qwen_block_reason:
             r["qwen_block_reason"] = qwen_block_reason
         return r
+
+    # Pass 0: Archive retrieval — queries for Eric's own prior words/decisions (Tier 7)
+    archive_signals = _score_signals(text, ARCHIVE_RETRIEVAL_SIGNALS)
+    if archive_signals:
+        return _result("ARCHIVE_REQUIREMENTS_DISCOVERY", "high" if len(archive_signals) >= 2 else "medium",
+                       signals=archive_signals,
+                       reason=f"Archive retrieval intent detected — signals: {archive_signals}")
 
     # Pass 1a: FINAL_DIRECTIVE — V4 Implementer
     if text.startswith("FINAL_DIRECTIVE"):
@@ -1195,14 +1215,14 @@ def _ensure_routing_table():
 
 
 def _persist_routing(routing, original_message, thread_id, override,
-                     preflight_response=None):
+                     preflight_response=None, kanban_card_id=None):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         INSERT INTO routing_decisions
             (message_id, thread_id, original_message, selected_route,
              selected_agent, matched_signals, confidence, override_used,
-             multihop, qwen_blocked, preflight_response)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+             multihop, qwen_blocked, preflight_response, kanban_card_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         routing["message_id"], thread_id, original_message,
         routing["route"], routing.get("agent"),
@@ -1211,9 +1231,63 @@ def _persist_routing(routing, original_message, thread_id, override,
         int(routing.get("multihop", False)),
         int(routing.get("qwen_blocked", False)),
         preflight_response,
+        kanban_card_id,
     ))
     conn.commit()
     conn.close()
+
+
+# ── Tier 7: Kanban card creation ────────────────────────────────────────
+
+def _create_kanban_card(message, routing, thread_id=None):
+    """Create a Kanban card on cis-pipeline board via `hermes kanban create` CLI.
+    Returns card_id string or None on failure."""
+    import subprocess
+    route = routing["route"]
+    # Determine card prefix from route
+    prefix_map = {
+        "ARCHIVE_REQUIREMENTS_DISCOVERY": "[ARCHIVE]",
+        "EXTERNAL_RESEARCH": "[RESEARCH]",
+        "v4_drafter": "[DRAFT]",
+        "v4_reviewer": "[REVIEW]",
+        "fast": "[RESEARCH]",
+        "multihop": "[RESEARCH]",
+    }
+    prefix = prefix_map.get(route, "[PIPELINE]")
+    title = f"{prefix} {message[:80]}{'...' if len(message) > 80 else ''}"
+
+    # Card body: original prompt verbatim + context
+    body_lines = [
+        "## Directive",
+        message,
+        "",
+        "## Context",
+        f"- Route: {route}",
+        f"- Thread: {thread_id or 'none'}",
+    ]
+    blocker = ROUTER_BLOCKERS.get(route)
+    if blocker:
+        body_lines.append(f"- Blocker: {blocker}")
+    body = "\n".join(body_lines)
+
+    # Assignee
+    agent = routing.get("agent")
+    assignee = agent if agent and agent != "unknown" else None
+
+    cmd = ["hermes", "kanban", "create", title, "--body", body,
+           "--tenant", "cis-pipeline", "--created-by", "router", "--json"]
+    if assignee:
+        cmd.extend(["--assignee", assignee])
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30,
+                               env={**__import__('os').environ, "HERMES_HOME": "/home/eric/.hermes-v4impl"})
+        if result.returncode == 0 and result.stdout.strip():
+            data = json.loads(result.stdout)
+            return data.get("id") or data.get("card_id") or result.stdout.strip()
+    except Exception:
+        pass
+    return None
 
 
 # ── Router dispatch helpers ──────────────────────────────────────────────
@@ -1917,6 +1991,34 @@ def route_message():
             "retry": False
         }), 403
     # ── end enforcement ──────────────────────────────────────────────
+
+    # ── Tier 7: Pipeline/Archive routes create Kanban cards ──────────
+    # Deterministic fast paths (FINAL_DIRECTIVE, JUDGE_REQUEST) bypass Kanban.
+    # Pipeline routes (draft, review, research, archive) create durable cards.
+    tier7_pipeline_routes = {
+        "ARCHIVE_REQUIREMENTS_DISCOVERY", "EXTERNAL_RESEARCH",
+        "v4_drafter", "v4_reviewer", "fast", "multihop"
+    }
+    if routing["route"] in tier7_pipeline_routes or (
+        override and override in ROUTER_AGENT_MAP and
+        override not in ("v4_implementer", "qwen")
+    ):
+        card_id = _create_kanban_card(message, routing, thread_id)
+        routing["kanban_card_id"] = card_id
+        routing["agent_response"] = None
+        # Add blocker info if applicable
+        blocker = ROUTER_BLOCKERS.get(routing["route"])
+        if blocker:
+            routing["blocked_by"] = blocker
+            routing["next_unlock"] = {
+                "BLOCKED_ON_ARCHIVE_INDEX": "Tier 7.5 Archive Import + FTS5 Search",
+                "BLOCKED_ON_WEB_RESEARCH_CONFIG": "Tier 7.6 Research Gateway Repair",
+            }.get(blocker, "Unknown — check dependency graph")
+        _persist_routing(routing, message, thread_id, override,
+                        kanban_card_id=card_id)
+        db.close()
+        return jsonify(routing), 200
+    # ── end Tier 7 routing ───────────────────────────────────────────
 
     if classify_only:
         routing["classify_only"] = True

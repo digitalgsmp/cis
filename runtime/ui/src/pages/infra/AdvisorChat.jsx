@@ -1093,6 +1093,20 @@ export default function AdvisorChat() {
           [data.final_route]: content,
         }));
       }
+      // Tier 7: Handle pipeline/archive card responses
+      if (data.kanban_card_id) {
+        const cardInfo = {
+          card_id: data.kanban_card_id,
+          route: data.route,
+          blocked_by: data.blocked_by || null,
+          next_unlock: data.next_unlock || null,
+          confidence: data.confidence,
+        };
+        setRouterPanelContents(prev => ({
+          ...prev,
+          pipeline: cardInfo,
+        }));
+      }
     } catch (e) {
       console.error("Router send failed:", e);
       setRouterResponse({ error: e.message });
