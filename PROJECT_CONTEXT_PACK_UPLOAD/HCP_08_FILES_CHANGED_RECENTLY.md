@@ -1,7 +1,75 @@
 # Files Changed Recently
-Generated: 2026-06-08 12:06 UTC | Run: run-435fc4ee2184
+Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 42a4514 Add minimal closeout handoff writer
+
+## tools/closeout.sh 
+
+## f6db743 Add gate results markers for state write
+
+## tools/gates/gate_closeout_complete.sh 
+
+## 871ebf7 Add minimal state write executor
+
+## tools/state_write.py 
+
+## b76a79b Add build method and advisor role context rules
+
+## config/agents_static.yaml 
+
+## config/hcp_static.yaml 
+
+## d7ae7fe Add Tier 6.4 pipeline transition gates
+
+## tools/gates/_gate_common.sh 
+
+## tools/gates/gate_consensus_signal_valid.sh 
+
+## tools/gates/gate_eric_approval_present.sh 
+
+## tools/gates/gate_implementation_artifact_present.sh 
+
+## tools/gates/gate_proposal_schema_valid.sh 
+
+## tools/gates/gate_research_artifact_present.sh 
+
+## tools/gates/gate_review_round_valid.sh 
+
+## tools/gates/test_tier_6_4_gates.sh 
+
+## b34c0ea Reconcile Tier 6.1 and 6.4 gate marker specs
+
+## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
+
+## docs/CIS_TIER_6_4_PIPELINE_TRANSITION_GATES_DESIGN.md 
+
+## fe7b07f Refresh generated context after Tier 6 checkpoint
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 7295e92 Fix keep_section swap: Proposal write keeps Review, Review write keeps Proposal
 
@@ -38,103 +106,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md 
 
 ## docs/CIS_TIER_6_2_GATE_CLOSEOUT_COMPLETE_V2_DESIGN.md 
-
-## f7e476e Track Hermes CLI wrapper backup after Tier 5 startup gate repair
-
-## runtime/config/bin/hermes.wrapper 
-
-## 326de83 Retire legacy Phase 3/4 context briefing startup gate
-
-## tools/archive/generate_context_briefing.py 
-
-## tools/archive/verify_context_briefing_freshness.py 
-
-## e6be51f tier 5 final closeout — regenerate context + log closeout trigger design
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 2cf6bcc tier 5.7 add gitignore rule for live_backups
-
-## .gitignore 
-
-## dd38304 tier 5.7 clean stale context packs
-
-## PROJECT_CONTEXT_PACK/00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK/01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK/02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK/03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK/04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK/05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK/06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK/07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK/08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK/09_TERMS_AND_NAMING.md 
-
-## a6f7856 tier 5.6 gate_export_agreement.sh — export manifest verification gate
-
-## tools/gates/gate_export_agreement.sh 
-
-## tools/gates/gate_runner.sh 
-
-## 7129116 tier 5.5 generate_all.py — shared run ID orchestrator + export manifest
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/export/generate_agents_md.py 
-
-## tools/export/generate_all.py 
-
-## tools/export/generate_hcp.py 

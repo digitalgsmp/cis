@@ -281,6 +281,12 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
     # Verification-hardening rule
     lines.append("**Verification-hardening rule (2026-05-31):** " + agents_static.get("verification_hardening_rule", "").strip().replace("\n", " "))
     lines.append("")
+    # Evidence-Backed Response Rule
+    lines.append("**Evidence-Backed Response Rule**")
+    lines.append("")
+    for line in shared.get("evidence_rule", "").strip().splitlines():
+        lines.append(line)
+    lines.append("")
     lines.append("---")
     lines.append("")
 
@@ -760,6 +766,13 @@ def render_hcp_06(stamp, hcp_static, agents_static):
     lines.append("## Verification-Hardening Rule (2026-05-31)")
     lines.append("")
     for line in s["verification_hardening_rule_summary"].strip().splitlines():
+        lines.append(line)
+    lines.append("")
+
+    # Evidence-Backed Response Rule
+    lines.append("## Evidence-Backed Response Rule")
+    lines.append("")
+    for line in s["evidence_rule_text"].strip().splitlines():
         lines.append(line)
     lines.append("")
 

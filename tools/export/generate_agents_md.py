@@ -159,6 +159,10 @@ def render(static, runs, decisions, questions, actions, blockers, run_id=None):
             lines.append(f"> {line}")
         lines.append("")
 
+    lines.append("## 12. Evidence-Backed Response Rule")
+    lines.append(static.get("evidence_rule", "").strip())
+    lines.append("")
+
     return "\n".join(lines)
 
 

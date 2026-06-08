@@ -12,6 +12,22 @@ shared:
   repo_url: "https://github.com/digitalgsmp/cis"
   current_phase: "Tier 5 Context Export Pipeline — IN PROGRESS"
   cis_definition: "CIS is a Hermes-native adversarial deliberation engine. The pipeline is the product. The state spine is bidirectional: it briefs the pipeline from verified history and receives verified outputs from completed pipeline runs."
+  evidence_rule: |
+    CIS must not rely on trust-based agent self-reporting.
+    Every consequential agent response must be accompanied by one of:
+      1. Raw local evidence: command output, git status/show, file contents,
+         DB query output, test output, generated artifact path plus verification.
+      2. External research evidence: cited source, retrieved document,
+         quoted or summarized source material with citation.
+    Agent summaries may follow evidence, but must not replace it.
+    Claims such as "passed," "clean," "unchanged," "verified," "no mutation,"
+    "ready to commit," or "complete" are incomplete unless accompanied by evidence.
+    Report pattern: state command/source → paste raw evidence → short interpretation.
+    The operator should not be required to manually rerun routine verification
+    commands unless Hermes lacks access, the command requires operator-only credentials,
+    or an external advisor explicitly requests independent human verification.
+    The Verification Hardening Rule is the V4 Implementer-specific application of
+    this general principle.
 
 ###########################################################################
 # HCP_00 — README START HERE
@@ -509,6 +525,25 @@ hcp_06:
     canonical state, and do not bypass Eric Gate. Their role is to help
     Eric evaluate Hermes proposals, identify gaps, challenge scope, and
     produce bounded directives before V4 Implementer executes.
+
+  evidence_rule_text: |
+    **Evidence-Backed Response Rule**
+
+    CIS must not rely on trust-based agent self-reporting.
+    Every consequential agent response must be accompanied by:
+    1. Raw local evidence: command output, git status/show, file contents,
+       DB query output, test output, artifact path plus verification.
+    2. External research evidence: cited source, document reference,
+       quoted or summarized source material with citation.
+    Agent summaries may follow evidence, but must not replace it.
+    Claims such as "passed," "clean," "unchanged," "verified," "no mutation,"
+    "ready to commit," or "complete" are incomplete unless accompanied by evidence.
+    Report pattern: command/source → raw evidence → interpretation.
+    The operator should not be required to manually rerun routine verification
+    commands unless Hermes lacks access, the command requires operator-only credentials,
+    or an external advisor explicitly requests independent human verification.
+    The verification-hardening rule is the V4 Implementer-specific application of
+    this general principle.
 
   build_method: |
     CIS is being built from the Dependency Graph Build Plan using minimal

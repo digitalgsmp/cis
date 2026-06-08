@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-08 12:06 UTC | Run: run-435fc4ee2184
+Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -50,6 +50,26 @@ NeMo preflight is used for evidence collection only.
 **V4 Implementer self-report is not a source of truth.** Completion is accepted only after
 deterministic evidence. Accepted evidence: git diff, test output, DB queries, endpoint
 responses, service health, browser/UI state, independent reviewer pass/fail.
+
+## Evidence-Backed Response Rule
+
+**Evidence-Backed Response Rule**
+
+CIS must not rely on trust-based agent self-reporting.
+Every consequential agent response must be accompanied by:
+1. Raw local evidence: command output, git status/show, file contents,
+   DB query output, test output, artifact path plus verification.
+2. External research evidence: cited source, document reference,
+   quoted or summarized source material with citation.
+Agent summaries may follow evidence, but must not replace it.
+Claims such as "passed," "clean," "unchanged," "verified," "no mutation,"
+"ready to commit," or "complete" are incomplete unless accompanied by evidence.
+Report pattern: command/source → raw evidence → interpretation.
+The operator should not be required to manually rerun routine verification
+commands unless Hermes lacks access, the command requires operator-only credentials,
+or an external advisor explicitly requests independent human verification.
+The verification-hardening rule is the V4 Implementer-specific application of
+this general principle.
 
 ## Kanban Contingency
 

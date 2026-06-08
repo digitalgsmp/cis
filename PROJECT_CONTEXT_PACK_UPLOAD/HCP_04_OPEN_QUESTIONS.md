@@ -1,7 +1,10 @@
 # Open Questions — Hermes Harness / CIS
-Generated: 2026-06-08 12:06 UTC | Run: run-435fc4ee2184
+Generated: 2026-06-08 17:43 UTC | Run: run-906d3aa96057
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## OQ-SEED-005 — Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Imp
+Status: OPEN
 
 ## OQ-SEED-003 — Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or
 Status: OPEN
