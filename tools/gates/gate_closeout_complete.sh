@@ -515,13 +515,12 @@ fi
 
 # ── Check Phase 2 result ─────────────────────────────────────────────
 
-finalize_results_file
-
 if [ "$PHASE2_FAILED" -ne 0 ]; then
     echo ""
     echo "Phase 2 FAILED — STATE_WRITE succeeded but postcondition check failed."
     echo "Spine rows exist. Closeout NOT completed. Verification gap detected."
     echo "Gate results: $GATE_RESULTS_FILE"
+    finalize_results_file
     exit 3
 fi
 
@@ -579,4 +578,6 @@ echo "  CLOSEOUT COMPLETE"
 echo "  Run ID:  $RUN_ID"
 echo "  Node:    $NODE_ID"
 echo "═══════════════════════════════════════════"
+append_gate_result "closeout" "closeout" "$CLOSEOUT_SCRIPT --run-id $RUN_ID --node-id $NODE_ID" 0 "PASS" "CLOSEOUT COMPLETE: $CLOSEOUT_OUTPUT"
+finalize_results_file
 exit 0
