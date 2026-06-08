@@ -276,7 +276,14 @@ init_results_file
 
 GATE_GIT_STATE="${SCRIPT_DIR}/gate_git_state.sh"
 require_script "$GATE_GIT_STATE" "gate_git_state.sh"
-run_gate "gate_git_state" "$GATE_GIT_STATE" || PHASE1_FAILED=1
+# Forward expected files if GATE_GIT_EXPECTED_FILES is set
+if [ -n "${GATE_GIT_EXPECTED_FILES:-}" ]; then
+    # Split on whitespace — each token is a file path
+    read -ra EXPECTED_ARRAY <<< "$GATE_GIT_EXPECTED_FILES"
+    run_gate "gate_git_state" "$GATE_GIT_STATE" "${EXPECTED_ARRAY[@]}" || PHASE1_FAILED=1
+else
+    run_gate "gate_git_state" "$GATE_GIT_STATE" || PHASE1_FAILED=1
+fi
 
 GATE_NO_SECRETS="${SCRIPT_DIR}/gate_no_secrets.sh"
 require_script "$GATE_NO_SECRETS" "gate_no_secrets.sh"
