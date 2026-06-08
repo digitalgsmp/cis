@@ -47,12 +47,12 @@ Verdict: Phase 1 fully absorbed into pre-Tier 0 gateway repair + Tier 2 Kanban c
 
 | Foundation Item | Disposition | Where / Why |
 |---|---|---|
-| 2A — Session-start context injection | **Absorbed** | Tier 8 (MCP Bridge) — query tools feed Drafter context without full AGENTS.md regeneration. Also partially covered by Tier 5 (AGENTS.md auto-loading + HCP packet). |
-| 2B — FTS5 lexical search (POST /api/knowledge/search) | **Absorbed** | Tier 9 (Chroma/VDB) — vector index replaces FTS5. Same goal, better retrieval. |
-| 2C — Import Claude/ChatGPT transcripts | **Dependency-blocked** | Requires session import pipeline stable + VDB (Tier 9) to index. Transcripts exist in docs/claude_chat_transcripts/. import_session.py exists but only handles Hermes sessions. |
+| 2A — Session-start context injection | **Partially absorbed** | Tier 5 AGENTS/HCP exports provide current-state briefing. Future enhancement scheduled for Tier 8 MCP Bridge (query tools). |
+| 2B — FTS5 lexical search (POST /api/knowledge/search) | **Deferred-scheduled** | Tier 9 retrieval layer. Open question: FTS5 + Chroma hybrid vs Chroma-only. |
+| 2C — Import Claude/ChatGPT transcripts | **Deferred-unscheduled** | Blocked on import schema/design, not VDB. VDB indexing depends on imported corpus. Transcripts exist in docs/claude_chat_transcripts/. import_session.py exists but only handles Hermes sessions. |
 | 2D — Notes capture (capture_notes table + /note command) | **Deferred-unscheduled** | No v2.0 tier assigned. Self-contained — no upstream dependencies. Could be built at any time. |
 
-Verdict: Knowledge search and context injection have homes at Tiers 8-9. Transcript import is blocked on VDB. Notes capture is the only item with no scheduled home.
+Verdict: Context injection partially covered by Tier 5 exports, fully at Tier 8. Knowledge search deferred to Tier 9 with hybrid approach open question. Transcript import and notes capture remain unscheduled.
 
 ---
 
@@ -74,7 +74,7 @@ Verdict: UI reorg has a home at Tier 10 but Quick Capture is blocked on notes ca
 | Table | Built? | Disposition |
 |---|---|---|
 | workflow_runs | Yes (Tier 4) | Complete |
-| cards | No | **Dependency-blocked** — needs Tier 7 Kanban integration |
+| cards | No | **Deferred-scheduled** | Not a Tier 7 blocker unless Router Reclassification requires querying card history from SQLite spine. Hermes Kanban `kanban.db` remains coordination source. |
 | research_artifacts | No | **Deferred-unscheduled** — no v2.0 tier |
 | proposals | No | **Deferred-unscheduled** — no v2.0 tier |
 | review_rounds | No | **Superseded** by deliberation_rounds table |
@@ -97,19 +97,25 @@ Verdict: 6 of 15 tables built. project_state added in remediation. 8 remain defe
 
 | Status | Count | Items |
 |---|---|---|
-| Absorbed | 11 | Gateway config (7), context injection, FTS5, UI reorg (3) |
-| Deferred-scheduled | 1 | export_manifests table (Tier 6) |
-| Deferred-unscheduled | 9 | Notes capture, Quick Capture, 6 spine tables |
-| Dependency-blocked | 2 | Claude/ChatGPT import, cards table |
+| Absorbed | 8 | Gateway config (7), UI reorg 3.1-3.3 |
+| Partially absorbed | 1 | Session-start context injection (Tier 5 + Tier 8) |
+| Deferred-scheduled | 4 | FTS5/search (Tier 9), export_manifests (Tier 6), cards table (Tier 7+), UI Quick Capture (Tier 10) |
+| Deferred-unscheduled | 9 | Notes capture, Claude/ChatGPT import, 6 spine tables, Quick Capture panel |
+| Dependency-blocked | 0 | — |
 | Superseded | 2 | Brave search, review_rounds table |
 | Cancelled | 0 | — |
 
+**Scheduling note:** Notes capture is operational infrastructure, not merely UI.
+Consider scheduling as Tier 7.5 or Tier 8 prerequisite, rather than deferring to Tier 10.
+Quick Capture panel (3.4) should follow the capture backend, not precede it.
+
 ## Open Questions for Review
 
-1. Should notes capture (2D) be explicitly scheduled as a standalone Tier or bundled into Tier 10?
-2. Should Claude/ChatGPT import run before VDB (Tier 9) or after? Transcripts must be imported before they can be indexed.
+1. Should notes capture (2D) be explicitly scheduled as Tier 7.5 or Tier 8 prerequisite rather than deferred to Tier 10?
+2. Should Claude/ChatGPT import be scheduled before VDB (Tier 9)? Transcripts must be imported before they can be indexed.
 3. Are the 8 deferred spine tables needed before Tier 8 (MCP Bridge) which queries spine state?
-4. Does the "cards" table need to exist before Tier 7 (Router Kanban integration)?
+4. Does the cards table need to exist before Tier 7 (Router Kanban integration)? Current assessment: not a blocker.
+5. **Should Tier 9 retrieval use FTS5 + Chroma hybrid search or Chroma-only?** FTS5 excels at exact phrase/keyword matching; Chroma excels at semantic similarity. A hybrid approach could combine both strengths.
 
 ---
 
