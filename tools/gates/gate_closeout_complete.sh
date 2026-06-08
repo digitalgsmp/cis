@@ -3,7 +3,7 @@
 # Tier 6.2 — CIS Dependency Graph Build Plan v2.0
 #
 # Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id>
-#                                  [--node-description <text>] [--skip-export]
+#                                  [--node-description <text>]
 #
 # Exit codes:
 #   0 — All phases passed. STATE_WRITE completed. Closeout completed.
@@ -32,7 +32,6 @@ RUN_ID=""
 KANBAN_CARD_ID=""
 NODE_ID=""
 NODE_DESCRIPTION=""
-SKIP_EXPORT=false
 
 # ── Parse CLI arguments ──────────────────────────────────────────────
 while [ $# -gt 0 ]; do
@@ -45,13 +44,11 @@ while [ $# -gt 0 ]; do
             NODE_ID="$2"; shift 2 ;;
         --node-description)
             NODE_DESCRIPTION="$2"; shift 2 ;;
-        --skip-export)
-            SKIP_EXPORT=true; shift ;;
         --db-path)
             DB_PATH="$2"; shift 2 ;;
         *)
             echo "ERROR: unknown argument: $1" >&2
-            echo "Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id> [--node-description <text>] [--skip-export] [--db-path <path>]" >&2
+            echo "Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id> [--node-description <text>] [--db-path <path>]" >&2
             exit 4
             ;;
     esac
@@ -497,49 +494,45 @@ echo "STATE_WRITE PASSED."
 echo ""
 echo "── EXPORT REGENERATION ──"
 
-if [ "$SKIP_EXPORT" = true ]; then
-    echo "Export regeneration SKIPPED (--skip-export flag set)."
-else
-    RUN_GENERATE=false
+RUN_GENERATE=false
 
-    if [ ! -f "$EXPORT_MANIFEST_PATH" ]; then
-        echo "Export manifest missing: $EXPORT_MANIFEST_PATH"
+if [ ! -f "$EXPORT_MANIFEST_PATH" ]; then
+    echo "Export manifest missing: $EXPORT_MANIFEST_PATH"
+    RUN_GENERATE=true
+else
+    MANIFEST_MTIME=$(stat -c %Y "$EXPORT_MANIFEST_PATH" 2>/dev/null) || MANIFEST_MTIME=0
+    if [ "$MANIFEST_MTIME" -lt "$STATE_WRITE_COMPLETION_TS" ]; then
+        echo "Export manifest is older than STATE_WRITE completion — regenerating."
         RUN_GENERATE=true
     else
-        MANIFEST_MTIME=$(stat -c %Y "$EXPORT_MANIFEST_PATH" 2>/dev/null) || MANIFEST_MTIME=0
-        if [ "$MANIFEST_MTIME" -lt "$STATE_WRITE_COMPLETION_TS" ]; then
-            echo "Export manifest is older than STATE_WRITE completion — regenerating."
-            RUN_GENERATE=true
-        else
-            echo "Export manifest is newer than STATE_WRITE completion — skipping regeneration."
-        fi
+        echo "Export manifest is newer than STATE_WRITE completion — skipping regeneration."
+    fi
+fi
+
+if [ "$RUN_GENERATE" = true ]; then
+    if [ ! -f "$GENERATE_ALL_SCRIPT" ]; then
+        echo "generate_all.py not found: $GENERATE_ALL_SCRIPT"
+        finalize_results_file
+        exit 2
     fi
 
-    if [ "$RUN_GENERATE" = true ]; then
-        if [ ! -f "$GENERATE_ALL_SCRIPT" ]; then
-            echo "generate_all.py not found: $GENERATE_ALL_SCRIPT"
-            finalize_results_file
-            exit 2
-        fi
+    GENERATE_OUTPUT=""
+    GENERATE_EXIT=0
+    set +e
+    GENERATE_OUTPUT=$(python3 "$GENERATE_ALL_SCRIPT" --run-id "$RUN_ID" 2>&1)
+    GENERATE_EXIT=$?
+    set -e
 
-        GENERATE_OUTPUT=""
-        GENERATE_EXIT=0
-        set +e
-        GENERATE_OUTPUT=$(python3 "$GENERATE_ALL_SCRIPT" --run-id "$RUN_ID" 2>&1)
-        GENERATE_EXIT=$?
-        set -e
+    echo "${GENERATE_OUTPUT:0:500}"
 
-        echo "${GENERATE_OUTPUT:0:500}"
-
-        if [ "$GENERATE_EXIT" -ne 0 ]; then
-            finalize_results_file
-            echo ""
-            echo "Export regeneration FAILED (exit ${GENERATE_EXIT}) — Phase 2 not reached."
-            echo "Gate results: $GATE_RESULTS_FILE"
-            exit 2
-        fi
-        echo "Export regeneration PASSED."
+    if [ "$GENERATE_EXIT" -ne 0 ]; then
+        finalize_results_file
+        echo ""
+        echo "Export regeneration FAILED (exit ${GENERATE_EXIT}) — Phase 2 not reached."
+        echo "Gate results: $GATE_RESULTS_FILE"
+        exit 2
     fi
+    echo "Export regeneration PASSED."
 fi
 
 # ══════════════════════════════════════════════════════════════════════
@@ -554,12 +547,7 @@ PHASE2_FAILED=0
 
 # ── gate_export_agreement ────────────────────────────────────────────
 
-if [ "$SKIP_EXPORT" = true ]; then
-    echo ""
-    echo "━━━ GATE: gate_export_agreement ━━━"
-    echo "   SKIP: --skip-export flag set"
-    append_gate_result "gate_export_agreement" "post" "${SCRIPT_DIR}/gate_export_agreement.sh" 0 "SKIP" "SKIP: --skip-export flag set"
-elif [ -n "${GATE_EXPORT_AGREEMENT:-}" ]; then
+if [ -n "${GATE_EXPORT_AGREEMENT:-}" ]; then
     GATE_EXPORT_SCRIPT="${SCRIPT_DIR}/gate_export_agreement.sh"
     run_optional_gate "GATE_EXPORT_AGREEMENT" "gate_export_agreement" "$GATE_EXPORT_SCRIPT" || PHASE2_FAILED=1
 else
@@ -655,5 +643,153 @@ echo "  Run ID:  $RUN_ID"
 echo "  Node:    $NODE_ID"
 echo "═══════════════════════════════════════════"
 append_gate_result "closeout" "closeout" "$CLOSEOUT_SCRIPT --run-id $RUN_ID --node-id $NODE_ID" 0 "PASS" "CLOSEOUT COMPLETE: $CLOSEOUT_OUTPUT"
+
+# ── Resolve closeout file path ───────────────────────────────────────
+
+CLOSEOUT_FILE=""
+if echo "$CLOSEOUT_OUTPUT" | grep -q "CLOSEOUT WRITTEN:"; then
+    CLOSEOUT_FILE=$(echo "$CLOSEOUT_OUTPUT" | grep "CLOSEOUT WRITTEN:" | sed 's/CLOSEOUT WRITTEN: //')
+fi
+
+if [ -z "$CLOSEOUT_FILE" ] || [ ! -f "$CLOSEOUT_FILE" ]; then
+    echo ""
+    echo "ERROR: cannot resolve closeout file path from closeout.sh output."
+    echo "Raw output: ${CLOSEOUT_OUTPUT:0:300}"
+    append_gate_result "closeout_artifact" "closeout" "resolve_path" 3 "FAIL" "FAIL: cannot resolve CLOSEOUT_FILE"
+    finalize_results_file
+    exit 3
+fi
+
+# ── Closeout artifact verification ───────────────────────────────────
+
+GATE_CLOSEOUT_ARTIFACT="${SCRIPT_DIR}/gate_closeout_artifact.sh"
+
+if [ -f "$GATE_CLOSEOUT_ARTIFACT" ]; then
+    GATE_CA_OUTPUT=""
+    GATE_CA_EXIT=0
+    set +e
+    GATE_CA_OUTPUT=$("$GATE_CLOSEOUT_ARTIFACT" --closeout-file "$CLOSEOUT_FILE" 2>&1)
+    GATE_CA_EXIT=$?
+    set -e
+    echo "${GATE_CA_OUTPUT:0:300}"
+    if [ "$GATE_CA_EXIT" -ne 0 ]; then
+        echo ""
+        echo "Closeout artifact verification FAILED."
+        append_gate_result "gate_closeout_artifact" "post" "$GATE_CLOSEOUT_ARTIFACT --closeout-file $CLOSEOUT_FILE" "$GATE_CA_EXIT" "FAIL" "FAIL: ${GATE_CA_OUTPUT:0:400}"
+        PHASE2_FAILED=1
+    else
+        append_gate_result "gate_closeout_artifact" "post" "$GATE_CLOSEOUT_ARTIFACT --closeout-file $CLOSEOUT_FILE" 0 "PASS" "${GATE_CA_OUTPUT:0:400}"
+    fi
+else
+    echo ""
+    echo "━━━ GATE: gate_closeout_artifact ━━━"
+    echo "   SKIP: gate_closeout_artifact.sh not found"
+    append_gate_result "gate_closeout_artifact" "post" "${SCRIPT_DIR}/gate_closeout_artifact.sh" 0 "SKIP" "SKIP: script not found"
+fi
+
+# ── Check Phase 2 result ─────────────────────────────────────────────
+
+if [ "$PHASE2_FAILED" -ne 0 ]; then
+    echo ""
+    echo "Phase 2 FAILED — STATE_WRITE succeeded but postcondition check failed."
+    echo "Spine rows exist. Closeout NOT completed. Verification gap detected."
+    echo "Gate results: $GATE_RESULTS_FILE"
+    finalize_results_file
+    exit 3
+fi
+
+echo ""
+echo "Phase 2 PASSED — all post-STATE_WRITE gates passed."
+
+# ══════════════════════════════════════════════════════════════════════
+# COMMIT — Export files
+# ══════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── EXPORT COMMIT ──"
+
+git -C "$CIS_REPO" add \
+    AGENTS.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md \
+    runtime/manifests/EXPORT_MANIFEST.json
+
+EXPORT_COMMIT_MSG="Closeout exports: ${NODE_ID} — ${NODE_DESCRIPTION}"
+git -C "$CIS_REPO" commit -m "$EXPORT_COMMIT_MSG" || {
+    echo ""
+    echo "Export commit FAILED."
+    finalize_results_file
+    exit 3
+}
+
+EXPORT_COMMIT=$(git -C "$CIS_REPO" rev-parse --short HEAD)
+echo "Export commit: $EXPORT_COMMIT"
+
+# ── Inject commit hash into closeout artifact ────────────────────────
+
+sed -i "s/HEAD: <pending>/HEAD: ${EXPORT_COMMIT}/" "$CLOSEOUT_FILE"
+echo "Commit hash injected into: $CLOSEOUT_FILE"
+
+# ══════════════════════════════════════════════════════════════════════
+# COMMIT — Closeout artifact
+# ══════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── CLOSEOUT COMMIT ──"
+
+git -C "$CIS_REPO" add "$CLOSEOUT_FILE"
+
+CLOSEOUT_COMMIT_MSG="Closeout artifact: ${NODE_ID} — exports at ${EXPORT_COMMIT}"
+git -C "$CIS_REPO" commit -m "$CLOSEOUT_COMMIT_MSG" || {
+    echo ""
+    echo "Closeout commit FAILED."
+    finalize_results_file
+    exit 3
+}
+
+CLOSEOUT_COMMIT=$(git -C "$CIS_REPO" rev-parse --short HEAD)
+echo "Closeout commit: $CLOSEOUT_COMMIT"
+
+# ══════════════════════════════════════════════════════════════════════
+# POST-COMMIT VERIFICATION
+# ══════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── POST-COMMIT VERIFICATION ──"
+
+POST_STATUS=$(git -C "$CIS_REPO" status --short)
+EXEMPT="runtime/memory/current_context.json"
+
+if echo "$POST_STATUS" | grep -v "^$" | grep -v "$EXEMPT" | grep -q .; then
+    echo "FAIL: unexpected dirty files after commit."
+    echo "Git status:"
+    echo "$POST_STATUS"
+    finalize_results_file
+    exit 3
+fi
+
+echo "Post-commit verification PASSED — working tree clean."
+
+# ══════════════════════════════════════════════════════════════════════
+# DONE
+# ══════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "═══════════════════════════════════════════"
+echo "  DONE"
+echo "  Run ID:         $RUN_ID"
+echo "  Node:           $NODE_ID"
+echo "  Export commit:  $EXPORT_COMMIT"
+echo "  Closeout commit: $CLOSEOUT_COMMIT"
+echo "═══════════════════════════════════════════"
+append_gate_result "done" "closeout" "git commit" 0 "PASS" "DONE: export=$EXPORT_COMMIT closeout=$CLOSEOUT_COMMIT"
 finalize_results_file
 exit 0

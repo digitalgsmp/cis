@@ -179,6 +179,11 @@ lines.append('- All gates were run through the verified closeout chain.')
 lines.append('- STATE_WRITE completed with deterministic evidence.')
 lines.append('')
 
+# Commit placeholder — injected by gate_closeout_complete.sh after export commit
+lines.append('## Commit')
+lines.append('HEAD: <pending>')
+lines.append('')
+
 # Write output
 output_path = '$OUTPUT_FILE'
 with open(output_path, 'w') as f:
