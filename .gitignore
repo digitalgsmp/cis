@@ -132,5 +132,5 @@ docs/architecture_atlas/original_CISChats/
 data/
 proposals/
 
-# Runtime live backups (pre-existing, not source code)
-/runtime/config/systemd/live_backups/
+# Runtime live backups (tracked for gateway service recovery)
+!/runtime/config/systemd/live_backups/

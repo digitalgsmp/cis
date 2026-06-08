@@ -146,8 +146,19 @@ def query_spine(db_path):
         except Exception:
             row_counts[table] = "?"
 
+    # Query canonical build state from project_state table (Tier 6.5 remediation)
+    state_rows = conn.execute(
+        """SELECT key, value FROM project_state
+           WHERE superseded_at IS NULL
+           AND id = (
+               SELECT MAX(id) FROM project_state ps2
+               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
+           )"""
+    ).fetchall()
+    build_state = {row["key"]: row["value"] for row in state_rows}
+
     conn.close()
-    return decisions, questions, actions, blockers, runs, latest_run, row_counts
+    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state
 
 
 # ── per-file renderers ─────────────────────────────────────────────────────
@@ -185,23 +196,21 @@ def render_hcp_00(stamp, hcp_static, agents_static, head_short, actions):
 
 
 def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
-                   actions, blockers, runs, latest_run, row_counts):
+                   actions, blockers, runs, latest_run, row_counts, build_state):
     s = hcp_static["hcp_01"]
     shared = hcp_static["shared"]
     infra = agents_static.get("infrastructure", {})
     gateways = agents_static.get("gateways", [])
+
+    build_phase = build_state.get("build_phase", "(unknown — project_state table missing)")
 
     lines = ["# CIS Current State"]
     lines.append(f"Version: {s['version']}")
     lines.append(f"Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
     lines.append(f"Authority: {s['authority']}")
 
-    # Status line: derive from actions
-    curr_actions = [a for a in actions if a["status"] in ("IN_PROGRESS", "PENDING")]
-    status_parts = []
-    for a in curr_actions:
-        status_parts.append(a["description"])
-    status_line = " | ".join(status_parts) if status_parts else shared["current_phase"]
+    # Status line: from canonical build state, fall back to actions
+    status_line = build_phase
     lines.append(f"Status: {status_line}")
     lines.append("")
     # Generation stamp
@@ -214,7 +223,7 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
     # Current Objective
     lines.append("## Current Objective")
     lines.append("")
-    lines.append(f"**{shared['current_phase']}.**")
+    lines.append(f"**{build_phase}**")
     lines.append("")
 
     # HEAD and status
@@ -232,7 +241,7 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
         lines.append("**Remaining Tier 5:** " + " → ".join(a["description"] for a in remaining))
         lines.append("")
 
-    lines.append("Do NOT start Tier 6, Judge, UI, VDB/Chroma, router reclassification, or MCP.")
+    lines.append("Do NOT start Tier 7, Judge, UI, VDB/Chroma, router reclassification, or MCP.")
     lines.append("")
 
     # Tier descriptions
@@ -949,7 +958,7 @@ def main():
     agents_static = load_yaml(args.agents_config)
 
     # Query spine
-    decisions, questions, actions, blockers, runs, latest_run, row_counts = query_spine(args.db)
+    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state = query_spine(args.db)
 
     # Build stamp
     stamp = generation_stamp(args.run_id)
@@ -957,7 +966,7 @@ def main():
     # Render each HCP file
     renderers = {
         "HCP_00_README_START_HERE.md": lambda: render_hcp_00(stamp, hcp_static, agents_static, get_git_head(REPO_ROOT)[0], actions),
-        "HCP_01_CURRENT_STATE.md": lambda: render_hcp_01(stamp, hcp_static, agents_static, decisions, questions, actions, blockers, runs, latest_run, row_counts),
+        "HCP_01_CURRENT_STATE.md": lambda: render_hcp_01(stamp, hcp_static, agents_static, decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state),
         "HCP_02_ACTIVE_ARCHITECTURE.md": lambda: render_hcp_02(stamp, hcp_static, agents_static),
         "HCP_03_DECISIONS_LOG.md": lambda: render_hcp_03(stamp, decisions),
         "HCP_04_OPEN_QUESTIONS.md": lambda: render_hcp_04(stamp, questions),

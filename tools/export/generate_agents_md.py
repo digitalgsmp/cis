@@ -59,11 +59,22 @@ def query_spine(db_path):
            ORDER BY created_at DESC"""
     ).fetchall()
 
+    # Query canonical build state from project_state table (Tier 6.5 remediation)
+    state_rows = conn.execute(
+        """SELECT key, value FROM project_state
+           WHERE superseded_at IS NULL
+           AND id = (
+               SELECT MAX(id) FROM project_state ps2
+               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
+           )"""
+    ).fetchall()
+    build_state = {row["key"]: row["value"] for row in state_rows}
+
     conn.close()
-    return runs, decisions, questions, actions, blockers
+    return runs, decisions, questions, actions, blockers, build_state
 
 
-def render(static, runs, decisions, questions, actions, blockers, run_id=None):
+def render(static, runs, decisions, questions, actions, blockers, build_state, run_id=None):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     latest_run_id = runs[0]["id"] if runs else "none"
     rid = run_id or "none"
@@ -76,7 +87,8 @@ def render(static, runs, decisions, questions, actions, blockers, run_id=None):
     lines.append("")
 
     lines.append("## 1. Current Build Phase")
-    lines.append("Tier 4.4 COMPLETE. Tier 5 Context Export Pipeline — IN PROGRESS.")
+    build_phase = build_state.get("build_phase", "(unknown — project_state table missing)")
+    lines.append(build_phase)
     lines.append("Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md")
     lines.append("")
 
@@ -184,8 +196,8 @@ def main():
         sys.exit(2)
 
     static = load_static(args.config)
-    runs, decisions, questions, actions, blockers = query_spine(args.db)
-    output = render(static, runs, decisions, questions, actions, blockers, run_id=args.run_id)
+    runs, decisions, questions, actions, blockers, build_state = query_spine(args.db)
+    output = render(static, runs, decisions, questions, actions, blockers, build_state, run_id=args.run_id)
 
     char_count = len(output)
     if char_count > CHAR_LIMIT:

@@ -17,6 +17,7 @@ ALLOWED_DECISION_STATUSES = {"DECIDED", "OPEN", "SUPERSEDED"}
 ALLOWED_QUESTION_STATUSES = {"OPEN", "RESOLVED", "DEFERRED"}
 ALLOWED_ACTION_STATUSES = {"PENDING", "IN_PROGRESS", "COMPLETE", "BLOCKED", "DEFERRED"}
 ALLOWED_BLOCKER_STATUSES = {"ACTIVE", "RESOLVED"}
+ALLOWED_STATE_SOURCES = {"git", "gate", "manual"}
 
 
 def init_db(db_path=None):
@@ -37,6 +38,13 @@ def init_db(db_path=None):
     )
     if cursor.fetchone() is None:
         migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0001_context_export_state.sql"
+        conn.executescript(migration_path.read_text())
+    # Apply Tier 6.5 remediation migration if not yet applied (project_state table)
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_state'"
+    )
+    if cursor.fetchone() is None:
+        migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0002_project_state.sql"
         conn.executescript(migration_path.read_text())
     return conn
 
@@ -218,4 +226,42 @@ def insert_active_blocker(conn, id, description, status="ACTIVE", resolution=Non
            (id, description, status, resolution, created_at, resolved_at)
            VALUES (?, ?, ?, ?, ?, ?)""",
         (id, description, status, resolution, created_at or datetime.now(timezone.utc).isoformat(), resolved_at),
+    )
+
+
+def insert_project_state(conn, key, value, source, evidence_hash=None, evidence_run_id=None, created_at=None):
+    """Insert one row into project_state (append-only)."""
+    if source not in ALLOWED_STATE_SOURCES:
+        raise ValueError(f"Invalid source '{source}'. Allowed: {', '.join(sorted(ALLOWED_STATE_SOURCES))}")
+    from datetime import datetime, timezone
+    conn.execute(
+        """INSERT INTO project_state
+           (key, value, source, evidence_hash, evidence_run_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (key, value, source, evidence_hash, evidence_run_id,
+         created_at or datetime.now(timezone.utc).isoformat()),
+    )
+
+
+def get_project_state(conn):
+    """Return current project state as {key: value} dict. Only newest unsuperseded row per key."""
+    rows = conn.execute(
+        """SELECT key, value FROM project_state
+           WHERE superseded_at IS NULL
+           AND id = (
+               SELECT MAX(id) FROM project_state ps2
+               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
+           )"""
+    ).fetchall()
+    return {row[0]: row[1] for row in rows}
+
+
+def supersede_project_state(conn, key, superseded_by_id):
+    """Mark all current rows for a key as superseded."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """UPDATE project_state SET superseded_at = ?, superseded_by = ?
+           WHERE key = ? AND superseded_at IS NULL""",
+        (now, superseded_by_id, key),
     )

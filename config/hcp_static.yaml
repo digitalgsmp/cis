@@ -10,7 +10,7 @@ shared:
   project_name: "Hermes Harness / CIS"
   build_authority: "docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md"
   repo_url: "https://github.com/digitalgsmp/cis"
-  current_phase: "Tier 5 Context Export Pipeline — IN PROGRESS"
+  # current_phase removed — now sourced from project_state table in spine
   cis_definition: "CIS is a Hermes-native adversarial deliberation engine. The pipeline is the product. The state spine is bidirectional: it briefs the pipeline from verified history and receives verified outputs from completed pipeline runs."
   evidence_rule: |
     CIS must not rely on trust-based agent self-reporting.
