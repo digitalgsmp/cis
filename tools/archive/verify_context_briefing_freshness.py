@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# DEPRECATED after Tier 5 AGENTS.md context architecture.
+# Historical Phase 3/4 context briefing tooling only. Not active startup tooling.
 """
 CIS Phase 4A — Deterministic Briefing Freshness Verifier v0.1
 
@@ -48,7 +50,6 @@ STATIC_SOURCES: list[str] = [
     os.path.join(PROJECT_ROOT, "seed_intent_corpus/SEED_INTENT_EXCERPTS.md"),
     os.path.join(PROJECT_ROOT, "seed_intent_corpus/SESSION_ORIENTATION_PROMPT.md"),
     os.path.join(PROJECT_ROOT, "cis_kernel/build/CIS_SCRATCHPAD.md"),
-    os.path.join(PROJECT_ROOT, "PROJECT_CONTEXT_PACK/05_NEXT_ACTIONS.md"),
 ]
 
 # Dynamic source: latest handoff (resolved at runtime, same logic as generator)

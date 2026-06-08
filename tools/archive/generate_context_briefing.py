@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# DEPRECATED after Tier 5 AGENTS.md context architecture.
+# Historical Phase 3/4 context briefing tooling only. Not active startup tooling.
 """
 CIS Phase 3A — Automatic Context Loader v0.1
 
