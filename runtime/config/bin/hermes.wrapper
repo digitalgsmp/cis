@@ -1,0 +1,41 @@
+# Reference backup of active Hermes CLI wrapper.
+# Active runtime file lives at /home/eric/.local/bin/hermes.
+# Tracks Tier 5 AGENTS.md startup preflight for recovery if wrapper is overwritten.
+#!/usr/bin/env bash
+unset PYTHONPATH
+unset PYTHONHOME
+
+# CIS Tier 5 — AGENTS.md freshness gate
+MAX_AGE="${HERMES_AGENTS_MAX_AGE_SECONDS:-86400}"
+PROJECT_ROOT="${CIS_PROJECT_ROOT:-/mnt/projects/cis}"
+AGENTS_MD="$PROJECT_ROOT/AGENTS.md"
+
+# Preflight: AGENTS.md must exist, be non-empty, and be fresh
+if [ ! -f "$AGENTS_MD" ]; then
+    echo "[CIS] HARD FAIL: AGENTS.md not found at $AGENTS_MD" >&2
+    echo "[CIS] Run: cd /mnt/projects/cis && python3 tools/export/generate_agents_md.py" >&2
+    exit 2
+fi
+
+if [ ! -s "$AGENTS_MD" ]; then
+    echo "[CIS] HARD FAIL: AGENTS.md is empty ($AGENTS_MD)" >&2
+    exit 2
+fi
+
+now=$(date +%s)
+mtime=$(stat -c %Y "$AGENTS_MD")
+age=$(( now - mtime ))
+if [ "$age" -gt "$MAX_AGE" ]; then
+    hours=$(( age / 3600 ))
+    max_hours=$(( MAX_AGE / 3600 ))
+    echo "[CIS] HARD FAIL: AGENTS.md is stale (${hours}h old, max allowed: ${max_hours}h)" >&2
+    echo "[CIS] Run: cd /mnt/projects/cis && python3 tools/export/generate_agents_md.py" >&2
+    exit 2
+fi
+
+# Pass — proceed to Hermes
+HERMES_BIN="/home/eric/.hermes/hermes-agent/venv/bin/hermes"
+if [ -n "$HERMES_HOME" ] && [ -x "$HERMES_HOME/hermes-agent/venv/bin/hermes" ]; then
+    HERMES_BIN="$HERMES_HOME/hermes-agent/venv/bin/hermes"
+fi
+exec "$HERMES_BIN" "$@"
