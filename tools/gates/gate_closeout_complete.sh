@@ -539,12 +539,14 @@ CLOSEOUT_MANIFEST="${CIS_REPO}/runtime/manifests/CLOSEOUT_${RUN_ID}.json"
 
 if [ ! -f "$CLOSEOUT_SCRIPT" ]; then
     echo "closeout.sh not found: $CLOSEOUT_SCRIPT"
-    echo "This is expected if closeout.sh has not been implemented yet (Tier 6.x)."
+    echo "closeout.sh missing — closeout incomplete. Node is not DONE."
     echo ""
-    echo "All gates PASSED. STATE_WRITE completed. Closeout script not yet available."
+    echo "All gates PASSED. STATE_WRITE completed. Closeout artifact NOT written."
     echo "Gate results: $GATE_RESULTS_FILE"
     echo "Expected manifest: $CLOSEOUT_MANIFEST"
-    exit 0
+    append_gate_result "closeout" "closeout" "$CLOSEOUT_SCRIPT --run-id $RUN_ID --node-id $NODE_ID" 3 "FAIL" "FAIL: closeout.sh not found at $CLOSEOUT_SCRIPT"
+    finalize_results_file
+    exit 3
 fi
 
 CLOSEOUT_OUTPUT=""
@@ -566,6 +568,8 @@ if [ "$CLOSEOUT_EXIT" -ne 0 ]; then
     echo "Closeout script FAILED (exit ${CLOSEOUT_EXIT})."
     echo "All gates passed and STATE_WRITE completed, but CLOSEOUT_*.md was not written."
     echo "Gate results: $GATE_RESULTS_FILE"
+    append_gate_result "closeout" "closeout" "$CLOSEOUT_SCRIPT --run-id $RUN_ID --node-id $NODE_ID" "$CLOSEOUT_EXIT" "FAIL" "FAIL: closeout.sh exit ${CLOSEOUT_EXIT}: ${CLOSEOUT_OUTPUT:0:400}"
+    finalize_results_file
     exit 3
 fi
 
