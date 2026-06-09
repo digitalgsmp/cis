@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-09 00:45 UTC | Run: run-c1ff1607f3cc | Latest pipeline: run-05b24781207e
+Generated: 2026-06-09 01:55 UTC | Run: run-dedef3bea93d | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.
+Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
