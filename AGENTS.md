@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-09 05:26 UTC | Run: run-2d269628edad | Latest pipeline: run-88032ce506724
+Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.
+Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -53,6 +53,8 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - /home/eric/.hermes/hermes-agent/agent/usage_pricing.py:731 — Added completion_tokens_details.reasoning_tokens fallback
 
 ## 4. Active Decisions
+- [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON block. Freeform model body is stored as documentation and never parsed for routing. Every Drafter and Reviewer response must end with a FINAL_JSON block containing role, status, summary, recommendation, next_action. Role-scoped status values: Drafter emits PROPOSAL_READY or REVISION_READY only. Reviewer emits CONSENSUS_REACHED, OBJECTIONS, or ESCALATE only. If FINAL_JSON is missing or malformed, orchestrator issues one repair prompt then falls back to constrained text-scanning. Markdown heading presence (### Summary, ### Recommendation) must never cause validation failure.
+- [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate, or closeout execution. workflow_runs is the authoritative in-flight work object. deliberation_rounds stores per-round Drafter/Reviewer history. Router creates a workflow_runs row and returns run_id. Orchestrator accepts --run-id and reads topic from workflow_runs. Gates verify from SQLite. Kanban code paths are commented out and preserved as legacy. kanban_card_id is null on all new pipeline runs.
 - [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. The CIS toolchain (generators, gates, database layer, static config templates) may be copied or bootstrapped into a new project repo. Projects do not share one runtime spine. Projects do not import a central CIS repo as a live dependency for generated context or state. Cross-project contamination is avoided through filesystem and repo isolation. A second project initializes its own repo with its own spine, static config, and generated outputs. The --project-root model requires no database schema migration, no generator refactoring, and no multi-project routing logic. It is a zero-implementation decision.
 - [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use numbered migration files under runtime/schema/migrations/. Verified artifacts are never rewritten.
 - [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active profiles. Not before.

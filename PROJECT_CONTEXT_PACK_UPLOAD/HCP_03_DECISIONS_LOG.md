@@ -1,10 +1,12 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-06-09 05:26 UTC | Run: run-2d269628edad
+Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-06-09 | [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON blo | The router/Kanban canary failed with ERROR because Drafter Round 2 output was mi | DECIDED | spine record |
+| 2026-06-09 | [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate | Kanban was documented as temporary scaffolding in the June 6 smoke test. The spi | DECIDED | spine record |
 | 2026-06-08 | [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. Th | Eric Gate approved 2026-06-08 | DECIDED | spine record |
 | 2026-06-07 | [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use num |  | DECIDED | spine record |
 | 2026-06-07 | [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active  |  | DECIDED | spine record |

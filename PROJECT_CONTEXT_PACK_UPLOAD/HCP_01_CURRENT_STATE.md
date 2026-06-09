@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-09
 Authority: Eric (Architect)
-Status: Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.
+Status: Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
 
-Generated: 2026-06-09 05:26 UTC | Run: run-2d269628edad
+Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.**
+**Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.**
 
-**HEAD:** `e6da565`.
+**HEAD:** `2671d59`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -365,7 +365,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 |-------|------|
 | workflow_runs | 5 |
 | deliberation_rounds | 4 |
-| project_decisions | 11 |
+| project_decisions | 13 |
 | open_questions | 6 |
 | next_actions | 12 |
 | active_blockers | 6 |
