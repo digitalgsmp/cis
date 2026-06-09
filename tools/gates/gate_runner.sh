@@ -44,7 +44,7 @@ run_gate() {
 
 # ── Gate 1: Git state (always runs — dirty tree is expected to fail) ─
 
-run_gate "gate_git_state" "${SCRIPT_DIR}/gate_git_state.sh" || exit $FAILED
+run_gate "gate_git_state" "${SCRIPT_DIR}/gate_git_state.sh" "$@" || exit $FAILED
 
 # ── Gate 2: No secrets (always runs) ────────────────────────────────
 
