@@ -161,6 +161,12 @@ def render(static, runs, decisions, questions, actions, blockers, build_state, r
     lines.append(static.get("role_identity_rule", "").strip())
     lines.append("")
 
+    startup = static.get("startup_protocol", "").strip()
+    if startup:
+        lines.append("## 10.5. READ_ONLY_STANDING_BY Startup Protocol")
+        lines.append(startup)
+        lines.append("")
+
     lines.append("## 11. Seed Intent — Eric's Own Words")
     si = static.get("seed_intent", {})
     lines.append(si.get("instruction", ""))

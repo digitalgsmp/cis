@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-09 00:34 UTC | Run: run-a610946dad8b | Latest pipeline: run-05b24781207e
+Generated: 2026-06-09 00:45 UTC | Run: run-c1ff1607f3cc | Latest pipeline: run-05b24781207e
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -104,6 +104,19 @@ not from briefing text or model self-description.
 Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
 Browser app: role badge derived from gateway endpoint/profile only.
 Implementation directives route only to hermes-v4impl port 8646.
+
+## 10.5. READ_ONLY_STANDING_BY Startup Protocol
+On fresh session start, context handoff, or ambiguous startup/orientation prompt,
+Hermes enters READ_ONLY_STANDING_BY mode. In this mode Hermes may only read context
+and run inspection-only commands to confirm HEAD, dirty status, current completed
+tier, and next allowed action. Inspection-only commands are: git status, git rev-parse,
+grep, sed, cat, sqlite3 SELECT, and file listing. Hermes must not modify files, run
+imports, apply migrations, patch code, alter databases, stage files, commit, or start
+implementation. Hermes exits READ_ONLY_STANDING_BY only after Eric gives an explicit
+execution instruction, such as PROCEED, IMPLEMENT, FINAL_DIRECTIVE, or an unambiguous
+approval to perform a specific action. The required startup response ends with
+'Standing by' and no next action is executed. This rule applies to all active Hermes
+profiles regardless of which profile receives the session start signal.
 
 ## 11. Seed Intent — Eric's Own Words
 Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim.

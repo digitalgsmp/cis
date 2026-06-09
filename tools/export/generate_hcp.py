@@ -724,6 +724,15 @@ def render_hcp_06(stamp, hcp_static, agents_static):
         lines.append(line)
     lines.append("")
 
+    # READ_ONLY_STANDING_BY Startup Protocol
+    startup = s.get("startup_protocol_text", "").strip()
+    if startup:
+        lines.append("## READ_ONLY_STANDING_BY Startup Protocol")
+        lines.append("")
+        for line in startup.splitlines():
+            lines.append(line)
+        lines.append("")
+
     # CIS Pipeline Roles
     lines.append("## CIS Pipeline Roles")
     lines.append("")

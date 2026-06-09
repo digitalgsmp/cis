@@ -4,7 +4,7 @@ Date: 2026-06-09
 Authority: Eric (Architect)
 Status: Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.
 
-Generated: 2026-06-09 00:34 UTC | Run: run-a610946dad8b
+Generated: 2026-06-09 00:45 UTC | Run: run-c1ff1607f3cc
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.**
 
-**HEAD:** `aeb7b30`.
+**HEAD:** `1830024`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.

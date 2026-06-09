@@ -517,6 +517,21 @@ hcp_06:
     Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
     Implementation directives route only to hermes-v4impl port 8646.
 
+  startup_protocol_text: |
+    **READ_ONLY_STANDING_BY Startup Protocol**
+
+    On fresh session start, context handoff, or ambiguous startup/orientation prompt,
+    Hermes enters READ_ONLY_STANDING_BY mode. In this mode Hermes may only read context
+    and run inspection-only commands to confirm HEAD, dirty status, current completed
+    tier, and next allowed action. Inspection-only commands are: git status, git rev-parse,
+    grep, sed, cat, sqlite3 SELECT, and file listing. Hermes must not modify files, run
+    imports, apply migrations, patch code, alter databases, stage files, commit, or start
+    implementation. Hermes exits READ_ONLY_STANDING_BY only after Eric gives an explicit
+    execution instruction, such as PROCEED, IMPLEMENT, FINAL_DIRECTIVE, or an unambiguous
+    approval to perform a specific action. The required startup response ends with
+    "Standing by" and no next action is executed. This rule applies to all active Hermes
+    profiles regardless of which profile receives the session start signal.
+
   external_advisor_deliberation_role: |
     Until CIS is self-reliant, ChatGPT and Claude function as external
     advisor-deliberators for the build. They temporarily provide the
