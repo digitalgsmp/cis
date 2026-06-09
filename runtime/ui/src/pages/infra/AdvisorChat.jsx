@@ -1093,10 +1093,11 @@ export default function AdvisorChat() {
           [data.final_route]: content,
         }));
       }
-      // Tier 7: Handle pipeline/archive card responses
-      if (data.kanban_card_id) {
+      // Tier 7: Handle pipeline/archive card responses (run_id or legacy kanban_card_id)
+      const pipelineId = data.run_id || data.kanban_card_id;
+      if (pipelineId) {
         const cardInfo = {
-          card_id: data.kanban_card_id,
+          card_id: pipelineId,
           route: data.route,
           blocked_by: data.blocked_by || null,
           next_unlock: data.next_unlock || null,

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-09 02:11 UTC | Run: run-97cca642e1bb | Latest pipeline: run-05b24781207e
+Generated: 2026-06-09 05:26 UTC | Run: run-2d269628edad | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -81,6 +81,10 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-005] hermes-gateway.service auto-overwrite mechanism may reintroduce service misconfiguration. Service was repaired at commit 353cef5 after being overwritten from Flash/Research profile to r1 profile. Manual service identity check recommended at session start until root cause is fixed.
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-88032ce506724] Draft a brief proposal for replacing Kanban pipeline transport with SQLite spine — ERROR (0 rounds, incomplete)
+- [run-3a0ee8f0fa724] Spine-native canary after deliberation_rounds persistence patch: confirm orchest — ERROR (0 rounds, incomplete)
+- [run-b77483fe75234] spine canary quick test — CONSENSUS_REACHED (1 rounds, 2026-06-09T05:09:44.255404+00:00)
+- [run-9957d6ad08f44] Spine-native canary: confirm orchestrator runs from workflow_runs without Kanban — ERROR (0 rounds, incomplete)
 - [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
 
 ## 9. Verification Hardening Rule

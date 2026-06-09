@@ -5,7 +5,7 @@ import sqlite3
 import urllib.request
 import requests
 import http.client
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 
 # ALLOV1-BE-001: Lifecycle observability imports
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 advisor_bp = Blueprint('advisor', __name__)
 
 DB_PATH = "/mnt/projects/cis/runtime/db/cis_memory.db"
+SPINE_DB_PATH = "/mnt/projects/cis/data/cis_memory.db"  # CIS spine
 
 # Agents that participate in deliberation (parallel mode, reconciliation).
 # Prime is fast chat. Qwen is execution worker. Neither deliberates.
@@ -1237,57 +1238,34 @@ def _persist_routing(routing, original_message, thread_id, override,
     conn.close()
 
 
-# ── Tier 7: Kanban card creation ────────────────────────────────────────
+# ── Tier 7: Workflow run creation (spine-native) ─────────────────────────
+# DEPRECATED: _create_kanban_card() — Kanban is retired as pipeline transport.
+# See session_handoffs/PROPOSAL_RETIRE_KANBAN_SPINE_API.md
+#
+# def _create_kanban_card(message, routing, thread_id=None):
+#     ... (commented out — spine-native path now used)
+#
+# KEPT for legacy/compatibility: function body preserved below.
 
-def _create_kanban_card(message, routing, thread_id=None):
-    """Create a Kanban card on cis-pipeline board via `hermes kanban create` CLI.
-    Returns card_id string or None on failure."""
-    import subprocess
-    route = routing["route"]
-    # Determine card prefix from route
-    prefix_map = {
-        "ARCHIVE_REQUIREMENTS_DISCOVERY": "[ARCHIVE]",
-        "EXTERNAL_RESEARCH": "[RESEARCH]",
-        "v4_drafter": "[DRAFT]",
-        "v4_reviewer": "[REVIEW]",
-        "fast": "[RESEARCH]",
-        "multihop": "[RESEARCH]",
-    }
-    prefix = prefix_map.get(route, "[PIPELINE]")
-    title = f"{prefix} {message[:80]}{'...' if len(message) > 80 else ''}"
 
-    # Card body: original prompt verbatim + context
-    body_lines = [
-        "## Directive",
-        message,
-        "",
-        "## Context",
-        f"- Route: {route}",
-        f"- Thread: {thread_id or 'none'}",
-    ]
-    blocker = ROUTER_BLOCKERS.get(route)
-    if blocker:
-        body_lines.append(f"- Blocker: {blocker}")
-    body = "\n".join(body_lines)
-
-    # Assignee
-    agent = routing.get("agent")
-    assignee = agent if agent and agent != "unknown" else None
-
-    cmd = ["hermes", "kanban", "create", title, "--body", body,
-           "--tenant", "cis-pipeline", "--created-by", "router", "--json"]
-    if assignee:
-        cmd.extend(["--assignee", assignee])
-
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30,
-                               env={**__import__('os').environ, "HERMES_HOME": "/home/eric/.hermes-v4impl"})
-        if result.returncode == 0 and result.stdout.strip():
-            data = json.loads(result.stdout)
-            return data.get("id") or data.get("card_id") or result.stdout.strip()
-    except Exception:
-        pass
-    return None
+def _create_workflow_run(topic, route, agent=None):
+    """Create a workflow_runs row and return the run_id.
+    Uses the spine as the authoritative work object — no Kanban."""
+    import uuid
+    run_id = f"run-{uuid.uuid4().hex[:13]}"
+    now = datetime.now(timezone.utc).isoformat()
+    max_rounds = 3
+    conn = sqlite3.connect(SPINE_DB_PATH)
+    conn.execute("""
+        INSERT INTO workflow_runs
+            (id, topic, route, status, result, kanban_board, requires_eric_review,
+             max_rounds, max_consecutive_revisions, rounds_completed, created_at, updated_at)
+        VALUES (?, ?, ?, 'PENDING', 'ERROR', 'cis-pipeline', 1,
+                ?, 3, 0, ?, ?)
+    """, (run_id, topic, route, max_rounds, now, now))
+    conn.commit()
+    conn.close()
+    return run_id
 
 
 # ── Router dispatch helpers ──────────────────────────────────────────────
@@ -1992,9 +1970,9 @@ def route_message():
         }), 403
     # ── end enforcement ──────────────────────────────────────────────
 
-    # ── Tier 7: Pipeline/Archive routes create Kanban cards ──────────
-    # Deterministic fast paths (FINAL_DIRECTIVE, JUDGE_REQUEST) bypass Kanban.
-    # Pipeline routes (draft, review, research, archive) create durable cards.
+    # ── Tier 7: Pipeline/Archive routes create spine workflow runs ───
+    # Deterministic fast paths (FINAL_DIRECTIVE, JUDGE_REQUEST) bypass workflow runs.
+    # Pipeline routes (draft, review, research, archive) create durable spine records.
     tier7_pipeline_routes = {
         "ARCHIVE_REQUIREMENTS_DISCOVERY", "EXTERNAL_RESEARCH",
         "v4_drafter", "v4_reviewer", "fast", "multihop"
@@ -2003,8 +1981,9 @@ def route_message():
         override and override in ROUTER_AGENT_MAP and
         override not in ("v4_implementer", "qwen")
     ):
-        card_id = _create_kanban_card(message, routing, thread_id)
-        routing["kanban_card_id"] = card_id
+        run_id = _create_workflow_run(message, routing["route"])
+        routing["run_id"] = run_id
+        routing["kanban_card_id"] = None  # legacy compatibility
         routing["agent_response"] = None
         # Add blocker info if applicable
         blocker = ROUTER_BLOCKERS.get(routing["route"])
@@ -2015,7 +1994,7 @@ def route_message():
                 "BLOCKED_ON_WEB_RESEARCH_CONFIG": "Tier 7.6 Research Gateway Repair",
             }.get(blocker, "Unknown — check dependency graph")
         _persist_routing(routing, message, thread_id, override,
-                        kanban_card_id=card_id)
+                        kanban_card_id=run_id)
         db.close()
         return jsonify(routing), 200
     # ── end Tier 7 routing ───────────────────────────────────────────

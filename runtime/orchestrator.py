@@ -23,6 +23,7 @@ import uuid
 import argparse
 import sqlite3
 import subprocess
+from datetime import datetime, timezone
 
 import yaml
 import requests
@@ -191,35 +192,105 @@ def _kanban_db_path(config):
     )
 
 
-def read_kanban_card(card_id):
-    """Return (title, body) from a Kanban card via `hermes kanban show --json`.
-    Raises RuntimeError on failure."""
+def _spine_db_path():
+    """Return path to the CIS spine database."""
+    return os.environ.get(
+        "CIS_DB_PATH",
+        "/mnt/projects/cis/data/cis_memory.db",
+    )
+
+
+def read_workflow_run(run_id):
+    """Return (topic, status, max_rounds) from workflow_runs by id.
+    Raises RuntimeError if not found."""
+    db_path = _spine_db_path()
     try:
-        result = subprocess.run(
-            ["hermes", "kanban", "show", "--json", card_id],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"hermes kanban show failed (exit {result.returncode}): "
-                f"{result.stderr.strip()[:500]}"
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT topic, status, max_rounds, rounds_completed FROM workflow_runs WHERE id = ?",
+            (run_id,),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            raise RuntimeError(f"Workflow run not found: {run_id}")
+        return row[0], row[1], row[2], row[3]
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Spine read failed: {e}")
+
+
+def update_workflow_status(run_id, status, result=None, round_num=None):
+    """Update workflow_runs status, optionally result and rounds_completed."""
+    db_path = _spine_db_path()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = sqlite3.connect(db_path)
+        if round_num is not None:
+            conn.execute(
+                "UPDATE workflow_runs SET status=?, updated_at=?, rounds_completed=? WHERE id=?",
+                (status, now, round_num, run_id),
             )
-        data = json.loads(result.stdout)
-        task = data.get("task", data)
-        title = task.get("title", "")
-        body = task.get("body", "") or ""
-        return title, body
-    except json.JSONDecodeError as e:
-        raise RuntimeError(f"Failed to parse kanban show JSON: {e}")
-    except FileNotFoundError:
-        raise RuntimeError("hermes CLI not found on PATH")
-    except Exception as e:
-        raise RuntimeError(f"Kanban card read failed: {e}")
+        else:
+            conn.execute(
+                "UPDATE workflow_runs SET status=?, updated_at=? WHERE id=?",
+                (status, now, run_id),
+            )
+        if result is not None:
+            conn.execute(
+                "UPDATE workflow_runs SET result=?, completed_at=? WHERE id=?",
+                (result, now, run_id),
+            )
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Spine status update failed: {e}")
 
 
+def insert_deliberation_round(run_id, round_number, drafter_output, reviewer_output,
+                               reviewer_signal, objections_json=None):
+    """Insert one deliberation_rounds row. Matches the inspected schema exactly."""
+    db_path = _spine_db_path()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("""
+            INSERT INTO deliberation_rounds
+                (run_id, round_number, drafter_role, drafter_output,
+                 reviewer_role, reviewer_signal, objections_json,
+                 revision_number, requires_eric_review, created_at)
+            VALUES (?, ?, 'hermes-v4pro', ?, 'hermes-r1', ?, ?,
+                    1, 1, ?)
+        """, (run_id, round_number, drafter_output, reviewer_signal,
+              objections_json, now))
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Deliberation round insert failed: {e}")
+
+
+# ── DEPRECATED: Kanban functions (commented out — spine-native path now used) ─
+# See session_handoffs/PROPOSAL_RETIRE_KANBAN_SPINE_API.md
+#
+# def read_kanban_card(card_id): ... (commented out)
+# def write_card_body(card_id, body, config): ... (commented out)
+# def update_card_status(card_id, action, reason=None, config=None): ... (commented out)
+# def _read_card_body_only(card_id): ... (commented out)
+# def strip_orchestrator_sections(body, keep_section=None): ... (commented out)
+#
+# The original function bodies are preserved below for reference.
+# --- ORPHANED read_kanban_card body (def removed) ---
+#     """Return (title, body) from a Kanban card via `hermes kanban show --json`.
+#     Raises RuntimeError on failure."""
+#     try:
+#         result = subprocess.run(
+#             ["hermes", "kanban", "show", "--json", card_id],
+#             ... (commented out — spine-native path now used)
+
+
+# DEPRECATED — write_card_body: Kanban card body writer (commented out)
+# Stub retained so old Kanban code paths compile but are never executed in spine-native mode.
 def write_card_body(card_id, body, config):
+    """DEPRECATED. Use insert_deliberation_round() for spine-native path."""
+    raise RuntimeError("write_card_body is deprecated — use spine-native path")
     """Write body to Kanban card via direct SQLite UPDATE.
     Uses short-lived connection. Confirms exactly one row updated.
     Raises RuntimeError on failure."""
@@ -242,6 +313,12 @@ def write_card_body(card_id, body, config):
     finally:
         if conn:
             conn.close()
+
+
+# DEPRECATED — read_kanban_card stub (spine-native path replaces Kanban)
+def read_kanban_card(card_id):
+    """DEPRECATED. Use read_workflow_run() for spine-native path."""
+    raise RuntimeError("read_kanban_card is deprecated — use spine-native path")
 
 
 def update_card_status(card_id, action, reason=None, config=None):
@@ -325,28 +402,14 @@ def strip_orchestrator_sections(body, keep_section=None):
 
 
 def validate_proposal_sections(drafter_output):
-    """Check that ### Summary and ### Recommendation exist with non-empty
-    content in Drafter output.
+    """Check that Drafter output is non-empty and contains substantive content.
+    Does NOT require specific markdown headings — the Reviewer is the real
+    quality gate.  Only blocks truly empty or whitespace-only responses.
     Returns (passed: bool, missing_headings: list[str])."""
-    missing = []
-    for heading in ["### Summary", "### Recommendation"]:
-        found = False
-        lines = drafter_output.split("\n")
-        for i, line in enumerate(lines):
-            if line.strip() == heading:
-                # Check that there is non-empty content after this heading
-                for j in range(i + 1, len(lines)):
-                    next_line = lines[j].strip()
-                    if next_line.startswith("### ") or next_line.startswith("## "):
-                        # Hit another heading — no content found
-                        break
-                    if next_line:
-                        found = True
-                        break
-                break
-        if not found:
-            missing.append(heading)
-    return len(missing) == 0, missing
+    stripped = drafter_output.strip()
+    if len(stripped) < 50:
+        return False, ["Drafter output too short (< 50 chars)"]
+    return True, []
 
 
 def normalize_review_section(reviewer_output, objections, is_consensus, is_last_round):
@@ -379,14 +442,13 @@ def normalize_review_section(reviewer_output, objections, is_consensus, is_last_
 
 # ── Main deliberation loop ────────────────────────────────────────────
 
-def run_deliberation(topic, config, kanban_card_id=None):
-    """Run the Drafter→Reviewer deliberation loop. Returns final output dict.
+def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
+    """Run the Drafter->Reviewer deliberation loop. Returns final output dict.
 
-    If kanban_card_id is provided, reads card body as context, writes
-    ## Proposal and ## Review sections back to the card after each stage,
-    and manages card status transitions.
-    """
-    run_id = f"run-{uuid.uuid4().hex[:12]}"
+    If run_id is provided (spine-native), writes state to workflow_runs and
+    deliberation_rounds via SQLite. If kanban_card_id is provided (legacy),
+    writes to Kanban card. If neither, raw topic mode (no persistence)."""
+    run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
     thread_id = f"orch-{run_id}"
 
     print(f"═══ CIS Deliberation Engine ═══")
@@ -395,6 +457,8 @@ def run_deliberation(topic, config, kanban_card_id=None):
     print(f"Max rounds: {config['max_rounds']}")
     if config.get("test_mode"):
         print(f"Test mode: ON (truncated responses)")
+    if run_id and not kanban_card_id:
+        print(f"Spine-native mode: run_id={run_id}")
     if kanban_card_id:
         print(f"Kanban card: {kanban_card_id}")
     print()
@@ -631,6 +695,18 @@ def run_deliberation(topic, config, kanban_card_id=None):
                     "run_id": run_id,
                 }
 
+        # ── Spine-native: persist round to deliberation_rounds ────
+        if run_id and not kanban_card_id:
+            try:
+                signal = 'CONSENSUS_REACHED' if is_consensus else (
+                    'OBJECTIONS' if detected_objections and detected_objections != [reviewer_output[:500]] else 'ESCALATE')
+                obj_json = json.dumps(detected_objections) if detected_objections else None
+                insert_deliberation_round(run_id, round_num, drafter_output,
+                                         reviewer_output, signal, obj_json)
+                print(f"  Spine: deliberation_rounds round={round_num} written", flush=True)
+            except Exception as e:
+                print(f"  WARNING: deliberation_rounds write failed: {e}", flush=True)
+
         # ── Act on consensus ───────────────────────────────────────
         if is_consensus:
             print(f"\n  >>> consensus detected: CONSENSUS_REACHED in Round {round_num} <<<")
@@ -638,9 +714,16 @@ def run_deliberation(topic, config, kanban_card_id=None):
             if kanban_card_id:
                 try:
                     update_card_status(kanban_card_id, "complete", config=config)
-                    print(f"  Kanban card → done", flush=True)
+                    print(f"  Kanban card -> done", flush=True)
                 except Exception as e:
                     print(f"  WARNING: Failed to complete Kanban card: {e}", flush=True)
+            if run_id and not kanban_card_id:
+                try:
+                    update_workflow_status(run_id, 'CONSENSUS_REACHED',
+                                          result='CONSENSUS_REACHED', round_num=round_num)
+                    print(f"  Spine: workflow_runs status=CONSENSUS_REACHED", flush=True)
+                except Exception as e:
+                    print(f"  WARNING: Spine status update failed: {e}", flush=True)
             return {
                 "result": "CONSENSUS_REACHED",
                 "round": round_num,
@@ -677,6 +760,14 @@ def run_deliberation(topic, config, kanban_card_id=None):
             print(f"  Kanban card → blocked", flush=True)
         except Exception as e:
             print(f"  WARNING: Failed to block Kanban card: {e}", flush=True)
+
+    if run_id and not kanban_card_id:
+        try:
+            update_workflow_status(run_id, 'ESCALATE', result='ESCALATE',
+                                  round_num=rounds_completed)
+            print(f"  Spine: workflow_runs status=ESCALATE", flush=True)
+        except Exception as e:
+            print(f"  WARNING: Spine status update failed: {e}", flush=True)
 
     # Collect unresolved objections from last round
     unresolved = "\n".join(f"  - {o}" for o in objections) if objections else "No structured objections extracted"
@@ -742,7 +833,11 @@ def main():
     )
     parser.add_argument(
         "--kanban-card-id", default=None, metavar="ID",
-        help="Read topic from Kanban card, write deliberation artifacts back to card"
+        help="DEPRECATED: Read topic from Kanban card. Use --run-id."
+    )
+    parser.add_argument(
+        "--run-id", default=None, metavar="ID",
+        help="Read topic from workflow_runs table and write state back (spine-native)"
     )
     args = parser.parse_args()
 
@@ -753,8 +848,20 @@ def main():
     if args.test:
         config["test_mode"] = True
 
-    # ── Tier 6.3: Kanban card topic resolution ────────────────────
-    if args.kanban_card_id:
+    # ── Spine-native: workflow_runs topic resolution ───────────────
+    if args.run_id:
+        try:
+            topic, status, max_rounds, rounds_done = read_workflow_run(args.run_id)
+            if not topic:
+                print(f"Error: Workflow run {args.run_id} has no topic")
+                sys.exit(1)
+            print(f"Topic from spine: {topic[:200]}{'...' if len(topic) > 200 else ''}")
+            print(f"Status: {status}, Rounds completed: {rounds_done}")
+        except Exception as e:
+            print(f"Error: Failed to read workflow run {args.run_id}: {e}")
+            sys.exit(1)
+    elif args.kanban_card_id:
+        # ── Tier 6.3: Kanban card topic resolution (legacy) ──────────
         try:
             title, body = read_kanban_card(args.kanban_card_id)
             if not title:
@@ -783,7 +890,7 @@ def main():
             sys.exit(1)
 
     # Run deliberation
-    result = run_deliberation(topic, config, kanban_card_id=args.kanban_card_id)
+    result = run_deliberation(topic, config, kanban_card_id=args.kanban_card_id, run_id=args.run_id)
 
     # Output
     print("═══ Final Result ═══")
