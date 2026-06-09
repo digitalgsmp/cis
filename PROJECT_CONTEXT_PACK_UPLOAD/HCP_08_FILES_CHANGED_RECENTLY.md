@@ -1,7 +1,33 @@
 # Files Changed Recently
-Generated: 2026-06-08 23:32 UTC | Run: run-0f52471c07ee
+Generated: 2026-06-09 00:04 UTC | Run: run-af283a499b30
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 84a7bb3 Regenerate context after Tier 7.5a corpus audit closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 58fe147 Preserve quick advisor routing deliberation artifact
 
@@ -230,7 +256,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## f6db743 Add gate results markers for state write
 
 ## tools/gates/gate_closeout_complete.sh 
-
-## 871ebf7 Add minimal state write executor
-
-## tools/state_write.py 

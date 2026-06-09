@@ -46,6 +46,13 @@ def init_db(db_path=None):
     if cursor.fetchone() is None:
         migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0002_project_state.sql"
         conn.executescript(migration_path.read_text())
+    # Apply Tier 7.5b DAM migration if not yet applied (dam_assets + FTS5)
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='dam_assets'"
+    )
+    if cursor.fetchone() is None:
+        migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0003_dam.sql"
+        conn.executescript(migration_path.read_text())
     return conn
 
 

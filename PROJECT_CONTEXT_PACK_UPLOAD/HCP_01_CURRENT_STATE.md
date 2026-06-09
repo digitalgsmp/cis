@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-08
+Date: 2026-06-09
 Authority: Eric (Architect)
 Status: Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.
 
-Generated: 2026-06-08 23:32 UTC | Run: run-0f52471c07ee
+Generated: 2026-06-09 00:04 UTC | Run: run-af283a499b30
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7.5a COMPLETE. Tier 7.5b Clean Subset Import + FTS5 ready.**
 
-**HEAD:** `58fe147`.
+**HEAD:** `84a7bb3`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
