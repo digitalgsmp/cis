@@ -1,7 +1,51 @@
 # Files Changed Recently
-Generated: 2026-06-09 00:04 UTC | Run: run-af283a499b30
+Generated: 2026-06-09 00:34 UTC | Run: run-a610946dad8b
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## aeb7b30 Implement Tier 7.5b DAM text import and FTS5 search
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/api/dam.py 
+
+## runtime/app.py 
+
+## runtime/dam/__init__.py 
+
+## runtime/dam/importer.py 
+
+## runtime/db/dam_db.py 
+
+## runtime/db/database.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/manifests/dam_frozen_manifest.txt 
+
+## runtime/schema/migrations/0003_dam.sql 
+
+## tools/manifest/generate_dam_manifest.py 
 
 ## 84a7bb3 Regenerate context after Tier 7.5a corpus audit closeout
 
@@ -252,7 +296,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 42a4514 Add minimal closeout handoff writer
 
 ## tools/closeout.sh 
-
-## f6db743 Add gate results markers for state write
-
-## tools/gates/gate_closeout_complete.sh 
