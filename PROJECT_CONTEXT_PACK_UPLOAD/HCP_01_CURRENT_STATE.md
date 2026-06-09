@@ -4,7 +4,7 @@ Date: 2026-06-09
 Authority: Eric (Architect)
 Status: Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.
 
-Generated: 2026-06-09 01:55 UTC | Run: run-dedef3bea93d
+Generated: 2026-06-09 02:11 UTC | Run: run-97cca642e1bb
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7.5b COMPLETE. Determine Tier 8 MCP Bridge readiness next.**
 
-**HEAD:** `851cbfe`.
+**HEAD:** `e0ba288`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
