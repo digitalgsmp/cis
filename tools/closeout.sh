@@ -94,7 +94,7 @@ ALLOWED_DIRTY=(
     "AGENTS.md"
     "PROJECT_CONTEXT_PACK_UPLOAD/"
     "runtime/manifests/EXPORT_MANIFEST.json"
-    "SESSION_LOG.md"
+    "cis_kernel/source/SESSION_LOG.md"
     "runtime/memory/current_context.json"
 )
 
