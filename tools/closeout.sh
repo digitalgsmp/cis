@@ -274,13 +274,13 @@ if [[ -n "$DIRTY_AFTER" ]]; then
     echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
     _write_spine_record "FAIL" "$START_HEAD" "$END_HEAD" "" "1" "PASS" "PASS" \
         "$COMMIT_HASH" "$(echo -e "$DIRTY_AFTER")" \
-        "final clean check" "repo still dirty after commit" "$LOG_FILE"
+        "final clean check" "repo still dirty after commit" "$LOG_FILE" ""
     exit 1
 fi
 
 # ── Write spine record ────────────────────────────────────────────────────────
 _write_spine_record "PASS" "$START_HEAD" "$END_HEAD" "" "1" "PASS" "PASS" \
-    "$COMMIT_HASH" "" "" "" "$LOG_FILE"
+    "$COMMIT_HASH" "" "" "" "$LOG_FILE" "$PUSH_STATUS"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
