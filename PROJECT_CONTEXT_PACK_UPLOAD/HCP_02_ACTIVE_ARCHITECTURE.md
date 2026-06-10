@@ -1,5 +1,5 @@
 # Active Architecture — Hermes Harness / CIS
-Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
+Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -76,7 +76,7 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 
 | Lane | Profile | Action | Gate |
 |------|---------|--------|------|
-| TRIAGE | Router | Topic classifier creates Kanban card, assigns Research | — |
+| TRIAGE | Router | Topic classifier creates workflow_run, assigns Research | — |
 | RESEARCH | hermes-prime | Grounds topic in evidence (NeMo firewall + Tavily) | Research artifact attached |
 | DRAFT | hermes-v4pro | Generates structured proposal from research + spine briefing | Proposal artifact attached |
 | REVIEW | hermes-r1 | Adversarial challenge. Emits OBJECTIONS or CONSENSUS_REACHED | Loop back to DRAFT or promote |
@@ -88,26 +88,13 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 | EXPORT | generate_all.py | AGENTS.md (Hermes) + HCP_ files (ChatGPT/Claude) | Generated, not manual |
 | DONE | — | Pipeline run complete. Spine enriched | — |
 
-### Shared Kanban Configuration (Phase A Verified)
+### Pipeline Coordination (ADR-013)
 
-Kanban is the cross-profile coordination layer for pipeline tasks.
-All profiles share one board via two env vars in each profile's `.env`:
-
-```
-HERMES_KANBAN_DB=/mnt/projects/cis/data/kanban.db
-HERMES_KANBAN_HOME=/mnt/projects/cis/data
-```
-
-**Both are required.** `HERMES_KANBAN_DB` alone is insufficient — board metadata
-(which boards exist) is stored under `kanban_home()/kanban/boards/`, not in the
-database file. `HERMES_KANBAN_HOME` makes board registration shared.
-
-**Phase A evidence:** Canary card created from prime profile was visible from
-v4pro and r1 profiles with both env vars set.
-
-**Kanban coordinates work; SQLite spine stores verified truth.**
-They serve different layers. Kanban manages tasks, lanes, assignments.
-The spine persists verified decisions, proposals, and project state.
+Kanban is retired as pipeline transport per ADR-013.
+workflow_runs is the authoritative in-flight work object.
+Deliberation rounds stored in deliberation_rounds.
+Implementation evidence in workflow_run_artifacts.
+Eric approval recorded in workflow_runs.eric_approved_at.
 
 ### Tier 0/1 — Built Artifacts
 

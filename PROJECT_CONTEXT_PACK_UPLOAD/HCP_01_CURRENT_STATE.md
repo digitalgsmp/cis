@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-09
+Date: 2026-06-10
 Authority: Eric (Architect)
 Status: Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
 
-Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
+Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.**
 
-**HEAD:** `2671d59`.
+**HEAD:** `4979cca`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -300,10 +300,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 - **V4 Implementer self-report:** Not a source of truth. Completion requires
   deterministic evidence (git diff, test output, DB queries, endpoint responses,
   service health, browser/UI state, independent reviewer pass/fail).
-- **Kanban profile-scoping:** RESOLVED. Kanban IS shareable via env vars
-  (HERMES_KANBAN_DB + HERMES_KANBAN_HOME). Phase A verified.
-- **Gateway restart required for env vars:** `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME`
-  have been added to all profile `.env` files.
+- "Kanban pipeline transport:" RETIRED per ADR-013. workflow_runs is the authoritative work object.
 
 ---
 

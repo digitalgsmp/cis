@@ -1,5 +1,5 @@
 # Terms and Naming — CIS Advisor Loop
-Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
+Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -32,13 +32,12 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 - **blackboard**: Shared artifact space for Research/Drafter/Reviewer/Implementer/Verifier exchange.
 - **Eric Gate**: Human sanity gate after CONSENSUS_REACHED, before FINAL_DIRECTIVE.
 
-## Kanban Coordination Layer (Phase A Verified)
+## Spine-Native Pipeline Transport (ADR-013)
 
-- **shared Kanban**: All Hermes profiles coordinate through one kanban.db. Achieved by setting `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME` to the same shared path in every profile `.env`. Coordinates work (tasks, lanes, assignments). Distinct from the SQLite state spine which stores verified knowledge.
-- **HERMES_KANBAN_DB**: Env var that pins the kanban database file path. Required for cross-profile sharing. Set to `/mnt/projects/cis/data/kanban.db`.
-- **HERMES_KANBAN_HOME**: Env var that pins the kanban root directory (board metadata, workspaces, logs). Required for cross-profile sharing because board registration is stored under `kanban_home()/kanban/boards/`. Set to `/mnt/projects/cis/data`.
-- **Kanban coordination layer**: The shared Kanban board managing CIS pipeline task flow across profiles. Coordinates work; does not store verified knowledge.
-- **state spine**: SQLite database (`cis_memory.db`) storing verified project knowledge. Written only after VERIFY PASS. Distinct from Kanban coordination layer.
+- **workflow_runs**: Authoritative in-flight work object.
+- **deliberation_rounds**: Per-round Drafter/Reviewer history.
+- **workflow_run_artifacts**: Implementation evidence records.
+- **workflow_run_legacy_links**: Historical Kanban card references.
 
 ## Tier 0/1 Built Artifacts
 
@@ -54,4 +53,4 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 - **Deterministic state spine**: SQLite schema organized around workflow events.
 - **Generated HCP export**: HCP_ files from deterministic script. Not manually edited.
 - **External advisor packet**: HCP_ files for ChatGPT and Claude. Read-only.
-- **Kanban contingency**: If shared Kanban fails in gateway context, fall back to Flask/CIS database task tables.
+- **Pipeline contingency**: Kanban retired (ADR-013). Spine-native workflow_runs is authoritative. Fall back to direct SQLite spine access if Flask API unavailable.

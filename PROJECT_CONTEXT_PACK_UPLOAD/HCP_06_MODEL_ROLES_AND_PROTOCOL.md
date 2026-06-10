@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
+Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -47,7 +47,7 @@ profiles regardless of which profile receives the session start signal.
 
 ## Pipeline Protocol
 
-1. **TRIAGE:** Router creates Kanban card, assigns Research profile
+1. **TRIAGE:** Router creates workflow_run, assigns Research profile
 2. **RESEARCH → DRAFT → REVIEW ↔ LOOP:** Adversarial deliberation. 2-3 rounds typical before CONSENSUS_REACHED
 3. **CONSENSUS_REACHED:** Structured Reviewer signal meaning no material objections remain
 4. **ERIC_GATE:** Eric reviews resolved proposal. Pass → IMPLEMENT. Redirect/Insight → DRAFT
@@ -113,8 +113,11 @@ This rule ensures external advisors (ChatGPT, Claude) request evidence in a
 format that produces machine-verifiable output rather than narrativized
 summaries.
 
-## Kanban Contingency
+## Pipeline Contingency
 
-Kanban is preferred for pipeline coordination. `kanban.db` is shared
-across profiles. If Kanban is profile-scoped or unavailable, pipeline uses Flask/CIS
-database task tables as the coordination layer.
+Kanban is retired as pipeline transport (ADR-013). workflow_runs is the
+authoritative in-flight work object. If the Flask API is unavailable,
+pipeline coordination falls back to direct SQLite spine access.
+Implementation evidence is stored in workflow_run_artifacts.
+Eric approval is recorded in workflow_runs.eric_approved_at.
+Approval setter (UI/API/CLI) is pending Foundation Hardening Phase.

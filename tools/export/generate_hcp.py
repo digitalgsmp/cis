@@ -565,11 +565,14 @@ def render_hcp_02(stamp, hcp_static, agents_static):
         lines.append(line)
     lines.append("")
 
-    # Kanban config
-    lines.append("### Shared Kanban Configuration (Phase A Verified)")
+    # Kanban retired per ADR-013
+    lines.append("### Pipeline Coordination (ADR-013)")
     lines.append("")
-    for line in s["kanban_shared_config"].strip().splitlines():
-        lines.append(line)
+    lines.append("Kanban is retired as pipeline transport per ADR-013.")
+    lines.append("workflow_runs is the authoritative in-flight work object.")
+    lines.append("Deliberation rounds stored in deliberation_rounds.")
+    lines.append("Implementation evidence in workflow_run_artifacts.")
+    lines.append("Eric approval recorded in workflow_runs.eric_approved_at.")
     lines.append("")
 
     # Tier 0/1 artifacts
@@ -801,10 +804,10 @@ def render_hcp_06(stamp, hcp_static, agents_static):
         lines.append(line)
     lines.append("")
 
-    # Kanban Contingency
-    lines.append("## Kanban Contingency")
+    # Pipeline Contingency (ADR-013)
+    lines.append("## Pipeline Contingency")
     lines.append("")
-    for line in s["kanban_contingency"].strip().splitlines():
+    for line in s["pipeline_contingency"].strip().splitlines():
         lines.append(line)
     lines.append("")
 
@@ -914,11 +917,13 @@ def render_hcp_09(stamp, hcp_static, agents_static):
         lines.append(f"- **{term}**: {defn}")
     lines.append("")
 
-    # Kanban Terms
-    lines.append("## Kanban Coordination Layer (Phase A Verified)")
+    # Kanban retired per ADR-013 — spine-native transport now
+    lines.append("## Spine-Native Pipeline Transport (ADR-013)")
     lines.append("")
-    for term, defn in s["kanban_terms"].items():
-        lines.append(f"- **{term}**: {defn}")
+    lines.append("- **workflow_runs**: Authoritative in-flight work object.")
+    lines.append("- **deliberation_rounds**: Per-round Drafter/Reviewer history.")
+    lines.append("- **workflow_run_artifacts**: Implementation evidence records.")
+    lines.append("- **workflow_run_legacy_links**: Historical Kanban card references.")
     lines.append("")
 
     # Tier 0/1 terms

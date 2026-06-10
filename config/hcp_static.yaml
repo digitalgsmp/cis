@@ -302,10 +302,7 @@ hcp_01:
     - **V4 Implementer self-report:** Not a source of truth. Completion requires
       deterministic evidence (git diff, test output, DB queries, endpoint responses,
       service health, browser/UI state, independent reviewer pass/fail).
-    - **Kanban profile-scoping:** RESOLVED. Kanban IS shareable via env vars
-      (HERMES_KANBAN_DB + HERMES_KANBAN_HOME). Phase A verified.
-    - **Gateway restart required for env vars:** `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME`
-      have been added to all profile `.env` files.
+    - "Kanban pipeline transport:" RETIRED per ADR-013. workflow_runs is the authoritative work object.
 
   # Reference files (static)
   reference_files: |
@@ -377,7 +374,7 @@ hcp_02:
   pipeline_lanes_table: |
     | Lane | Profile | Action | Gate |
     |------|---------|--------|------|
-    | TRIAGE | Router | Topic classifier creates Kanban card, assigns Research | — |
+    | TRIAGE | Router | Topic classifier creates workflow_run, assigns Research | — |
     | RESEARCH | hermes-prime | Grounds topic in evidence (NeMo firewall + Tavily) | Research artifact attached |
     | DRAFT | hermes-v4pro | Generates structured proposal from research + spine briefing | Proposal artifact attached |
     | REVIEW | hermes-r1 | Adversarial challenge. Emits OBJECTIONS or CONSENSUS_REACHED | Loop back to DRAFT or promote |
@@ -388,26 +385,6 @@ hcp_02:
     | STATE_WRITE | Gated worker | Writes verified results to SQLite spine. Triggers export. Git commit | Only after VERIFY PASS |
     | EXPORT | generate_all.py | AGENTS.md (Hermes) + HCP_ files (ChatGPT/Claude) | Generated, not manual |
     | DONE | — | Pipeline run complete. Spine enriched | — |
-
-  kanban_shared_config: |
-    Kanban is the cross-profile coordination layer for pipeline tasks.
-    All profiles share one board via two env vars in each profile's `.env`:
-
-    ```
-    HERMES_KANBAN_DB=/mnt/projects/cis/data/kanban.db
-    HERMES_KANBAN_HOME=/mnt/projects/cis/data
-    ```
-
-    **Both are required.** `HERMES_KANBAN_DB` alone is insufficient — board metadata
-    (which boards exist) is stored under `kanban_home()/kanban/boards/`, not in the
-    database file. `HERMES_KANBAN_HOME` makes board registration shared.
-
-    **Phase A evidence:** Canary card created from prime profile was visible from
-    v4pro and r1 profiles with both env vars set.
-
-    **Kanban coordinates work; SQLite spine stores verified truth.**
-    They serve different layers. Kanban manages tasks, lanes, assignments.
-    The spine persists verified decisions, proposals, and project state.
 
   bidirectional_spine_text: |
     ### Bidirectional Spine
@@ -605,7 +582,7 @@ hcp_06:
     |---------|------|---------------|-----------|
 
   pipeline_protocol_steps:
-    - "**TRIAGE:** Router creates Kanban card, assigns Research profile"
+    - "**TRIAGE:** Router creates workflow_run, assigns Research profile"
     - "**RESEARCH → DRAFT → REVIEW ↔ LOOP:** Adversarial deliberation. 2-3 rounds typical before CONSENSUS_REACHED"
     - "**CONSENSUS_REACHED:** Structured Reviewer signal meaning no material objections remain"
     - "**ERIC_GATE:** Eric reviews resolved proposal. Pass → IMPLEMENT. Redirect/Insight → DRAFT"
@@ -623,10 +600,13 @@ hcp_06:
     deterministic evidence. Accepted evidence: git diff, test output, DB queries, endpoint
     responses, service health, browser/UI state, independent reviewer pass/fail.
 
-  kanban_contingency: |
-    Kanban is preferred for pipeline coordination. `kanban.db` is shared
-    across profiles. If Kanban is profile-scoped or unavailable, pipeline uses Flask/CIS
-    database task tables as the coordination layer.
+  pipeline_contingency: |
+    Kanban is retired as pipeline transport (ADR-013). workflow_runs is the
+    authoritative in-flight work object. If the Flask API is unavailable,
+    pipeline coordination falls back to direct SQLite spine access.
+    Implementation evidence is stored in workflow_run_artifacts.
+    Eric approval is recorded in workflow_runs.eric_approved_at.
+    Approval setter (UI/API/CLI) is pending Foundation Hardening Phase.
 
 ###########################################################################
 # HCP_07 — RECENT HANDOFF (mostly dynamic — spine + git)
@@ -709,13 +689,6 @@ hcp_09:
     - {name: "hermes-v4impl", label: "V4 Implementer", lane: "IMPLEMENT"}
     - {name: "hermes-qwen", label: "Qwen (paused)", lane: "—"}
 
-  kanban_terms:
-    "shared Kanban": "All Hermes profiles coordinate through one kanban.db. Achieved by setting `HERMES_KANBAN_DB` and `HERMES_KANBAN_HOME` to the same shared path in every profile `.env`. Coordinates work (tasks, lanes, assignments). Distinct from the SQLite state spine which stores verified knowledge."
-    HERMES_KANBAN_DB: "Env var that pins the kanban database file path. Required for cross-profile sharing. Set to `/mnt/projects/cis/data/kanban.db`."
-    HERMES_KANBAN_HOME: "Env var that pins the kanban root directory (board metadata, workspaces, logs). Required for cross-profile sharing because board registration is stored under `kanban_home()/kanban/boards/`. Set to `/mnt/projects/cis/data`."
-    "Kanban coordination layer": "The shared Kanban board managing CIS pipeline task flow across profiles. Coordinates work; does not store verified knowledge."
-    "state spine": "SQLite database (`cis_memory.db`) storing verified project knowledge. Written only after VERIFY PASS. Distinct from Kanban coordination layer."
-
   tier_0_1_terms:
     "orchestrator": "`runtime/orchestrator.py` — Python state machine that runs Drafter→Reviewer deliberation loop. Removes Eric from manual API relay. Bounded by timeouts and input truncation."
     "orchestrator config": "`runtime/orchestrator_config.yaml` — drafter/reviewer timeouts, max rounds, input truncation limits."
@@ -728,4 +701,4 @@ hcp_09:
     "Deterministic state spine": "SQLite schema organized around workflow events."
     "Generated HCP export": "HCP_ files from deterministic script. Not manually edited."
     "External advisor packet": "HCP_ files for ChatGPT and Claude. Read-only."
-    "Kanban contingency": "If shared Kanban fails in gateway context, fall back to Flask/CIS database task tables."
+    "Pipeline contingency": "Kanban retired (ADR-013). Spine-native workflow_runs is authoritative. Fall back to direct SQLite spine access if Flask API unavailable."

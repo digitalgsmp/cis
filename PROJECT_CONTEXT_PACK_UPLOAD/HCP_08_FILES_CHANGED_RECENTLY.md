@@ -1,7 +1,75 @@
 # Files Changed Recently
-Generated: 2026-06-09 05:36 UTC | Run: run-ea88841533dd
+Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 4979cca Migration 0005: retire kanban columns, add eric_approved_at and artifacts table, preserve legacy link — ADR-013
+
+## runtime/schema/migrations/0005_retire_kanban_workflow_fields.sql 
+
+## runtime/schema/spine_schema.sql 
+
+## 6888451 Remove Kanban fields from source code and API layer — ADR-013
+
+## runtime/api/advisor.py 
+
+## runtime/db/database.py 
+
+## runtime/ui/src/pages/infra/AdvisorChat.jsx 
+
+## tools/gates/gate_db_state.py 
+
+## 5635e48 Disconnect Kanban from runtime execution paths, rewrite gates spine-native — ADR-013
+
+## runtime/orchestrator.py 
+
+## runtime/orchestrator_config.yaml 
+
+## tools/gates/_gate_common.sh 
+
+## tools/gates/gate_closeout_complete.sh 
+
+## tools/gates/gate_consensus_signal_valid.sh 
+
+## tools/gates/gate_eric_approval_present.sh 
+
+## tools/gates/gate_implementation_artifact_present.sh 
+
+## tools/gates/gate_proposal_schema_valid.sh 
+
+## tools/gates/gate_research_artifact_present.sh 
+
+## tools/gates/gate_review_round_valid.sh 
+
+## tools/gates/test_tier_6_4_gates.sh 
+
+## tools/state_write.py 
+
+## def2310 Record ADR-012 ADR-013 pipeline stability and advance state to Tier 8 spec planning
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 2671d59 Implement spine-native orchestration transport
 
@@ -258,63 +326,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 8a8c99f Implement Tier 7 Router Reclassification
-
-## runtime/api/advisor.py 
-
-## runtime/api/router.py 
-
-## runtime/ui/src/pages/infra/AdvisorChat.jsx 
-
-## 2cea834 Revise draft plan reconciliation after advisor review
-
-## docs/PLAN_RECONCILIATION.md 
-
-## e43c58c Regenerate context from canonical build state
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 71e7364 Add canonical build-state remediation layer
-
-## .gitignore 
-
-## config/hcp_static.yaml 
-
-## docs/PLAN_RECONCILIATION.md 
-
-## runtime/config/systemd/live_backups/hermes-gateway-r1.service.pre_tier5_2e_20260607_005129 
-
-## runtime/config/systemd/live_backups/hermes-gateway.service.pre_tier5_2e_20260607_005129 
-
-## runtime/db/database.py 
-
-## runtime/schema/migrations/0002_project_state.sql 
-
-## tools/export/generate_agents_md.py 
-
-## tools/export/generate_hcp.py 
-
-## tools/gates/gate_build_state_coherence.sh 
