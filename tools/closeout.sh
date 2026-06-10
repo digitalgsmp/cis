@@ -48,7 +48,7 @@ _write_spine_record() {
     local failure_step="${10}"
     local failure_summary="${11}"
     local log_path="${12}"
-    local push_status="${13}"
+    local push_status="${13:-}"
     local completed_at
     completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
