@@ -12,7 +12,7 @@ Usage:
   python3 orchestrator.py "Your topic here"
   python3 orchestrator.py --config /path/to/config.yaml "Your topic here"
   echo "Your topic here" | python3 orchestrator.py
-  python3 orchestrator.py --kanban-card-id <id> [--test]
+  python3 orchestrator.py --run-id <id> [--test]
 """
 
 import sys
