@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-06-10 03:47 UTC | Run: run-2a19df20210f
+Generated: 2026-06-10 05:51 UTC | Run: run-a72b28729575
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## aa3ffe0 Implement Component 1: Provenance and Lifecycle Base Schema (migration 0008)
+
+## docs/CIS_FOUNDATION_HARDENING_COMPONENT_1_DESIGN.md 
+
+## runtime/schema/migrations/0008_provenance_lifecycle_base.sql 
+
+## f296a76 Add Foundation Hardening Phase scope document
+
+## docs/FOUNDATION_HARDENING_PHASE.md 
+
+## 3d5b92a Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## b8f7619 Regenerate context after session closeout
 
@@ -176,45 +212,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## tools/export/generate_hcp.py 
-
-## 4979cca Migration 0005: retire kanban columns, add eric_approved_at and artifacts table, preserve legacy link — ADR-013
-
-## runtime/schema/migrations/0005_retire_kanban_workflow_fields.sql 
-
-## runtime/schema/spine_schema.sql 
-
-## 6888451 Remove Kanban fields from source code and API layer — ADR-013
-
-## runtime/api/advisor.py 
-
-## runtime/db/database.py 
-
-## runtime/ui/src/pages/infra/AdvisorChat.jsx 
-
-## tools/gates/gate_db_state.py 
-
-## 5635e48 Disconnect Kanban from runtime execution paths, rewrite gates spine-native — ADR-013
-
-## runtime/orchestrator.py 
-
-## runtime/orchestrator_config.yaml 
-
-## tools/gates/_gate_common.sh 
-
-## tools/gates/gate_closeout_complete.sh 
-
-## tools/gates/gate_consensus_signal_valid.sh 
-
-## tools/gates/gate_eric_approval_present.sh 
-
-## tools/gates/gate_implementation_artifact_present.sh 
-
-## tools/gates/gate_proposal_schema_valid.sh 
-
-## tools/gates/gate_research_artifact_present.sh 
-
-## tools/gates/gate_review_round_valid.sh 
-
-## tools/gates/test_tier_6_4_gates.sh 
-
-## tools/state_write.py 
