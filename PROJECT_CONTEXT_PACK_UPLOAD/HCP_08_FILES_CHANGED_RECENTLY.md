@@ -1,7 +1,61 @@
 # Files Changed Recently
-Generated: 2026-06-10 01:21 UTC | Run: run-789983c4d690
+Generated: 2026-06-10 03:15 UTC | Run: run-6592ac474837
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 4a64560 Fix allowed dirty list: SESSION_LOG.md path is cis_kernel/source/SESSION_LOG.md
+
+## tools/closeout.sh 
+
+## 0a3c9ef Add closeout command — wrapper intercept, deterministic engine, session_closeouts table
+
+## runtime/config/bin/hermes.wrapper 
+
+## runtime/schema/migrations/0006_session_closeouts.sql 
+
+## runtime/schema/spine_schema.sql 
+
+## tools/closeout.sh 
+
+## d3f9710 Complete Kanban retirement cleanup in advisor.py and orchestrator.py — ADR-013
+
+## runtime/api/advisor.py 
+
+## runtime/orchestrator.py 
+
+## 30a834c Fix orchestrator docstring: --kanban-card-id → --run-id
+
+## runtime/orchestrator.py 
+
+## f7dfa19 Remove Kanban from generated context — ADR-013
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## config/hcp_static.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/export/generate_hcp.py 
 
 ## 4979cca Migration 0005: retire kanban columns, add eric_approved_at and artifacts table, preserve legacy link — ADR-013
 
@@ -196,112 +250,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/export/generate_hcp.py 
 
 ## 1830024 Refresh generated context after Tier 7.5b closeout
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## aeb7b30 Implement Tier 7.5b DAM text import and FTS5 search
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/api/dam.py 
-
-## runtime/app.py 
-
-## runtime/dam/__init__.py 
-
-## runtime/dam/importer.py 
-
-## runtime/db/dam_db.py 
-
-## runtime/db/database.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/manifests/dam_frozen_manifest.txt 
-
-## runtime/schema/migrations/0003_dam.sql 
-
-## tools/manifest/generate_dam_manifest.py 
-
-## 84a7bb3 Regenerate context after Tier 7.5a corpus audit closeout
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 58fe147 Preserve quick advisor routing deliberation artifact
-
-## docs/Routining the quick advisor.txt
-
-## 1cd4b41 Add Tier 7.5a corpus audit
-
-## docs/audits/corpus_audit_2026-06-08.md 
-
-## tools/audit/corpus_audit.py 
-
-## de44757 Regenerate context after Tier 7.1 Router Reclassification
 
 ## AGENTS.md 
 
