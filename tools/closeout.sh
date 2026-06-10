@@ -48,6 +48,7 @@ _write_spine_record() {
     local failure_step="${10}"
     local failure_summary="${11}"
     local log_path="${12}"
+    local push_status="${13}"
     local completed_at
     completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -56,7 +57,8 @@ _write_spine_record() {
     (started_at, completed_at, status, start_head, end_head,
      dirty_before_json, dirty_after_json, generated_context,
      export_agreement_status, build_state_coherence_status,
-     commit_hash, log_path, failure_step, failure_summary, created_by)
+     commit_hash, log_path, failure_step, failure_summary, created_by,
+     push_status)
 VALUES
     ('$STARTED_AT', '$completed_at', '$status', '$start_head', '$end_head',
      '$(echo "$dirty_before" | sed "s/'/''/g")',
@@ -65,7 +67,8 @@ VALUES
      '$commit_hash', '$log_path',
      '$(echo "$failure_step" | sed "s/'/''/g")',
      '$(echo "$failure_summary" | sed "s/'/''/g")',
-     'operator_command');" 2>/dev/null || \
+     'operator_command',
+     '$push_status');" 2>/dev/null || \
     echo "[CIS CLOSEOUT] Warning: could not write spine record" >&2
 }
 
@@ -217,6 +220,28 @@ else
     COMMIT_HASH=$(git rev-parse --short HEAD)
 fi
 
+# ── Push to GitHub ────────────────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 6b: Pushing to GitHub..."
+PUSH_STATUS="SKIP"
+if git remote get-url origin &>/dev/null; then
+    PUSH_OUT=$(git push origin master 2>&1)
+    PUSH_EXIT=$?
+    echo "$PUSH_OUT"
+    if [ $PUSH_EXIT -eq 0 ]; then
+        PUSH_STATUS="PASS"
+        echo "[CIS CLOSEOUT] GitHub push: PASS"
+    else
+        PUSH_STATUS="FAIL"
+        echo "[CIS CLOSEOUT] WARNING: GitHub push failed — session will still"
+        echo "[CIS CLOSEOUT] close locally. GitHub is not current."
+        echo "[CIS CLOSEOUT] Next action: run 'git push origin master' when"
+        echo "[CIS CLOSEOUT] connectivity is available."
+    fi
+else
+    echo "[CIS CLOSEOUT] No remote origin configured — skipping push."
+fi
+
 # ── Final clean state check ───────────────────────────────────────────────────
 END_HEAD=$(git rev-parse --short HEAD)
 FINAL_STATUS=$(git status --short 2>/dev/null || true)
@@ -267,6 +292,13 @@ else
     echo "[CIS] Committed regenerated context: no (already current)"
 fi
 echo "[CIS] Repo clean: yes"
+if [[ "$PUSH_STATUS" == "PASS" ]]; then
+    echo "[CIS] GitHub push: yes"
+elif [[ "$PUSH_STATUS" == "FAIL" ]]; then
+    echo "[CIS] GitHub push: FAILED — run 'git push origin master' manually"
+else
+    echo "[CIS] GitHub push: skipped (no remote configured)"
+fi
 echo "[CIS] Log: $LOG_FILE"
 echo "[CIS] Next safe action: open new session in READ_ONLY_STANDING_BY"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

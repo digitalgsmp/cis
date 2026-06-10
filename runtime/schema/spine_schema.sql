@@ -73,5 +73,6 @@ CREATE TABLE IF NOT EXISTS session_closeouts (
     log_path                     TEXT,
     failure_step                 TEXT,
     failure_summary              TEXT,
-    created_by                   TEXT NOT NULL DEFAULT 'operator_command'
+    created_by                   TEXT NOT NULL DEFAULT 'operator_command',
+    push_status                  TEXT
 );
