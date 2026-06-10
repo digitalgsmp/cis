@@ -2,7 +2,7 @@
 # gate_closeout_complete.sh v2 — Deterministic Closeout Orchestrator
 # Tier 6.2 — CIS Dependency Graph Build Plan v2.0
 #
-# Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id>
+# Usage: gate_closeout_complete.sh --run-id <id> --node-id <id>
 #                                  [--node-description <text>]
 #
 # Exit codes:
@@ -29,7 +29,6 @@ DB_PATH="${DB_PATH:-${CIS_DB_PATH:-${CIS_REPO}/data/cis_memory.db}}"
 
 # ── CLI arg defaults ─────────────────────────────────────────────────
 RUN_ID=""
-KANBAN_CARD_ID=""
 NODE_ID=""
 NODE_DESCRIPTION=""
 
@@ -38,8 +37,6 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --run-id)
             RUN_ID="$2"; shift 2 ;;
-        --kanban-card-id)
-            KANBAN_CARD_ID="$2"; shift 2 ;;
         --node-id)
             NODE_ID="$2"; shift 2 ;;
         --node-description)
@@ -48,7 +45,7 @@ while [ $# -gt 0 ]; do
             DB_PATH="$2"; shift 2 ;;
         *)
             echo "ERROR: unknown argument: $1" >&2
-            echo "Usage: gate_closeout_complete.sh --run-id <id> --kanban-card-id <id> --node-id <id> [--node-description <text>] [--db-path <path>]" >&2
+            echo "Usage: gate_closeout_complete.sh --run-id <id> --node-id <id> [--node-description <text>] [--db-path <path>]" >&2
             exit 4
             ;;
     esac
@@ -57,10 +54,6 @@ done
 # ── Validate required args ───────────────────────────────────────────
 if [ -z "$RUN_ID" ]; then
     echo "ERROR: --run-id is required" >&2
-    exit 4
-fi
-if [ -z "$KANBAN_CARD_ID" ]; then
-    echo "ERROR: --kanban-card-id is required" >&2
     exit 4
 fi
 if [ -z "$NODE_ID" ]; then
@@ -101,7 +94,6 @@ init_results_file() {
     cat > "$GATE_RESULTS_FILE" <<JSONSTART
 {
   "run_id": "$(json_escape "$RUN_ID")",
-  "kanban_card_id": "$(json_escape "$KANBAN_CARD_ID")",
   "node_id": "$(json_escape "$NODE_ID")",
   "node_description": "$(json_escape "$NODE_DESCRIPTION")",
   "timestamp_started": "$TIMESTAMP_STARTED",
@@ -367,7 +359,7 @@ GATE_IMPLEMENT_EXIT=2
 for entry in "${PIPELINE_GATES[@]}"; do
     IFS=':' read -r env_var gate_name script_path <<< "$entry"
     if [ -n "${!env_var:-}" ]; then
-        run_optional_gate "$env_var" "$gate_name" "$script_path" "--kanban-card-id" "$KANBAN_CARD_ID"
+        run_optional_gate "$env_var" "$gate_name" "$script_path" "--run-id" "$RUN_ID"
         gate_rc=$?
         [ $gate_rc -ne 0 ] && PHASE1_FAILED=1
 
@@ -383,7 +375,7 @@ for entry in "${PIPELINE_GATES[@]}"; do
         echo ""
         echo "━━━ GATE: ${gate_name} ━━━"
         echo "   SKIP: ${env_var} not set"
-        append_gate_result "$gate_name" "pre" "$script_path --kanban-card-id $KANBAN_CARD_ID" 0 "SKIP" "SKIP: ${env_var} not set"
+        append_gate_result "$gate_name" "pre" "$script_path --run-id $RUN_ID" 0 "SKIP" "SKIP: ${env_var} not set"
     fi
 done
 

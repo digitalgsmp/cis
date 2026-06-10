@@ -1,6 +1,7 @@
 #!/bin/bash
-# test_tier_6_4_gates.sh — Test suite for Tier 6.4 pipeline-transition gates
-# Creates Kanban fixture cards, runs all six gates against them, reports results.
+# test_tier_6_4_gates.sh — Test suite for pipeline-transition gates
+# Creates spine fixtures, runs all six gates against them, reports results.
+# Kanban retired per ADR-013. Fixtures now use direct sqlite3 INSERT.
 #
 # Usage: ./test_tier_6_4_gates.sh
 #
@@ -13,13 +14,17 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATES_DIR="$SCRIPT_DIR"
 PASSED=0
 FAILED=0
-FIXTURE_IDS=()
+TOTAL=0
+FIXTURE_RUN_IDS=()
+
+CIS_DB_PATH="${CIS_DB_PATH:-/mnt/projects/cis/data/cis_memory.db}"
 
 cleanup() {
-    # Optional: remove created fixture cards
-    # for id in "${FIXTURE_IDS[@]}"; do
-    #     hermes kanban archive "$id" &>/dev/null || true
-    # done
+    for run_id in "${FIXTURE_RUN_IDS[@]}"; do
+        sqlite3 "$CIS_DB_PATH" "DELETE FROM workflow_run_artifacts WHERE run_id = '$run_id';" 2>/dev/null || true
+        sqlite3 "$CIS_DB_PATH" "DELETE FROM deliberation_rounds WHERE run_id = '$run_id';" 2>/dev/null || true
+        sqlite3 "$CIS_DB_PATH" "DELETE FROM workflow_runs WHERE id = '$run_id';" 2>/dev/null || true
+    done
     true
 }
 trap cleanup EXIT
@@ -27,28 +32,45 @@ trap cleanup EXIT
 # ── Helpers ──────────────────────────────────────────────────────────
 
 create_fixture() {
-    local title="$1"
-    local body="$2"
-    local card_id
-    card_id=$(hermes kanban create "$title" --body "$body" --json 2>&1 | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
-    if [[ -z "$card_id" ]]; then
-        echo "ERROR: failed to create fixture: $title" >&2
-        exit 2
-    fi
-    FIXTURE_IDS+=("$card_id")
-    echo "$card_id"
+    local run_id="test-$(uuidgen 2>/dev/null | tr '[:upper:]' '[:lower:]' | head -c 8 || echo "$RANDOM$RANDOM")"
+    local signal="$1"
+    local requires_eric="${2:-1}"
+    local objections_json="${3:-}"
+    local drafter_output="${4:-Test drafter output content for validation.}"
+    local eric_approved="${5:-}"
+
+    # Insert workflow_run
+    sqlite3 "$CIS_DB_PATH" "INSERT INTO workflow_runs
+        (id, topic, result, status, requires_eric_review, max_rounds,
+         max_consecutive_revisions, rounds_completed, created_at, eric_approved_at)
+        VALUES ('$run_id', 'Test topic for gate validation',
+                'PENDING', 'PENDING', $requires_eric, 3, 3, 1,
+                datetime('now')"${eric_approved:+, '$eric_approved'}");"
+
+    # Insert deliberation_round
+    sqlite3 "$CIS_DB_PATH" "INSERT INTO deliberation_rounds
+        (run_id, round_number, drafter_role, drafter_output,
+         reviewer_role, reviewer_signal, objections_json,
+         revision_number, requires_eric_review, created_at)
+        VALUES ('$run_id', 1, 'hermes-v4pro', '$drafter_output',
+                'hermes-r1', '$signal', ${objections_json:-NULL},
+                1, $requires_eric, datetime('now'));"
+
+    FIXTURE_RUN_IDS+=("$run_id")
+    echo "$run_id"
 }
 
 run_gate() {
     local gate="$1"
-    local card_id="$2"
+    local run_id="$2"
     local expected_exit="$3"
     local expected_msg="$4"
     local desc="$5"
 
     local output exit_code
-    output=$("$GATES_DIR/$gate" --kanban-card-id "$card_id" 2>&1) || exit_code=$?
+    output=$("$GATES_DIR/$gate" --run-id "$run_id" 2>&1) || exit_code=$?
     exit_code=${exit_code:-0}
+    TOTAL=$((TOTAL + 1))
 
     if [[ "$exit_code" == "$expected_exit" ]]; then
         if [[ -n "$expected_msg" ]] && ! echo "$output" | grep -qF "$expected_msg"; then
@@ -65,257 +87,85 @@ run_gate() {
     fi
 }
 
-# ── Fixture 1: All valid markers (passing) ───────────────────────────
+# ── Fixture 1: CONSENSUS_REACHED with all fields ────────────────────
 
-echo "=== Fixture 1: All valid markers ==="
-F1=$(create_fixture "T6.4-test-passing" "## Research Artifact
-Evidence collected.
+echo "=== Fixture 1: CONSENSUS_REACHED, eric_approved ==="
+F1=$(create_fixture "CONSENSUS_REACHED" "1" "" "A valid proposal with summary and recommendation sections." "2026-06-09T00:00:00Z")
 
-## Proposal
-### Summary
-A valid summary.
-### Recommendation
-A valid recommendation.
+run_gate gate_research_artifact_present.sh "$F1" 0 "" "research: drafter output present"
+run_gate gate_proposal_schema_valid.sh "$F1" 0 "" "proposal: drafter output non-empty"
+run_gate gate_review_round_valid.sh "$F1" 0 "" "review: CONSENSUS_REACHED"
+run_gate gate_consensus_signal_valid.sh "$F1" 0 "" "consensus: CONSENSUS_REACHED with requires_eric"
+run_gate gate_eric_approval_present.sh "$F1" 0 "" "eric: approved"
+# gate_implementation: no artifact yet, expect FAIL
+run_gate gate_implementation_artifact_present.sh "$F1" 1 "no implementation artifact" "implement: no artifact inserted"
 
-## Review
-CONSENSUS_REACHED
-remaining_objections: none
-requires_eric_review: true
-
-## Eric Gate
-APPROVED
-
-## Implementation
-Commit: b34c0ea — Reconcile Tier 6.1 and 6.4 gate marker specs
-Modified: /mnt/projects/cis/tools/gates/gate_research_artifact_present.sh
-")
-
-run_gate gate_research_artifact_present.sh "$F1" 0 "" "research: valid markers"
-run_gate gate_proposal_schema_valid.sh "$F1" 0 "" "proposal: valid markers"
-run_gate gate_review_round_valid.sh "$F1" 0 "" "review: valid markers"
-run_gate gate_consensus_signal_valid.sh "$F1" 0 "" "consensus: valid markers"
-run_gate gate_eric_approval_present.sh "$F1" 0 "" "eric: valid markers"
-run_gate gate_implementation_artifact_present.sh "$F1" 0 "" "implement: valid markers"
-
-# ── Fixture 2: Missing Proposal section ──────────────────────────────
+# ── Fixture 2: OBJECTIONS signal ────────────────────────────────────
 
 echo ""
-echo "=== Fixture 2: Missing Proposal section ==="
-F2=$(create_fixture "T6.4-test-missing-proposal" "## Research Artifact
-Evidence.
+echo "=== Fixture 2: OBJECTIONS with objections_json ==="
+F2=$(create_fixture "OBJECTIONS" "1" "'[\"test objection one\", \"test objection two\"]'" "A proposal with objections.")
 
-## Review
-CONSENSUS_REACHED
-remaining_objections: none
-requires_eric_review: true
-")
-run_gate gate_proposal_schema_valid.sh "$F2" 1 "Proposal section missing" "proposal: missing section"
+run_gate gate_review_round_valid.sh "$F2" 0 "" "review: OBJECTIONS with valid objections_json"
+run_gate gate_consensus_signal_valid.sh "$F2" 1 "expected CONSENSUS_REACHED" "consensus: OBJECTIONS fails consensus gate"
 
-# ── Fixture 3: Empty Research Artifact ──────────────────────────────
+# ── Fixture 3: ESCALATE signal ──────────────────────────────────────
 
 echo ""
-echo "=== Fixture 3: Empty Research Artifact ==="
-F3=$(create_fixture "T6.4-test-empty-research" "## Research Artifact
+echo "=== Fixture 3: ESCALATE signal ==="
+F3=$(create_fixture "ESCALATE" "1" "" "Proposal text for escalation test.")
 
-## Proposal
-### Summary
-S.
-### Recommendation
-R.
-")
-run_gate gate_research_artifact_present.sh "$F3" 1 "Research Artifact section empty" "research: empty section"
+run_gate gate_review_round_valid.sh "$F3" 0 "" "review: ESCALATE accepted"
+run_gate gate_consensus_signal_valid.sh "$F3" 1 "expected CONSENSUS_REACHED" "consensus: ESCALATE fails consensus gate"
 
-# ── Fixture 4: APPROVED in wrong section ────────────────────────────
+# ── Fixture 4: CONSENSUS_REACHED, requires_eric=0 (should fail) ────
 
 echo ""
-echo "=== Fixture 4: APPROVED in wrong section ==="
-F4=$(create_fixture "T6.4-test-approved-wrong-section" "## Proposal
-APPROVED
-### Summary
-S.
-### Recommendation
-R.
+echo "=== Fixture 4: CONSENSUS but requires_eric_review false ==="
+F4=$(create_fixture "CONSENSUS_REACHED" "0" "" "Proposal content.")
 
-## Eric Gate
-")
-run_gate gate_eric_approval_present.sh "$F4" 1 "APPROVED not found" "eric: APPROVED in Proposal, not Eric Gate"
+run_gate gate_consensus_signal_valid.sh "$F4" 1 "requires_eric_review is not true" "consensus: requires_eric false rejected"
 
-# ── Fixture 5: Suffixed headings ─────────────────────────────────────
+# ── Fixture 5: Eric not approved ────────────────────────────────────
 
 echo ""
-echo "=== Fixture 5: Suffixed heading ==="
-F5=$(create_fixture "T6.4-test-suffixed-heading" "## Proposal Archive
-### Summary
-S.
-### Recommendation
-R.
+echo "=== Fixture 5: CONSENSUS but no eric_approved ==="
+F5=$(create_fixture "CONSENSUS_REACHED" "1" "" "Proposal content." "")
 
-## Review
-CONSENSUS_REACHED
-remaining_objections: none
-requires_eric_review: true
-")
-run_gate gate_proposal_schema_valid.sh "$F5" 1 "Proposal section missing" "proposal: ## Proposal Archive is not ## Proposal"
+run_gate gate_eric_approval_present.sh "$F5" 1 "Eric approval pending" "eric: not approved fails"
 
-# ── Fixture 6: Duplicate Proposal heading ────────────────────────────
+# ── Fixture 6: Implementation artifact present ──────────────────────
 
 echo ""
-echo "=== Fixture 6: Duplicate Proposal heading ==="
-F6=$(create_fixture "T6.4-test-dup-proposal" "## Proposal
+echo "=== Fixture 6: Implementation artifact with commit hash ==="
+F6=$(create_fixture "CONSENSUS_REACHED" "1" "" "Proposal content." "2026-06-09T00:00:00Z")
+sqlite3 "$CIS_DB_PATH" "INSERT INTO workflow_run_artifacts
+    (run_id, artifact_type, content) VALUES
+    ('$F6', 'implementation', 'Commit: abc1234def — Fixed gate wiring for Tier 8 readiness');"
 
-## Proposal
-### Summary
-Valid summary.
-### Recommendation
-Valid recommendation.
-")
-run_gate gate_proposal_schema_valid.sh "$F6" 1 "duplicate" "proposal: duplicate heading"
-
-# ── Fixture 7: remaining_objections: 0 (rejected) ────────────────────
+run_gate gate_implementation_artifact_present.sh "$F6" 0 "" "implement: artifact with commit hash"
 
 echo ""
-echo "=== Fixture 7: remaining_objections: 0 ==="
-F7=$(create_fixture "T6.4-test-ro-zero" "## Review
-CONSENSUS_REACHED
-remaining_objections: 0
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F7" 1 "rejected remaining_objections" "review: rejects remaining_objections: 0"
-run_gate gate_consensus_signal_valid.sh "$F7" 1 "rejected remaining_objections" "consensus: rejects remaining_objections: 0"
+echo "=== Fixture 7: Implementation artifact with file evidence ==="
+F7=$(create_fixture "CONSENSUS_REACHED" "1" "" "Proposal content." "2026-06-09T00:00:00Z")
+sqlite3 "$CIS_DB_PATH" "INSERT INTO workflow_run_artifacts
+    (run_id, artifact_type, content) VALUES
+    ('$F7', 'implementation', 'Modified: /mnt/projects/cis/tools/gates/_gate_common.sh');"
 
-# ── Fixture 8: remaining_objections: [] (rejected) ──────────────────
+run_gate gate_implementation_artifact_present.sh "$F7" 0 "" "implement: artifact with file evidence"
 
-echo ""
-echo "=== Fixture 8: remaining_objections: [] ==="
-F8=$(create_fixture "T6.4-test-ro-brackets" "## Review
-CONSENSUS_REACHED
-remaining_objections: []
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F8" 1 "rejected remaining_objections" "review: rejects remaining_objections: []"
-run_gate gate_consensus_signal_valid.sh "$F8" 1 "rejected remaining_objections" "consensus: rejects remaining_objections: []"
-
-# ── Fixture 9: Case-insensitive none (NONE, None) ───────────────────
+# ── Fixture 8: Empty drafter_output (placeholder) ───────────────────
 
 echo ""
-echo "=== Fixture 9: Case-insensitive none ==="
-F9a=$(create_fixture "T6.4-test-none-upper" "## Review
-CONSENSUS_REACHED
-remaining_objections: NONE
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F9a" 0 "" "review: accepts NONE (case-insensitive)"
-run_gate gate_consensus_signal_valid.sh "$F9a" 0 "" "consensus: accepts NONE"
-
-F9b=$(create_fixture "T6.4-test-none-mixed" "## Review
-CONSENSUS_REACHED
-remaining_objections: None
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F9b" 0 "" "review: accepts None (case-insensitive)"
-
-# ── Fixture 10: Standalone vs embedded signal ────────────────────────
-
-echo ""
-echo "=== Fixture 10: Standalone vs embedded signal ==="
-F10a=$(create_fixture "T6.4-test-signal-standalone" "## Review
-CONSENSUS_REACHED
-remaining_objections: none
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F10a" 0 "" "review: standalone CONSENSUS_REACHED"
-
-F10b=$(create_fixture "T6.4-test-signal-embedded" "## Review
-We reached CONSENSUS_REACHED after deliberation.
-")
-run_gate gate_review_round_valid.sh "$F10b" 1 "no valid signal" "review: embedded CONSENSUS_REACHED rejected"
-
-F10c=$(create_fixture "T6.4-test-signal-first-word" "## Review
-CONSENSUS_REACHED with additional notes.
-remaining_objections: none
-requires_eric_review: true
-")
-run_gate gate_review_round_valid.sh "$F10c" 0 "" "review: CONSENSUS_REACHED as first word accepted"
-
-# ── Fixture 11: OBJECTIONS dash bullet acceptance ────────────────────
-
-echo ""
-echo "=== Fixture 11: OBJECTIONS with dash bullets ==="
-F11=$(create_fixture "T6.4-test-dash-bullets" "## Review
-OBJECTIONS
-- objection one
-- objection two
-")
-run_gate gate_review_round_valid.sh "$F11" 0 "" "review: OBJECTIONS with dash bullets accepted"
-
-# ── Fixture 12: OBJECTIONS * bullet rejected ─────────────────────────
-
-echo ""
-echo "=== Fixture 12: OBJECTIONS with star bullet rejected ==="
-F12=$(create_fixture "T6.4-test-star-bullets" "## Review
-OBJECTIONS
-* objection one
-* objection two
-")
-run_gate gate_review_round_valid.sh "$F12" 1 "OBJECTIONS missing bullet" "review: OBJECTIONS with * bullets rejected"
-
-# ── Fixture 13: OBJECTIONS + bullet rejected ─────────────────────────
-
-echo ""
-echo "=== Fixture 13: OBJECTIONS with plus bullet rejected ==="
-F13=$(create_fixture "T6.4-test-plus-bullets" "## Review
-OBJECTIONS
-+ objection one
-+ objection two
-")
-run_gate gate_review_round_valid.sh "$F13" 1 "OBJECTIONS missing bullet" "review: OBJECTIONS with + bullets rejected"
-
-# ── Fixture 14: Missing requires_eric_review ─────────────────────────
-
-echo ""
-echo "=== Fixture 14: Missing requires_eric_review ==="
-F14=$(create_fixture "T6.4-test-missing-rer" "## Review
-CONSENSUS_REACHED
-remaining_objections: none
-")
-run_gate gate_consensus_signal_valid.sh "$F14" 1 "missing requires_eric_review" "consensus: missing requires_eric_review"
-
-# ── Fixture 15: requires_eric_review: false ──────────────────────────
-
-echo ""
-echo "=== Fixture 15: requires_eric_review: false ==="
-F15=$(create_fixture "T6.4-test-rer-false" "## Review
-CONSENSUS_REACHED
-remaining_objections: none
-requires_eric_review: false
-")
-run_gate gate_consensus_signal_valid.sh "$F15" 1 "requires_eric_review is false" "consensus: requires_eric_review: false rejected"
-
-# ── Fixture 16: Implementation path outside /mnt/projects/cis/ ──────
-
-echo ""
-echo "=== Fixture 16: Implementation path outside /mnt/projects/cis/ ==="
-F16=$(create_fixture "T6.4-test-path-outside" "## Implementation
-Created: /tmp/some_file.sh
-")
-run_gate gate_implementation_artifact_present.sh "$F16" 1 "no artifact evidence" "implement: path outside /mnt/projects/cis/ rejected"
-
-# ── Fixture 17: Duplicate Eric Gate ──────────────────────────────────
-
-echo ""
-echo "=== Fixture 17: Duplicate Eric Gate ==="
-F17=$(create_fixture "T6.4-test-dup-eric" "## Eric Gate
-
-## Eric Gate
-APPROVED
-")
-run_gate gate_eric_approval_present.sh "$F17" 1 "duplicate" "eric: duplicate heading rejected"
+echo "=== Fixture 8: Empty/placeholder drafter_output ==="
+F8=$(create_fixture "ESCALATE" "1" "" "[ACTUAL OUTPUT NOT RECOVERED]")
+run_gate gate_proposal_schema_valid.sh "$F8" 1 "" "proposal: placeholder rejected"
 
 # ── Summary ──────────────────────────────────────────────────────────
 
 echo ""
 echo "========================================"
-echo "Results: $PASSED passed, $FAILED failed"
+echo "Results: $PASSED passed, $FAILED failed (of $TOTAL total)"
 echo "========================================"
 
 if [[ $FAILED -gt 0 ]]; then

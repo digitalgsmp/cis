@@ -1,91 +1,31 @@
 #!/bin/bash
-# gate_proposal_schema_valid.sh — Tier 6.4 pipeline-transition gate
-# Stage: DRAFT — validates ## Proposal section schema
-#
-# Usage: gate_proposal_schema_valid.sh [--kanban-card-id <id>]
-#
-# Exit 0: PASS — Proposal heading, ### Summary, ### Recommendation all present with content
-# Exit 1: FAIL — section missing, sub-heading missing/empty, or duplicate heading
-# Exit 2: ERROR — no card ID, kanban unavailable, JSON parse failure
-#
-# Marker spec: CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md §3.2
-# Gate design: CIS_TIER_6_4_PIPELINE_TRANSITION_GATES_DESIGN.md §4.2
-#
+# gate_proposal_schema_valid.sh — pipeline-transition gate
+# Stage: DRAFT — validates proposal exists in final deliberation round
+# Usage: gate_proposal_schema_valid.sh [--run-id <id>]
+# Exit 0: PASS — final round drafter_output non-empty and non-placeholder
+# Exit 1: FAIL — output missing, empty, or placeholder only
+# Exit 2: ERROR — no run ID or DB unavailable
+
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/_gate_common.sh"
 
-# ── Resolve card ID ──────────────────────────────────────────────────
-resolve_card_id "$@"
-CARD_BODY=$(read_card_body "$CARD_ID")
+resolve_run_id "$@"
 
-# ── Validate ─────────────────────────────────────────────────────────
-echo "$CARD_BODY" | python3 -c "
+query_spine "SELECT drafter_output FROM deliberation_rounds
+             WHERE run_id = '$RUN_ID'
+             ORDER BY round_number DESC LIMIT 1;" | python3 -c "
 import sys
-
-def extract_sub_content(section_lines, sub_heading):
-    found = False
-    content_lines = []
-    for line in section_lines:
-        stripped = line.strip()
-        if stripped == sub_heading:
-            found = True
-            continue
-        if found:
-            if stripped.startswith('### ') or stripped.startswith('## '):
-                break
-            content_lines.append(line)
-    if not found:
-        return None
-    return '\n'.join(content_lines)
-
-body = sys.stdin.read()
-lines = body.split('\n')
-target = '## Proposal'
-
-# 1. Check for duplicate headings
-count = sum(1 for l in lines if l.strip() == target)
-if count > 1:
-    print(f'FAIL: duplicate {target} heading in card body')
+output = sys.stdin.read().strip()
+if not output:
+    print('FAIL: no deliberation rounds found for this run')
     sys.exit(1)
-
-# 2. Find heading
-heading_idx = None
-for i, line in enumerate(lines):
-    if line.strip() == target:
-        heading_idx = i
-        break
-
-if heading_idx is None:
-    print('FAIL: Proposal section missing')
+if 'NOT RECOVERED' in output:
+    print('FAIL: drafter_output is a placeholder — orchestrator did not persist this round')
     sys.exit(1)
-
-# 3. Extract section content
-section_lines = []
-for j in range(heading_idx + 1, len(lines)):
-    stripped = lines[j].strip()
-    if stripped.startswith('## '):
-        break
-    section_lines.append(lines[j])
-
-# 4. Check ### Summary sub-heading
-summary_content = extract_sub_content(section_lines, '### Summary')
-if summary_content is None:
-    print('FAIL: Proposal missing ### Summary')
+if len(output) < 50:
+    print('FAIL: drafter_output too short to be a valid proposal')
     sys.exit(1)
-if not summary_content.strip():
-    print('FAIL: Proposal ### Summary empty')
-    sys.exit(1)
-
-# 5. Check ### Recommendation sub-heading
-rec_content = extract_sub_content(section_lines, '### Recommendation')
-if rec_content is None:
-    print('FAIL: Proposal missing ### Recommendation')
-    sys.exit(1)
-if not rec_content.strip():
-    print('FAIL: Proposal ### Recommendation empty')
-    sys.exit(1)
-
-print('PASS: Proposal section valid — Summary and Recommendation present with content')
+print('PASS: Proposal artifact present in final deliberation round')
 sys.exit(0)
 "

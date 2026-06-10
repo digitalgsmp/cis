@@ -47,6 +47,3 @@ max_reviewer_input_chars: 4000
 # Test mode: prepends "[TEST MODE] Respond in 3 sentences or fewer." to all prompts.
 # Enable via --test flag or set to true here.
 test_mode: false
-
-# Kanban board for Tier 6.3 card integration
-kanban_board: cis-pipeline

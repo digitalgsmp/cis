@@ -61,7 +61,6 @@ def load_config(config_path=None):
         "max_input_chars": None,
         "max_reviewer_input_chars": 4000,
         "test_mode": False,
-        "kanban_board": "cis-pipeline",
     }
     for key, default in defaults.items():
         if key not in config:
@@ -184,13 +183,7 @@ def detect_objections(reviewer_response_text, config):
 
 # ── Tier 6.3: Kanban integration helpers ──────────────────────────────
 
-def _kanban_db_path(config):
-    """Return path to the Kanban SQLite database."""
-    return os.environ.get(
-        "HERMES_KANBAN_DB",
-        "/mnt/projects/cis/data/kanban.db",
-    )
-
+# RETIRED — _kanban_db_path retired per ADR-013
 
 def _spine_db_path():
     """Return path to the CIS spine database."""
@@ -442,12 +435,12 @@ def normalize_review_section(reviewer_output, objections, is_consensus, is_last_
 
 # ── Main deliberation loop ────────────────────────────────────────────
 
-def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
+def run_deliberation(topic, config, run_id=None):
     """Run the Drafter->Reviewer deliberation loop. Returns final output dict.
 
     If run_id is provided (spine-native), writes state to workflow_runs and
-    deliberation_rounds via SQLite. If kanban_card_id is provided (legacy),
-    writes to Kanban card. If neither, raw topic mode (no persistence)."""
+    deliberation_rounds via SQLite. If None, raw topic mode (no persistence)."""
+    # RETIRED — Kanban retired per ADR-013. All kanban_card_id paths removed.
     run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
     thread_id = f"orch-{run_id}"
 
@@ -457,20 +450,9 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
     print(f"Max rounds: {config['max_rounds']}")
     if config.get("test_mode"):
         print(f"Test mode: ON (truncated responses)")
-    if run_id and not kanban_card_id:
+    if run_id:
         print(f"Spine-native mode: run_id={run_id}")
-    if kanban_card_id:
-        print(f"Kanban card: {kanban_card_id}")
     print()
-
-    # ── Tier 6.3: Kanban card claim ────────────────────────────────
-    if kanban_card_id:
-        try:
-            update_card_status(kanban_card_id, "claim", config=config)
-            print(f"  Kanban card claimed → running", flush=True)
-        except Exception as e:
-            print(f"  ERROR: Failed to claim Kanban card: {e}", flush=True)
-            sys.exit(1)
 
     # Apply max_input_chars if configured
     max_in = config.get("max_input_chars")
@@ -511,16 +493,12 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
         t0 = time.time()
 
         if round_num == 1:
-            # When using Kanban card, skip test prefix for Drafter —
-            # proposal structure validation requires full structured output
-            prefix = "" if kanban_card_id else test_prefix
-            drafter_prompt = prefix + topic + PROPOSAL_STRUCTURE_REQUIREMENT
+            drafter_prompt = test_prefix + topic + PROPOSAL_STRUCTURE_REQUIREMENT
         else:
-            prefix = "" if kanban_card_id else test_prefix
             # Build revision prompt with objections from Reviewer
             objections_text = "\n".join(f"  - {o}" for o in objections)
             drafter_prompt = (
-                f"{prefix}"
+                f"{test_prefix}"
                 f"REVISION REQUEST — Round {round_num}\n\n"
                 f"Original topic: {topic}\n\n"
                 f"The Reviewer raised the following objections to your previous proposal:\n"
@@ -537,13 +515,7 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
             )
         except Exception as e:
             print(f"  ROUND {round_num} DRAFT FAILED: {e}", flush=True)
-            if kanban_card_id:
-                try:
-                    update_card_status(kanban_card_id, "block",
-                                       f"ERROR: DRAFT API failure in round {round_num}: {e}",
-                                       config=config)
-                except Exception:
-                    pass
+            # RETIRED — Kanban retired per ADR-013
             return {
                 "result": "ERROR",
                 "phase": "DRAFT",
@@ -557,52 +529,7 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
         drafter_elapsed = time.time() - t0
         print(f"  ROUND {round_num} DRAFT complete ({drafter_elapsed:.1f}s, {len(drafter_output)} chars)", flush=True)
 
-        # ── Tier 6.3: Validate proposal structure ──────────────────
-        if kanban_card_id:
-            passed, missing = validate_proposal_sections(drafter_output)
-            if not passed:
-                print(f"  ROUND {round_num} DRAFT VALIDATION FAILED: missing {missing}", flush=True)
-                try:
-                    update_card_status(
-                        kanban_card_id, "block",
-                        f"DRAFT validation failed in round {round_num}: missing {', '.join(missing)}",
-                        config=config,
-                    )
-                except Exception:
-                    pass
-                return {
-                    "result": "ERROR",
-                    "phase": "DRAFT_VALIDATION",
-                    "round": round_num,
-                    "error": f"Missing required proposal sections: {', '.join(missing)}",
-                    "run_id": run_id,
-                }
-
-            # ── Write ## Proposal to Kanban card ───────────────────
-            try:
-                current_body, _ = _read_card_body_only(kanban_card_id)
-                cleaned = strip_orchestrator_sections(current_body, keep_section="review")
-                new_body = cleaned + f"\n\n## Proposal\n\n{drafter_output}"
-                if new_body.startswith("\n"):
-                    new_body = new_body.lstrip("\n")
-                write_card_body(kanban_card_id, new_body, config)
-                print(f"  ROUND {round_num} proposal written to Kanban card", flush=True)
-            except Exception as e:
-                print(f"  ROUND {round_num} Kanban body write FAILED: {e}", flush=True)
-                try:
-                    update_card_status(kanban_card_id, "block",
-                                       f"ERROR: Kanban body write failed in round {round_num}: {e}",
-                                       config=config)
-                except Exception:
-                    pass
-                return {
-                    "result": "ERROR",
-                    "phase": "KANBAN_WRITE",
-                    "round": round_num,
-                    "error": f"Kanban body write failed: {e}",
-                    "run_id": run_id,
-                }
-
+        # RETIRED — Kanban proposal validation and card writes retired per ADR-013
         # ── REVIEW phase ───────────────────────────────────────────
         print(f"  ROUND {round_num} REVIEW started ({config['reviewer_agent']})", flush=True)
         t0 = time.time()
@@ -635,13 +562,7 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
             )
         except Exception as e:
             print(f"  ROUND {round_num} REVIEW FAILED: {e}", flush=True)
-            if kanban_card_id:
-                try:
-                    update_card_status(kanban_card_id, "block",
-                                       f"ERROR: REVIEW API failure in round {round_num}: {e}",
-                                       config=config)
-                except Exception:
-                    pass
+            # RETIRED — Kanban retired per ADR-013
             return {
                 "result": "ERROR",
                 "phase": "REVIEW",
@@ -665,38 +586,10 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
             print(f"  no structured signals detected in Reviewer output for Round {round_num}")
             detected_objections = [reviewer_output[:500] + ("..." if len(reviewer_output) > 500 else "")]
 
-        # ── Tier 6.3: Normalize and write ## Review to Kanban card ─
-        if kanban_card_id:
-            is_last = (round_num == config["max_rounds"])
-            review_section = normalize_review_section(
-                reviewer_output, detected_objections, is_consensus, is_last
-            )
-            try:
-                current_body, _ = _read_card_body_only(kanban_card_id)
-                cleaned = strip_orchestrator_sections(current_body, keep_section="proposal")
-                new_body = cleaned + f"\n\n{review_section}"
-                if new_body.startswith("\n"):
-                    new_body = new_body.lstrip("\n")
-                write_card_body(kanban_card_id, new_body, config)
-                print(f"  ROUND {round_num} review written to Kanban card", flush=True)
-            except Exception as e:
-                print(f"  ROUND {round_num} Kanban review write FAILED: {e}", flush=True)
-                try:
-                    update_card_status(kanban_card_id, "block",
-                                       f"ERROR: Kanban review write failed in round {round_num}: {e}",
-                                       config=config)
-                except Exception:
-                    pass
-                return {
-                    "result": "ERROR",
-                    "phase": "KANBAN_WRITE",
-                    "round": round_num,
-                    "error": f"Kanban review write failed: {e}",
-                    "run_id": run_id,
-                }
+        # RETIRED — Kanban review write to card retired per ADR-013
 
         # ── Spine-native: persist round to deliberation_rounds ────
-        if run_id and not kanban_card_id:
+        if run_id:
             try:
                 signal = 'CONSENSUS_REACHED' if is_consensus else (
                     'OBJECTIONS' if detected_objections and detected_objections != [reviewer_output[:500]] else 'ESCALATE')
@@ -711,13 +604,8 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
         if is_consensus:
             print(f"\n  >>> consensus detected: CONSENSUS_REACHED in Round {round_num} <<<")
             print()
-            if kanban_card_id:
-                try:
-                    update_card_status(kanban_card_id, "complete", config=config)
-                    print(f"  Kanban card -> done", flush=True)
-                except Exception as e:
-                    print(f"  WARNING: Failed to complete Kanban card: {e}", flush=True)
-            if run_id and not kanban_card_id:
+            # RETIRED — Kanban retired per ADR-013
+            if run_id:
                 try:
                     update_workflow_status(run_id, 'CONSENSUS_REACHED',
                                           result='CONSENSUS_REACHED', round_num=round_num)
@@ -752,16 +640,9 @@ def run_deliberation(topic, config, kanban_card_id=None, run_id=None):
     print(f"═══ escalating: max rounds ({config['max_rounds']}) reached without CONSENSUS_REACHED ═══")
     print()
 
-    if kanban_card_id:
-        try:
-            update_card_status(kanban_card_id, "block",
-                               f"ESCALATE: max rounds ({config['max_rounds']}) reached without consensus",
-                               config=config)
-            print(f"  Kanban card → blocked", flush=True)
-        except Exception as e:
-            print(f"  WARNING: Failed to block Kanban card: {e}", flush=True)
+    # RETIRED — Kanban retired per ADR-013
 
-    if run_id and not kanban_card_id:
+    if run_id:
         try:
             update_workflow_status(run_id, 'ESCALATE', result='ESCALATE',
                                   round_num=rounds_completed)
@@ -831,10 +712,7 @@ def main():
         "--output", "-o", default=None, metavar="PATH",
         help="Write full result JSON to file"
     )
-    parser.add_argument(
-        "--kanban-card-id", default=None, metavar="ID",
-        help="DEPRECATED: Read topic from Kanban card. Use --run-id."
-    )
+    # RETIRED — --kanban-card-id retired per ADR-013
     parser.add_argument(
         "--run-id", default=None, metavar="ID",
         help="Read topic from workflow_runs table and write state back (spine-native)"
@@ -860,21 +738,6 @@ def main():
         except Exception as e:
             print(f"Error: Failed to read workflow run {args.run_id}: {e}")
             sys.exit(1)
-    elif args.kanban_card_id:
-        # ── Tier 6.3: Kanban card topic resolution (legacy) ──────────
-        try:
-            title, body = read_kanban_card(args.kanban_card_id)
-            if not title:
-                print(f"Error: Kanban card {args.kanban_card_id} has no title")
-                sys.exit(1)
-            # Use card title as topic, prepend body as context
-            topic = title
-            if body:
-                topic = f"{title}\n\n## Context from Kanban Card\n\n{body}"
-            print(f"Topic from Kanban card: {title[:200]}{'...' if len(title) > 200 else ''}")
-        except Exception as e:
-            print(f"Error: Failed to read Kanban card {args.kanban_card_id}: {e}")
-            sys.exit(1)
     else:
         # Get topic from CLI arg or stdin (raw topic mode — unchanged)
         if args.topic:
@@ -890,7 +753,8 @@ def main():
             sys.exit(1)
 
     # Run deliberation
-    result = run_deliberation(topic, config, kanban_card_id=args.kanban_card_id, run_id=args.run_id)
+    # RETIRED — kanban_card_id retired per ADR-013
+    result = run_deliberation(topic, config, run_id=args.run_id)
 
     # Output
     print("═══ Final Result ═══")

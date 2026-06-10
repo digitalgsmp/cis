@@ -39,7 +39,6 @@ TIER_6_4_MARKER_KEYS = [
 ]
 REQUIRED_TOP_LEVEL = [
     "run_id",
-    "kanban_card_id",
     "node_id",
     "node_description",
     "timestamp_started",
@@ -120,7 +119,7 @@ def validate_gates(gates):
         fail("no gate has PASS status — nothing verified")
 
 
-def write_spine(db_path, run_id, kanban_card_id, result):
+def write_spine(db_path, run_id, result):
     """Write or update workflow_runs row. Returns 'INSERTED' or 'UPDATED'."""
     # Dynamic import to keep database.py dependency optional until needed
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "runtime"))
@@ -139,9 +138,9 @@ def write_spine(db_path, run_id, kanban_card_id, result):
     if existing:
         conn.execute(
             """UPDATE workflow_runs
-               SET kanban_card_id = ?, result = ?, completed_at = ?
+               SET result = ?, completed_at = ?
                WHERE id = ?""",
-            (kanban_card_id, result, now, run_id),
+            (result, now, run_id),
         )
         conn.commit()
         conn.close()
@@ -153,7 +152,6 @@ def write_spine(db_path, run_id, kanban_card_id, result):
             topic=f"Closeout: {result}",
             result=result,
             requires_eric_review=1,
-            kanban_card_id=kanban_card_id,
             created_at=now,
             completed_at=now,
         )
@@ -229,7 +227,7 @@ def main():
     validate_gates(data["gates"])
 
     # 4. Write to spine
-    action = write_spine(args.db_path, args.run_id, data["kanban_card_id"], review_signal)
+    action = write_spine(args.db_path, args.run_id, review_signal)
 
     # 5. Write closeout manifest
     write_manifest(args.manifest_dir, args.run_id, data, markers)
