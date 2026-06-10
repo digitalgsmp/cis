@@ -1216,14 +1216,14 @@ def _ensure_routing_table():
 
 
 def _persist_routing(routing, original_message, thread_id, override,
-                     preflight_response=None, kanban_card_id=None):
+                     preflight_response=None):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         INSERT INTO routing_decisions
             (message_id, thread_id, original_message, selected_route,
              selected_agent, matched_signals, confidence, override_used,
-             multihop, qwen_blocked, preflight_response, kanban_card_id)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+             multihop, qwen_blocked, preflight_response)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
     """, (
         routing["message_id"], thread_id, original_message,
         routing["route"], routing.get("agent"),
@@ -1232,7 +1232,6 @@ def _persist_routing(routing, original_message, thread_id, override,
         int(routing.get("multihop", False)),
         int(routing.get("qwen_blocked", False)),
         preflight_response,
-        kanban_card_id,
     ))
     conn.commit()
     conn.close()

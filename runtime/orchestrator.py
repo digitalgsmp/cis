@@ -183,8 +183,6 @@ def detect_objections(reviewer_response_text, config):
 
 # ── Tier 6.3: Kanban integration helpers ──────────────────────────────
 
-# RETIRED — _kanban_db_path retired per ADR-013
-
 def _spine_db_path():
     """Return path to the CIS spine database."""
     return os.environ.get(
@@ -260,138 +258,11 @@ def insert_deliberation_round(run_id, round_number, drafter_output, reviewer_out
         raise RuntimeError(f"Deliberation round insert failed: {e}")
 
 
-# ── DEPRECATED: Kanban functions (commented out — spine-native path now used) ─
-# See session_handoffs/PROPOSAL_RETIRE_KANBAN_SPINE_API.md
-#
-# def read_kanban_card(card_id): ... (commented out)
-# def write_card_body(card_id, body, config): ... (commented out)
-# def update_card_status(card_id, action, reason=None, config=None): ... (commented out)
-# def _read_card_body_only(card_id): ... (commented out)
-# def strip_orchestrator_sections(body, keep_section=None): ... (commented out)
-#
-# The original function bodies are preserved below for reference.
-# --- ORPHANED read_kanban_card body (def removed) ---
-#     """Return (title, body) from a Kanban card via `hermes kanban show --json`.
-#     Raises RuntimeError on failure."""
-#     try:
-#         result = subprocess.run(
-#             ["hermes", "kanban", "show", "--json", card_id],
-#             ... (commented out — spine-native path now used)
+# RETIRED: Kanban function stubs removed per ADR-013
 
 
-# DEPRECATED — write_card_body: Kanban card body writer (commented out)
-# Stub retained so old Kanban code paths compile but are never executed in spine-native mode.
-def write_card_body(card_id, body, config):
-    """DEPRECATED. Use insert_deliberation_round() for spine-native path."""
-    raise RuntimeError("write_card_body is deprecated — use spine-native path")
-    """Write body to Kanban card via direct SQLite UPDATE.
-    Uses short-lived connection. Confirms exactly one row updated.
-    Raises RuntimeError on failure."""
-    db_path = _kanban_db_path(config)
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.execute(
-            "UPDATE tasks SET body = ? WHERE id = ?",
-            (body, card_id),
-        )
-        if cursor.rowcount != 1:
-            raise RuntimeError(
-                f"Body update affected {cursor.rowcount} rows (expected 1). "
-                f"Card ID may not exist: {card_id}"
-            )
-        conn.commit()
-    except sqlite3.Error as e:
-        raise RuntimeError(f"SQLite body write failed: {e}")
-    finally:
-        if conn:
-            conn.close()
-
-
-# DEPRECATED — read_kanban_card stub (spine-native path replaces Kanban)
-def read_kanban_card(card_id):
-    """DEPRECATED. Use read_workflow_run() for spine-native path."""
-    raise RuntimeError("read_kanban_card is deprecated — use spine-native path")
-
-
-def update_card_status(card_id, action, reason=None, config=None):
-    """Update card status via `hermes kanban` CLI.
-    action: 'claim', 'complete', or 'block'.
-    Raises RuntimeError on failure."""
-    if action == "claim":
-        cmd = ["hermes", "kanban", "claim", card_id]
-    elif action == "complete":
-        cmd = ["hermes", "kanban", "complete", card_id]
-    elif action == "block":
-        cmd = ["hermes", "kanban", "block", card_id]
-        if reason:
-            cmd.append(reason)
-    else:
-        raise ValueError(f"Unknown status action: {action}")
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"hermes kanban {action} failed (exit {result.returncode}): "
-                f"{result.stderr.strip()[:500]}"
-            )
-    except FileNotFoundError:
-        raise RuntimeError("hermes CLI not found on PATH")
-    except Exception as e:
-        raise RuntimeError(f"Kanban status update failed: {e}")
-
-
-def strip_orchestrator_sections(body, keep_section=None):
-    """Remove ## Proposal and ## Review sections from body.
-    If keep_section is 'proposal', preserves ## Proposal while removing ## Review.
-    If keep_section is 'review', preserves ## Review while removing ## Proposal.
-    If keep_section is None (default), removes both.
-    Preserves all other sections including ## Context, ## Eric Gate,
-    ## Implementation, ## Research Artifact, ## Verification Failure, etc."""
-    if not body:
-        return ""
-
-    lines = body.split("\n")
-    result = []
-    skip_proposal = (keep_section != "proposal")
-    skip_review = (keep_section != "review")
-    skip = False
-    current_section = None
-
-    for line in lines:
-        stripped = line.strip()
-        # Detect section headings
-        if stripped == "## Proposal":
-            if skip_proposal:
-                skip = True
-                current_section = "proposal"
-                continue
-            else:
-                skip = False
-                current_section = None
-        elif stripped == "## Review":
-            if skip_review:
-                skip = True
-                current_section = "review"
-                continue
-            else:
-                skip = False
-                current_section = None
-        elif skip and stripped.startswith("## "):
-            # New top-level section — stop skipping
-            skip = False
-            current_section = None
-
-        if not skip:
-            result.append(line)
-
-    return "\n".join(result).strip()
+# RETIRED: update_card_status — Kanban retired per ADR-013
+# Original body referenced the Kanban CLI. Fully removed.
 
 
 def validate_proposal_sections(drafter_output):
@@ -405,33 +276,8 @@ def validate_proposal_sections(drafter_output):
     return True, []
 
 
-def normalize_review_section(reviewer_output, objections, is_consensus, is_last_round):
-    """Construct a deterministic ## Review section with exactly one valid signal.
-
-    Returns normalized markdown string for the ## Review section.
-
-    Signal priority (first match wins):
-      1. If is_consensus → CONSENSUS_REACHED
-      2. If objections list is non-empty → OBJECTIONS
-      3. Otherwise → ESCALATE (fallback)
-    """
-    if is_consensus:
-        signal_block = (
-            "CONSENSUS_REACHED\n"
-            "remaining_objections: none\n"
-            "requires_eric_review: true\n"
-        )
-    elif objections and len(objections) > 0:
-        objection_lines = "\n".join(f"- {o}" for o in objections)
-        signal_block = f"OBJECTIONS\n{objection_lines}\n"
-    else:
-        signal_block = (
-            "ESCALATE\n"
-            "Reviewer output did not contain a valid consensus or objections signal.\n"
-        )
-
-    return f"## Review\n\n{signal_block}\n{reviewer_output}"
-
+# RETIRED: normalize_review_section — Kanban retired per ADR-013
+# RETIRED: strip_orchestrator_sections — Kanban retired per ADR-013
 
 # ── Main deliberation loop ────────────────────────────────────────────
 
@@ -670,25 +516,7 @@ def run_deliberation(topic, config, run_id=None):
     }
 
 
-def _read_card_body_only(card_id):
-    """Read only the card body from Kanban (used internally for
-    incremental writes). Returns (body, full_data)."""
-    try:
-        result = subprocess.run(
-            ["hermes", "kanban", "show", "--json", card_id],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"hermes kanban show failed: {result.stderr.strip()[:200]}")
-        data = json.loads(result.stdout)
-        task = data.get("task", data)
-        return task.get("body", "") or "", task
-    except Exception:
-        # On failure, return empty body — will be overwritten
-        return "", {}
-
+# RETIRED: _read_card_body_only — Kanban retired per ADR-013
 
 # ── CLI ────────────────────────────────────────────────────────────────
 
