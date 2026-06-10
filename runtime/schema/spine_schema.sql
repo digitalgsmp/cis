@@ -1,6 +1,7 @@
 -- spine_schema.sql — CIS Deterministic State Spine
 -- Tier 4.1: Minimum schema (workflow_runs + deliberation_rounds)
 -- Updated: Migration 0005 — Kanban retired per ADR-013.
+-- Updated: Migration 0006 — session_closeouts table added.
 
 PRAGMA foreign_keys = ON;
 
@@ -53,4 +54,24 @@ CREATE TABLE IF NOT EXISTS workflow_run_legacy_links (
     kanban_board   TEXT,
     retired_at     TEXT NOT NULL DEFAULT (datetime('now')),
     note           TEXT
+);
+
+
+CREATE TABLE IF NOT EXISTS session_closeouts (
+    id                           INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at                   TEXT NOT NULL,
+    completed_at                 TEXT,
+    status                       TEXT NOT NULL CHECK (status IN ('PASS', 'FAIL', 'BLOCKED')),
+    start_head                   TEXT,
+    end_head                     TEXT,
+    dirty_before_json            TEXT,
+    dirty_after_json             TEXT,
+    generated_context            INTEGER NOT NULL DEFAULT 0,
+    export_agreement_status      TEXT,
+    build_state_coherence_status TEXT,
+    commit_hash                  TEXT,
+    log_path                     TEXT,
+    failure_step                 TEXT,
+    failure_summary              TEXT,
+    created_by                   TEXT NOT NULL DEFAULT 'operator_command'
 );

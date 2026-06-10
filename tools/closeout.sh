@@ -1,200 +1,273 @@
-#!/bin/bash
-# closeout.sh — CIS Tier 6.x Closeout Artifact Writer
-# Reads a closeout manifest JSON, writes a human-readable handoff markdown file.
+#!/usr/bin/env bash
+# tools/closeout.sh — CIS deterministic session closeout engine
+# Invoked by: hermes wrapper (hermes closeout / hermes closeout --check)
+# Future: router OPERATOR_COMMAND path calls same script
 #
-# Usage: closeout.sh --run-id <id> --node-id <id> --node-description <desc>
-#                    --manifest-path <path> [--output-dir <path>]
+# --check mode: read-only safety check, no regeneration or commit
+# Normal mode: full closeout — regenerate, gate, commit, verify clean
 #
-# Exit 0: CLOSEOUT WRITTEN
-# Exit 1: Write failure
-# Exit 2: Input validation failure (missing manifest, bad JSON, missing fields)
+# Writes result to session_closeouts table in SQLite spine.
+# Logs to runtime/logs/closeout/YYYYMMDD_HHMMSS_closeout.log
 #
-# Spec: CIS_TIER_6_1_CLOSEOUT_TRIGGER_DESIGN.md §2.3-2.4
-# Invoked by: gate_closeout_complete.sh v2 (Tier 6.2)
-#
-# Deferred: --generate-exports flag (runs generate_all.py)
-# Deferred: --commit flag (git add + git commit generated files)
-# These require separate approved design/directives before Tier 6.5.
-#
+# SESSION CLOSED is printed only if final git status --short is empty.
+# Any unexpected dirty files block closeout before regeneration begins.
+
 set -euo pipefail
 
-# ── CLI defaults ─────────────────────────────────────────────────────
-RUN_ID=""
-NODE_ID=""
-NODE_DESCRIPTION=""
-MANIFEST_PATH=""
-OUTPUT_DIR="session_handoffs"
+PROJECT_ROOT="${CIS_PROJECT_ROOT:-/mnt/projects/cis}"
+DB_PATH="${CIS_DB_PATH:-$PROJECT_ROOT/data/cis_memory.db}"
+LOG_DIR="$PROJECT_ROOT/runtime/logs/closeout"
+CHECK_ONLY=false
 
-# ── Parse CLI ────────────────────────────────────────────────────────
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --run-id)        RUN_ID="$2"; shift 2 ;;
-        --node-id)       NODE_ID="$2"; shift 2 ;;
-        --node-description) NODE_DESCRIPTION="$2"; shift 2 ;;
-        --manifest-path) MANIFEST_PATH="$2"; shift 2 ;;
-        --output-dir)    OUTPUT_DIR="$2"; shift 2 ;;
-        *)
-            echo "ERROR: unknown argument: $1" >&2
-            echo "Usage: closeout.sh --run-id <id> --node-id <id> --node-description <desc> --manifest-path <path> [--output-dir <path>]" >&2
-            exit 2
-            ;;
-    esac
+# Parse --check flag
+for arg in "$@"; do
+    if [[ "$arg" == "--check" ]]; then
+        CHECK_ONLY=true
+    fi
 done
 
-# ── Validate required args ───────────────────────────────────────────
-if [ -z "$RUN_ID" ]; then
-    echo "ERROR: --run-id is required" >&2
-    exit 2
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG_FILE="$LOG_DIR/${TIMESTAMP}_closeout.log"
+STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# Tee all output to log file
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ── Spine record writer (must be defined before any call) ─────────────────────
+_write_spine_record() {
+    local status="$1"
+    local start_head="$2"
+    local end_head="$3"
+    local dirty_before="$4"
+    local generated="$5"
+    local export_status="$6"
+    local coherence_status="$7"
+    local commit_hash="$8"
+    local dirty_after="$9"
+    local failure_step="${10}"
+    local failure_summary="${11}"
+    local log_path="${12}"
+    local completed_at
+    completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+    sqlite3 "$DB_PATH" \
+"INSERT INTO session_closeouts
+    (started_at, completed_at, status, start_head, end_head,
+     dirty_before_json, dirty_after_json, generated_context,
+     export_agreement_status, build_state_coherence_status,
+     commit_hash, log_path, failure_step, failure_summary, created_by)
+VALUES
+    ('$STARTED_AT', '$completed_at', '$status', '$start_head', '$end_head',
+     '$(echo "$dirty_before" | sed "s/'/''/g")',
+     '$(echo "$dirty_after" | sed "s/'/''/g")',
+     $generated, '$export_status', '$coherence_status',
+     '$commit_hash', '$log_path',
+     '$(echo "$failure_step" | sed "s/'/''/g")',
+     '$(echo "$failure_summary" | sed "s/'/''/g")',
+     'operator_command');" 2>/dev/null || \
+    echo "[CIS CLOSEOUT] Warning: could not write spine record" >&2
+}
+
+echo "[CIS CLOSEOUT] Started at $STARTED_AT"
+echo "[CIS CLOSEOUT] Log: $LOG_FILE"
+if $CHECK_ONLY; then
+    echo "[CIS CLOSEOUT] Mode: CHECK ONLY (no regeneration or commit)"
+else
+    echo "[CIS CLOSEOUT] Mode: FULL CLOSEOUT"
 fi
-if [ -z "$NODE_ID" ]; then
-    echo "ERROR: --node-id is required" >&2
-    exit 2
+echo ""
+
+cd "$PROJECT_ROOT" || {
+    echo "[CIS CLOSEOUT] BLOCKED: could not cd to $PROJECT_ROOT"
+    _write_spine_record "BLOCKED" "" "" "" "0" "" "" "" "" "cd to project root" \
+        "could not cd to $PROJECT_ROOT" "$LOG_FILE"
+    exit 1
+}
+
+START_HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "[CIS CLOSEOUT] Start HEAD: $START_HEAD"
+
+# ── Dirty file guard ──────────────────────────────────────────────────────────
+# Allowed dirty files before closeout. Anything else blocks.
+ALLOWED_DIRTY=(
+    "AGENTS.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/"
+    "runtime/manifests/EXPORT_MANIFEST.json"
+    "SESSION_LOG.md"
+    "runtime/memory/current_context.json"
+)
+
+echo "[CIS CLOSEOUT] Step 1/6: Checking for unexpected dirty files..."
+DIRTY_FILES=$(git status --short 2>/dev/null || true)
+
+if [[ -n "$DIRTY_FILES" ]]; then
+    UNEXPECTED=""
+    while IFS= read -r line; do
+        FILEPATH=$(echo "$line" | awk '{print $2}')
+        IS_ALLOWED=false
+        for allowed in "${ALLOWED_DIRTY[@]}"; do
+            if [[ "$FILEPATH" == "$allowed" ]] || \
+               [[ "$FILEPATH" == ${allowed%/}/* ]]; then
+                IS_ALLOWED=true
+                break
+            fi
+        done
+        if ! $IS_ALLOWED; then
+            UNEXPECTED="$UNEXPECTED\n  $line"
+        fi
+    done <<< "$DIRTY_FILES"
+
+    if [[ -n "$UNEXPECTED" ]]; then
+        echo ""
+        echo "[CIS CLOSEOUT] BLOCKED: unexpected dirty files found:"
+        echo -e "$UNEXPECTED"
+        echo ""
+        echo "[CIS CLOSEOUT] What this means: implementation work may be"
+        echo "[CIS CLOSEOUT] unfinished or uncommitted. Closeout would regenerate"
+        echo "[CIS CLOSEOUT] context from an incomplete state."
+        echo "[CIS CLOSEOUT] Next action: ask Hermes to inspect git status,"
+        echo "[CIS CLOSEOUT] commit or stash unfinished work, then retry closeout."
+        _write_spine_record "BLOCKED" "$START_HEAD" "" \
+            "$(echo -e "$UNEXPECTED")" "0" "" "" "" "" \
+            "dirty file guard" "unexpected dirty files: $(echo -e "$UNEXPECTED")" \
+            "$LOG_FILE"
+        exit 1
+    fi
 fi
-if [ -z "$NODE_DESCRIPTION" ]; then
-    NODE_DESCRIPTION="$NODE_ID"
-fi
-if [ -z "$MANIFEST_PATH" ]; then
-    echo "ERROR: --manifest-path is required" >&2
-    exit 2
-fi
 
-# ── Read and validate manifest ───────────────────────────────────────
-if [ ! -f "$MANIFEST_PATH" ]; then
-    echo "ERROR: manifest not found: $MANIFEST_PATH" >&2
-    exit 2
+echo "[CIS CLOSEOUT] Dirty file check: PASS"
+
+if $CHECK_ONLY; then
+    echo ""
+    echo "[CIS CLOSEOUT] CHECK COMPLETE — closeout is safe to run."
+    echo "[CIS CLOSEOUT] Run 'hermes closeout' to execute."
+    exit 0
 fi
 
-# ── Generate output filename ─────────────────────────────────────────
-CLOSEOUT_DATE=$(date +%Y%m%d)
-SANITIZED_NODE=$(echo "$NODE_ID" | sed 's/[^a-zA-Z0-9_-]/_/g')
-OUTPUT_FILE="${OUTPUT_DIR}/CLOSEOUT_${CLOSEOUT_DATE}_${SANITIZED_NODE}.md"
-
-# ── Write handoff markdown ───────────────────────────────────────────
-mkdir -p "$OUTPUT_DIR"
-
-set +e
-python3 -c "
-import json, sys, os
-
-# Read manifest
-try:
-    with open('$MANIFEST_PATH') as f:
-        manifest = json.load(f)
-except Exception as e:
-    print(f'ERROR: cannot read manifest: {e}', file=sys.stderr)
-    sys.exit(2)
-
-# Validate required fields
-required = ['run_id', 'node_id', 'timestamp_started', 'git_head', 'gates']
-for field in required:
-    if field not in manifest or manifest[field] is None:
-        print(f'ERROR: manifest missing required field: {field}', file=sys.stderr)
-        sys.exit(2)
-
-# Build markdown
-lines = []
-lines.append('# Session Closeout — $NODE_ID')
-lines.append('')
-lines.append(f'Date: {os.environ.get(\"CLOSEOUT_DATE\", \"\")}')
-lines.append(f'Status: CLOSEOUT COMPLETE')
-lines.append(f'Run ID: {manifest[\"run_id\"]}')
-lines.append(f'Commit: {manifest[\"git_head\"][:7]}')
-lines.append('')
-lines.append('---')
-lines.append('')
-lines.append('## Completed')
-lines.append('')
-lines.append(f'- **Tier/Node:** {manifest[\"node_id\"]}')
-lines.append(f'- **Description:** {manifest.get(\"node_description\", \"\")}')
-lines.append(f'- **Started:** {manifest[\"timestamp_started\"]}')
-lines.append(f'- **Completed:** {manifest.get(\"timestamp_completed\", \"\")}')
-lines.append('')
-
-# State write summary
-sw = manifest.get('state_write', {})
-if sw:
-    lines.append('## State Write')
-    lines.append(f'- Status: {sw.get(\"status\", \"UNKNOWN\")}')
-    lines.append(f'- Rows written: {sw.get(\"rows_written_or_updated\", 0)}')
-    if sw.get('error'):
-        lines.append(f'- Error: {sw[\"error\"]}')
-    lines.append('')
-
-# Tier 6.4 markers
-markers = manifest.get('tier_6_4_markers')
-if markers:
-    lines.append('## Tier 6.4 Markers')
-    lines.append('')
-    lines.append(f'- Research Artifact: {\"PASS\" if markers.get(\"research_present\") else \"FAIL\"}')
-    lines.append(f'- Proposal Schema: {\"PASS\" if markers.get(\"proposal_valid\") else \"FAIL\"}')
-    lines.append(f'- Review Signal: {markers.get(\"review_signal\", \"N/A\")}')
-    lines.append(f'- Consensus: {\"PASS\" if markers.get(\"consensus_valid\") else \"FAIL\"}')
-    lines.append(f'- Eric Gate: {\"PASS\" if markers.get(\"eric_approved\") else \"FAIL\"}')
-    lines.append(f'- Implementation: {\"PASS\" if markers.get(\"implementation_present\") else \"FAIL\"}')
-    lines.append('')
-
-# Gate verification summary
-gates = manifest.get('gates', [])
-if gates:
-    pass_count = sum(1 for g in gates if g.get('status') == 'PASS')
-    fail_count = sum(1 for g in gates if g.get('status') == 'FAIL')
-    skip_count = sum(1 for g in gates if g.get('status') == 'SKIP')
-    lines.append('## Gate Verification')
-    lines.append('')
-    lines.append(f'| Gate | Phase | Status | Exit |')
-    lines.append(f'|------|-------|--------|------|')
-    for g in gates:
-        lines.append(f'| {g.get(\"name\",\"\")} | {g.get(\"phase\",\"\")} | {g.get(\"status\",\"\")} | {g.get(\"exit_code\",\"\")} |')
-    lines.append('')
-    lines.append(f'**Summary:** {pass_count} PASS, {fail_count} FAIL, {skip_count} SKIP')
-    lines.append('')
-
-# Export status
-exp = manifest.get('export', {})
-if exp:
-    lines.append('## Export')
-    lines.append(f'- Status: {exp.get(\"status\", \"SKIP\")}')
-    lines.append('')
-
-# Git status
-git_status = manifest.get('final_git_status', '')
-if git_status:
-    lines.append('## Git Status at Closeout')
-    lines.append(chr(96)*3)
-    lines.append(git_status)
-    lines.append(chr(96)*3)
-    lines.append('')
-
-# Next action
-next_action = manifest.get('next_action', '')
-if next_action:
-    lines.append('## Next Action')
-    lines.append(next_action)
-    lines.append('')
-
-# Boundaries
-lines.append('## Boundaries Held')
-lines.append('- No files outside approved manifest were created or modified.')
-lines.append('- All gates were run through the verified closeout chain.')
-lines.append('- STATE_WRITE completed with deterministic evidence.')
-lines.append('')
-
-# Commit placeholder — injected by gate_closeout_complete.sh after export commit
-lines.append('## Commit')
-lines.append('HEAD: <pending>')
-lines.append('')
-
-# Write output
-output_path = '$OUTPUT_FILE'
-with open(output_path, 'w') as f:
-    f.write('\n'.join(lines) + '\n')
-
-print(f'CLOSEOUT WRITTEN: {output_path}')
-"
-py_exit=$?
-if [ $py_exit -ne 0 ]; then
-    exit $py_exit
+# ── Regenerate context ────────────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 2/6: Regenerating context..."
+if ! python3 tools/export/generate_all.py; then
+    echo ""
+    echo "[CIS CLOSEOUT] FAILED at step: generate_all.py"
+    echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
+    echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
+    _write_spine_record "FAIL" "$START_HEAD" "" "" "0" "" "" "" "" \
+        "generate_all.py" "generate_all.py exited non-zero" "$LOG_FILE"
+    exit 1
 fi
-set -e
+echo "[CIS CLOSEOUT] Context regeneration: PASS"
 
+# ── Export agreement gate ─────────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 3/6: Verifying export agreement..."
+if ! bash tools/gates/gate_export_agreement.sh; then
+    echo ""
+    echo "[CIS CLOSEOUT] FAILED at step: gate_export_agreement.sh"
+    echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
+    echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
+    _write_spine_record "FAIL" "$START_HEAD" "" "" "1" "FAIL" "" "" "" \
+        "gate_export_agreement.sh" "export agreement gate failed" "$LOG_FILE"
+    exit 1
+fi
+echo "[CIS CLOSEOUT] Export agreement: PASS"
+
+# ── Build state coherence gate ────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 4/6: Verifying build state coherence..."
+if ! bash tools/gates/gate_build_state_coherence.sh; then
+    echo ""
+    echo "[CIS CLOSEOUT] FAILED at step: gate_build_state_coherence.sh"
+    echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
+    echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
+    _write_spine_record "FAIL" "$START_HEAD" "" "" "1" "PASS" "FAIL" "" "" \
+        "gate_build_state_coherence.sh" "build state coherence gate failed" \
+        "$LOG_FILE"
+    exit 1
+fi
+echo "[CIS CLOSEOUT] Build state coherence: PASS"
+
+# ── Stage generated context ───────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 5/6: Staging generated context..."
+git add \
+    AGENTS.md \
+    PROJECT_CONTEXT_PACK_UPLOAD/ \
+    runtime/manifests/EXPORT_MANIFEST.json \
+    2>/dev/null || true
+git status --short
+
+# ── Commit ────────────────────────────────────────────────────────────────────
+echo ""
+echo "[CIS CLOSEOUT] Step 6/6: Committing..."
+COMMIT_HASH=""
+if git diff --cached --quiet; then
+    echo "[CIS CLOSEOUT] Nothing to commit — context already current."
+else
+    if ! git commit -m "Regenerate context after session closeout"; then
+        echo ""
+        echo "[CIS CLOSEOUT] FAILED at step: git commit"
+        echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
+        echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
+        _write_spine_record "FAIL" "$START_HEAD" "" "" "1" "PASS" "PASS" "" "" \
+            "git commit" "git commit failed" "$LOG_FILE"
+        exit 1
+    fi
+    COMMIT_HASH=$(git rev-parse --short HEAD)
+fi
+
+# ── Final clean state check ───────────────────────────────────────────────────
+END_HEAD=$(git rev-parse --short HEAD)
+FINAL_STATUS=$(git status --short 2>/dev/null || true)
+DIRTY_AFTER=""
+
+if [[ -n "$FINAL_STATUS" ]]; then
+    while IFS= read -r line; do
+        FILEPATH=$(echo "$line" | awk '{print $2}')
+        IS_ALLOWED=false
+        for allowed in "${ALLOWED_DIRTY[@]}"; do
+            if [[ "$FILEPATH" == "$allowed" ]] || \
+               [[ "$FILEPATH" == ${allowed%/}/* ]]; then
+                IS_ALLOWED=true
+                break
+            fi
+        done
+        if ! $IS_ALLOWED; then
+            DIRTY_AFTER="$DIRTY_AFTER\n  $line"
+        fi
+    done <<< "$FINAL_STATUS"
+fi
+
+COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+if [[ -n "$DIRTY_AFTER" ]]; then
+    echo ""
+    echo "[CIS CLOSEOUT] INCOMPLETE — repo still dirty after commit:"
+    echo -e "$DIRTY_AFTER"
+    echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
+    echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
+    _write_spine_record "FAIL" "$START_HEAD" "$END_HEAD" "" "1" "PASS" "PASS" \
+        "$COMMIT_HASH" "$(echo -e "$DIRTY_AFTER")" \
+        "final clean check" "repo still dirty after commit" "$LOG_FILE"
+    exit 1
+fi
+
+# ── Write spine record ────────────────────────────────────────────────────────
+_write_spine_record "PASS" "$START_HEAD" "$END_HEAD" "" "1" "PASS" "PASS" \
+    "$COMMIT_HASH" "" "" "" "$LOG_FILE"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "[CIS] SESSION CLOSED"
+echo "[CIS] HEAD: $END_HEAD"
+if [[ -n "$COMMIT_HASH" ]]; then
+    echo "[CIS] Committed regenerated context: yes ($COMMIT_HASH)"
+else
+    echo "[CIS] Committed regenerated context: no (already current)"
+fi
+echo "[CIS] Repo clean: yes"
+echo "[CIS] Log: $LOG_FILE"
+echo "[CIS] Next safe action: open new session in READ_ONLY_STANDING_BY"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 exit 0
