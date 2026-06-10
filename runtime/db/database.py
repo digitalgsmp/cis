@@ -87,8 +87,6 @@ def insert_workflow_run(
     result,
     requires_eric_review=1,
     max_rounds=3,
-    kanban_card_id=None,
-    kanban_board="cis-pipeline",
     max_consecutive_revisions=3,
     rounds_completed=0,
     final_objections_json=None,
@@ -103,16 +101,14 @@ def insert_workflow_run(
 
     from datetime import datetime, timezone
 
-    conn.execute(
+        conn.execute(
         """INSERT INTO workflow_runs
-           (id, kanban_card_id, kanban_board, topic, result, requires_eric_review,
+           (id, topic, result, requires_eric_review,
             max_rounds, max_consecutive_revisions, rounds_completed,
             final_objections_json, created_at, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             id,
-            kanban_card_id,
-            kanban_board,
             topic,
             result,
             requires_eric_review,

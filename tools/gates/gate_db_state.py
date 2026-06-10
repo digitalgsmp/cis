@@ -33,13 +33,16 @@ ALLOWED_TABLES = {
     "open_questions",
     "next_actions",
     "active_blockers",
+    "workflow_run_artifacts",
+    "workflow_run_legacy_links",
 }
 
 ALLOWED_COLUMNS = {
     # workflow_runs
-    "id", "kanban_card_id", "kanban_board", "topic", "result",
+    "id", "topic", "result", "status", "route", "updated_at",
     "requires_eric_review", "max_rounds", "max_consecutive_revisions",
     "rounds_completed", "final_objections_json", "created_at", "completed_at",
+    "eric_approved_at",
     # deliberation_rounds
     "run_id", "round_number", "drafter_role", "drafter_output",
     "reviewer_role", "reviewer_signal", "objections_json", "revision_number",

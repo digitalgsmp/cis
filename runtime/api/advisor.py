@@ -1258,9 +1258,9 @@ def _create_workflow_run(topic, route, agent=None):
     conn = sqlite3.connect(SPINE_DB_PATH)
     conn.execute("""
         INSERT INTO workflow_runs
-            (id, topic, route, status, result, kanban_board, requires_eric_review,
+            (id, topic, route, status, result, requires_eric_review,
              max_rounds, max_consecutive_revisions, rounds_completed, created_at, updated_at)
-        VALUES (?, ?, ?, 'PENDING', 'ERROR', 'cis-pipeline', 1,
+        VALUES (?, ?, ?, 'PENDING', 'ERROR', 1,
                 ?, 3, 0, ?, ?)
     """, (run_id, topic, route, max_rounds, now, now))
     conn.commit()
@@ -1983,7 +1983,7 @@ def route_message():
     ):
         run_id = _create_workflow_run(message, routing["route"])
         routing["run_id"] = run_id
-        routing["kanban_card_id"] = None  # legacy compatibility
+        # RETIRED — kanban_card_id retired per ADR-013
         routing["agent_response"] = None
         # Add blocker info if applicable
         blocker = ROUTER_BLOCKERS.get(routing["route"])
@@ -1994,7 +1994,7 @@ def route_message():
                 "BLOCKED_ON_WEB_RESEARCH_CONFIG": "Tier 7.6 Research Gateway Repair",
             }.get(blocker, "Unknown — check dependency graph")
         _persist_routing(routing, message, thread_id, override,
-                        kanban_card_id=run_id)
+)
         db.close()
         return jsonify(routing), 200
     # ── end Tier 7 routing ───────────────────────────────────────────
