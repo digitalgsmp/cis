@@ -1,7 +1,63 @@
 # Files Changed Recently
-Generated: 2026-06-10 05:53 UTC | Run: run-7f36d0a80841
+Generated: 2026-06-11 04:56 UTC | Run: run-3aa4092c3d32
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 607610d Implement Component 2 advisor escalation protocol
+
+## config/hcp_static.yaml 
+
+## runtime/db/database.py 
+
+## runtime/schema/migrations/0009_advisor_escalation_protocol.sql 
+
+## runtime/schema/spine_schema.sql 
+
+## tools/escalation/build_packet.py 
+
+## tools/escalation/check_escalation_required.py 
+
+## tools/escalation/ingest_response.py 
+
+## tools/escalation/record_reconciliation.py 
+
+## tools/gates/gate_db_state.py 
+
+## tools/gates/gate_escalation_packet.py 
+
+## 0c9aa44 Approve Component 2 Escalation Advisor Integration Protocol Revision 2 design document
+
+## docs/CIS_FOUNDATION_HARDENING_COMPONENT_2_DESIGN.md 
+
+## f732cb4 Document future build-plan and prose-spine requirement
+
+## docs/CIS_FUTURE_BUILD_PLAN_SPINE_REQUIREMENT.md 
+
+## 89b2347 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## d618e49 Regenerate context after session closeout
 
@@ -184,27 +240,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 4a64560 Fix allowed dirty list: SESSION_LOG.md path is cis_kernel/source/SESSION_LOG.md
-
-## tools/closeout.sh 
-
-## 0a3c9ef Add closeout command — wrapper intercept, deterministic engine, session_closeouts table
-
-## runtime/config/bin/hermes.wrapper 
-
-## runtime/schema/migrations/0006_session_closeouts.sql 
-
-## runtime/schema/spine_schema.sql 
-
-## tools/closeout.sh 
-
-## d3f9710 Complete Kanban retirement cleanup in advisor.py and orchestrator.py — ADR-013
-
-## runtime/api/advisor.py 
-
-## runtime/orchestrator.py 
-
-## 30a834c Fix orchestrator docstring: --kanban-card-id → --run-id
-
-## runtime/orchestrator.py 
