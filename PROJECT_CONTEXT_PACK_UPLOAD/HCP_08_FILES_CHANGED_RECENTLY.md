@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-06-11 14:59 UTC | Run: run-bb49bbe4457d
+Generated: 2026-06-11 15:02 UTC | Run: run-30a5ccd91f9f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## bf9abad Tier 5.4b — Complete export pipeline coherence for READ_FIRST_HERMES_CONTEXT.md
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/export/generate_all.py 
+
+## tools/export/generate_hcp.py 
+
+## tools/gates/gate_export_agreement.sh 
 
 ## d6a9360 Tier 5.4a — Add READ_FIRST_HERMES_CONTEXT.md as generated export
 
@@ -268,7 +302,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/gates/gate_db_state.py 
 
 ## tools/gates/gate_escalation_packet.py 
-
-## 0c9aa44 Approve Component 2 Escalation Advisor Integration Protocol Revision 2 design document
-
-## docs/CIS_FOUNDATION_HARDENING_COMPONENT_2_DESIGN.md 
