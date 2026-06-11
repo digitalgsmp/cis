@@ -43,6 +43,7 @@ ALLOWED_TABLES = {
     "advisor_escalations",
     "advisor_escalation_packets",
     "advisor_responses",
+    "eric_gate_approvals",
 }
 
 ALLOWED_COLUMNS = {
@@ -78,6 +79,11 @@ ALLOWED_COLUMNS = {
     "primary_type", "secondary_flags",
     "classification_source", "classification_status",
     "response_status", "received_at", "ingested_at",
+    # eric_gate_approvals
+    "decision", "decided_at", "decided_by",
+    "goal_reference_id", "briefing_hash", "briefing_json",
+    "drift_snapshot_json", "decision_trail_snapshot_json",
+    "is_current", "supersedes_approval_id", "rationale",
 }
 
 
