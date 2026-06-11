@@ -59,7 +59,6 @@ def query_spine(db_path):
            ORDER BY created_at DESC"""
     ).fetchall()
 
-    # Query canonical build state from project_state table (Tier 6.5 remediation)
     state_rows = conn.execute(
         """SELECT key, value FROM project_state
            WHERE superseded_at IS NULL
@@ -70,11 +69,23 @@ def query_spine(db_path):
     ).fetchall()
     build_state = {row["key"]: row["value"] for row in state_rows}
 
+    # Eric Gate approval status
+    eric_gate = conn.execute(
+        """SELECT ega.decision, ega.decided_at, ega.goal_reference_id,
+                  ega.workflow_run_id, gr.goal_label
+           FROM eric_gate_approvals ega
+           LEFT JOIN goal_references gr ON ega.goal_reference_id = gr.id
+           WHERE ega.is_current = 1
+           ORDER BY ega.decided_at DESC
+           LIMIT 1"""
+    ).fetchone()
+
     conn.close()
-    return runs, decisions, questions, actions, blockers, build_state
+    return runs, decisions, questions, actions, blockers, build_state, eric_gate
 
 
-def render(static, runs, decisions, questions, actions, blockers, build_state, run_id=None):
+def render(static, runs, decisions, questions, actions, blockers, build_state,
+           eric_gate=None, run_id=None):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     latest_run_id = runs[0]["id"] if runs else "none"
     rid = run_id or "none"
@@ -153,21 +164,35 @@ def render(static, runs, decisions, questions, actions, blockers, build_state, r
         lines.append("- No completed runs yet.")
     lines.append("")
 
-    lines.append("## 9. Verification Hardening Rule")
+    lines.append("## 9. Eric Gate Status")
+    if eric_gate:
+        decision = eric_gate["decision"] or "UNKNOWN"
+        decided = eric_gate["decided_at"] or "Not yet decided"
+        goal = eric_gate["goal_label"] or "No goal label"
+        run_id_eg = eric_gate["workflow_run_id"] or "N/A"
+        lines.append(f"- Workflow run: {run_id_eg}")
+        lines.append(f"- Status: {decision}")
+        lines.append(f"- Decided at: {decided}")
+        lines.append(f"- Goal: {goal}")
+    else:
+        lines.append("- No Eric Gate decision recorded (pending)")
+    lines.append("")
+
+    lines.append("## 10. Verification Hardening Rule")
     lines.append(static.get("verification_hardening_rule", "").strip())
     lines.append("")
 
-    lines.append("## 10. Role Identity Rule")
+    lines.append("## 11. Role Identity Rule")
     lines.append(static.get("role_identity_rule", "").strip())
     lines.append("")
 
     startup = static.get("startup_protocol", "").strip()
     if startup:
-        lines.append("## 10.5. READ_ONLY_STANDING_BY Startup Protocol")
+        lines.append("## 11.5. READ_ONLY_STANDING_BY Startup Protocol")
         lines.append(startup)
         lines.append("")
 
-    lines.append("## 11. Seed Intent — Eric's Own Words")
+    lines.append("## 12. Seed Intent — Eric's Own Words")
     si = static.get("seed_intent", {})
     lines.append(si.get("instruction", ""))
     lines.append("")
@@ -177,7 +202,7 @@ def render(static, runs, decisions, questions, actions, blockers, build_state, r
             lines.append(f"> {line}")
         lines.append("")
 
-    lines.append("## 12. Evidence-Backed Response Rule")
+    lines.append("## 13. Evidence-Backed Response Rule")
     lines.append(static.get("evidence_rule", "").strip())
     lines.append("")
 
@@ -202,8 +227,10 @@ def main():
         sys.exit(2)
 
     static = load_static(args.config)
-    runs, decisions, questions, actions, blockers, build_state = query_spine(args.db)
-    output = render(static, runs, decisions, questions, actions, blockers, build_state, run_id=args.run_id)
+    runs, decisions, questions, actions, blockers, build_state, eric_gate = \
+        query_spine(args.db)
+    output = render(static, runs, decisions, questions, actions, blockers,
+                    build_state, eric_gate=eric_gate, run_id=args.run_id)
 
     char_count = len(output)
     if char_count > CHAR_LIMIT:

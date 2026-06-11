@@ -157,8 +157,20 @@ def query_spine(db_path):
     ).fetchall()
     build_state = {row["key"]: row["value"] for row in state_rows}
 
+    # Eric Gate approval status
+    eric_gate = conn.execute(
+        """SELECT ega.decision, ega.decided_at, ega.goal_reference_id,
+                  ega.workflow_run_id, ega.briefing_hash, gr.goal_label
+           FROM eric_gate_approvals ega
+           LEFT JOIN goal_references gr ON ega.goal_reference_id = gr.id
+           WHERE ega.is_current = 1
+           ORDER BY ega.decided_at DESC
+           LIMIT 1"""
+    ).fetchone()
+    eric_gate_dict = _row_to_dict(eric_gate) if eric_gate else None
+
     conn.close()
-    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state
+    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate_dict
 
 
 # ── per-file renderers ─────────────────────────────────────────────────────
@@ -823,7 +835,7 @@ def render_hcp_06(stamp, hcp_static, agents_static):
     return "\n".join(lines)
 
 
-def render_hcp_07(stamp, hcp_static, latest_run, actions):
+def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None):
     s = hcp_static["hcp_07"]
     head_short, _ = get_git_head(REPO_ROOT)
 
@@ -868,6 +880,24 @@ def render_hcp_07(stamp, hcp_static, latest_run, actions):
         lines.append(f"{na['description']}.")
     else:
         lines.append("(No pending actions)")
+    lines.append("")
+
+    # Eric Gate approval provenance summary
+    lines.append("## Eric Gate Approval Status")
+    lines.append("")
+    if eric_gate:
+        decision = eric_gate.get("decision", "UNKNOWN")
+        decided = eric_gate.get("decided_at", "Not yet decided")
+        goal = eric_gate.get("goal_label", "No goal label")
+        run_eg = eric_gate.get("workflow_run_id", "N/A")
+        brief_hash = eric_gate.get("briefing_hash", "N/A")
+        lines.append(f"- Decision: {decision}")
+        lines.append(f"- Workflow run: {run_eg}")
+        lines.append(f"- Decided at: {decided}")
+        lines.append(f"- Goal reference: {goal}")
+        lines.append(f"- Briefing hash: {brief_hash}")
+    else:
+        lines.append("- No Eric Gate decision recorded (pending)")
     lines.append("")
 
     return "\n".join(lines)
@@ -981,7 +1011,7 @@ def main():
     agents_static = load_yaml(args.agents_config)
 
     # Query spine
-    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state = query_spine(args.db)
+    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate = query_spine(args.db)
 
     # Build stamp
     stamp = generation_stamp(args.run_id)
@@ -995,7 +1025,7 @@ def main():
         "HCP_04_OPEN_QUESTIONS.md": lambda: render_hcp_04(stamp, questions),
         "HCP_05_NEXT_ACTIONS.md": lambda: render_hcp_05(stamp, hcp_static, agents_static, actions, blockers),
         "HCP_06_MODEL_ROLES_AND_PROTOCOL.md": lambda: render_hcp_06(stamp, hcp_static, agents_static),
-        "HCP_07_RECENT_HANDOFF.md": lambda: render_hcp_07(stamp, hcp_static, latest_run, actions),
+        "HCP_07_RECENT_HANDOFF.md": lambda: render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate),
         "HCP_08_FILES_CHANGED_RECENTLY.md": lambda: render_hcp_08(stamp),
         "HCP_09_TERMS_AND_NAMING.md": lambda: render_hcp_09(stamp, hcp_static, agents_static),
     }

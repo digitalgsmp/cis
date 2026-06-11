@@ -2,9 +2,9 @@
 Date: 2026-06-11
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `e3734ac`
+HEAD: `626b06a`
 
-Generated: 2026-06-11 07:08 UTC | Run: run-bcdcc6ee41bf
+Generated: 2026-06-11 14:45 UTC | Run: run-265fd1ac887c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -55,3 +55,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 
 (No pending actions)
+
+## Eric Gate Approval Status
+
+- No Eric Gate decision recorded (pending)

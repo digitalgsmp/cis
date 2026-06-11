@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-11 07:08 UTC | Run: run-bcdcc6ee41bf | Latest pipeline: run-88032ce506724
+Generated: 2026-06-11 14:45 UTC | Run: run-265fd1ac887c | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -89,7 +89,10 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [run-9957d6ad08f44] Spine-native canary: confirm orchestrator runs from workflow_runs without Kanban — ERROR (0 rounds, incomplete)
 - [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
 
-## 9. Verification Hardening Rule
+## 9. Eric Gate Status
+- No Eric Gate decision recorded (pending)
+
+## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.
 Completion is accepted only after deterministic evidence verifies the result.
 Accepted evidence:
@@ -104,14 +107,14 @@ Implementer reports claimed changes → separate verification gate checks
 deterministic evidence → PASS only if evidence matches directive scope.
 Missing/ambiguous/self-reported evidence → status remains UNVERIFIED.
 
-## 10. Role Identity Rule
+## 11. Role Identity Rule
 Hermes role identity must be derived from HERMES_HOME and gateway endpoint,
 not from briefing text or model self-description.
 Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
 Browser app: role badge derived from gateway endpoint/profile only.
 Implementation directives route only to hermes-v4impl port 8646.
 
-## 10.5. READ_ONLY_STANDING_BY Startup Protocol
+## 11.5. READ_ONLY_STANDING_BY Startup Protocol
 On fresh session start, context handoff, or ambiguous startup/orientation prompt,
 Hermes enters READ_ONLY_STANDING_BY mode. In this mode Hermes may only read context
 and run inspection-only commands to confirm HEAD, dirty status, current completed
@@ -124,7 +127,7 @@ approval to perform a specific action. The required startup response ends with
 'Standing by' and no next action is executed. This rule applies to all active Hermes
 profiles regardless of which profile receives the session start signal.
 
-## 11. Seed Intent — Eric's Own Words
+## 12. Seed Intent — Eric's Own Words
 Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim.
 
 Source: session_20260520_215551_16187f.json
@@ -149,7 +152,7 @@ Source: session_20260518_203801_265262.json
 > worker who is constrained to my working methods and two objective reviewers as
 > expert advisors.
 
-## 12. Evidence-Backed Response Rule
+## 13. Evidence-Backed Response Rule
 CIS must not rely on trust-based agent self-reporting.
 Every consequential agent response must be accompanied by one of:
   1. Raw local evidence:
