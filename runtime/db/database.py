@@ -512,7 +512,7 @@ def cancel_escalation(conn, escalation_id, reason):
 
 def confirm_response_classification(conn, response_id, confirmed=True):
     """Advance a response to CLASSIFIED when Eric confirms or corrects.
-    
+
     Sets classification_status to CONFIRMED (or CORRECTED if confirmed=False),
     classification_source to ERIC, and response_status to CLASSIFIED.
     """
@@ -525,3 +525,108 @@ def confirm_response_classification(conn, response_id, confirmed=True):
            WHERE id = ?""",
         (status, response_id),
     )
+
+
+# ── Component 3 — Eric Gate Approval helpers ──────────────────────
+
+ALLOWED_ERIC_GATE_DECISIONS = {'APPROVE', 'VETO', 'RETURN_TO_DRAFT'}
+
+
+def insert_eric_gate_approval(conn, approval_id, workflow_run_id, decision,
+                               goal_reference_id, briefing_hash, briefing_json,
+                               drift_snapshot_json, decision_trail_snapshot_json,
+                               decided_by='Eric', is_current=1, rationale=None,
+                               supersedes_approval_id=None, created_at=None,
+                               decided_at=None):
+    """Insert one row into eric_gate_approvals. Returns the new row id."""
+    if decision not in ALLOWED_ERIC_GATE_DECISIONS:
+        raise ValueError(
+            f"Invalid decision '{decision}'. Allowed: {sorted(ALLOWED_ERIC_GATE_DECISIONS)}")
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """INSERT INTO eric_gate_approvals
+           (id, workflow_run_id, decision, decided_at, decided_by,
+            goal_reference_id, briefing_hash, briefing_json,
+            drift_snapshot_json, decision_trail_snapshot_json,
+            is_current, supersedes_approval_id, rationale, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (approval_id, workflow_run_id, decision,
+         decided_at or now, decided_by,
+         goal_reference_id, briefing_hash, briefing_json,
+         drift_snapshot_json, decision_trail_snapshot_json,
+         is_current, supersedes_approval_id, rationale,
+         created_at or now),
+    )
+    return approval_id
+
+
+def supersede_current_approval(conn, workflow_run_id):
+    """Set is_current=0 for all current approval rows on a workflow run.
+
+    Must be called inside a transaction before inserting a new current row.
+    """
+    conn.execute(
+        """UPDATE eric_gate_approvals SET is_current = 0
+           WHERE workflow_run_id = ? AND is_current = 1""",
+        (workflow_run_id,),
+    )
+
+
+def get_current_eric_gate_approval(conn, workflow_run_id):
+    """Return the current eric_gate_approvals row as dict, or None."""
+    row = conn.execute(
+        """SELECT * FROM eric_gate_approvals
+           WHERE workflow_run_id = ? AND is_current = 1
+           ORDER BY decided_at DESC, created_at DESC, id DESC
+           LIMIT 1""",
+        (workflow_run_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    cols = [d[0] for d in conn.execute(
+        "SELECT * FROM eric_gate_approvals LIMIT 0").description]
+    return dict(zip(cols, row))
+
+
+def get_eric_gate_approval_history(conn, workflow_run_id):
+    """Return all eric_gate_approvals rows for a run as list of dicts, newest first."""
+    rows = conn.execute(
+        """SELECT * FROM eric_gate_approvals
+           WHERE workflow_run_id = ?
+           ORDER BY decided_at DESC, created_at DESC, id DESC""",
+        (workflow_run_id,),
+    ).fetchall()
+    cols = [d[0] for d in conn.execute(
+        "SELECT * FROM eric_gate_approvals LIMIT 0").description]
+    return [dict(zip(cols, r)) for r in rows]
+
+
+def set_workflow_run_approved_at(conn, workflow_run_id, approved_at):
+    """Set workflow_runs.eric_approved_at and update updated_at."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """UPDATE workflow_runs SET
+               eric_approved_at = ?,
+               updated_at = ?
+           WHERE id = ?""",
+        (approved_at, now, workflow_run_id),
+    )
+
+
+def get_escalation_blockers(conn, workflow_run_id):
+    """Return count of unreconciled mandatory escalations for a workflow run.
+
+    Terminal states (RECONCILED, CANCELLED_BY_ERIC, ABANDONED, SUPERSEDED)
+    are not blocking.
+    """
+    row = conn.execute(
+        """SELECT COUNT(*) FROM advisor_escalations
+           WHERE workflow_run_id = ?
+             AND trigger_class = 'MANDATORY'
+             AND status NOT IN ('RECONCILED', 'CANCELLED_BY_ERIC',
+                                'ABANDONED', 'SUPERSEDED')""",
+        (workflow_run_id,),
+    ).fetchone()
+    return row[0]
