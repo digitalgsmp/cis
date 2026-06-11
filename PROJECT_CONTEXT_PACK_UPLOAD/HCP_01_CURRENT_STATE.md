@@ -4,7 +4,7 @@ Date: 2026-06-11
 Authority: Eric (Architect)
 Status: Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
 
-Generated: 2026-06-11 14:45 UTC | Run: run-265fd1ac887c
+Generated: 2026-06-11 14:46 UTC | Run: run-8e7a47944aa6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.**
 
-**HEAD:** `626b06a`.
+**HEAD:** `4c24b53`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
