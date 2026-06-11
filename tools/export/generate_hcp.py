@@ -1008,7 +1008,7 @@ def render_read_first(stamp):
     ]
     for st_line in stamp:
         lines.append(st_line)
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 # ── main ──────────────────────────────────────────────────────────────────

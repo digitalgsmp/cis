@@ -125,7 +125,7 @@ if [ "$ARTIFACT_COUNT" -lt 1 ]; then
     exit 1
 fi
 
-EXPECTED_COUNT=11
+EXPECTED_COUNT=12
 if [ "$ARTIFACT_COUNT" -ne "$EXPECTED_COUNT" ]; then
     echo "WARN: expected ${EXPECTED_COUNT} artifacts, found ${ARTIFACT_COUNT}"
     WARNINGS=$((WARNINGS + 1))

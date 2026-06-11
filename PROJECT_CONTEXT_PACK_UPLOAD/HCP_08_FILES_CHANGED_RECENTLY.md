@@ -1,7 +1,33 @@
 # Files Changed Recently
-Generated: 2026-06-11 14:54 UTC | Run: none
+Generated: 2026-06-11 14:59 UTC | Run: run-bb49bbe4457d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## d6a9360 Tier 5.4a — Add READ_FIRST_HERMES_CONTEXT.md as generated export
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## tools/export/generate_hcp.py 
 
 ## 89de2ae Regenerate context after session closeout
 
@@ -246,7 +272,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 0c9aa44 Approve Component 2 Escalation Advisor Integration Protocol Revision 2 design document
 
 ## docs/CIS_FOUNDATION_HARDENING_COMPONENT_2_DESIGN.md 
-
-## f732cb4 Document future build-plan and prose-spine requirement
-
-## docs/CIS_FUTURE_BUILD_PLAN_SPINE_REQUIREMENT.md 
