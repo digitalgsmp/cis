@@ -1,25 +1,21 @@
 # Read First — Hermes Harness Context
 
-Current state: Tier 5.3 COMPLETE. Next action: Tier 5.4 generate_hcp.py.
+**This file is a generated pointer. It is not authoritative.**
 
-AGENTS.md is the live Hermes-native context source for all 4 active gateways.
-HERMES_CIS_BRIEFING_PATH is permanently retired.
+The canonical source of truth is the HCP packet, also generated from
+the SQLite spine + git metadata by `tools/export/generate_hcp.py`.
 
-HCP files in PROJECT_CONTEXT_PACK_UPLOAD/ are the external advisor packet for
-ChatGPT and Claude. Manually synced at closeout until Tier 5.4–5.6 auto-generate them.
+## Start here
 
-The current canonical project context files:
-- HCP_00_README_START_HERE.md
-- HCP_01_CURRENT_STATE.md
-- HCP_02_ACTIVE_ARCHITECTURE.md
-- HCP_03_DECISIONS_LOG.md
-- HCP_04_OPEN_QUESTIONS.md
-- HCP_05_NEXT_ACTIONS.md
-- HCP_06_MODEL_ROLES_AND_PROTOCOL.md
-- HCP_07_RECENT_HANDOFF.md
-- HCP_08_FILES_CHANGED_RECENTLY.md
-- HCP_09_TERMS_AND_NAMING.md
+- **HCP_00_README_START_HERE.md** — architecture overview, how to use the packet
+- **HCP_01_CURRENT_STATE.md** — current build phase, HEAD, infrastructure, blockers
+- **HCP_05_NEXT_ACTIONS.md** — next safe action, approved build order, do-not-start list
+- **HCP_07_RECENT_HANDOFF.md** — most recent session handoff, Eric Gate status
 
-Treat HCP files as current source of truth for ChatGPT/Claude sessions.
-Older files are historical working notes.
-If there is a conflict, prefer the HCP files.
+If there is a conflict between this file and any HCP file, prefer the HCP file.
+All HCP files carry the stamp: DO NOT MANUALLY EDIT — regenerate with
+tools/export/generate_hcp.py.
+
+Generated: 2026-06-11 14:54 UTC | Run: none
+Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
+DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py

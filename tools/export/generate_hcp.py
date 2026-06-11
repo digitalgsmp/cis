@@ -2,7 +2,7 @@
 """
 generate_hcp.py — Tier 5.4
 Reads SQLite spine + agents_static.yaml + hcp_static.yaml + git metadata.
-Writes HCP_00 through HCP_09 to PROJECT_CONTEXT_PACK_UPLOAD/.
+Writes READ_FIRST_HERMES_CONTEXT.md plus HCP_00 through HCP_09 to PROJECT_CONTEXT_PACK_UPLOAD/.
 
 Usage: python3 tools/export/generate_hcp.py [--db PATH] [--hcp-config PATH]
           [--agents-config PATH] [--out-dir PATH] [--run-id ID] [--dry-run]
@@ -23,6 +23,7 @@ DEFAULT_AGENTS_CONFIG = REPO_ROOT / "config" / "agents_static.yaml"
 DEFAULT_OUT_DIR = REPO_ROOT / "PROJECT_CONTEXT_PACK_UPLOAD"
 
 HCP_FILES = [
+    "READ_FIRST_HERMES_CONTEXT.md",
     "HCP_00_README_START_HERE.md",
     "HCP_01_CURRENT_STATE.md",
     "HCP_02_ACTIVE_ARCHITECTURE.md",
@@ -982,10 +983,38 @@ def render_hcp_09(stamp, hcp_static, agents_static):
     return "\n".join(lines)
 
 
+def render_read_first(stamp):
+    """Generate a minimal pointer-only file. No tier-specific prose — points
+    sessions to the generated HCP packet as source of truth."""
+    lines = [
+        "# Read First — Hermes Harness Context",
+        "",
+        "**This file is a generated pointer. It is not authoritative.**",
+        "",
+        "The canonical source of truth is the HCP packet, also generated from",
+        "the SQLite spine + git metadata by `tools/export/generate_hcp.py`.",
+        "",
+        "## Start here",
+        "",
+        "- **HCP_00_README_START_HERE.md** — architecture overview, how to use the packet",
+        "- **HCP_01_CURRENT_STATE.md** — current build phase, HEAD, infrastructure, blockers",
+        "- **HCP_05_NEXT_ACTIONS.md** — next safe action, approved build order, do-not-start list",
+        "- **HCP_07_RECENT_HANDOFF.md** — most recent session handoff, Eric Gate status",
+        "",
+        "If there is a conflict between this file and any HCP file, prefer the HCP file.",
+        "All HCP files carry the stamp: DO NOT MANUALLY EDIT — regenerate with",
+        "tools/export/generate_hcp.py.",
+        "",
+    ]
+    for st_line in stamp:
+        lines.append(st_line)
+    return "\n".join(lines)
+
+
 # ── main ──────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate HCP_00–HCP_09 from spine")
+    parser = argparse.ArgumentParser(description="Generate READ_FIRST_HERMES_CONTEXT.md + HCP_00–HCP_09 from spine")
     parser.add_argument("--db", default=str(DEFAULT_DB))
     parser.add_argument("--hcp-config", default=str(DEFAULT_HCP_CONFIG))
     parser.add_argument("--agents-config", default=str(DEFAULT_AGENTS_CONFIG))
@@ -1018,6 +1047,7 @@ def main():
 
     # Render each HCP file
     renderers = {
+        "READ_FIRST_HERMES_CONTEXT.md": lambda: render_read_first(stamp),
         "HCP_00_README_START_HERE.md": lambda: render_hcp_00(stamp, hcp_static, agents_static, get_git_head(REPO_ROOT)[0], actions),
         "HCP_01_CURRENT_STATE.md": lambda: render_hcp_01(stamp, hcp_static, agents_static, decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state),
         "HCP_02_ACTIVE_ARCHITECTURE.md": lambda: render_hcp_02(stamp, hcp_static, agents_static),
