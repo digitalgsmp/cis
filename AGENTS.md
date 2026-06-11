@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-11 15:02 UTC | Run: run-30a5ccd91f9f | Latest pipeline: run-88032ce506724
+Generated: 2026-06-11 21:53 UTC | Run: run-c5eca72db2a3 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -18,10 +18,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - Schedule field-use work (SWA)
 - CIS Foundation Build Plan Phases 1-3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
-- Judge implementation (gated on Tier 6)
-- Tier 6 Pipeline Integration (gated on Tier 5)
-- Tier 7 Router Reclassification (gated on Tier 6)
-- Tier 8 MCP Bridge (gated on Tier 7)
+- Tier 8 MCP Bridge implementation (gated on Tier 8 specification planning complete)
 - Tier 9 Chroma/VDB (gated on Tier 8)
 - Tier 10 CIS UI/custom display views (gated on Tier 9)
 - Any artifact not in the approved Dependency Graph Build Plan v2.0

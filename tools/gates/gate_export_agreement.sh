@@ -151,6 +151,21 @@ if [ "$GIT_HEAD" != "$CURRENT_HEAD" ]; then
     WARNINGS=$((WARNINGS + 1))
 fi
 
+# ── Check 5.5: Build state coherence (spine vs static do_not_start) ────────
+
+COHERENCE_GATE="$SCRIPT_DIR/gate_build_state_coherence.py"
+if [ -x "$COHERENCE_GATE" ]; then
+    echo "Running build state coherence check..."
+    if ! python3 "$COHERENCE_GATE"; then
+        echo "FAIL: build state coherence gate failed — spine and static config are contradictory"
+        echo "  Fix: update config/agents_static.yaml do_not_start to match spine project_state"
+        exit 1
+    fi
+else
+    echo "WARN: coherence gate not found or not executable: $COHERENCE_GATE"
+    WARNINGS=$((WARNINGS + 1))
+fi
+
 # ── Check 6: per-artifact verification ─────────────────────────────────────
 
 echo "Verifying ${ARTIFACT_COUNT} artifacts against manifest..."

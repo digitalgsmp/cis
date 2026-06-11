@@ -4,7 +4,7 @@ Date: 2026-06-11
 Authority: Eric (Architect)
 Status: Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
 
-Generated: 2026-06-11 15:02 UTC | Run: run-30a5ccd91f9f
+Generated: 2026-06-11 21:53 UTC | Run: run-c5eca72db2a3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.**
 
-**HEAD:** `bf9abad`.
+**HEAD:** `487837e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -316,10 +316,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 - Schedule field-use work (SWA)
 - CIS Foundation Build Plan Phases 1-3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
-- Judge implementation (gated on Tier 6)
-- Tier 6 Pipeline Integration (gated on Tier 5)
-- Tier 7 Router Reclassification (gated on Tier 6)
-- Tier 8 MCP Bridge (gated on Tier 7)
+- Tier 8 MCP Bridge implementation (gated on Tier 8 specification planning complete)
 - Tier 9 Chroma/VDB (gated on Tier 8)
 - Tier 10 CIS UI/custom display views (gated on Tier 9)
 - Any artifact not in the approved Dependency Graph Build Plan v2.0
