@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime"
 from db.database import (
     init_db, get_escalation, get_escalation_responses,
     record_reconciliation as db_record_reconciliation,
+    confirm_response_classification,
     ALLOWED_RECONCILIATION_DISPOSITIONS,
 )
 
@@ -58,6 +59,8 @@ def main():
                         help="If REJECT disposition, which advisor's position is rejected")
     parser.add_argument("--rejection-reason", default=None,
                         help="Rejection rationale detail (required if --reject-advisor set)")
+    parser.add_argument("--confirm-responses", action="store_true", default=False,
+                        help="Advance all ingested responses to CLASSIFIED (Eric confirmation)")
     args = parser.parse_args()
 
     db_path = args.db
@@ -122,6 +125,14 @@ def main():
                  args.rejection_reason, now),
             )
             print(f"Rejection rationale recorded for advisor {args.reject_advisor}")
+
+    # Confirm responses (advance to CLASSIFIED)
+    if args.confirm_responses:
+        responses = get_escalation_responses(conn, args.escalation_id)
+        for resp in responses:
+            if resp["response_status"] == "INGESTED":
+                confirm_response_classification(conn, resp["id"], confirmed=True)
+                print(f"Response {resp['id']} ({resp['advisor']}): CONFIRMED → CLASSIFIED")
 
     conn.commit()
     conn.close()

@@ -508,3 +508,20 @@ def cancel_escalation(conn, escalation_id, reason):
            WHERE id = ? AND status NOT IN ('ABANDONED', 'SUPERSEDED', 'CANCELLED_BY_ERIC', 'RECONCILED')""",
         (reason, datetime.now(timezone.utc).isoformat(), escalation_id),
     )
+
+
+def confirm_response_classification(conn, response_id, confirmed=True):
+    """Advance a response to CLASSIFIED when Eric confirms or corrects.
+    
+    Sets classification_status to CONFIRMED (or CORRECTED if confirmed=False),
+    classification_source to ERIC, and response_status to CLASSIFIED.
+    """
+    status = 'CONFIRMED' if confirmed else 'CORRECTED'
+    conn.execute(
+        """UPDATE advisor_responses SET
+               classification_status = ?,
+               classification_source = 'ERIC',
+               response_status = 'CLASSIFIED'
+           WHERE id = ?""",
+        (status, response_id),
+    )

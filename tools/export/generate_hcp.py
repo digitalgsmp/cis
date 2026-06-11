@@ -811,6 +811,15 @@ def render_hcp_06(stamp, hcp_static, agents_static):
         lines.append(line)
     lines.append("")
 
+    # Escalation Advisor Integration Protocol (Component 2)
+    escalation = s.get("escalation_protocol_section", "").strip()
+    if escalation:
+        lines.append("## Escalation Advisor Integration Protocol (Component 2)")
+        lines.append("")
+        for line in escalation.splitlines():
+            lines.append(line)
+        lines.append("")
+
     return "\n".join(lines)
 
 

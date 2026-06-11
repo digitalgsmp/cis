@@ -87,8 +87,12 @@ def check_unresolved_objection(conn, workflow_run_id):
 
 
 def check_governance_tier(conn, workflow_run_id):
-    """Check if this run involves governance-tier work (Tier 6+)."""
-    # For now, check project_state for current tier >= 6
+    """Check if the project is at Tier 6+ governance scope.
+    
+    Reads project_state.next_tier. Returns True when next_tier >= 6.
+    Note: this checks global project state, not per-run scope.
+    Per-run governance detection deferred to future refinement.
+    """
     state = conn.execute(
         "SELECT value FROM project_state WHERE key = 'next_tier' AND superseded_at IS NULL ORDER BY id DESC LIMIT 1"
     ).fetchone()
@@ -102,26 +106,32 @@ def check_governance_tier(conn, workflow_run_id):
 
 
 def is_escalation_satisfied(conn, workflow_run_id):
-    """Check if a mandatory escalation for this run is RECONCILED or Eric-cancelled."""
-    rows = conn.execute(
+    """Check if a mandatory escalation for this run is RECONCILED or Eric-cancelled.
+    
+    Returns True only if at least one mandatory escalation exists for this run
+    and all mandatory escalations are in a satisfying terminal state.
+    Returns False if mandatory triggers exist but no mandatory escalation
+    records exist at all.
+    """
+    # Count total mandatory escalations for this run
+    total = conn.execute(
+        """SELECT COUNT(*) FROM advisor_escalations
+           WHERE workflow_run_id = ?
+           AND trigger_class = 'MANDATORY'""",
+        (workflow_run_id,),
+    ).fetchone()[0]
+
+    # Count satisfying escalations (RECONCILED or CANCELLED_BY_ERIC)
+    satisfied = conn.execute(
         """SELECT COUNT(*) FROM advisor_escalations
            WHERE workflow_run_id = ?
            AND trigger_class = 'MANDATORY'
            AND status IN ('RECONCILED', 'CANCELLED_BY_ERIC')""",
         (workflow_run_id,),
-    ).fetchone()
-    if rows[0] > 0:
-        return True
+    ).fetchone()[0]
 
-    # Also check if there's an open mandatory escalation that hasn't been satisfied
-    open_rows = conn.execute(
-        """SELECT COUNT(*) FROM advisor_escalations
-           WHERE workflow_run_id = ?
-           AND trigger_class = 'MANDATORY'
-           AND status NOT IN ('RECONCILED', 'CANCELLED_BY_ERIC', 'ABANDONED', 'SUPERSEDED')""",
-        (workflow_run_id,),
-    ).fetchone()
-    return open_rows[0] == 0  # Satisfied if no open mandatory escalations
+    # Satisfied only if at least one exists and none are still open
+    return total > 0 and satisfied == total
 
 
 def main():
