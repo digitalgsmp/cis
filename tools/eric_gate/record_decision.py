@@ -72,12 +72,15 @@ def dict_from_row(conn, query, params=()):
     return dict(zip(cols, row))
 
 
-def rebuild_briefing(run_id):
+def rebuild_briefing(run_id, db_path=None):
     """Rebuild briefing from current spine state. Returns (payload, error)."""
     try:
+        cmd = [sys.executable, BUILD_BRIEFING_SCRIPT,
+               "--workflow-run-id", run_id, "--json"]
+        if db_path:
+            cmd.extend(["--db", db_path])
         result = subprocess.run(
-            [sys.executable, BUILD_BRIEFING_SCRIPT,
-             "--workflow-run-id", run_id, "--json"],
+            cmd,
             capture_output=True, text=True, timeout=30,
         )
         if result.returncode != 0:
@@ -132,9 +135,9 @@ def check_3_requires_eric_review(conn, run_id):
     return True, None
 
 
-def check_4_briefing_rebuildable(run_id):
+def check_4_briefing_rebuildable(run_id, db_path=None):
     """Briefing can be rebuilt from current spine state."""
-    payload, err = rebuild_briefing(run_id)
+    payload, err = rebuild_briefing(run_id, db_path)
     if err:
         return False, err
     return True, payload
@@ -314,7 +317,7 @@ def check_13_valid_decision(decision):
 # ── Main Setter ────────────────────────────────────────────────────
 
 def record_decision(run_id, decision, briefing_hash, goal_reference_id,
-                    rationale, supersede, conn):
+                    rationale, supersede, conn, db_path=None):
     """Run all preconditions, then write decision in a transaction."""
 
     checks = [
@@ -324,7 +327,7 @@ def record_decision(run_id, decision, briefing_hash, goal_reference_id,
     ]
 
     # Check 4: briefing rebuildable
-    ok, payload_or_err = check_4_briefing_rebuildable(run_id)
+    ok, payload_or_err = check_4_briefing_rebuildable(run_id, db_path)
     checks.append(("Briefing rebuildable", (ok, payload_or_err if not ok else None)))
     if not ok:
         payload = None
@@ -502,6 +505,7 @@ def main():
             args.rationale,
             args.supersede,
             conn,
+            db_path=args.db,
         )
     finally:
         conn.close()
