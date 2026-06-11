@@ -35,6 +35,14 @@ ALLOWED_TABLES = {
     "active_blockers",
     "workflow_run_artifacts",
     "workflow_run_legacy_links",
+    "project_state",
+    "goal_references",
+    "decision_trails",
+    "drift_indicators",
+    "rejection_rationale",
+    "advisor_escalations",
+    "advisor_escalation_packets",
+    "advisor_responses",
 }
 
 ALLOWED_COLUMNS = {
@@ -53,6 +61,23 @@ ALLOWED_COLUMNS = {
     # next_actions
     "tier", "description", "depends_on", "updated_at",
     # active_blockers (id, description, status, resolution, created_at, resolved_at covered above)
+    # project_state columns
+    "key", "value", "source", "evidence_hash", "evidence_run_id", "superseded_at",
+    # advisor_escalations
+    "workflow_run_id", "trigger_class", "trigger_reason", "escalation_scope",
+    "reconciliation_disposition", "reconciliation_note",
+    "advisor_divergence_summary", "advisor_positions_json",
+    "reconciled_at", "abandoned_at", "abandoned_reason", "superseded_by",
+    # advisor_escalation_packets
+    "escalation_id", "packet_version", "packet_raw", "packet_hash",
+    "git_head", "advisor_target", "requested_response_type", "packet_status",
+    "transmitted_at",
+    # advisor_responses
+    "packet_id", "advisor", "transmission_mode", "response_raw",
+    "responded_packet_hash", "hash_match_status",
+    "primary_type", "secondary_flags",
+    "classification_source", "classification_status",
+    "response_status", "received_at", "ingested_at",
 }
 
 
