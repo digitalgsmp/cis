@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-11 04:56 UTC | Run: run-3aa4092c3d32
+Generated: 2026-06-11 06:13 UTC | Run: run-ac5d4621a9c7
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -121,3 +121,50 @@ pipeline coordination falls back to direct SQLite spine access.
 Implementation evidence is stored in workflow_run_artifacts.
 Eric approval is recorded in workflow_runs.eric_approved_at.
 Approval setter (UI/API/CLI) is pending Foundation Hardening Phase.
+
+## Escalation Advisor Integration Protocol (Component 2)
+
+### Escalation Advisor Integration Protocol (Component 2, APPROVED)
+
+Component 2 defines the formal boundary between the Hermes operational layer
+and the external escalation advisor layer (Claude, ChatGPT).
+
+**Advisor authority limits:**
+- Claude and ChatGPT are escalation advisors only.
+- No execution authority. No spine write access. No directive authority.
+- An advisor response is never a FINAL_DIRECTIVE and must never be pasted to v4impl as one.
+- Output is advisory input to Eric's reconciliation only.
+
+**Trigger conditions:**
+- Discretionary: Eric requests external audit at any time.
+- Mandatory: open drift indicators, deliberation exhaustion (max rounds without consensus),
+  verification failure twice on same scope, unresolved/dismissed objections,
+  governance-tier work (Tier 6+), Eric mandate.
+- A mandatory escalation blocks progression to implementation until RECONCILED or Eric-cancelled.
+
+**Packet format (P0-P6):**
+- P0: Header — escalation_id, version, git HEAD, advisor target, trigger class, hash.
+- P1: Project position from spine project_state.
+- P2: Spine state excerpt — workflow_run, deliberation rounds, active blockers.
+- P3: Provenance records — goal references, decision trails, drift indicators, rejection rationale.
+- P4: The exact question — one explicit ask, requested response type.
+- P5: Constraints — advisor authority limits, Exact-Format Instruction Rule, scope fence.
+- P6: Evidence appendix — raw terminal output.
+
+**Response lifecycle:**
+EXPECTED → TRANSMITTED → RECEIVED → INGESTED → CLASSIFIED.
+Responses stored verbatim. Classification via deterministic tooling (PROPOSED),
+confirmed or corrected by Eric (CONFIRMED/CORRECTED). Eric is final authority.
+
+**Reconciliation:**
+Eric records disposition (ACCEPT/ACCEPT_WITH_MODIFICATION/REJECT/RETURN_TO_DRAFT/ESCALATE_FURTHER)
+with plain-language note. For BOTH-advisor escalations where advisors diverge,
+captures divergence summary and structured positions.
+
+**Terminal states:** ABANDONED, SUPERSEDED, CANCELLED_BY_ERIC — all require reason fields.
+
+**Current path:** Manual copy-paste. Builder assembles packet from spine; Eric transmits;
+response ingested via CLI tool. Eric remains sole transmitter and reconciler.
+
+**Future path (Tier 8):** API transport replaces copy-paste. Contract unchanged.
+Eric's reconciliation is never automated.
