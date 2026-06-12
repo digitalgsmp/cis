@@ -5,15 +5,18 @@ Classifier for Tier 7R — domain classification and adapter routing.
 7R.2: Adds CIS domain detection and routes through CISAdapter.
 7R.3: Adds SWA domain detection and routes through SWAAdapter.
 7R.4: Adds Process Manager state machine validation.
+7R.5: Adds Human Approval Gate integration.
 
 classify() preserves 7R.1 behavior (backward compatible).
 classify_full() runs the complete adapter pipeline: domain → adapter → state → objects.
 classify_with_pm() adds Process Manager state-transition validation.
+classify_full_pipeline_with_approval() adds human approval gate enforcement.
 """
 from .scope_registry import classify_domain, Domain, is_out_of_scope, is_in_scope
 from .work_intent import WorkIntent
 from .adapters import get_adapter, is_cis_domain, is_swa_domain
 from .process_manager import ProcessManager, ProcessResult
+from .approval_gate import ApprovalGate, ApprovalDecision, process_with_approval
 from typing import List, Optional, Tuple
 
 
@@ -201,3 +204,46 @@ def classify_full_pipeline(
 
     candidates = adapter.stage_candidates(intent)
     return intent, candidates, result
+
+
+def classify_full_pipeline_with_approval(
+    prompt: str,
+    source_type: str = "prompt",
+    evidence_refs: Optional[List[str]] = None,
+    pm: Optional[ProcessManager] = None,
+    gate: Optional[ApprovalGate] = None,
+) -> Tuple[WorkIntent, List[WorkIntent], ProcessResult, ApprovalDecision]:
+    """
+    Complete 7R.5 pipeline: classify → process manager → approval gate → stage.
+
+    Returns (intent, candidates, process_result, approval_decision).
+
+    The Human Approval Gate enforces Eric Gate requirements:
+    - Gated transitions → AWAITING_APPROVAL (candidates empty)
+    - Approved transitions → candidates proceed
+    - Non-gated transitions → proceed normally
+    """
+    if pm is None:
+        pm = ProcessManager()
+    if gate is None:
+        gate = ApprovalGate()
+
+    intent, result = classify_with_pm(prompt, source_type, evidence_refs, pm)
+
+    # Check approval gate
+    decision, candidates_allowed = process_with_approval(intent, result, gate)
+
+    if not candidates_allowed:
+        return intent, [], result, decision
+
+    # Gate passed — stage candidates
+    domain = intent.domain
+    if not domain or intent.status == "BLOCKED":
+        return intent, [], result, decision
+
+    adapter = get_adapter(domain)
+    if adapter is None:
+        return intent, [], result, decision
+
+    candidates = adapter.stage_candidates(intent)
+    return intent, candidates, result, decision
