@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `dc685d5`
+HEAD: `cb80987`
 
-Generated: 2026-06-12 23:09 UTC | Run: none
+Generated: 2026-06-12 23:18 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-7R.3 — SWAAdapter (validation use case).
+7R.4 — Process Manager (state machine).
 
 ## Eric Gate Approval Status
 

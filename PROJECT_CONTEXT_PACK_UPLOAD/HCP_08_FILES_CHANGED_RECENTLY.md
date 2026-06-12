@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-06-12 23:09 UTC | Run: none
+Generated: 2026-06-12 23:18 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## cb80987 feat(7R.3): SWAAdapter — validation use case for multi-domain adapter architecture
+
+## runtime/tier7r/adapters/__init__.py 
+
+## runtime/tier7r/adapters/swa_adapter.py 
+
+## runtime/tier7r/classifier.py 
+
+## tests/test_tier7r_2.py 
+
+## tests/test_tier7r_3.py 
+
+## 892c18d regenerate exports — 7R.2 COMPLETE
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## dc685d5 feat(7R.2): CISAdapter — CIS domain classification + candidate staging
 
@@ -296,43 +334,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## cis_kernel/source/SESSION_LOG.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 104f13e Component 3.5 Phase 3 — generator switchover to build-plan spine
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/db/build_plan.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/build_plan/sync_project_state.py 
-
-## tools/export/generate_hcp.py 
-
-## 215bd22 Component 3.5 Phase 2 — seed CIS build graph
-
-## runtime/db/build_plan.py 
-
-## tools/build_plan/seed_build_plan.py 
