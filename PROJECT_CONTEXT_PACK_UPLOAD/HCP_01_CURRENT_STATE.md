@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-12
 Authority: Eric (Architect)
-Status: Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.
+Status: Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.
 
-Generated: 2026-06-12 04:57 UTC | Run: run-1498bf62c9cb
+Generated: 2026-06-12 04:59 UTC | Run: run-c6b821346c02
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.**
+**Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.**
 
-**HEAD:** `5f5f757`.
+**HEAD:** `65451e0`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**Component 3.5 — Build-Plan Spine Authority (Tier 3.5, IN PROGRESS)**
+(No eligible PENDING node in build plan.)
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -282,7 +282,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 12. Tier 8 — MCP Bridge 🚫 BLOCKED
 13. Tier 9 — Chroma/VDB 🚫 BLOCKED
 14. Tier 10 — CIS UI / Custom Display Views 🚫 BLOCKED
-15. Component 3.5 — Build-Plan Spine Authority 🔄 IN PROGRESS
+15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE
 16. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
 17. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
 18. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE

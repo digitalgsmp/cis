@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-12 04:57 UTC | Run: run-1498bf62c9cb | Latest pipeline: run-88032ce506724
+Generated: 2026-06-12 04:59 UTC | Run: run-c6b821346c02 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.
+Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -71,7 +71,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Component 3.5 — Build-Plan Spine Authority] (Tier 3.5) Component 3.5 — Build-Plan Spine Authority
 
 ## 7. Active Blockers
 - [Tier 8 — MCP Bridge] Gated on Tier 7 Full Durable Router Pipeline per dependency graph.

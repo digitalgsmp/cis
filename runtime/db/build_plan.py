@@ -145,3 +145,19 @@ def sync_project_state_from_build_plan(conn, project_id='CIS'):
             "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
             ("build_phase", phase, source, now)
         )
+    else:
+        # No IN_PROGRESS or unblocked PENDING node — all work complete or blocked
+        source = "gate"
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("next_tier", "—", source, now)
+        )
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("next_action", "(none — all nodes COMPLETE, BLOCKED, or DEFERRED)", source, now)
+        )
+        phase = f"{completed_label}. No active work — all remaining nodes BLOCKED or DEFERRED."
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("build_phase", phase, source, now)
+        )

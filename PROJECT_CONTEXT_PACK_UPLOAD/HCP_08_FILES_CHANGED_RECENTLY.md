@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-06-12 04:57 UTC | Run: run-1498bf62c9cb
+Generated: 2026-06-12 04:59 UTC | Run: run-c6b821346c02
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 65451e0 Component 3.5: finish generator switchover — AGENTS.md Sections 6-7 now read from build_plan_nodes
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/export/generate_agents_md.py 
 
 ## 5f5f757 Component 3.5 spine cleanup: resolve 3 stale blockers, seed next_action, regenerate exports
 
@@ -336,9 +366,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/gates/gate_final_directive_allowed.py 
 
 ## tools/gates/gate_runner.sh 
-
-## e05e3e8 Ignore generated Eric Gate briefing artifacts
-
-## .gitignore 
-
-## runtime/eric_gate/briefings/run-b77483fe75234.json 
