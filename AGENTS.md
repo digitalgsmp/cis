@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-12 03:29 UTC | Run: run-d63fe620a6ac | Latest pipeline: run-88032ce506724
+Generated: 2026-06-12 04:25 UTC | Run: run-ded73b495439 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
+Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start

@@ -170,8 +170,20 @@ def query_spine(db_path):
     ).fetchone()
     eric_gate_dict = _row_to_dict(eric_gate) if eric_gate else None
 
+    # Query build_plan_nodes for Component 3.5 generator switchover
+    build_plan_nodes = [_row_to_dict(r) for r in conn.execute(
+        """SELECT bpn.*,
+           (SELECT COUNT(*) FROM build_plan_dependencies bpd
+            JOIN build_plan_nodes dep ON bpd.depends_on_id = dep.id
+            WHERE bpd.node_id = bpn.id AND bpd.dependency_type = 'HARD'
+              AND dep.status != 'COMPLETE') as unmet_hard_deps
+           FROM build_plan_nodes bpn
+           WHERE bpn.project_id = 'CIS'
+           ORDER BY bpn.sequence"""
+    ).fetchall()]
+
     conn.close()
-    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate_dict
+    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate_dict, build_plan_nodes
 
 
 # ── per-file renderers ─────────────────────────────────────────────────────
@@ -209,7 +221,8 @@ def render_hcp_00(stamp, hcp_static, agents_static, head_short, actions):
 
 
 def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
-                   actions, blockers, runs, latest_run, row_counts, build_state):
+                   actions, blockers, runs, latest_run, row_counts, build_state,
+                   build_plan_nodes):
     s = hcp_static["hcp_01"]
     shared = hcp_static["shared"]
     infra = agents_static.get("infrastructure", {})
@@ -394,29 +407,37 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
     # Next Safe Action
     lines.append("## Next Safe Action")
     lines.append("")
-    pending = [a for a in actions if a["status"] == "PENDING"]
-    if pending:
-        na = pending[0]
-        lines.append(f"**{na['description']}**")
-        if na.get("depends_on"):
-            lines.append(f"Depends on: {na['depends_on']}")
+    in_progress = [n for n in build_plan_nodes if n["status"] == "IN_PROGRESS"]
+    eligible = [n for n in build_plan_nodes if n["status"] == "PENDING" and n.get("unmet_hard_deps", 0) == 0]
+    if in_progress:
+        node = in_progress[0]
+        lines.append(f"**{node['node_label']} (Tier {node['tier']}, IN PROGRESS)**")
+    elif eligible:
+        node = eligible[0]
+        lines.append(f"**{node['node_label']} (Tier {node['tier']})**")
     else:
-        lines.append("(No pending actions in spine)")
+        lines.append("(No eligible PENDING node in build plan.)")
     lines.append("")
 
     # Approved build order
     lines.append("**Approved build order:**")
+    status_map = {
+        "COMPLETE": "✅ COMPLETE",
+        "IN_PROGRESS": "🔄 IN PROGRESS",
+        "PENDING": "⬜ PENDING",
+        "BLOCKED": "🚫 BLOCKED",
+        "DEFERRED": "⏸ DEFERRED",
+    }
+    counter = 1
+    for node in build_plan_nodes:
+        disp = status_map.get(node["status"], node["status"])
+        lines.append(f"{counter}. {node['node_label']} {disp}")
+        counter += 1
     for a in actions:
-        status_map = {
-            "COMPLETE": "✅ COMPLETE",
-            "PASS_WITH_LIMITATIONS": "✅ PASS_WITH_LIMITATIONS",
-            "IN_PROGRESS": "🔄 IN PROGRESS",
-            "PENDING": "⬜ PENDING",
-            "BLOCKED": "🚫 BLOCKED",
-        }
-        status_disp = status_map.get(a["status"], a["status"])
+        disp = status_map.get(a["status"], a["status"])
         tier = f"Tier {a['tier']}" if a.get("tier") else "—"
-        lines.append(f"{len(lines)}. {tier} — {a['description']} {status_disp}")
+        lines.append(f"{counter}. {tier} — {a['description']} {disp}")
+        counter += 1
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -677,7 +698,8 @@ def render_hcp_04(stamp, questions):
     return "\n".join(lines)
 
 
-def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers):
+def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers,
+                   build_plan_nodes):
     s = hcp_static["hcp_05"]
 
     lines = ["# Next Actions — Hermes Harness / CIS"]
@@ -688,12 +710,24 @@ def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers):
     # Current Next Action
     lines.append(s["current_next_action_framing"].strip())
     lines.append("")
-    pending = [a for a in actions if a["status"] == "PENDING"]
-    if pending:
-        na = pending[0]
-        lines.append(f"**{na['description']}.** {na.get('depends_on', '')}")
+    in_progress = [n for n in build_plan_nodes if n["status"] == "IN_PROGRESS"]
+    eligible = [n for n in build_plan_nodes if n["status"] == "PENDING" and n.get("unmet_hard_deps", 0) == 0]
+    if in_progress:
+        node = in_progress[0]
+        lines.append(f"**{node['node_label']}** (IN PROGRESS)")
+    elif eligible:
+        node = eligible[0]
+        lines.append(f"**{node['node_label']}**")
     else:
-        lines.append("(No pending actions)")
+        blocked_nodes = [n for n in build_plan_nodes if n["status"] == "BLOCKED"]
+        deferred_nodes = [n for n in build_plan_nodes if n["status"] == "DEFERRED"]
+        lines.append("(No eligible PENDING node in build plan.)")
+        if deferred_nodes:
+            labels = "; ".join(f"Tier {n['tier']} DEFERRED" for n in deferred_nodes)
+            lines.append(f"Deferred: {labels}.")
+        if blocked_nodes:
+            labels = "; ".join(f"Tier {n['tier']} BLOCKED" for n in blocked_nodes)
+            lines.append(f"Blocked: {labels}.")
     lines.append("")
 
     # Do not start
@@ -707,11 +741,23 @@ def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers):
     lines.append("## Approved Build Order")
     lines.append("")
     lines.append(s["approved_build_order_header"].strip())
+    status_map = {
+        "COMPLETE": "✅ COMPLETE",
+        "IN_PROGRESS": "🔄 IN PROGRESS",
+        "PENDING": "⬜ PENDING",
+        "BLOCKED": "🚫 BLOCKED",
+        "DEFERRED": "⏸ DEFERRED",
+    }
+    counter = 1
+    for node in build_plan_nodes:
+        disp = status_map.get(node["status"], node["status"])
+        lines.append(f"| {node['tier']} | {node['node_label'][:80]} | {disp} | |")
+        counter += 1
     for a in actions:
-        status_disp = a["status"]
-        commits = ""
+        disp = a["status"]
         tier = f"Tier {a['tier']}" if a.get("tier") else "—"
-        lines.append(f"| {tier} | {a['description'][:80]} | {status_disp} | {commits} |")
+        lines.append(f"| {tier} | {a['description'][:80]} | {disp} | |")
+        counter += 1
     lines.append("")
 
     # Known Limitations
@@ -836,7 +882,8 @@ def render_hcp_06(stamp, hcp_static, agents_static):
     return "\n".join(lines)
 
 
-def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None):
+def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None,
+                   build_plan_nodes=None):
     s = hcp_static["hcp_07"]
     head_short, _ = get_git_head(REPO_ROOT)
 
@@ -875,12 +922,14 @@ def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None):
     # Exact Next Action
     lines.append(s["exact_next_action_framing"])
     lines.append("")
-    pending = [a for a in actions if a["status"] == "PENDING"]
-    if pending:
-        na = pending[0]
-        lines.append(f"{na['description']}.")
+    in_progress = [n for n in build_plan_nodes if n["status"] == "IN_PROGRESS"]
+    eligible = [n for n in build_plan_nodes if n["status"] == "PENDING" and n.get("unmet_hard_deps", 0) == 0]
+    if in_progress:
+        lines.append(f"{in_progress[0]['node_label']} (IN PROGRESS).")
+    elif eligible:
+        lines.append(f"{eligible[0]['node_label']}.")
     else:
-        lines.append("(No pending actions)")
+        lines.append("(No eligible PENDING node in build plan.)")
     lines.append("")
 
     # Eric Gate approval provenance summary
@@ -1040,7 +1089,7 @@ def main():
     agents_static = load_yaml(args.agents_config)
 
     # Query spine
-    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate = query_spine(args.db)
+    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate, build_plan_nodes = query_spine(args.db)
 
     # Build stamp
     stamp = generation_stamp(args.run_id)
@@ -1049,13 +1098,13 @@ def main():
     renderers = {
         "READ_FIRST_HERMES_CONTEXT.md": lambda: render_read_first(stamp),
         "HCP_00_README_START_HERE.md": lambda: render_hcp_00(stamp, hcp_static, agents_static, get_git_head(REPO_ROOT)[0], actions),
-        "HCP_01_CURRENT_STATE.md": lambda: render_hcp_01(stamp, hcp_static, agents_static, decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state),
+        "HCP_01_CURRENT_STATE.md": lambda: render_hcp_01(stamp, hcp_static, agents_static, decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, build_plan_nodes),
         "HCP_02_ACTIVE_ARCHITECTURE.md": lambda: render_hcp_02(stamp, hcp_static, agents_static),
         "HCP_03_DECISIONS_LOG.md": lambda: render_hcp_03(stamp, decisions),
         "HCP_04_OPEN_QUESTIONS.md": lambda: render_hcp_04(stamp, questions),
-        "HCP_05_NEXT_ACTIONS.md": lambda: render_hcp_05(stamp, hcp_static, agents_static, actions, blockers),
+        "HCP_05_NEXT_ACTIONS.md": lambda: render_hcp_05(stamp, hcp_static, agents_static, actions, blockers, build_plan_nodes),
         "HCP_06_MODEL_ROLES_AND_PROTOCOL.md": lambda: render_hcp_06(stamp, hcp_static, agents_static),
-        "HCP_07_RECENT_HANDOFF.md": lambda: render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate),
+        "HCP_07_RECENT_HANDOFF.md": lambda: render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate, build_plan_nodes),
         "HCP_08_FILES_CHANGED_RECENTLY.md": lambda: render_hcp_08(stamp),
         "HCP_09_TERMS_AND_NAMING.md": lambda: render_hcp_09(stamp, hcp_static, agents_static),
     }

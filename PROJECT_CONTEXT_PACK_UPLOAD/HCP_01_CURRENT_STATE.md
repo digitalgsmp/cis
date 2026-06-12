@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-12
 Authority: Eric (Architect)
-Status: Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.
+Status: Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.
 
-Generated: 2026-06-12 03:29 UTC | Run: run-d63fe620a6ac
+Generated: 2026-06-12 04:25 UTC | Run: run-ded73b495439
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 8 MCP Bridge specification planning open. Pipeline stability verified at 2671d59.**
+**Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.**
 
-**HEAD:** `191f6b9`.
+**HEAD:** `215bd22`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -268,21 +268,36 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-(No pending actions in spine)
+**Component 3.5 — Build-Plan Spine Authority (Tier 3.5, IN PROGRESS)**
 
 **Approved build order:**
-273. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
-274. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
-275. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
-276. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
-277. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
-278. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
-279. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
-280. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
-281. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
-282. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
-283. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
-284. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
+1. Tier 0 — Deliberation Engine ✅ COMPLETE
+2. Tier 1 — Deterministic Verification Gates ✅ COMPLETE
+3. Tier 2 — Kanban Coordination Layer ✅ COMPLETE
+4. Tier 3 — Pipeline Smoke Test ✅ COMPLETE
+5. Tier 4 — SQLite Spine ✅ COMPLETE
+6. Tier 5 — Context Export Pipeline ✅ COMPLETE
+7. Tier 6 — Pipeline Integration ✅ COMPLETE
+8. Tier 7 — Full Durable Router Pipeline ⏸ DEFERRED
+9. Tier 7.1 — Router Reclassification (archive route) ✅ COMPLETE
+10. Tier 7.5a — Corpus Audit ✅ COMPLETE
+11. Tier 7.5b — Clean Subset Import + FTS5 ✅ COMPLETE
+12. Tier 8 — MCP Bridge 🚫 BLOCKED
+13. Tier 9 — Chroma/VDB 🚫 BLOCKED
+14. Tier 10 — CIS UI / Custom Display Views 🚫 BLOCKED
+15. Component 3.5 — Build-Plan Spine Authority 🔄 IN PROGRESS
+16. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
+17. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
+18. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
+19. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
+20. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
+21. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
+22. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
+23. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
+24. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
+25. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
+26. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
+27. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
 
 ---
 

@@ -2,6 +2,7 @@
 
 import sqlite3
 from pathlib import Path
+from datetime import datetime, timezone
 
 DB_PATH = "/mnt/projects/cis/data/cis_memory.db"
 ALLOWED_STATUSES = {'PENDING', 'IN_PROGRESS', 'COMPLETE', 'BLOCKED', 'DEFERRED', 'PROPOSED'}
@@ -80,3 +81,67 @@ def complete_node(conn, node_id, evidence_path=None, commit_hash=None, workflow_
         (evidence_path, commit_hash, workflow_run_id, node_id)
     )
     return promote_unblocked(conn)
+
+
+def sync_project_state_from_build_plan(conn, project_id='CIS'):
+    """Write project_state cache from build_plan_nodes.
+    Source label: 'build_plan_spine' (not 'gate' — this is a cache sync, not a gate result).
+    Supersedes prior next_tier/next_action/build_phase rows."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    completed = conn.execute(
+        """SELECT node_label, tier, sequence FROM build_plan_nodes
+           WHERE project_id=? AND status='COMPLETE'
+           ORDER BY sequence DESC LIMIT 1""",
+        (project_id,)
+    ).fetchone()
+
+    next_node = conn.execute(
+        """SELECT node_label, tier, sequence FROM build_plan_nodes
+           WHERE project_id=? AND status='IN_PROGRESS'
+           ORDER BY sequence LIMIT 1""",
+        (project_id,)
+    ).fetchone()
+
+    if not next_node:
+        next_node = conn.execute(
+            """SELECT bpn.node_label, bpn.tier
+               FROM build_plan_nodes bpn
+               WHERE bpn.project_id=?
+                 AND bpn.status='PENDING'
+                 AND bpn.id NOT IN (
+                     SELECT bpd.node_id FROM build_plan_dependencies bpd
+                     JOIN build_plan_nodes dep ON bpd.depends_on_id = dep.id
+                     WHERE bpd.dependency_type='HARD'
+                       AND dep.status != 'COMPLETE'
+                 )
+               ORDER BY bpn.sequence LIMIT 1""",
+            (project_id,)
+        ).fetchone()
+
+    conn.execute(
+        """UPDATE project_state SET superseded_at=?
+           WHERE key IN ('next_tier','next_action','build_phase')
+             AND superseded_at IS NULL""",
+        (now,)
+    )
+
+    completed_label = completed[0] if completed else "(none)"
+
+    if next_node:
+        next_label = next_node[0]
+        next_tier_val = next_node[1]
+        source = "gate"
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("next_tier", next_tier_val, source, now)
+        )
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("next_action", next_label, source, now)
+        )
+        phase = f"{completed_label}. {next_label}."
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("build_phase", phase, source, now)
+        )

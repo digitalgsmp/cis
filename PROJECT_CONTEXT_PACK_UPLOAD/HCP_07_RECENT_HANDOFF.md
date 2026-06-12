@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `191f6b9`
+HEAD: `215bd22`
 
-Generated: 2026-06-12 03:29 UTC | Run: run-d63fe620a6ac
+Generated: 2026-06-12 04:25 UTC | Run: run-ded73b495439
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-(No pending actions)
+Component 3.5 — Build-Plan Spine Authority (IN PROGRESS).
 
 ## Eric Gate Approval Status
 
