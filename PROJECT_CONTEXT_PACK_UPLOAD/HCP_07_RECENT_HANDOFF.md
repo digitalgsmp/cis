@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `7c402c9`
+HEAD: `76706fa`
 
-Generated: 2026-06-12 23:27 UTC | Run: none
+Generated: 2026-06-12 23:30 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-7R.6 — Dead Letter / blocked handling.
+7R.7 — Acceptance test suite.
 
 ## Eric Gate Approval Status
 
