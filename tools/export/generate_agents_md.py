@@ -47,17 +47,29 @@ def query_spine(db_path):
            ORDER BY opened_at DESC"""
     ).fetchall()
 
+    # Section 6 — Next Actions: authoritative source is build_plan_nodes
     actions = conn.execute(
-        """SELECT * FROM next_actions
-           WHERE status IN ('PENDING','IN_PROGRESS') AND id LIKE 'NA-SEED-%'
-           ORDER BY tier, id"""
+        """SELECT node_label AS id, tier, node_label AS description, status
+           FROM build_plan_nodes
+           WHERE project_id='CIS' AND status IN ('PENDING','IN_PROGRESS')
+           ORDER BY sequence"""
     ).fetchall()
 
-    blockers = conn.execute(
-        """SELECT * FROM active_blockers
-           WHERE status = 'ACTIVE' AND id LIKE 'BLK-SEED-%'
+    # Section 7 — Active Blockers: authoritative source is BLOCKED build_plan_nodes,
+    # supplemented by ACTIVE infrastructure blockers from active_blockers
+    bp_blockers = conn.execute(
+        """SELECT node_label AS id, blocked_reason AS description, 'BLOCKED' AS status
+           FROM build_plan_nodes
+           WHERE project_id='CIS' AND status='BLOCKED'
+           ORDER BY sequence"""
+    ).fetchall()
+    ab_blockers = conn.execute(
+        """SELECT id, description, status
+           FROM active_blockers
+           WHERE status='ACTIVE' AND id LIKE 'BLK-SEED-%'
            ORDER BY created_at DESC"""
     ).fetchall()
+    blockers = list(bp_blockers) + list(ab_blockers)
 
     state_rows = conn.execute(
         """SELECT key, value FROM project_state

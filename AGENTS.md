@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-12 04:39 UTC | Run: run-eaf5d6e32e40 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-12 04:57 UTC | Run: run-1498bf62c9cb | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -71,9 +71,12 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [NA-SEED-012] (Tier 3.5) Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates.
+- [Component 3.5 — Build-Plan Spine Authority] (Tier 3.5) Component 3.5 — Build-Plan Spine Authority
 
 ## 7. Active Blockers
+- [Tier 8 — MCP Bridge] Gated on Tier 7 Full Durable Router Pipeline per dependency graph.
+- [Tier 9 — Chroma/VDB] Gated on Tier 8 MCP Bridge per dependency graph.
+- [Tier 10 — CIS UI / Custom Display Views] Gated on Tier 9 Chroma/VDB per dependency graph.
 - [BLK-SEED-004] Google Drive backup integrity unverified
 - [BLK-SEED-005] hermes-gateway.service auto-overwrite mechanism may reintroduce service misconfiguration. Service was repaired at commit 353cef5 after being overwritten from Flash/Research profile to r1 profile. Manual service identity check recommended at session start until root cause is fixed.
 
