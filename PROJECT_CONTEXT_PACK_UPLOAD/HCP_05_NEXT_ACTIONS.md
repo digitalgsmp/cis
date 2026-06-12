@@ -1,11 +1,13 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-12 23:30 UTC | Run: none
+Generated: 2026-06-12 23:33 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**7R.7 — Acceptance test suite**
+(No eligible PENDING node in build plan.)
+Deferred: Tier 7 DEFERRED.
+Blocked: Tier 8 BLOCKED; Tier 9 BLOCKED; Tier 10 BLOCKED.
 
 Do NOT start:
 
@@ -50,7 +52,7 @@ Do NOT start:
 | 7R.4 | 7R.4 — Process Manager (state machine) | ✅ COMPLETE | |
 | 7R.5 | 7R.5 — Human approval gate integration | ✅ COMPLETE | |
 | 7R.6 | 7R.6 — Dead Letter / blocked handling | ✅ COMPLETE | |
-| 7R.7 | 7R.7 — Acceptance test suite | ⬜ PENDING | |
+| 7R.7 | 7R.7 — Acceptance test suite | ✅ COMPLETE | |
 | Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | COMPLETE | |
 | Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE | |
 | Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE | |
