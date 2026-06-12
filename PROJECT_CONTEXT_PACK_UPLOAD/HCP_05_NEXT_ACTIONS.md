@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-12 22:59 UTC | Run: run-6e0d0642ca46
+Generated: 2026-06-12 23:09 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**7R.2 — CISAdapter (CIS domain only)**
+**7R.3 — SWAAdapter (validation use case)**
 
 Do NOT start:
 
@@ -45,7 +45,7 @@ Do NOT start:
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | ✅ COMPLETE | |
 | 7R | Tier 7R — Intent-to-Workflow Architecture Specification | ✅ COMPLETE | |
 | 7R.1 | 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion | ✅ COMPLETE | |
-| 7R.2 | 7R.2 — CISAdapter (CIS domain only) | ⬜ PENDING | |
+| 7R.2 | 7R.2 — CISAdapter (CIS domain only) | ✅ COMPLETE | |
 | 7R.3 | 7R.3 — SWAAdapter (validation use case) | ⬜ PENDING | |
 | 7R.4 | 7R.4 — Process Manager (state machine) | ⬜ PENDING | |
 | 7R.5 | 7R.5 — Human approval gate integration | ⬜ PENDING | |

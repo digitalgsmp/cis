@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `29d2f4e`
+HEAD: `dc685d5`
 
-Generated: 2026-06-12 22:59 UTC | Run: run-6e0d0642ca46
+Generated: 2026-06-12 23:09 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-7R.2 — CISAdapter (CIS domain only).
+7R.3 — SWAAdapter (validation use case).
 
 ## Eric Gate Approval Status
 

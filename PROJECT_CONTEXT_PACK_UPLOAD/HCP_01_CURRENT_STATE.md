@@ -4,7 +4,7 @@ Date: 2026-06-12
 Authority: Eric (Architect)
 Status: 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).
 
-Generated: 2026-06-12 22:59 UTC | Run: run-6e0d0642ca46
+Generated: 2026-06-12 23:09 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).**
 
-**HEAD:** `29d2f4e`.
+**HEAD:** `dc685d5`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**7R.2 — CISAdapter (CIS domain only) (Tier 7R.2)**
+**7R.3 — SWAAdapter (validation use case) (Tier 7R.3)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -285,7 +285,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE
 16. Tier 7R — Intent-to-Workflow Architecture Specification ✅ COMPLETE
 17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ✅ COMPLETE
-18. 7R.2 — CISAdapter (CIS domain only) ⬜ PENDING
+18. 7R.2 — CISAdapter (CIS domain only) ✅ COMPLETE
 19. 7R.3 — SWAAdapter (validation use case) ⬜ PENDING
 20. 7R.4 — Process Manager (state machine) ⬜ PENDING
 21. 7R.5 — Human approval gate integration ⬜ PENDING

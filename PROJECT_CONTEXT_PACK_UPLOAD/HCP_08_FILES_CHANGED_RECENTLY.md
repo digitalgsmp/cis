@@ -1,7 +1,47 @@
 # Files Changed Recently
-Generated: 2026-06-12 22:59 UTC | Run: run-6e0d0642ca46
+Generated: 2026-06-12 23:09 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## dc685d5 feat(7R.2): CISAdapter — CIS domain classification + candidate staging
+
+## runtime/tier7r/adapters/__init__.py 
+
+## runtime/tier7r/adapters/cis_adapter.py 
+
+## runtime/tier7r/classifier.py 
+
+## tests/test_tier7r_2.py 
+
+## 50909c5 Session closeout — regenerate exports (run-6e0d0642ca46)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## cis_kernel/source/SESSION_LOG.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 29d2f4e Architecture note: Model-Based Implementation Review
 
@@ -296,41 +336,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/db/build_plan.py 
 
 ## tools/build_plan/seed_build_plan.py 
-
-## 9ca140f Regenerate context after Component 3.5 Phase 1 schema
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/CIS_FOUNDATION_HARDENING_COMPONENT_3_5_DESIGN.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 191f6b9 Component 3.5 Phase 1 — build-plan spine schema (empty tables)
-
-## runtime/db/database.py 
-
-## runtime/schema/migrations/0011_build_plan_spine.sql 
-
-## tools/gates/gate_db_state.py 
