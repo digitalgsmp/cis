@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-12
 Authority: Eric (Architect)
-Status: Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.
+Status: 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).
 
-Generated: 2026-06-12 22:21 UTC | Run: run-5dfd9a8c8f1a
+Generated: 2026-06-12 22:25 UTC | Run: run-d403dd7bd863
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.**
+**7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).**
 
-**HEAD:** `f526823`.
+**HEAD:** `f571640`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-(No eligible PENDING node in build plan.)
+**7R.2 — CISAdapter (CIS domain only) (Tier 7R.2)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -283,8 +283,8 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 13. Tier 9 — Chroma/VDB 🚫 BLOCKED
 14. Tier 10 — CIS UI / Custom Display Views 🚫 BLOCKED
 15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE
-16. Tier 7R — Intent-to-Workflow Architecture Specification PROPOSED
-17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ⬜ PENDING
+16. Tier 7R — Intent-to-Workflow Architecture Specification ✅ COMPLETE
+17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ✅ COMPLETE
 18. 7R.2 — CISAdapter (CIS domain only) ⬜ PENDING
 19. 7R.3 — SWAAdapter (validation use case) ⬜ PENDING
 20. 7R.4 — Process Manager (state machine) ⬜ PENDING

@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `f526823`
+HEAD: `f571640`
 
-Generated: 2026-06-12 22:21 UTC | Run: run-5dfd9a8c8f1a
+Generated: 2026-06-12 22:25 UTC | Run: run-d403dd7bd863
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-(No eligible PENDING node in build plan.)
+7R.2 — CISAdapter (CIS domain only).
 
 ## Eric Gate Approval Status
 
