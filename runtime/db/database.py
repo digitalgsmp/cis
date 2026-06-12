@@ -84,6 +84,13 @@ def init_db(db_path=None):
     if cursor.fetchone() is None:
         migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0009_advisor_escalation_protocol.sql"
         conn.executescript(migration_path.read_text())
+    # Apply Foundation Hardening Component 3.5 migration if not yet applied (build plan spine)
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='build_plan_nodes'"
+    )
+    if cursor.fetchone() is None:
+        migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0011_build_plan_spine.sql"
+        conn.executescript(migration_path.read_text())
     return conn
 
 

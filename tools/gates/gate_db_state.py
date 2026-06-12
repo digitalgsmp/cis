@@ -44,6 +44,9 @@ ALLOWED_TABLES = {
     "advisor_escalation_packets",
     "advisor_responses",
     "eric_gate_approvals",
+    # Component 3.5 — Build-Plan Spine
+    "build_plan_nodes",
+    "build_plan_dependencies",
 }
 
 ALLOWED_COLUMNS = {
@@ -84,6 +87,13 @@ ALLOWED_COLUMNS = {
     "goal_reference_id", "briefing_hash", "briefing_json",
     "drift_snapshot_json", "decision_trail_snapshot_json",
     "is_current", "supersedes_approval_id", "rationale",
+    # build_plan_nodes — Component 3.5
+    "project_id", "node_label", "sequence", "blocked_reason",
+    "allowed_mode", "required_role",
+    "evidence_path", "commit_hash",
+    "completed_at", "approved_at",
+    # build_plan_dependencies — Component 3.5
+    "node_id", "depends_on_id", "dependency_type",
 }
 
 
