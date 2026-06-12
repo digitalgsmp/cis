@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-06-12 04:59 UTC | Run: run-c6b821346c02
+Generated: 2026-06-12 05:00 UTC | Run: run-4bc173a38bd3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 840b07a Component 3.5 COMPLETE — generator switchover done, all gates pass
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/db/build_plan.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 65451e0 Component 3.5: finish generator switchover — AGENTS.md Sections 6-7 now read from build_plan_nodes
 
@@ -356,13 +386,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/eric_gate/seed_test_fixture.py 
 
 ## tools/eric_gate/show_status.py 
-
-## 229a093 Implement Component 3 Phase 4 Eric Gate verification gates
-
-## tools/gates/gate_db_state.py 
-
-## tools/gates/gate_eric_approval.py 
-
-## tools/gates/gate_final_directive_allowed.py 
-
-## tools/gates/gate_runner.sh 
