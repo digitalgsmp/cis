@@ -43,42 +43,33 @@ echo "OK: canonical build_phase = '$CANONICAL_PHASE'"
 CANONICAL_TIER=$(sqlite3 "$DB_PATH" \
     "SELECT value FROM project_state WHERE key='completed_tier' AND superseded_at IS NULL ORDER BY id DESC LIMIT 1" 2>/dev/null || echo "")
 
-# Check 2: AGENTS.md reports current tier
+# Check 2: AGENTS.md reports current build phase (label-format agnostic)
 if [ ! -f "$AGENTS_MD" ]; then
     fail "AGENTS.md not found at $AGENTS_MD"
 else
-    AGENTS_PHASE=$(grep "^Tier " "$AGENTS_MD" | head -1 || echo "")
-    if [ -z "$AGENTS_PHASE" ]; then
-        fail "AGENTS.md does not contain a Tier line"
+    # Extract the first content line after "## 1. Current Build Phase" heading
+    AGENTS_BUILD_LINE=$(sed -n '/^## 1\. Current Build Phase/,/^## /p' "$AGENTS_MD" \
+        | grep -v '^## ' | grep -v '^$' | head -1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ -z "$AGENTS_BUILD_LINE" ]; then
+        fail "AGENTS.md §1 has no build phase line"
+    elif [ "$AGENTS_BUILD_LINE" != "$CANONICAL_PHASE" ]; then
+        fail "AGENTS.md §1 build phase ('$AGENTS_BUILD_LINE') does not match canonical phase ('$CANONICAL_PHASE')"
     else
-        echo "OK: AGENTS.md reports '$AGENTS_PHASE'"
-        # Extract tier numbers for comparison
-        AGENTS_TIER=$(echo "$AGENTS_PHASE" | grep -oP 'Tier \K[0-9]+(\.[0-9]+)?' | head -1 || echo "0")
-        CANON_TIER_NUM=$(echo "$CANONICAL_TIER" | grep -oP '[0-9]+(\.[0-9]+)?' | head -1 || echo "0")
-        if [ -n "$AGENTS_TIER" ] && [ -n "$CANON_TIER_NUM" ]; then
-            if [ "$(echo "$AGENTS_TIER < $CANON_TIER_NUM" | bc -l 2>/dev/null)" = "1" ] || \
-               [ "$AGENTS_TIER" != "$CANON_TIER_NUM" ] && [ "$(echo "$AGENTS_TIER >= $CANON_TIER_NUM" | bc -l 2>/dev/null)" != "1" ]; then
-                fail "AGENTS.md tier ($AGENTS_TIER) is behind canonical tier ($CANON_TIER_NUM)"
-            else
-                echo "OK: AGENTS.md tier ($AGENTS_TIER) >= canonical tier ($CANON_TIER_NUM)"
-            fi
-        fi
+        echo "OK: AGENTS.md §1 build phase matches canonical phase"
     fi
 fi
 
-# Check 3: HCP_01 reports current tier matching project_state
+# Check 3: HCP_01 Status line matches canonical build phase
 if [ ! -f "$HCP_01" ]; then
     fail "HCP_01 not found at $HCP_01"
 else
-    HCP_STATUS=$(grep "^Status:" "$HCP_01" | head -1 || echo "")
+    HCP_STATUS=$(grep "^Status:" "$HCP_01" | head -1 | sed 's/^Status:[[:space:]]*//' || echo "")
     if [ -z "$HCP_STATUS" ]; then
         fail "HCP_01 does not contain a Status line"
+    elif [ "$HCP_STATUS" != "$CANONICAL_PHASE" ]; then
+        fail "HCP_01 Status ('$HCP_STATUS') does not match canonical phase ('$CANONICAL_PHASE')"
     else
-        echo "OK: HCP_01 status = '$HCP_STATUS'"
-        # Check that HCP status contains the canonical phase
-        if ! echo "$HCP_STATUS" | grep -qF "Tier"; then
-            fail "HCP_01 Status line does not reference a tier"
-        fi
+        echo "OK: HCP_01 Status matches canonical phase"
     fi
 fi
 
