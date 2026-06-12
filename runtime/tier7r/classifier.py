@@ -3,13 +3,14 @@ Classifier for Tier 7R — domain classification and adapter routing.
 
 7R.1: Minimal classifier — only rejects Micro1 as OUT_OF_SCOPE.
 7R.2: Adds CIS domain detection and routes through CISAdapter.
+7R.3: Adds SWA domain detection and routes through SWAAdapter.
 
 classify() preserves 7R.1 behavior (backward compatible).
-classify_full() runs the complete 7R.2 pipeline: domain → adapter → state → objects → candidates.
+classify_full() runs the complete pipeline: domain → adapter → state → objects → candidates.
 """
 from .scope_registry import classify_domain, Domain, is_out_of_scope, is_in_scope
 from .work_intent import WorkIntent
-from .adapters import get_adapter, is_cis_domain
+from .adapters import get_adapter, is_cis_domain, is_swa_domain
 from typing import List, Optional
 
 
@@ -44,21 +45,26 @@ def classify_domain_router(prompt: str) -> str:
     Content-Based Router — determine which domain a prompt belongs to.
 
     7R.2: Detects CIS domain via keyword matching.
-    Falls back to empty string (unclassified) for non-CIS, non-Micro1 prompts.
-    Micro1 is still rejected as OUT_OF_SCOPE.
+    7R.3: Detects SWA domain via keyword matching.
+    Falls back to empty string (unclassified) for unrecognized prompts.
+    Micro1 is always rejected as OUT_OF_SCOPE.
 
-    Returns: "CIS" | "OUT_OF_SCOPE" | ""
+    Returns: "CIS" | "SWA" | "OUT_OF_SCOPE" | ""
     """
     # First check out-of-scope (Micro1)
     domain = classify_domain(prompt)
     if is_out_of_scope(domain):
         return Domain.OUT_OF_SCOPE.value
 
+    # Check SWA domain via keyword matching (7R.3 — checked BEFORE CIS for specificity)
+    if is_swa_domain(prompt):
+        return Domain.SWA.value
+
     # Check CIS domain via keyword matching
     if is_cis_domain(prompt):
         return Domain.CIS.value
 
-    # Unclassified — no adapter available yet
+    # Unclassified — no adapter available
     return ""
 
 

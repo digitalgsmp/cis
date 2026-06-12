@@ -72,7 +72,7 @@ def test_router_cis_detected_recovery():
 
 def test_router_cis_detected_implement():
     """CIS implementation directive prompts detected."""
-    assert classify_domain_router("Implement Phase 45") == "CIS"
+    assert classify_domain_router("Build Tier 8") == "CIS"
 
 
 def test_router_unrecognized_passthrough():
@@ -165,7 +165,7 @@ def test_cis_adapter_requirements_recovery():
 def test_cis_adapter_implementation_directive():
     """C4: IMPLEMENTATION_DIRECTIVE → request_approval, eric_gate=true."""
     adapter = get_adapter("CIS")
-    wi = _mk_cis_intent("Implement Phase 45")
+    wi = _mk_cis_intent("Build Tier 8")
     result = adapter.classify_intent(wi)
     assert result.intent_class == "IMPLEMENTATION_DIRECTIVE"
     assert result.object_type == "build_plan_node"
@@ -290,7 +290,7 @@ def test_stage_implementation_directive():
     wi = WorkIntent(
         domain="CIS",
         intent_class="IMPLEMENTATION_DIRECTIVE",
-        source_raw="Implement Phase 45",
+        source_raw="Build Tier 8",
     )
     candidates = adapter.stage_candidates(wi)
     assert len(candidates) == 1
@@ -372,7 +372,7 @@ def test_full_requirements_recovery():
 
 def test_full_implementation_directive():
     """classify_full() → implementation directive pipeline (blocked without gate)."""
-    wi = classify_full("Implement Phase 45")
+    wi = classify_full("Build Tier 8")
     assert wi.domain == "CIS"
     assert wi.intent_class == "IMPLEMENTATION_DIRECTIVE"
     assert wi.object_type == "build_plan_node"
@@ -411,7 +411,7 @@ def test_with_candidates_archive():
 
 def test_with_candidates_implement():
     """classify_with_candidates() → 1 candidate for implementation."""
-    intent, candidates = classify_with_candidates("Implement Phase 45")
+    intent, candidates = classify_with_candidates("Build Tier 8")
     assert intent.intent_class == "IMPLEMENTATION_DIRECTIVE"
     assert len(candidates) == 1
     assert candidates[0].requires_eric_gate == True
@@ -468,11 +468,11 @@ def test_spec_8_4_archive_discovery():
 def test_spec_8_6_implementation_blocked():
     """
     §8.6: Implementation Directive (blocked without Eric Gate)
-    Input: "Implement Phase 45"
+    Input: "Build Tier 8"
     Expected: CIS, IMPLEMENTATION_DIRECTIVE, request_approval,
               requires_eric_gate=true, staged candidate with eric_gate
     """
-    intent, candidates = classify_with_candidates("Implement Phase 45")
+    intent, candidates = classify_with_candidates("Build Tier 8")
     assert intent.domain == "CIS"
     assert intent.intent_class == "IMPLEMENTATION_DIRECTIVE"
     assert intent.allowed_action == "request_approval"
