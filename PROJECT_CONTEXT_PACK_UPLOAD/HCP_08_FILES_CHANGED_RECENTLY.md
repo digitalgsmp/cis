@@ -1,7 +1,49 @@
 # Files Changed Recently
-Generated: 2026-06-11 21:53 UTC | Run: run-c5eca72db2a3
+Generated: 2026-06-12 03:29 UTC | Run: run-d63fe620a6ac
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 191f6b9 Component 3.5 Phase 1 — build-plan spine schema (empty tables)
+
+## runtime/db/database.py 
+
+## runtime/schema/migrations/0011_build_plan_spine.sql 
+
+## tools/gates/gate_db_state.py 
+
+## 67dfe00 Tier 5.6 — Repair build state coherence: do_not_start + coherence gate
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/agents_static.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/gates/gate_build_state_coherence.py 
+
+## tools/gates/gate_export_agreement.sh 
 
 ## 487837e Regenerate context after session closeout
 
@@ -248,42 +290,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 9dc9a9f Regenerate context exports after Component 2 remediation
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 0b9c47a Fix Component 2 remediation: escalation satisfaction fail-closed, governance interim scope, CLASSIFIED lifecycle, HCP_06 rendering
-
-## runtime/db/database.py 
-
-## tools/escalation/check_escalation_required.py 
-
-## tools/escalation/record_reconciliation.py 
-
-## tools/export/generate_hcp.py 
-
-## 2e488ce Regenerate context after Component 2 advisor escalation protocol
 
 ## AGENTS.md 
 
