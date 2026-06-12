@@ -4,7 +4,7 @@ Date: 2026-06-12
 Authority: Eric (Architect)
 Status: Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.
 
-Generated: 2026-06-12 05:00 UTC | Run: run-4bc173a38bd3
+Generated: 2026-06-12 22:13 UTC | Run: run-dc808e127cb0
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Component 3.5 — Build-Plan Spine Authority. No active work — all remaining nodes BLOCKED or DEFERRED.**
 
-**HEAD:** `840b07a`.
+**HEAD:** `c6ba17e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.

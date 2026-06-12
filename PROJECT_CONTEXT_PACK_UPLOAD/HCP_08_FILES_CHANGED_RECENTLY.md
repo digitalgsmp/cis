@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-06-12 05:00 UTC | Run: run-4bc173a38bd3
+Generated: 2026-06-12 22:13 UTC | Run: run-dc808e127cb0
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## c6ba17e Tier 7R architecture-basis specification — APPROVED_AS_ARCHITECTURE_BASIS
+
+## docs/CIS_TIER_7R_SPECIFICATION_PROPOSAL.md 
+
+## dafa5bb Regenerate exports (run-4bc173a38bd3) — no state change
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 840b07a Component 3.5 COMPLETE — generator switchover done, all gates pass
 
@@ -346,43 +378,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 4c24b53 Implement Component 3 Phase 6 Eric Gate export visibility
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/export/generate_agents_md.py 
-
-## tools/export/generate_hcp.py 
-
-## 626b06a Implement Component 3 Phase 5 Eric Gate support tools and tests
-
-## tests/test_eric_gate.py 
-
-## tools/eric_gate/record_decision.py 
-
-## tools/eric_gate/seed_test_fixture.py 
-
-## tools/eric_gate/show_status.py 
