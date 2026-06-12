@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-12 04:28 UTC | Run: run-bea1e0ded8a1
+Generated: 2026-06-12 04:39 UTC | Run: run-eaf5d6e32e40
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -43,6 +43,7 @@ Do NOT start:
 | 9 | Tier 9 — Chroma/VDB | 🚫 BLOCKED | |
 | 10 | Tier 10 — CIS UI / Custom Display Views | 🚫 BLOCKED | |
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | 🔄 IN PROGRESS | |
+| Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | IN_PROGRESS | |
 | Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE | |
 | Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE | |
 | Tier 5 | Run Tier 5.2: AGENTS.md canary test across all 4 active profiles | COMPLETE | |
