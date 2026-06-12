@@ -4,7 +4,7 @@ Date: 2026-06-12
 Authority: Eric (Architect)
 Status: 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).
 
-Generated: 2026-06-12 23:18 UTC | Run: none
+Generated: 2026-06-12 23:24 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).**
 
-**HEAD:** `cb80987`.
+**HEAD:** `060c54e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**7R.4 — Process Manager (state machine) (Tier 7R.4)**
+**7R.5 — Human approval gate integration (Tier 7R.5)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -287,7 +287,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ✅ COMPLETE
 18. 7R.2 — CISAdapter (CIS domain only) ✅ COMPLETE
 19. 7R.3 — SWAAdapter (validation use case) ✅ COMPLETE
-20. 7R.4 — Process Manager (state machine) ⬜ PENDING
+20. 7R.4 — Process Manager (state machine) ✅ COMPLETE
 21. 7R.5 — Human approval gate integration ⬜ PENDING
 22. 7R.6 — Dead Letter / blocked handling ⬜ PENDING
 23. 7R.7 — Acceptance test suite ⬜ PENDING

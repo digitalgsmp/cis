@@ -2,9 +2,9 @@
 Date: 2026-06-12
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `cb80987`
+HEAD: `060c54e`
 
-Generated: 2026-06-12 23:18 UTC | Run: none
+Generated: 2026-06-12 23:24 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-7R.4 — Process Manager (state machine).
+7R.5 — Human approval gate integration.
 
 ## Eric Gate Approval Status
 
