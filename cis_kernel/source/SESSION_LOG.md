@@ -252,3 +252,21 @@ Extractor run complete.
 - Source groups: all project folders (cis/, ai_execution_infrastructure/, blender/, resolve/, unreal/)
 - Output directory: /mnt/projects/cis/cis_kernel/extraction/functional_intents
 - Estimated cost: $0.0025
+
+## 2026-06-12 17:25:40
+
+Extractor run complete.
+- Files processed: 1
+- Failed: 0
+- Source groups: all project folders (cis/, ai_execution_infrastructure/, blender/, resolve/, unreal/)
+- Output directory: /mnt/projects/cis/cis_kernel/extraction/functional_intents
+- Estimated cost: $0.0024
+
+## 2026-06-12 17:28:37
+
+Extractor run complete.
+- Files processed: 3
+- Failed: 0
+- Source groups: all project folders (cis/, ai_execution_infrastructure/, blender/, resolve/, unreal/)
+- Output directory: /mnt/projects/cis/cis_kernel/extraction/functional_intents
+- Estimated cost: $0.0064
