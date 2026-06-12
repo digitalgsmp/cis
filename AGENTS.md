@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-12 23:34 UTC | Run: run-2c7b298a4cd5 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-12 23:40 UTC | Run: run-d1516e68b41f | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-7R.1 — WorkIntent schema + scope registry + Micro1 exclusion. 7R.2 — CISAdapter (CIS domain only).
+Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -73,7 +73,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ## 6. Next Actions
 
 ## 7. Active Blockers
-- [Tier 8 — MCP Bridge] Gated on Tier 7R.4 (Process Manager) per Tier 7R specification §11.5.
+- [Tier 8 — MCP Bridge] Awaiting Tier 8 specification document and Eric Gate approval. All Tier 7R nodes (7R, 7R.1-7R.7) are COMPLETE. Previously gated on Tier 7R.4 — now satisfied.
 - [Tier 9 — Chroma/VDB] Gated on Tier 8 MCP Bridge per dependency graph.
 - [Tier 10 — CIS UI / Custom Display Views] Gated on Tier 9 Chroma/VDB per dependency graph.
 - [BLK-SEED-004] Google Drive backup integrity unverified
