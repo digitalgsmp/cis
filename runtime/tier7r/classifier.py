@@ -6,17 +6,20 @@ Classifier for Tier 7R — domain classification and adapter routing.
 7R.3: Adds SWA domain detection and routes through SWAAdapter.
 7R.4: Adds Process Manager state machine validation.
 7R.5: Adds Human Approval Gate integration.
+7R.6: Adds Dead Letter / blocked handling.
 
 classify() preserves 7R.1 behavior (backward compatible).
 classify_full() runs the complete adapter pipeline: domain → adapter → state → objects.
 classify_with_pm() adds Process Manager state-transition validation.
 classify_full_pipeline_with_approval() adds human approval gate enforcement.
+classify_full_pipeline_with_dl() adds dead-letter recording.
 """
 from .scope_registry import classify_domain, Domain, is_out_of_scope, is_in_scope
 from .work_intent import WorkIntent
 from .adapters import get_adapter, is_cis_domain, is_swa_domain
 from .process_manager import ProcessManager, ProcessResult
 from .approval_gate import ApprovalGate, ApprovalDecision, process_with_approval
+from .dead_letter import DeadLetterRegistry, BlockRecord, BlockCategory, handle_blocked_result
 from typing import List, Optional, Tuple
 
 
@@ -247,3 +250,43 @@ def classify_full_pipeline_with_approval(
 
     candidates = adapter.stage_candidates(intent)
     return intent, candidates, result, decision
+
+
+def classify_full_pipeline_with_dl(
+    prompt: str,
+    source_type: str = "prompt",
+    evidence_refs: Optional[List[str]] = None,
+    pm: Optional[ProcessManager] = None,
+    gate: Optional[ApprovalGate] = None,
+    registry: Optional[DeadLetterRegistry] = None,
+) -> Tuple[WorkIntent, List[WorkIntent], ProcessResult, ApprovalDecision, Optional[BlockRecord]]:
+    """
+    Complete 7R.6 pipeline: classify → PM → approval gate → dead-letter → stage.
+
+    Returns (intent, candidates, process_result, approval_decision, block_record).
+
+    If the pipeline blocks (PM, gate, or missing domain), the block is recorded
+    in the DeadLetterRegistry. Blocked intents return empty candidates.
+    Non-blocked intents proceed to candidate staging as usual.
+    """
+    if pm is None:
+        pm = ProcessManager()
+    if gate is None:
+        gate = ApprovalGate()
+    if registry is None:
+        registry = DeadLetterRegistry()
+
+    intent, result = classify_with_pm(prompt, source_type, evidence_refs, pm)
+    decision, candidates_allowed = process_with_approval(intent, result, gate)
+
+    if not candidates_allowed or not result.allowed or not intent.domain or intent.status == "BLOCKED":
+        block_record = handle_blocked_result(intent, result, decision, registry)
+        return intent, [], result, decision, block_record
+
+    adapter = get_adapter(intent.domain)
+    if adapter is None:
+        block_record = registry.record_unsupported_domain(intent)
+        return intent, [], result, decision, block_record
+
+    candidates = adapter.stage_candidates(intent)
+    return intent, candidates, result, decision, None
