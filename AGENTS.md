@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-12 22:13 UTC | Run: run-dc808e127cb0 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-12 22:21 UTC | Run: run-5dfd9a8c8f1a | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -71,9 +71,16 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
+- [7R.1 — WorkIntent schema + scope registry + Micro1 exclusion] (Tier 7R.1) 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion
+- [7R.2 — CISAdapter (CIS domain only)] (Tier 7R.2) 7R.2 — CISAdapter (CIS domain only)
+- [7R.3 — SWAAdapter (validation use case)] (Tier 7R.3) 7R.3 — SWAAdapter (validation use case)
+- [7R.4 — Process Manager (state machine)] (Tier 7R.4) 7R.4 — Process Manager (state machine)
+- [7R.5 — Human approval gate integration] (Tier 7R.5) 7R.5 — Human approval gate integration
+- [7R.6 — Dead Letter / blocked handling] (Tier 7R.6) 7R.6 — Dead Letter / blocked handling
+- [7R.7 — Acceptance test suite] (Tier 7R.7) 7R.7 — Acceptance test suite
 
 ## 7. Active Blockers
-- [Tier 8 — MCP Bridge] Gated on Tier 7 Full Durable Router Pipeline per dependency graph.
+- [Tier 8 — MCP Bridge] Gated on Tier 7R.4 (Process Manager) per Tier 7R specification §11.5.
 - [Tier 9 — Chroma/VDB] Gated on Tier 8 MCP Bridge per dependency graph.
 - [Tier 10 — CIS UI / Custom Display Views] Gated on Tier 9 Chroma/VDB per dependency graph.
 - [BLK-SEED-004] Google Drive backup integrity unverified

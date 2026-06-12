@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-12 22:13 UTC | Run: run-dc808e127cb0
+Generated: 2026-06-12 22:21 UTC | Run: run-5dfd9a8c8f1a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -45,6 +45,14 @@ Do NOT start:
 | 9 | Tier 9 — Chroma/VDB | 🚫 BLOCKED | |
 | 10 | Tier 10 — CIS UI / Custom Display Views | 🚫 BLOCKED | |
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | ✅ COMPLETE | |
+| 7R | Tier 7R — Intent-to-Workflow Architecture Specification | PROPOSED | |
+| 7R.1 | 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion | ⬜ PENDING | |
+| 7R.2 | 7R.2 — CISAdapter (CIS domain only) | ⬜ PENDING | |
+| 7R.3 | 7R.3 — SWAAdapter (validation use case) | ⬜ PENDING | |
+| 7R.4 | 7R.4 — Process Manager (state machine) | ⬜ PENDING | |
+| 7R.5 | 7R.5 — Human approval gate integration | ⬜ PENDING | |
+| 7R.6 | 7R.6 — Dead Letter / blocked handling | ⬜ PENDING | |
+| 7R.7 | 7R.7 — Acceptance test suite | ⬜ PENDING | |
 | Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | COMPLETE | |
 | Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE | |
 | Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE | |
