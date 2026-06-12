@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-12 23:24 UTC | Run: none
+Generated: 2026-06-12 23:27 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**7R.5 — Human approval gate integration**
+**7R.6 — Dead Letter / blocked handling**
 
 Do NOT start:
 
@@ -48,7 +48,7 @@ Do NOT start:
 | 7R.2 | 7R.2 — CISAdapter (CIS domain only) | ✅ COMPLETE | |
 | 7R.3 | 7R.3 — SWAAdapter (validation use case) | ✅ COMPLETE | |
 | 7R.4 | 7R.4 — Process Manager (state machine) | ✅ COMPLETE | |
-| 7R.5 | 7R.5 — Human approval gate integration | ⬜ PENDING | |
+| 7R.5 | 7R.5 — Human approval gate integration | ✅ COMPLETE | |
 | 7R.6 | 7R.6 — Dead Letter / blocked handling | ⬜ PENDING | |
 | 7R.7 | 7R.7 — Acceptance test suite | ⬜ PENDING | |
 | Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | COMPLETE | |
