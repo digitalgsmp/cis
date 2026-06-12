@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-06-12 04:25 UTC | Run: run-ded73b495439
+Generated: 2026-06-12 04:28 UTC | Run: run-bea1e0ded8a1
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 104f13e Component 3.5 Phase 3 — generator switchover to build-plan spine
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/db/build_plan.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/build_plan/sync_project_state.py 
+
+## tools/export/generate_hcp.py 
 
 ## 215bd22 Component 3.5 Phase 2 — seed CIS build graph
 
@@ -288,13 +322,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## runtime/memory/current_context.json 
-
-## fb09063 Implement Component 3 Phase 1 Eric Gate approval schema
-
-## docs/CIS_FOUNDATION_HARDENING_COMPONENT_3_DESIGN.md 
-
-## runtime/db/database.py 
-
-## runtime/schema/migrations/0010_eric_gate_approvals.sql 
-
-## runtime/schema/spine_schema.sql 

@@ -4,7 +4,7 @@ Date: 2026-06-12
 Authority: Eric (Architect)
 Status: Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.
 
-Generated: 2026-06-12 04:25 UTC | Run: run-ded73b495439
+Generated: 2026-06-12 04:28 UTC | Run: run-bea1e0ded8a1
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7.5b — Clean Subset Import + FTS5. Component 3.5 — Build-Plan Spine Authority.**
 
-**HEAD:** `215bd22`.
+**HEAD:** `104f13e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
