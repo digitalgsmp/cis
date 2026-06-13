@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).
 
-Generated: 2026-06-13 03:21 UTC | Run: run-440b9c6db977
+Generated: 2026-06-13 03:33 UTC | Run: run-e6962c132948
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).**
 
-**HEAD:** `b7e3c75`.
+**HEAD:** `33e1f56`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
