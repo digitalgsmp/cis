@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 06:00 UTC | Run: run-3539b3db4ffb | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 06:49 UTC | Run: run-52241b7eef8d | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 COMPLETE. Tier 9 Chroma/VDB PENDING — specification planning open. Tier 10 BLOCKED (gated on Tier 9).
+Tier 8 COMPLETE. Tier 9 Chroma/VDB specification APPROVED (Eric Gate, commit 87ac0e3). Implementation eligible for separate FINAL_DIRECTIVE. Tier 10 BLOCKED (gated on Tier 9).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -88,10 +88,12 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)
 - Status: APPROVE
-- Decided at: 2026-06-13 05:30 UTC
-- Goal: Tier 8 MCP Bridge specification approved as architecture basis
-- Scope: Specification document only (docs/CIS_TIER_8_MCP_BRIDGE_SPECIFICATION.md, commit b165d34).
-Does NOT authorize Tier 8 implementation, Tier 9, or Tier 10.
+- Decided at: 2026-06-13 06:49 UTC
+- Goal: Tier 9 Chroma/VDB specification approved as architecture basis
+- Scope: Specification document only (docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md, commit 87ac0e3).
+Does NOT authorize Tier 9 implementation or Tier 10.
+Does NOT authorize archive-wide embedding or cloud/network embedding.
+Does NOT authorize write-capable retrieval tools.
 Implementation requires separate FINAL_DIRECTIVE.
 
 ## 10. Verification Hardening Rule

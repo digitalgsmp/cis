@@ -173,12 +173,14 @@ build_method: |
 
 eric_gate_status:
   decision: APPROVE
-  decided_at: 2026-06-13 05:30 UTC
-  goal_label: Tier 8 MCP Bridge specification approved as architecture basis
+  decided_at: 2026-06-13 06:49 UTC
+  goal_label: Tier 9 Chroma/VDB specification approved as architecture basis
   workflow_run_id: "N/A (direct Eric Gate — no deliberation run)"
   scope: |
-    Specification document only (docs/CIS_TIER_8_MCP_BRIDGE_SPECIFICATION.md, commit b165d34).
-    Does NOT authorize Tier 8 implementation, Tier 9, or Tier 10.
+    Specification document only (docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md, commit 87ac0e3).
+    Does NOT authorize Tier 9 implementation or Tier 10.
+    Does NOT authorize archive-wide embedding or cloud/network embedding.
+    Does NOT authorize write-capable retrieval tools.
     Implementation requires separate FINAL_DIRECTIVE.
 
 seed_intent:
