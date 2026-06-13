@@ -1,13 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-13 07:04 UTC | Run: run-fb414621a4e5
+Generated: 2026-06-13 07:14 UTC | Run: run-fe100b5d6cc2
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-(No eligible PENDING node in build plan.)
-Deferred: Tier 7 DEFERRED.
-Blocked: Tier 10 BLOCKED.
+**Tier 10 — CIS UI / Custom Display Views**
 
 Do NOT start:
 
@@ -43,7 +41,7 @@ Do NOT start:
 | 7.5b | Tier 7.5b — Clean Subset Import + FTS5 | ✅ COMPLETE | |
 | 8 | Tier 8 — MCP Bridge | ✅ COMPLETE | |
 | 9 | Tier 9 — Chroma/VDB | ✅ COMPLETE | |
-| 10 | Tier 10 — CIS UI / Custom Display Views | 🚫 BLOCKED | |
+| 10 | Tier 10 — CIS UI / Custom Display Views | ⬜ PENDING | |
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | ✅ COMPLETE | |
 | 7R | Tier 7R — Intent-to-Workflow Architecture Specification | ✅ COMPLETE | |
 | 7R.1 | 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion | ✅ COMPLETE | |
