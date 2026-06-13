@@ -46,6 +46,7 @@ from api.reconciliation import reconciliation_bp
 from api.idea_drafts import idea_drafts_bp
 from api.advisor_external import advisor_external_bp
 from api.dam import dam_bp
+from api.pipeline_views import pipeline_views_bp
 from cis_ingest import create_api_blueprint
 
 
@@ -110,6 +111,7 @@ app.register_blueprint(reconciliation_bp)
 app.register_blueprint(idea_drafts_bp)
 app.register_blueprint(advisor_external_bp)
 app.register_blueprint(dam_bp)
+app.register_blueprint(pipeline_views_bp)          # Tier 10 — CIS UI
 
 # ── Worker status route ────────────────────────────────────────────────────────
 

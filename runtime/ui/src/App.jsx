@@ -15,6 +15,11 @@ import InfraPage from './pages/InfraPage'
 import ChatConsole from './pages/ChatConsole'
 import AdvisorChat from './pages/infra/AdvisorChat'
 import HomePage from './pages/HomePage'
+import PipelinePage from './pages/PipelinePage'
+import EricGatePage from './pages/EricGatePage'
+import ArchiveSearchPage from './pages/ArchiveSearchPage'
+import SessionArchivePage from './pages/SessionArchivePage'
+import DecisionsPage from './pages/DecisionsPage'
 import './index.css'
 
 const NAV = [
@@ -29,6 +34,11 @@ const NAV = [
   { path: '/infra', label: 'Infra' },
   { path: '/chat', label: 'Chat' },
   { path: '/advisor-chat', label: 'Advisor Chat' },
+  { path: '/pipeline', label: 'Pipeline' },
+  { path: '/eric-gate', label: 'Eric Gate' },
+  { path: '/archive/search', label: 'Archive' },
+  { path: '/archive/sessions', label: 'Sessions' },
+  { path: '/decisions', label: 'Decisions' },
 ]
 
 export default function App() {
@@ -75,6 +85,11 @@ export default function App() {
           <Route path="/infra" element={<InfraPage />} />
           <Route path="/chat" element={<ChatConsole />} />
           <Route path="/advisor-chat" element={<AdvisorChat />} />
+          <Route path="/pipeline" element={<PipelinePage />} />
+          <Route path="/eric-gate" element={<EricGatePage />} />
+          <Route path="/archive/search" element={<ArchiveSearchPage />} />
+          <Route path="/archive/sessions" element={<SessionArchivePage />} />
+          <Route path="/decisions" element={<DecisionsPage />} />
         </Routes>
       </div>
 

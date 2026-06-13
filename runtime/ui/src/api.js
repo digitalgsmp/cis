@@ -130,4 +130,24 @@ export const api = {
   ingestFiles: () => fetch('/api/ingest-spines/files').then(r => r.json()),
   ingestFileDetail: (path) =>
     fetch(`/api/ingest-spines/files/${encodeURIComponent(path)}`).then(r => r.json()),
+
+  // ── Tier 10: Pipeline views (added 2026-06-13) ────────────────────────
+  pipelineStatus: () =>
+    fetch('/api/pipeline/status').then(r => r.json()),
+  pipelineNodeStatus: (label) =>
+    fetch(`/api/pipeline/status/${encodeURIComponent(label)}`).then(r => r.json()),
+  pipelineNextActions: () =>
+    fetch('/api/pipeline/next-actions').then(r => r.json()),
+  pipelineRuns: (limit = 20) =>
+    fetch(`/api/pipeline/runs?limit=${limit}`).then(r => r.json()),
+  pipelineRunDetail: (runId) =>
+    fetch(`/api/pipeline/runs/${encodeURIComponent(runId)}`).then(r => r.json()),
+  ericGate: () =>
+    fetch('/api/pipeline/eric-gate').then(r => r.json()),
+  decisions: () =>
+    fetch('/api/decisions').then(r => r.json()),
+  archiveSearchSemantic: (query, topK = 20) =>
+    fetch(`/api/archive/search/semantic?q=${encodeURIComponent(query)}&top_k=${topK}`).then(r => r.json()),
+  archiveSearchFts: (query, limit = 20) =>
+    fetch(`/api/archive/search/fts?q=${encodeURIComponent(query)}&limit=${limit}`).then(r => r.json()),
 }
