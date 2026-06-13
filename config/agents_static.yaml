@@ -173,15 +173,15 @@ build_method: |
 
 eric_gate_status:
   decision: APPROVE
-  decided_at: 2026-06-13 06:49 UTC
-  goal_label: Tier 9 Chroma/VDB specification approved as architecture basis
+  decided_at: 2026-06-13 07:41 UTC
+  goal_label: Tier 10 CIS UI / Custom Display Views specification approved as architecture basis
   workflow_run_id: "N/A (direct Eric Gate — no deliberation run)"
   scope: |
-    Specification document only (docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md, commit 87ac0e3).
-    Does NOT authorize Tier 9 implementation or Tier 10.
-    Does NOT authorize archive-wide embedding or cloud/network embedding.
-    Does NOT authorize write-capable retrieval tools.
-    Implementation requires separate FINAL_DIRECTIVE.
+    Specification document only (docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md, commit c2a3f20).
+    Does NOT authorize Tier 10 implementation until separate FINAL_DIRECTIVE.
+    Does NOT authorize broad UI redesign or new dependencies beyond the approved spec.
+    Does NOT authorize write-capable UI endpoints or pipeline bypass.
+    Does NOT authorize post-Tier-10 work.
 
 seed_intent:
   instruction: "Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim."

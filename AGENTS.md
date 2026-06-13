@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 07:15 UTC | Run: run-df9048838ca0 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 07:41 UTC | Run: run-3e065cfe6c4f | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI PENDING — specification planning open.
+Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -87,13 +87,13 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)
 - Status: APPROVE
-- Decided at: 2026-06-13 06:49 UTC
-- Goal: Tier 9 Chroma/VDB specification approved as architecture basis
-- Scope: Specification document only (docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md, commit 87ac0e3).
-Does NOT authorize Tier 9 implementation or Tier 10.
-Does NOT authorize archive-wide embedding or cloud/network embedding.
-Does NOT authorize write-capable retrieval tools.
-Implementation requires separate FINAL_DIRECTIVE.
+- Decided at: 2026-06-13 07:41 UTC
+- Goal: Tier 10 CIS UI / Custom Display Views specification approved as architecture basis
+- Scope: Specification document only (docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md, commit c2a3f20).
+Does NOT authorize Tier 10 implementation until separate FINAL_DIRECTIVE.
+Does NOT authorize broad UI redesign or new dependencies beyond the approved spec.
+Does NOT authorize write-capable UI endpoints or pipeline bypass.
+Does NOT authorize post-Tier-10 work.
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.
