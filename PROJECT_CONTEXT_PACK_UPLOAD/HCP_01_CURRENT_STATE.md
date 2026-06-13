@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-12
+Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).
 
-Generated: 2026-06-12 23:40 UTC | Run: run-d1516e68b41f
+Generated: 2026-06-13 03:21 UTC | Run: run-440b9c6db977
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).**
 
-**HEAD:** `1d0385c`.
+**HEAD:** `b7e3c75`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
