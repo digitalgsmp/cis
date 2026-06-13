@@ -10,7 +10,8 @@ Gate approval is recorded.
 
 **Author:** Hermes V4 Drafter (deepseek-v4-pro)
 **Date:** 2026-06-13
-**Status:** DRAFT — awaiting Eric Gate review
+**Revised:** 2026-06-13 — Adversarial review corrections: R1 (pre-indexing secret filtering), R2 (Python env clarification), R3 (content→content_text), R4 (data scope: all speaker roles, 3,082 sessions), R5 (deliberation_rounds: 4 rows), R6 (Chroma storage dir creation in build plan).
+**Status:** REVISED_DRAFT — corrections applied, awaiting Reviewer re-review
 **Gating dependency:** Tier 8 (MCP Bridge) must be COMPLETE per dependency graph
 
 ---
@@ -22,7 +23,7 @@ Gate approval is recorded.
 Eric's long-term goal, stated in his own words: "build a knowledge base in the
 sqlite db that will vectorized and saved to a vdb." The CIS project has already
 imported 3,071 Hermes session files into the SQLite spine with FTS5 full-text
-search (Tier 7.5b). But FTS5 is lexical only — it matches words, not meaning.
+search (Tier 5 DAM import). But FTS5 is lexical only — it matches words, not meaning.
 
 Current limitations of FTS5-only search:
 
@@ -64,8 +65,8 @@ This enables semantic search — finding sessions by meaning, not just by keywor
 
 | Source | Table(s) | Content to embed | Purpose |
 |--------|----------|-----------------|---------|
-| DAM session messages | `dam_extracted_text` | User messages from Hermes session archives (already imported, 3,071 sessions) | Recover Eric's own words about app logic, client schedules, assessments, recovery plans |
-| Deliberation rounds | `deliberation_rounds` | Drafter proposals and Reviewer feedback text | Find prior design reasoning and decisions |
+| DAM session messages | `dam_extracted_text` | All message types from Hermes session archives — user messages, assistant responses, tool outputs, and system messages (already imported, 3,082 sessions, 189,161 rows) | Recover Eric's own words about app logic, client schedules, assessments, recovery plans |
+| Deliberation rounds | `deliberation_rounds` | Drafter proposals and Reviewer feedback text (currently 4 rows; will grow as the pipeline produces more rounds) | Find prior design reasoning and decisions |
 | Project decisions | `project_decisions` | ADR-SEED-* decision text and labels | Trace architectural decision lineage |
 | Session closeouts | `session_closeouts` | Failure summaries and log paths | Find prior failure patterns and resolutions |
 
@@ -90,7 +91,44 @@ This enables semantic search — finding sessions by meaning, not just by keywor
   `/mnt/projects/cis/data/chroma_data`).
 - The embedding model is downloaded once and cached locally. No runtime network
   calls.
-- No secret-bearing fields (`API_KEY`, `TOKEN`, `PASSWORD`) are included in the
+
+### 2.4 Pre-indexing secret filtering (mandatory gate)
+
+Before any text is embedded and stored in Chroma, the embedding pipeline MUST
+apply secret filtering. Rows containing secret-like patterns must not be
+embedded in raw form.
+
+**Detection patterns (to redact or exclude):**
+
+| Pattern | Action | Regex |
+|---------|--------|-------|
+| API keys (sk-, openai, anthropic) | Redact value, keep structure | `sk-[A-Za-z0-9]{20,}` |
+| AWS-style keys | Redact value | `AKIA[0-9A-Z]{16}` |
+| GitHub tokens | Redact value | `gh[pousr]_[A-Za-z0-9]{36,}` |
+| Bearer tokens | Exclude row entirely | `Bearer\s+[A-Za-z0-9\-_\.]{20,}` |
+| Generic secrets (API_KEY=, TOKEN=, SECRET=, PASSWORD=) | Replace value with `[REDACTED]` | `(API_KEY|TOKEN|SECRET|PASSWORD)\s*[=:]\s*\S+` |
+| Private keys (-----BEGIN ... PRIVATE KEY-----) | Exclude row entirely | `-----BEGIN\s.*PRIVATE\sKEY-----` |
+| JWT tokens (eyJ...) | Redact value | `eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+` |
+
+**Filtering rules:**
+
+1. **Rows matching `Exclude row entirely` patterns**: The entire row is skipped.
+   Not embedded. Not stored in Chroma. A count of excluded rows is logged.
+2. **Rows matching `Redact value, keep structure` or `Replace value with [REDACTED]` patterns**:
+   The matching substrings are replaced with `[REDACTED]`. The rest of the text
+   is embedded normally. The original source row in `dam_extracted_text` is
+   unchanged (the spine is read-only).
+3. **Clean rows (no patterns matched)**: Embedded as-is.
+
+**Verification:**
+- The security acceptance test S5 confirms that search results do not contain
+  raw secret patterns.
+- The pre-implementation gate `gate_secret_filter_patterns.sh` validates the
+  regex patterns against known-clean and known-secret test inputs.
+- The post-implementation gate `gate_chroma_no_secrets_in_results.py` queries
+  Chroma and confirms zero secret-bearing rows in results.
+
+**No secret-bearing fields** (`API_KEY`, `TOKEN`, `PASSWORD`) are included in the
   embedding pipeline or indexed content.
 
 ---
@@ -255,6 +293,13 @@ relevant context but do not replace verified state.
 │  cis_mcp_bridge/chroma_index.py     (NEW — Tier 9)   │
 │                                                      │
 │  ┌────────────────────────────────────────────────┐  │
+│  │  SecretFilterPipeline  (§2.4)                  │  │
+│  │  - Regex-based detection of secret patterns    │  │
+│  │  - Redact in-place or exclude rows entirely    │  │
+│  │  - Logs excluded/redacted count                │  │
+│  └────────────────────┬───────────────────────────┘  │
+│                       │                              │
+│  ┌────────────────────▼───────────────────────────┐  │
 │  │  EmbeddingPipeline                             │  │
 │  │  - Loads sentence-transformers model           │  │
 │  │  - Embeds text from dam_extracted_text,        │  │
@@ -329,7 +374,7 @@ writes vectors to Chroma's own persistent storage on disk (separate from SQLite)
 
 | Data Source | Existing Table | Read by Chroma |
 |-------------|---------------|----------------|
-| Session messages | `dam_extracted_text` | Yes — embed user messages |
+| Session messages | `dam_extracted_text` | Yes — embed all messages (user, assistant, tool, system) |
 | Deliberation rounds | `deliberation_rounds` | Yes — embed drafter proposals |
 | Project decisions | `project_decisions` | Yes — embed decision text |
 | Session closeouts | `session_closeouts` | Yes — embed failure summaries |
@@ -340,7 +385,7 @@ One Chroma collection per data source:
 
 | Collection Name | Source Table | Embedding Content | Metadata |
 |-----------------|-------------|-------------------|----------|
-| `cis_sessions` | `dam_extracted_text` | `content` field (user messages) | `source_table`, `source_id`, `speaker`, `session_file` |
+| `cis_sessions` | `dam_extracted_text` | `content_text` field (all speaker roles) | `source_table`, `source_id`, `speaker_role`, `asset_id` |
 | `cis_deliberations` | `deliberation_rounds` | `drafter_output` field | `source_table`, `source_id`, `run_id`, `round_number` |
 | `cis_decisions` | `project_decisions` | `decision` + `label` fields | `source_table`, `source_id`, `decision_id` |
 | `cis_closeouts` | `session_closeouts` | `failure_summary` field | `source_table`, `source_id`, `log_path` |
@@ -400,6 +445,8 @@ variables. `CIS_CHROMA_PATH` is explicitly added via `mcp_servers.cis.env`.
 
 ### 8.5 No secrets, no credentials
 
+- Pre-indexing secret filtering (§2.4) redacts or excludes secret-bearing rows
+  before embedding. No raw secrets enter Chroma.
 - No API keys in embedding pipeline code
 - No authentication tokens for Chroma (embedded mode, localhost only)
 - No environment variable leakage (same MCP env filtering as Tier 8)
@@ -427,8 +474,9 @@ variables. `CIS_CHROMA_PATH` is explicitly added via `mcp_servers.cis.env`.
 | A5 | All 9 Tier 8 tools still work | Call each existing MCP tool | All return correct results, no regressions | Full regression suite |
 | A6 | Empty query handled | `cis_search_semantic("")` | Returns graceful error, not crash | Error handling test |
 | A7 | Index is idempotent | Run index build twice | Second run reports 0 new documents indexed | Idempotency test |
-| A8 | Metadata preserved | Search returns document with metadata | Result includes `source_table`, `source_id`, `session_file` or equivalent | Metadata verification |
+| A8 | Metadata preserved | Search returns document with metadata | Result includes `source_table`, `source_id`, `speaker_role` or equivalent | Metadata verification |
 | A9 | Collection exists after index | Query Chroma directly | All 4 collections exist with document counts matching source rows | Chroma native query |
+| A10 | Secret filtering applied | `cis_search_semantic(\"sk-\")` | Returns 0 results — no raw secrets in indexed content | Post-filter verification |
 
 ### 9.2 Security acceptance tests
 
@@ -462,7 +510,9 @@ variables. `CIS_CHROMA_PATH` is explicitly added via `mcp_servers.cis.env`.
 | Chroma package installed | Dependency | `~/.hermes/hermes-agent/venv/bin/python -c "import chromadb"` succeeds |
 | sentence-transformers installed | Dependency | `~/.hermes/hermes-agent/venv/bin/python -c "import sentence_transformers"` succeeds |
 | DAM data exists | DB state | `SELECT COUNT(*) FROM dam_extracted_text` > 0 |
-| Chroma storage dir writable | Filesystem | `CIS_CHROMA_PATH` directory exists and is writable |
+| Secret filter patterns valid | Dependency | `tools/gates/gate_secret_filter_patterns.sh` validates all detection regex patterns |
+| Python environment ready | Dependency | `~/.hermes/hermes-agent/venv/bin/python` is the bridge Python; chromadb and sentence-transformers must be importable there |
+| Chroma storage dir exists | Filesystem | `mkdir -p CIS_CHROMA_PATH` executed; directory is writable |
 
 ### 10.2 Post-implementation verification gates
 
@@ -470,9 +520,10 @@ variables. `CIS_CHROMA_PATH` is explicitly added via `mcp_servers.cis.env`.
 |------|------|---------|
 | `gate_mcp_readonly.py` | Security | Verify no write SQL in Tier 9 code (reuse Tier 8 gate) |
 | `gate_mcp_no_network.py` | Security | Verify no network imports in chroma_index.py (reuse Tier 8 gate) |
-| `gate_chroma_tool_a1.sh` through `gate_chroma_tool_a9.sh` | Functional | One gate per acceptance test A1-A9 |
+| `gate_chroma_tool_a1.sh` through `gate_chroma_tool_a10.sh` | Functional | One gate per acceptance test A1-A10 |
 | `gate_chroma_security_s1.sh` through `gate_chroma_security_s5.sh` | Security | One gate per security test S1-S5 |
 | `gate_chroma_tools_registered.sh` | Functional | Confirm 11 tools total (9 Tier 8 + 2 Tier 9) appear at startup |
+| `gate_chroma_no_secrets_in_results.py` | Security | Verify zero secret-bearing rows in Chroma search results (§2.4 verification) |
 | `gate_chroma_index_healthy.py` | Functional | Confirm Chroma collections exist and are queryable |
 
 ### 10.3 Test file structure
@@ -487,7 +538,7 @@ variables. `CIS_CHROMA_PATH` is explicitly added via `mcp_servers.cis.env`.
 └── tools/
     └── gates/
         ├── gate_chroma_index_healthy.py
-        ├── gate_chroma_tool_a1.sh through gate_chroma_tool_a9.sh
+│        ├── gate_chroma_tool_a1.sh through gate_chroma_tool_a10.sh
         ├── gate_chroma_security_s1.sh through gate_chroma_security_s5.sh
         └── gate_chroma_tools_registered.sh
 ```
@@ -532,8 +583,8 @@ Tier 9 implementation shall not begin until ALL of:
 
 | Node | Label | Depends On | Scope |
 |------|-------|-----------|-------|
-| Tier 9.1 | Chroma — dependency installation | Eric Gate on this spec | Install `chromadb` and `sentence-transformers` in Hermes venv. Verify imports. |
-| Tier 9.2 | Chroma — embedding pipeline | Tier 9.1 | Implement `chroma_index.py`: embedding pipeline, Chroma client, index-from-spine function. Unit tests with small test corpus. |
+| Tier 9.1 | Chroma — dependency installation | Eric Gate on this spec | Install `chromadb` and `sentence-transformers` in Hermes venv. Verify imports. Create `CIS_CHROMA_PATH` directory. |
+| Tier 9.2 | Chroma — embedding pipeline | Tier 9.1 | Implement `chroma_index.py`: secret filtering pipeline (§2.4), embedding pipeline, Chroma client, index-from-spine function. Unit tests with small test corpus. |
 | Tier 9.3 | Chroma — MCP tool integration | Tier 9.2 | Add `cis_search_semantic` and `cis_get_similar` to `tools.py`. Wire to chroma_index query functions. |
 | Tier 9.4 | Chroma — index build | Tier 9.3 | Run full index build against production `cis_memory.db`. Verify collections created. |
 | Tier 9.5 | Chroma — security gates | Tier 9.4 | Run all security gates: no write SQL, no network, no secrets. |
@@ -585,8 +636,18 @@ Tier 10 — CIS UI / Custom Display Views|BLOCKED
 ### A.2 DAM data availability
 
 ```
-COMMAND: sqlite3 data/cis_memory.db "SELECT COUNT(*) FROM dam_assets;"
+COMMAND: sqlite3 data/cis_memory.db "SELECT COUNT(*) FROM dam_extracted_text;"
+OUTPUT: 189161
+
+COMMAND: sqlite3 data/cis_memory.db "SELECT COUNT(DISTINCT asset_id) FROM dam_extracted_text;"
 OUTPUT: 3082
+
+COMMAND: sqlite3 data/cis_memory.db "SELECT DISTINCT speaker_role FROM dam_extracted_text ORDER BY speaker_role;"
+OUTPUT:
+assistant
+system
+tool
+user
 ```
 
 ### A.3 Eric's seed intent (verbatim)
