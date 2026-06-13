@@ -160,6 +160,60 @@ TOOLS = [
             "required": ["query"],
         },
     },
+    {
+        "name": "cis_search_semantic",
+        "description": (
+            "Semantic (vector) search across indexed CIS content using Chroma. "
+            "Finds sessions, deliberations, decisions, and closeouts by meaning, "
+            "not just keyword. Returns top-K results with relevance scores. "
+            "Use when keyword search misses related concepts."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query for semantic search",
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "Maximum results (default: 10, max: 50)",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 50,
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "cis_get_similar",
+        "description": (
+            "Find documents similar to a given indexed document by ID. "
+            "Returns top-K semantically similar documents with similarity scores. "
+            "Use for 'find me more like this' discovery."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "document_id": {
+                    "type": "string",
+                    "description": (
+                        "Document ID from a prior search result "
+                        "(e.g., 'session_12345', 'decision_ADR-SEED-001')"
+                    ),
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "Maximum results (default: 10, max: 50)",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 50,
+                },
+            },
+            "required": ["document_id"],
+        },
+    },
 ]
 
 
@@ -228,6 +282,36 @@ def handle_search_sessions(arguments):
     return {"sessions": spine.query_search_sessions(query_text, limit=limit)}
 
 
+def _get_chroma_client():
+    """Lazy-load the Chroma client (heavy import)."""
+    from . import chroma_index
+    return chroma_index.get_client()
+
+
+def handle_search_semantic(arguments):
+    """Handler for cis_search_semantic."""
+    query_text = arguments.get("query", "")
+    if not query_text:
+        return {"error": "query is required"}
+    top_k = arguments.get("top_k", 10)
+    client = _get_chroma_client()
+    results = client.search_semantic(query_text, top_k=top_k)
+    return {"results": results}
+
+
+def handle_get_similar(arguments):
+    """Handler for cis_get_similar."""
+    document_id = arguments.get("document_id", "")
+    if not document_id:
+        return {"error": "document_id is required"}
+    top_k = arguments.get("top_k", 10)
+    client = _get_chroma_client()
+    result = client.get_similar(document_id, top_k=top_k)
+    if isinstance(result, dict) and "error" in result:
+        return result
+    return {"results": result}
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -240,4 +324,6 @@ HANDLERS = {
     "cis_get_open_questions": handle_get_open_questions,
     "cis_get_eric_gate_status": handle_get_eric_gate_status,
     "cis_search_sessions": handle_search_sessions,
+    "cis_search_semantic": handle_search_semantic,
+    "cis_get_similar": handle_get_similar,
 }

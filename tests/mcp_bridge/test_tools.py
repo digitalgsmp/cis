@@ -18,11 +18,11 @@ from mcp_bridge import tools
 class TestToolDefinitions(unittest.TestCase):
     """Test tool schema definitions (no DB needed)."""
 
-    def test_all_9_tools_defined(self):
-        self.assertEqual(len(tools.TOOLS), 9)
+    def test_all_11_tools_defined(self):
+        self.assertEqual(len(tools.TOOLS), 11)
 
-    def test_all_9_handlers_registered(self):
-        self.assertEqual(len(tools.HANDLERS), 9)
+    def test_all_11_handlers_registered(self):
+        self.assertEqual(len(tools.HANDLERS), 11)
         for t in tools.TOOLS:
             self.assertIn(t["name"], tools.HANDLERS,
                           "No handler for {}".format(t["name"]))
