@@ -1,7 +1,35 @@
 # Files Changed Recently
-Generated: 2026-06-13 07:41 UTC | Run: run-096a28649950
+Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 8800353 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## a3d8002 Eric Gate: APPROVE Tier 10 CIS UI specification (commit c2a3f20)
 
@@ -290,27 +318,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 7f18965 feat(Tier 8): MCP Bridge — read-only stdio MCP server for CIS spine
-
-## runtime/mcp_bridge/__init__.py 
-
-## runtime/mcp_bridge/server.py 
-
-## runtime/mcp_bridge/spine.py 
-
-## runtime/mcp_bridge/tools.py 
-
-## tests/mcp_bridge/__init__.py 
-
-## tests/mcp_bridge/test_security.py 
-
-## tests/mcp_bridge/test_spine.py 
-
-## tests/mcp_bridge/test_tools.py 
-
-## tools/gates/gate_mcp_no_filesystem_write.py 
-
-## tools/gates/gate_mcp_no_network.py 
-
-## tools/gates/gate_mcp_readonly.py 

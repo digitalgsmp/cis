@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.
 
-Generated: 2026-06-13 07:41 UTC | Run: run-096a28649950
+Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.**
 
-**HEAD:** `a3d8002`.
+**HEAD:** `8800353`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
