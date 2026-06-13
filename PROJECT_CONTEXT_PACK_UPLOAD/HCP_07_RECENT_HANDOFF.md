@@ -2,9 +2,9 @@
 Date: 2026-06-13
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `7f18965`
+HEAD: `d856fd3`
 
-Generated: 2026-06-13 05:47 UTC | Run: run-e90935aa0a58
+Generated: 2026-06-13 06:00 UTC | Run: run-e6464b2e994f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-(No eligible PENDING node in build plan.)
+Tier 9 — Chroma/VDB.
 
 ## Eric Gate Approval Status
 

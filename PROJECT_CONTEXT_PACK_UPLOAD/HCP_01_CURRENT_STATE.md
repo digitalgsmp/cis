@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-13
 Authority: Eric (Architect)
-Status: Tier 8 COMPLETE. Tier 9 Chroma/VDB BLOCKED (gated on Tier 8).
+Status: Tier 8 COMPLETE. Tier 9 Chroma/VDB PENDING — specification planning open. Tier 10 BLOCKED (gated on Tier 9).
 
-Generated: 2026-06-13 05:47 UTC | Run: run-e90935aa0a58
+Generated: 2026-06-13 06:00 UTC | Run: run-e6464b2e994f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 8 COMPLETE. Tier 9 Chroma/VDB BLOCKED (gated on Tier 8).**
+**Tier 8 COMPLETE. Tier 9 Chroma/VDB PENDING — specification planning open. Tier 10 BLOCKED (gated on Tier 9).**
 
-**HEAD:** `7f18965`.
+**HEAD:** `d856fd3`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-(No eligible PENDING node in build plan.)
+**Tier 9 — Chroma/VDB (Tier 9)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -280,7 +280,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 10. Tier 7.5a — Corpus Audit ✅ COMPLETE
 11. Tier 7.5b — Clean Subset Import + FTS5 ✅ COMPLETE
 12. Tier 8 — MCP Bridge ✅ COMPLETE
-13. Tier 9 — Chroma/VDB 🚫 BLOCKED
+13. Tier 9 — Chroma/VDB ⬜ PENDING
 14. Tier 10 — CIS UI / Custom Display Views 🚫 BLOCKED
 15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE
 16. Tier 7R — Intent-to-Workflow Architecture Specification ✅ COMPLETE
