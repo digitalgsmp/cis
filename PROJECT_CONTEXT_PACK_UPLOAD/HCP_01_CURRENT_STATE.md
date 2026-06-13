@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.
 
-Generated: 2026-06-13 08:01 UTC | Run: run-6fde5f2bc8ec
+Generated: 2026-06-13 09:17 UTC | Run: run-1f89754b9357
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.**
 
-**HEAD:** `05596eb`.
+**HEAD:** `bbab96e`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
