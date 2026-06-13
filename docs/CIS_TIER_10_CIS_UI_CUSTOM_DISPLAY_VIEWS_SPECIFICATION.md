@@ -10,7 +10,8 @@ Gate approval is recorded.
 
 **Author:** Hermes V4 Drafter (deepseek-v4-pro)
 **Date:** 2026-06-13
-**Status:** DRAFT — awaiting Eric Gate review
+**Revised:** 2026-06-13 — Reviewer corrections: R1 (11→20 page count, separated top-level/infra), R2 (Appendix A.2: complete JSX + HTML inventory), R3 (Appendix A.3: corrected grep command).
+**Status:** REVISED_DRAFT — corrections applied, awaiting Reviewer re-review
 **Gating dependency:** Tier 9 (Chroma/VDB) must be COMPLETE per dependency graph
 
 ---
@@ -465,7 +466,7 @@ collections, no index modifications.
 | I1 | Flask serves new endpoints | Start Flask, curl `/api/pipeline/status` | Returns JSON with build_plan_nodes | Curl + jq validation |
 | I2 | React builds with new pages | `npm run build` in `runtime/ui/` | Build succeeds, new routes in bundle | Build output |
 | I3 | New nav links appear | Navigate to CIS dashboard | New nav entries for Pipeline, Eric Gate, Archive, Decisions visible | Browser screenshot |
-| I4 | Existing UI regression | Navigate to all 11 existing pages | All load correctly, no JS errors | Browser console check |
+| I4 | Existing UI regression | Navigate to all 20 existing JSX page files (13 top-level + 7 infra sub-pages) | All load correctly, no JS errors | Browser console check |
 | I5 | MCP bridge functions importable | `python -c "from cis_mcp_bridge.tools import cis_get_current_phase; print(type(cis_get_current_phase))"` | Prints `<class 'function'>` | Import test |
 
 ---
@@ -477,7 +478,7 @@ collections, no index modifications.
 | Gate | Type | Purpose |
 |------|------|---------|
 | Tier 9 COMPLETE | Dependency | Chroma/VDB must be verified complete with acceptance tests passing |
-| Existing UI operational | Functional | Flask server starts, React app builds, all 11 existing pages load |
+| Existing UI operational | Functional | Flask server starts, React app builds, all 20 existing JSX page files (13 top-level + 7 infra sub-pages) load |
 | MCP tools importable in Flask context | Dependency | `from cis_mcp_bridge.tools import cis_get_current_phase` succeeds from `runtime/` |
 | No `pipeline_views.py` exists yet | State | Confirm no prior Tier 10 implementation artifacts |
 
@@ -489,7 +490,7 @@ collections, no index modifications.
 | `gate_ui_no_pipeline_bypass.py` | Security | Scan for pipeline module imports |
 | `gate_ui_method_allowlist.sh` | Security | Confirm all new endpoints reject non-GET methods |
 | `gate_ui_tool_a1.sh` through `gate_ui_tool_a10.sh` | Functional | One gate per acceptance test A1-A10 |
-| `gate_ui_regression.sh` | Functional | Navigate all 11 existing pages, confirm zero JS errors |
+| `gate_ui_regression.sh` | Functional | Navigate all 20 existing JSX page files (13 top-level + 7 infra sub-pages), confirm zero JS errors |
 | `gate_ui_build.sh` | Functional | `npm run build` succeeds with new components |
 | `gate_ui_no_secrets_in_jsx.sh` | Security | Scan JSX files for secret patterns |
 
@@ -526,7 +527,7 @@ collections, no index modifications.
 | Tier 10.3 | UI — React components (archive views) | Tier 10.2 | Implement `ArchiveSearchPage.jsx`, `SessionArchivePage.jsx` (V4, V5). Wire to search endpoints. |
 | Tier 10.4 | UI — App integration | Tier 10.3 | Add new routes and nav entries to `App.jsx`. Update `api.js` if needed. |
 | Tier 10.5 | UI — security gates | Tier 10.4 | Run all security gates: no write endpoints, no pipeline bypass, no secrets. |
-| Tier 10.6 | UI — regression test | Tier 10.5 | Run existing UI regression: all 11 pages load, zero JS errors. |
+| Tier 10.6 | UI — regression test | Tier 10.5 | Run existing UI regression: all 20 existing JSX page files (13 top-level + 7 infra sub-pages) load, zero JS errors. |
 | Tier 10.7 | UI — acceptance test suite | Tier 10.6 | Run all 10 functional acceptance tests (A1-A10). Record results. |
 | Tier 10.8 | UI — closeout | Tier 10.7 | Verify all gates pass. Record evidence. Regenerate exports. Request Eric Gate closeout. |
 
@@ -574,7 +575,7 @@ Tier 10 implementation shall not begin until ALL of:
 | 1 | Tier 9 (Chroma/VDB) status = COMPLETE | `SELECT status FROM build_plan_nodes WHERE node_label = 'Tier 9 — Chroma/VDB'` |
 | 2 | Eric Gate approval recorded for **this specification** | This document approved by Eric |
 | 3 | Tier 8 MCP Bridge operational | MCP tools importable and returning correct data |
-| 4 | Existing CIS UI operational | Flask server starts, React app builds and loads all 11 pages |
+| 4 | Existing CIS UI operational | Flask server starts, React app builds and loads all 20 existing JSX page files (13 top-level + 7 infra sub-pages) |
 | 5 | Eric explicitly issues PROCEED or IMPLEMENT for Tier 10 | Not automatic |
 
 ### 13.2 What happens after approval
@@ -629,8 +630,10 @@ Tier 10 — CIS UI / Custom Display Views|PENDING
 
 ### A.2 Existing UI inventory
 
+**Top-level JSX page files (14 files):**
+
 ```
-COMMAND: find runtime/ui/src/pages -name "*.jsx" | sort
+COMMAND: find runtime/ui/src/pages -maxdepth 1 -name "*.jsx" | sort
 OUTPUT:
 runtime/ui/src/pages/AssetDetail.jsx
 runtime/ui/src/pages/ChatConsole.jsx
@@ -645,8 +648,29 @@ runtime/ui/src/pages/ProjectsPage.jsx
 runtime/ui/src/pages/ReviewQueue.jsx
 runtime/ui/src/pages/SchedulePage.jsx
 runtime/ui/src/pages/SpineGraphPage.jsx
-runtime/ui/src/pages/infra/AdvisorChat.jsx
+```
 
+**Infra sub-pages (6 files):**
+
+```
+COMMAND: find runtime/ui/src/pages/infra -name "*.jsx" | sort
+OUTPUT:
+runtime/ui/src/pages/infra/AdvisorChat.jsx
+runtime/ui/src/pages/infra/CollabTracker.jsx
+runtime/ui/src/pages/infra/Hardware.jsx
+runtime/ui/src/pages/infra/Models.jsx
+runtime/ui/src/pages/infra/Services.jsx
+runtime/ui/src/pages/infra/Software.jsx
+runtime/ui/src/pages/infra/Storage.jsx
+```
+
+Total JSX page files: 20 (13 top-level + 7 infra sub-pages).
+
+App.jsx nav routes: 11 top-level routes (Ideas, Projects, Schedule, DAM, Learn, Review, Ingestion, Map, Infra, Chat, Advisor Chat).
+
+**HTML component files (14 files):**
+
+```
 COMMAND: find runtime/ui_components -name "*.html" | sort
 OUTPUT:
 runtime/ui_components/mod_agents.html
@@ -668,9 +692,13 @@ runtime/ui_components/mod_session.html
 ### A.3 Existing MCP tool inventory (Tier 8 + Tier 9)
 
 ```
-COMMAND: grep -c "def cis_" runtime/mcp_bridge/tools.py
-OUTPUT: 11 (9 Tier 8 + 2 Tier 9)
+COMMAND: grep -c '"name": "cis_' runtime/mcp_bridge/tools.py
+OUTPUT: 11
 ```
+
+(9 Tier 8 tools + 2 Tier 9 tools. The `grep` pattern `"name": "cis_` matches the JSON
+tool definition names, which is the authoritative count. Counting `def cis_` function
+definitions is incorrect — MCP tools are registered as dict entries with `name` keys.)
 
 ### A.4 Dependency graph reference
 
