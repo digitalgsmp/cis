@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 8 COMPLETE. Tier 9 Chroma/VDB specification APPROVED (Eric Gate, commit 87ac0e3). Implementation eligible for separate FINAL_DIRECTIVE. Tier 10 BLOCKED (gated on Tier 9).
 
-Generated: 2026-06-13 06:49 UTC | Run: run-52241b7eef8d
+Generated: 2026-06-13 06:50 UTC | Run: run-e1815b58d771
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 COMPLETE. Tier 9 Chroma/VDB specification APPROVED (Eric Gate, commit 87ac0e3). Implementation eligible for separate FINAL_DIRECTIVE. Tier 10 BLOCKED (gated on Tier 9).**
 
-**HEAD:** `87ac0e3`.
+**HEAD:** `7457d09`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
