@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 06:50 UTC | Run: run-e1815b58d771 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 07:04 UTC | Run: run-fb414621a4e5 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 COMPLETE. Tier 9 Chroma/VDB specification APPROVED (Eric Gate, commit 87ac0e3). Implementation eligible for separate FINAL_DIRECTIVE. Tier 10 BLOCKED (gated on Tier 9).
+Tier 8 COMPLETE. Tier 9 Chroma/VDB COMPLETE. Tier 10 BLOCKED (gated on Tier 9).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -71,7 +71,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Tier 9 — Chroma/VDB] (Tier 9) Tier 9 — Chroma/VDB
 
 ## 7. Active Blockers
 - [Tier 10 — CIS UI / Custom Display Views] Gated on Tier 9 Chroma/VDB per dependency graph.
