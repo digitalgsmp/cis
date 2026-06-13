@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 05:34 UTC | Run: run-d9f777ddae7e | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 05:47 UTC | Run: run-e90935aa0a58 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.
+Tier 8 COMPLETE. Tier 9 Chroma/VDB BLOCKED (gated on Tier 8).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -71,7 +71,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Tier 8 — MCP Bridge] (Tier 8) Tier 8 — MCP Bridge
 
 ## 7. Active Blockers
 - [Tier 9 — Chroma/VDB] Gated on Tier 8 MCP Bridge per dependency graph.
