@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 8 COMPLETE. Tier 9 Chroma/VDB PENDING — specification planning open. Tier 10 BLOCKED (gated on Tier 9).
 
-Generated: 2026-06-13 06:00 UTC | Run: run-e6464b2e994f
+Generated: 2026-06-13 06:00 UTC | Run: run-3539b3db4ffb
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 COMPLETE. Tier 9 Chroma/VDB PENDING — specification planning open. Tier 10 BLOCKED (gated on Tier 9).**
 
-**HEAD:** `d856fd3`.
+**HEAD:** `a9ef985`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
