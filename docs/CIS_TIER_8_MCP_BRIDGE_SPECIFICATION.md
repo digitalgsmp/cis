@@ -10,7 +10,8 @@ Gate approval is recorded.
 
 **Author:** Hermes V4 Drafter (deepseek-v4-pro)
 **Date:** 2026-06-12
-**Status:** DRAFT — awaiting Eric Gate review
+**Revised:** 2026-06-13 — Adversarial review by V4 Reviewer (deepseek-v4-pro). Corrections: O1 (mcp venv path), O2 (decisions→project_decisions), O3 (FTS5 migration added), O4 (CLOSED→DECIDED filter), R5 (Appendix A.5 verified).
+**Status:** REVISED_DRAFT — corrections applied, awaiting Eric Gate review
 **Gating dependency:** Tier 7R.4 (Process Manager) must be COMPLETE per §11.5 of Tier 7R spec
 
 ---
@@ -65,10 +66,10 @@ the Eric Gate.
 | `cis_get_next_actions` | All nodes where status = PENDING and dependencies are COMPLETE | What to work on next |
 | `cis_get_recent_runs` | Last N workflow_runs with result, rounds_completed, created_at | Recent pipeline activity |
 | `cis_get_run_detail` | Single workflow_run + its deliberation_rounds | Deep inspection of a pipeline run |
-| `cis_get_open_decisions` | All rows from decisions table where status != CLOSED | What needs Eric's attention |
+| `cis_get_open_decisions` | All rows from project_decisions table where status = 'DECIDED' AND superseded_by IS NULL | Active, non-superseded decisions (ADR-SEED-*) |
 | `cis_get_open_questions` | All rows from open_questions table | Outstanding unknowns |
 | `cis_get_eric_gate_status` | Pending approvals from eric_gate_approvals | What's waiting for Eric |
-| `cis_search_sessions` | FTS5 search across session_closeouts and linked session transcripts | Archive discovery — "have we solved this before" |
+| `cis_search_sessions` | FTS5 search across session_closeouts (requires schema migration — see §5.3) | Archive discovery — "have we solved this before" |
 
 ### 2.2 What MCP tools SHALL NOT expose
 
@@ -194,7 +195,8 @@ that DO participate:
 │  ~/.hermes/config.yaml:                               │
 │    mcp_servers:                                       │
 │      cis:                                             │
-│        command: "python3"                             │
+│        command: "/home/eric/.hermes/hermes-agent/     │
+│                   venv/bin/python"                     │
 │        args: ["-m", "cis_mcp_bridge.server"]          │
 │        env:                                           │
 │          CIS_SPINE_PATH: "/mnt/projects/cis/data/     │
@@ -227,7 +229,7 @@ that DO participate:
 │  Tables read: build_plan_nodes, workflow_runs,        │
 │    deliberation_rounds, workflow_run_artifacts,       │
 │    eric_gate_approvals, session_closeouts,            │
-│    decisions, open_questions, next_actions            │
+│    project_decisions, open_questions, next_actions    │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -248,7 +250,7 @@ that DO participate:
 | stdio transport | No network exposure. Process boundary is the security boundary. Hermes spawns the subprocess with filtered env. |
 | SQLite read-only mode | OS-level guarantee that the bridge cannot write, even if code is buggy or compromised. |
 | CIS_SPINE_PATH env var | Path injected by Hermes MCP config. Bridge does not hardcode paths. |
-| No external dependencies beyond `mcp` and Python stdlib | Minimum surface area. `mcp` is already installed on the system for Hermes native MCP. |
+| No external dependencies beyond `mcp` and Python stdlib | Minimum surface area. `mcp` is installed in the Hermes Agent venv (`~/.hermes/hermes-agent/venv`). The MCP bridge uses this venv's Python. |
 
 ### 4.4 Hermes MCP configuration (per profile)
 
@@ -257,7 +259,7 @@ Each profile that needs CIS spine access adds to its `~/.hermes/config.yaml`:
 ```yaml
 mcp_servers:
   cis:
-    command: "python3"
+    command: "/home/eric/.hermes/hermes-agent/venv/bin/python"
     args: ["-m", "cis_mcp_bridge.server"]
     env:
       CIS_SPINE_PATH: "/mnt/projects/cis/data/cis_memory.db"
@@ -286,7 +288,7 @@ Tier 8 does not add tables to the SQLite spine. It reads existing tables:
 | `workflow_run_artifacts` | `cis_get_run_detail` | Associated artifacts |
 | `eric_gate_approvals` | `cis_get_eric_gate_status` | Pending approvals |
 | `session_closeouts` | `cis_search_sessions` | Archive search (FTS5) |
-| `decisions` | `cis_get_open_decisions` | Active decisions (ADR-SEED-*) |
+| `project_decisions` | `cis_get_open_decisions` | Active decisions (ADR-SEED-*) |
 | `open_questions` | `cis_get_open_questions` | Outstanding unknowns (OQ-SEED-*) |
 
 ### 5.2 No new configuration files
@@ -295,11 +297,17 @@ The MCP bridge requires no config file. Configuration is via:
 - `CIS_SPINE_PATH` environment variable (path to `cis_memory.db`)
 - Hermes `config.yaml` `mcp_servers.cis` block (transport + env)
 
-### 5.3 No new schema migrations
+### 5.3 Schema migration required
 
-No migrations are required. The bridge reads tables that already exist in the
-spine (Tier 4). If future tiers add tables the bridge should expose, new tools
-are added — no schema changes.
+One schema migration is required for Tier 8:
+
+| Migration | Purpose |
+|-----------|---------|
+| `runtime/schema/migrations/009_fts_session_closeouts.sql` | Create FTS5 virtual table `session_closeouts_fts` over `session_closeouts(failure_summary, failure_step, log_path, created_by)` to support `cis_search_sessions` full-text search |
+
+The migration creates an external content FTS5 index — the `session_closeouts` base table is not altered. The bridge queries the FTS5 virtual table for text search; the base table for row retrieval.
+
+This migration must be applied and verified before `cis_search_sessions` can be used. All other bridge tables already exist in the spine (Tier 4).
 
 ### 5.4 Directory structure
 
@@ -387,7 +395,7 @@ No API keys, tokens, or secrets are passed. The bridge has no access to
 | A5 | Run detail | `mcp_cis_get_run_detail("run-xxx")` | Returns the run + its deliberation_rounds + artifacts | Verify round count matches spine |
 | A6 | Eric Gate status | `mcp_cis_get_eric_gate_status()` | Returns pending approvals with workflow_run_id, decision, created_at | Compare against `SELECT * FROM eric_gate_approvals WHERE decision = 'APPROVE' AND is_current = 1` |
 | A7 | Session search | `mcp_cis_search_sessions("social worker")` | Returns matching session_closeouts with snippets | FTS5 match test |
-| A8 | Open decisions | `mcp_cis_get_open_decisions()` | Returns decisions where status != CLOSED | Compare against decisions table |
+| A8 | Open decisions | `mcp_cis_get_open_decisions()` | Returns decisions from project_decisions where status = 'DECIDED' AND superseded_by IS NULL | Compare against project_decisions table |
 | A9 | Open questions | `mcp_cis_get_open_questions()` | Returns all open questions | Compare against open_questions table |
 
 ### 7.2 Security acceptance tests
@@ -422,7 +430,7 @@ No API keys, tokens, or secrets are passed. The bridge has no access to
 | Tier 7R.4 COMPLETE | Dependency | Process Manager must be verified complete with acceptance tests passing |
 | spine_mcp_tables_exist.sql | DB state | Confirm all tables the bridge will read exist in cis_memory.db |
 | spine_row_count.sql | DB state | Confirm build_plan_nodes has rows (spine is not empty) |
-| mcp_package_installed.sh | Dependency | Confirm `python3 -c "import mcp"` succeeds |
+| `mcp_package_installed.sh` | Dependency | Confirm `~/.hermes/hermes-agent/venv/bin/python -c "import mcp"` succeeds |
 | python_version.sh | Dependency | Confirm Python 3.9+ is available |
 
 ### 8.2 Post-implementation verification gates (must pass before COMPLETE)
@@ -651,12 +659,20 @@ for current state, next actions, decisions, and prior proposals. The bidirection
 query tool that feeds Drafter context without full AGENTS.md regeneration.
 ```
 
-### A.5 MCP Python package availability
+### A.5 MCP Python package availability (verified 2026-06-12)
 
 ```
-COMMAND: python3 -c "import mcp; print(mcp.__version__)"
-OUTPUT: <to be verified at implementation time>
+COMMAND: ~/.hermes/hermes-agent/venv/bin/python -c "import mcp; print('mcp imported OK'); print(hasattr(mcp, 'ClientSession')); print(mcp.ClientSession)"
+OUTPUT:
+mcp imported OK
+True
+<class 'mcp.client.session.ClientSession'>
 ```
+
+The `mcp` Python package is available in the Hermes Agent venv at
+`~/.hermes/hermes-agent/venv`. This is the Python environment the MCP bridge
+uses (see §4.4 `command:` path). The system `python3` does NOT have `mcp`
+installed — the venv Python path must be used.
 
 ---
 
