@@ -4,7 +4,7 @@ Date: 2026-06-13
 Authority: Eric (Architect)
 Status: Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.
 
-Generated: 2026-06-13 05:32 UTC | Run: run-1250c74851b2
+Generated: 2026-06-13 05:34 UTC | Run: run-d9f777ddae7e
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.**
 
-**HEAD:** `b165d34`.
+**HEAD:** `1f29275`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
