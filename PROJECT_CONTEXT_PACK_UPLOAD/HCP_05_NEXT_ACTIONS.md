@@ -1,11 +1,12 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff
+Generated: 2026-06-13 08:01 UTC | Run: run-6fde5f2bc8ec
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**Tier 10 — CIS UI / Custom Display Views**
+(No eligible PENDING node in build plan.)
+Deferred: Tier 7 DEFERRED.
 
 Do NOT start:
 
@@ -19,9 +20,6 @@ Do NOT start:
 - Schedule field-use work (SWA)
 - CIS Foundation Build Plan Phases 1-3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
-- Tier 8 MCP Bridge implementation (gated on Tier 8 specification planning complete)
-- Tier 9 Chroma/VDB (gated on Tier 8)
-- Tier 10 CIS UI/custom display views (gated on Tier 9)
 - Any artifact not in the approved Dependency Graph Build Plan v2.0
 
 ## Approved Build Order
@@ -41,7 +39,7 @@ Do NOT start:
 | 7.5b | Tier 7.5b — Clean Subset Import + FTS5 | ✅ COMPLETE | |
 | 8 | Tier 8 — MCP Bridge | ✅ COMPLETE | |
 | 9 | Tier 9 — Chroma/VDB | ✅ COMPLETE | |
-| 10 | Tier 10 — CIS UI / Custom Display Views | ⬜ PENDING | |
+| 10 | Tier 10 — CIS UI / Custom Display Views | ✅ COMPLETE | |
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | ✅ COMPLETE | |
 | 7R | Tier 7R — Intent-to-Workflow Architecture Specification | ✅ COMPLETE | |
 | 7R.1 | 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion | ✅ COMPLETE | |

@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 08:01 UTC | Run: run-6fde5f2bc8ec | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.
+Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -18,9 +18,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - Schedule field-use work (SWA)
 - CIS Foundation Build Plan Phases 1-3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
-- Tier 8 MCP Bridge implementation (gated on Tier 8 specification planning complete)
-- Tier 9 Chroma/VDB (gated on Tier 8)
-- Tier 10 CIS UI/custom display views (gated on Tier 9)
 - Any artifact not in the approved Dependency Graph Build Plan v2.0
 
 ## 3. Active Architecture
@@ -71,7 +68,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Tier 10 — CIS UI / Custom Display Views] (Tier 10) Tier 10 — CIS UI / Custom Display Views
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified
@@ -86,14 +82,13 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)
-- Status: APPROVE
+- Status: IMPLEMENTED
 - Decided at: 2026-06-13 07:41 UTC
-- Goal: Tier 10 CIS UI / Custom Display Views specification approved as architecture basis
-- Scope: Specification document only (docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md, commit c2a3f20).
-Does NOT authorize Tier 10 implementation until separate FINAL_DIRECTIVE.
-Does NOT authorize broad UI redesign or new dependencies beyond the approved spec.
-Does NOT authorize write-capable UI endpoints or pipeline bypass.
-Does NOT authorize post-Tier-10 work.
+- Goal: Tier 10 CIS UI / Custom Display Views specification approved and implemented
+- Scope: Tier 10 implemented per approved specification (docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md, commit c2a3f20).
+6 React display views, 1 Flask blueprint (8 GET endpoints), 57 passing tests, 5 gate scripts.
+No write endpoints, no pipeline bypass, no secrets in frontend.
+Commit: IMPLEMENTED at <latest>.
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-13
 Authority: Eric (Architect)
-Status: Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.
+Status: Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.
 
-Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff
+Generated: 2026-06-13 08:01 UTC | Run: run-6fde5f2bc8ec
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 CIS UI specification APPROVED (Eric Gate, commit c2a3f20). Implementation eligible for separate FINAL_DIRECTIVE.**
+**Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.**
 
-**HEAD:** `8800353`.
+**HEAD:** `05596eb`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**Tier 10 — CIS UI / Custom Display Views (Tier 10)**
+(No eligible PENDING node in build plan.)
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -281,7 +281,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 11. Tier 7.5b — Clean Subset Import + FTS5 ✅ COMPLETE
 12. Tier 8 — MCP Bridge ✅ COMPLETE
 13. Tier 9 — Chroma/VDB ✅ COMPLETE
-14. Tier 10 — CIS UI / Custom Display Views ⬜ PENDING
+14. Tier 10 — CIS UI / Custom Display Views ✅ COMPLETE
 15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE
 16. Tier 7R — Intent-to-Workflow Architecture Specification ✅ COMPLETE
 17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ✅ COMPLETE
@@ -337,9 +337,6 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 - Schedule field-use work (SWA)
 - CIS Foundation Build Plan Phases 1-3
 - Snapshot trigger work (CIS-INFRA-STORAGE-002)
-- Tier 8 MCP Bridge implementation (gated on Tier 8 specification planning complete)
-- Tier 9 Chroma/VDB (gated on Tier 8)
-- Tier 10 CIS UI/custom display views (gated on Tier 9)
 - Any artifact not in the approved Dependency Graph Build Plan v2.0
 
 ---

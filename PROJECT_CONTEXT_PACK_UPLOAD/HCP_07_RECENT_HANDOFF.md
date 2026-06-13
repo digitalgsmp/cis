@@ -2,9 +2,9 @@
 Date: 2026-06-13
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `8800353`
+HEAD: `05596eb`
 
-Generated: 2026-06-13 07:44 UTC | Run: run-c99f3ab047ff
+Generated: 2026-06-13 08:01 UTC | Run: run-6fde5f2bc8ec
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-Tier 10 — CIS UI / Custom Display Views.
+(No eligible PENDING node in build plan.)
 
 ## Eric Gate Approval Status
 
