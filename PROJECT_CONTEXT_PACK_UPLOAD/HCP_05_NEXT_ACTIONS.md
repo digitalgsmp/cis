@@ -1,13 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-13 03:33 UTC | Run: run-e6962c132948
+Generated: 2026-06-13 05:32 UTC | Run: run-1250c74851b2
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-(No eligible PENDING node in build plan.)
-Deferred: Tier 7 DEFERRED.
-Blocked: Tier 8 BLOCKED; Tier 9 BLOCKED; Tier 10 BLOCKED.
+**Tier 8 — MCP Bridge**
 
 Do NOT start:
 
@@ -41,7 +39,7 @@ Do NOT start:
 | 7.1 | Tier 7.1 — Router Reclassification (archive route) | ✅ COMPLETE | |
 | 7.5a | Tier 7.5a — Corpus Audit | ✅ COMPLETE | |
 | 7.5b | Tier 7.5b — Clean Subset Import + FTS5 | ✅ COMPLETE | |
-| 8 | Tier 8 — MCP Bridge | 🚫 BLOCKED | |
+| 8 | Tier 8 — MCP Bridge | ⬜ PENDING | |
 | 9 | Tier 9 — Chroma/VDB | 🚫 BLOCKED | |
 | 10 | Tier 10 — CIS UI / Custom Display Views | 🚫 BLOCKED | |
 | 3.5 | Component 3.5 — Build-Plan Spine Authority | ✅ COMPLETE | |

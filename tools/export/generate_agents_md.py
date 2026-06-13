@@ -187,7 +187,21 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
         lines.append(f"- Decided at: {decided}")
         lines.append(f"- Goal: {goal}")
     else:
-        lines.append("- No Eric Gate decision recorded (pending)")
+        eg_static = static.get("eric_gate_status", {})
+        if eg_static and eg_static.get("decision"):
+            decision = eg_static.get("decision", "UNKNOWN")
+            decided = eg_static.get("decided_at", "Not yet decided")
+            goal = eg_static.get("goal_label", "No goal label")
+            run_id_eg = eg_static.get("workflow_run_id", "N/A")
+            scope = eg_static.get("scope", "").strip()
+            lines.append(f"- Workflow run: {run_id_eg}")
+            lines.append(f"- Status: {decision}")
+            lines.append(f"- Decided at: {decided}")
+            lines.append(f"- Goal: {goal}")
+            if scope:
+                lines.append(f"- Scope: {scope}")
+        else:
+            lines.append("- No Eric Gate decision recorded (pending)")
     lines.append("")
 
     lines.append("## 10. Verification Hardening Rule")

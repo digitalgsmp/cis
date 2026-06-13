@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-13 03:33 UTC | Run: run-e6962c132948 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-13 05:32 UTC | Run: run-1250c74851b2 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).
+Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -71,9 +71,9 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
+- [Tier 8 — MCP Bridge] (Tier 8) Tier 8 — MCP Bridge
 
 ## 7. Active Blockers
-- [Tier 8 — MCP Bridge] Awaiting Tier 8 specification document and Eric Gate approval. All Tier 7R nodes (7R, 7R.1-7R.7) are COMPLETE. Previously gated on Tier 7R.4 — now satisfied.
 - [Tier 9 — Chroma/VDB] Gated on Tier 8 MCP Bridge per dependency graph.
 - [Tier 10 — CIS UI / Custom Display Views] Gated on Tier 9 Chroma/VDB per dependency graph.
 - [BLK-SEED-004] Google Drive backup integrity unverified
@@ -87,7 +87,13 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
 
 ## 9. Eric Gate Status
-- No Eric Gate decision recorded (pending)
+- Workflow run: N/A (direct Eric Gate — no deliberation run)
+- Status: APPROVE
+- Decided at: 2026-06-13 05:30 UTC
+- Goal: Tier 8 MCP Bridge specification approved as architecture basis
+- Scope: Specification document only (docs/CIS_TIER_8_MCP_BRIDGE_SPECIFICATION.md, commit b165d34).
+Does NOT authorize Tier 8 implementation, Tier 9, or Tier 10.
+Implementation requires separate FINAL_DIRECTIVE.
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

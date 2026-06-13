@@ -2,9 +2,9 @@
 Date: 2026-06-13
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `33e1f56`
+HEAD: `b165d34`
 
-Generated: 2026-06-13 03:33 UTC | Run: run-e6962c132948
+Generated: 2026-06-13 05:32 UTC | Run: run-1250c74851b2
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-(No eligible PENDING node in build plan.)
+Tier 8 — MCP Bridge.
 
 ## Eric Gate Approval Status
 

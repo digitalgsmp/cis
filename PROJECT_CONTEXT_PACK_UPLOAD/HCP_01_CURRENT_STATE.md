@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-13
 Authority: Eric (Architect)
-Status: Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).
+Status: Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.
 
-Generated: 2026-06-13 03:33 UTC | Run: run-e6962c132948
+Generated: 2026-06-13 05:32 UTC | Run: run-1250c74851b2
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 7R COMPLETE — all 7R.1-7R.7 nodes finished. Tier 8 BLOCKED (awaiting specification planning).**
+**Tier 8 MCP Bridge specification APPROVED (Eric Gate, commit b165d34). Implementation planning eligible for separate FINAL_DIRECTIVE. Tier 8 implementation NOT YET AUTHORIZED.**
 
-**HEAD:** `33e1f56`.
+**HEAD:** `b165d34`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-(No eligible PENDING node in build plan.)
+**Tier 8 — MCP Bridge (Tier 8)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -279,7 +279,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 9. Tier 7.1 — Router Reclassification (archive route) ✅ COMPLETE
 10. Tier 7.5a — Corpus Audit ✅ COMPLETE
 11. Tier 7.5b — Clean Subset Import + FTS5 ✅ COMPLETE
-12. Tier 8 — MCP Bridge 🚫 BLOCKED
+12. Tier 8 — MCP Bridge ⬜ PENDING
 13. Tier 9 — Chroma/VDB 🚫 BLOCKED
 14. Tier 10 — CIS UI / Custom Display Views 🚫 BLOCKED
 15. Component 3.5 — Build-Plan Spine Authority ✅ COMPLETE

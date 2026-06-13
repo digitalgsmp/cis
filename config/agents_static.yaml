@@ -171,6 +171,16 @@ build_method: |
   with its own approved manifest. Do not run tests that intentionally
   execute through missing downstream dependencies and create partial state.
 
+eric_gate_status:
+  decision: APPROVE
+  decided_at: 2026-06-13 05:30 UTC
+  goal_label: Tier 8 MCP Bridge specification approved as architecture basis
+  workflow_run_id: "N/A (direct Eric Gate — no deliberation run)"
+  scope: |
+    Specification document only (docs/CIS_TIER_8_MCP_BRIDGE_SPECIFICATION.md, commit b165d34).
+    Does NOT authorize Tier 8 implementation, Tier 9, or Tier 10.
+    Implementation requires separate FINAL_DIRECTIVE.
+
 seed_intent:
   instruction: "Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim."
   excerpts:
