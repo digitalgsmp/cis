@@ -1,7 +1,35 @@
 # Files Changed Recently
-Generated: 2026-06-13 09:17 UTC | Run: run-1f89754b9357
+Generated: 2026-06-14 20:14 UTC | Run: run-3ae89b2a3cf2
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 2fa38e4 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## bbab96e chore: Tier 10 closeout — update do_not_start, regenerate context
 
@@ -322,9 +350,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 87ac0e3 docs: revise Tier 9 Chroma/VDB specification after review
-
-## docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md 
-
-## 715f6ed docs: draft Tier 9 Chroma/VDB specification
 
 ## docs/CIS_TIER_9_CHROMA_VDB_SPECIFICATION.md 
