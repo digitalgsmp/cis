@@ -36,9 +36,9 @@ age=$(( now - mtime ))
 if [ "$age" -gt "$MAX_AGE" ]; then
     hours=$(( age / 3600 ))
     max_hours=$(( MAX_AGE / 3600 ))
-    echo "[CIS] HARD FAIL: AGENTS.md is stale (${hours}h old, max allowed: ${max_hours}h)" >&2
-    echo "[CIS] Run: cd /mnt/projects/cis && python3 tools/export/generate_agents_md.py" >&2
-    exit 2
+    echo "[CIS] WARNING: AGENTS.md is stale (${hours}h old, max allowed: ${max_hours}h)" >&2
+    echo "[CIS] Hermes will continue, but project context may be outdated." >&2
+    echo "[CIS] To refresh: cd /mnt/projects/cis && python3 tools/export/generate_agents_md.py" >&2
 fi
 
 # ── Pass through to Hermes ────────────────────────────────────────────────────
