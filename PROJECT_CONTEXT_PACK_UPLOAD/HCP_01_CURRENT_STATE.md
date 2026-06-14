@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-14
 Authority: Eric (Architect)
-Status: Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.
+Status: Tier 10 COMPLETE and runtime-verified. All 8 pipeline API endpoints return valid JSON after CIS_SPINE_PATH env repair (cis-flask.service restarted 2026-06-14).
 
-Generated: 2026-06-14 20:14 UTC | Run: run-3ae89b2a3cf2
+Generated: 2026-06-14 21:12 UTC | Run: run-b216e76e7fde
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.**
+**Tier 10 COMPLETE and runtime-verified. All 8 pipeline API endpoints return valid JSON after CIS_SPINE_PATH env repair (cis-flask.service restarted 2026-06-14).**
 
-**HEAD:** `2fa38e4`.
+**HEAD:** `62fba66`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.

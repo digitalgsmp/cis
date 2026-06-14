@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-14 20:14 UTC | Run: run-3ae89b2a3cf2 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-14 21:12 UTC | Run: run-b216e76e7fde | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 8 COMPLETE. Tier 9 COMPLETE. Tier 10 COMPLETE.
+Tier 10 COMPLETE and runtime-verified. All 8 pipeline API endpoints return valid JSON after CIS_SPINE_PATH env repair (cis-flask.service restarted 2026-06-14).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
