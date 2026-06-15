@@ -106,7 +106,7 @@ hcp_01:
 
     tier_3: |
       **Tier 3 — Pipeline Smoke Test (PASS_WITH_LIMITATIONS):**
-      Smoke card created with Tier 2.8 schema. Orchestrator completed 3 DRAFT→REVIEW rounds.
+      Orchestrator completed 3 DRAFT→REVIEW rounds (Kanban retired per ADR-013).
       Result: ESCALATE with substantive unresolved objections (Research gateway missing, role
       boundary violation, deadlock breaker). gate_runner.sh: all 5 gates PASS. No manual relay.
 

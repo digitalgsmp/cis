@@ -4,7 +4,7 @@ Date: 2026-06-15
 Authority: Eric (Architect)
 Status: Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
 
-Generated: 2026-06-15 06:29 UTC | Run: run-8ada54299e40
+Generated: 2026-06-15 06:31 UTC | Run: run-80bf425cf2e4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.**
 
-**HEAD:** `15e21fc`.
+**HEAD:** `8c4e113`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -42,7 +42,7 @@ visibility confirmed. Limitation: Hermes v0.13 has no custom lanes — CIS stage
 in card title/body metadata.
 
 **Tier 3 — Pipeline Smoke Test (PASS_WITH_LIMITATIONS):**
-Smoke card created with Tier 2.8 schema. Orchestrator completed 3 DRAFT→REVIEW rounds.
+Orchestrator completed 3 DRAFT→REVIEW rounds (Kanban retired per ADR-013).
 Result: ESCALATE with substantive unresolved objections (Research gateway missing, role
 boundary violation, deadlock breaker). gate_runner.sh: all 5 gates PASS. No manual relay.
 
