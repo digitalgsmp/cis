@@ -1,0 +1,217 @@
+# Verifier Registry — validated facts for verification scripts
+# Generated: 2026-06-14 by tools/regenerate_verifier_registry.py
+# DO NOT HAND-EDIT — regenerate: python3 tools/regenerate_verifier_registry.py --write
+
+facts:
+  - key: GATE_DIR
+    value: "tools/gates/"
+    description: "Directory containing verification gate scripts"
+    validation_command: "test -d tools/gates/ && echo EXISTS"
+    validation_expected: "EXISTS"
+    last_validated: "2026-06-14T00:00:00Z"
+    valid: true
+
+  - key: GATE_COUNT
+    value: 44
+    description: "Number of gate scripts (sh + py) in GATE_DIR"
+    validation_command: "ls tools/gates/gate_*.sh tools/gates/gate_*.py 2>/dev/null | wc -l"
+    validation_expected: null
+
+  - key: MIGRATION_DIR
+    value: "runtime/schema/migrations/"
+    description: "Directory containing numbered SQL migration files"
+    validation_command: "test -d runtime/schema/migrations/ && echo EXISTS"
+    validation_expected: "EXISTS"
+
+  - key: UI_PAGES_DIR
+    value: "runtime/ui/src/pages/"
+    description: "Directory containing React page components"
+    validation_command: "test -d runtime/ui/src/pages/ && echo EXISTS"
+    validation_expected: "EXISTS"
+
+  - key: UI_ARCHIVE_DIR
+    value: "runtime/ui_archive/"
+    description: "Directory where archived pages are stored"
+    validation_command: "test -d runtime/ui_archive/ && echo EXISTS"
+    validation_expected: "EXISTS"
+
+  - key: SPINE_DB
+    value: "data/cis_memory.db"
+    description: "SQLite spine database path"
+    validation_command: "test -f data/cis_memory.db && echo EXISTS"
+    validation_expected: "EXISTS"
+
+  - key: DB_TABLES
+    value:
+      - active_blockers
+      - advisor_escalation_packets
+      - advisor_escalations
+      - advisor_responses
+      - build_plan_dependencies
+      - build_plan_nodes
+      - dam_assets
+      - dam_extracted_text
+      - dam_extracted_text_fts
+      - dam_extracted_text_fts_config
+      - dam_extracted_text_fts_data
+      - dam_extracted_text_fts_docsize
+      - dam_extracted_text_fts_idx
+      - decision_trails
+      - deliberation_rounds
+      - drift_indicators
+      - eric_gate_approvals
+      - goal_references
+      - next_actions
+      - open_questions
+      - project_decisions
+      - project_state
+      - rejection_rationale
+      - session_closeouts
+      - session_closeouts_fts
+      - session_closeouts_fts_config
+      - session_closeouts_fts_data
+      - session_closeouts_fts_docsize
+      - session_closeouts_fts_idx
+      - workflow_run_artifacts
+      - workflow_run_legacy_links
+      - workflow_runs
+    description: "All tables in cis_memory.db (from .tables)"
+    validation_command: "sqlite3 data/cis_memory.db '.tables'"
+    validation_expected: null
+
+  - key: TABLE_COLUMNS_eric_gate_approvals
+    value:
+      - id
+      - workflow_run_id
+      - decision
+      - decided_at
+      - decided_by
+      - goal_reference_id
+      - briefing_hash
+      - briefing_json
+      - drift_snapshot_json
+      - decision_trail_snapshot_json
+      - is_current
+      - supersedes_approval_id
+      - rationale
+      - created_at
+    description: "Columns in eric_gate_approvals"
+    validation_command: "sqlite3 data/cis_memory.db \"SELECT name FROM pragma_table_info('eric_gate_approvals') ORDER BY cid\""
+    validation_expected: null
+
+  - key: TABLE_COLUMNS_goal_references
+    value:
+      - id
+      - workflow_run_id
+      - goal_label
+      - dependency_node
+      - tier_advanced
+      - advancement_type
+      - linked_record_table
+      - linked_record_id
+      - authored_by
+      - created_at
+    description: "Columns in goal_references"
+    validation_command: "sqlite3 data/cis_memory.db \"SELECT name FROM pragma_table_info('goal_references') ORDER BY cid\""
+    validation_expected: null
+
+  - key: TABLE_COLUMNS_workflow_runs
+    value:
+      - id
+      - topic
+      - result
+      - requires_eric_review
+      - max_rounds
+      - max_consecutive_revisions
+      - rounds_completed
+      - final_objections_json
+      - created_at
+      - completed_at
+      - status
+      - route
+      - updated_at
+      - eric_approved_at
+    description: "Columns in workflow_runs"
+    validation_command: "sqlite3 data/cis_memory.db \"SELECT name FROM pragma_table_info('workflow_runs') ORDER BY cid\""
+    validation_expected: null
+
+  - key: TABLE_COLUMNS_dam_extracted_text
+    value:
+      - id
+      - asset_id
+      - segment_index
+      - speaker_role
+      - content_text
+      - created_at
+    description: "Columns in dam_extracted_text (main searchable content table)"
+    validation_command: "sqlite3 data/cis_memory.db \"SELECT name FROM pragma_table_info('dam_extracted_text') ORDER BY cid\""
+    validation_expected: null
+
+  - key: UI_PAGE_ROUTES
+    value:
+      - /
+      - /advisor-chat
+      - /archive/search
+      - /archive/sessions
+      - /chat
+      - /dam
+      - /dam/:id
+      - /decisions
+      - /eric-gate
+      - /ideas
+      - /infra
+      - /ingest
+      - /learn
+      - /pipeline
+      - /projects
+      - /projects/:id
+      - /review
+      - /schedule
+      - /spines
+    description: "All React page routes from App.jsx"
+    validation_command: "grep -oP '(?<=path=\")/[^\"]+' runtime/ui/src/App.jsx | sort"
+    validation_expected: null
+
+  - key: API_ROUTES_PIPELINE
+    value:
+      - /api/archive/search/fts
+      - /api/archive/search/semantic
+      - /api/decisions
+      - /api/pipeline/eric-gate
+      - /api/pipeline/next-actions
+      - /api/pipeline/runs
+      - /api/pipeline/runs/<run_id>
+      - /api/pipeline/status
+      - /api/pipeline/status/<path:node_label>
+    description: "Pipeline/display API endpoints (pipeline_views.py)"
+    validation_command: "grep '@pipeline_views_bp.route' runtime/api/pipeline_views.py | grep -oP '(?<=\"/api/)[^\"]+' | sort | sed 's|^|/api/|'"
+    validation_expected: null
+
+  - key: APP_BLUEPRINTS
+    value:
+      - advisor_bp
+      - advisor_external_bp
+      - app_bp
+      - captures_bp
+      - decisions_bp
+      - drafts_bp
+      - extraction_runs_bp
+      - gpt_bp
+      - idea_uploads_bp
+      - ingest_spines_bp
+      - live_bp
+      - models_bp
+      - operator_bp
+      - pipeline_bp
+      - pipeline_views_bp
+      - projects_bp
+      - queue_bp
+      - reconciliation_bp
+      - records_bp
+      - session_bp
+      - spines_bp
+      - system_bp
+      - tasks_bp
+    description: "Registered Flask blueprints in app.py"
+    validation_command: "grep 'register_blueprint' runtime/app.py | grep -oP '(?<=\\()[a-z_]+' | sort"
+    validation_expected: null

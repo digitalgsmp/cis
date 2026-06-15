@@ -4,7 +4,7 @@ Date: 2026-06-15
 Authority: Eric (Architect)
 Status: Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.
 
-Generated: 2026-06-15 04:00 UTC | Run: run-e34cd8be659c
+Generated: 2026-06-15 06:18 UTC | Run: run-673c502aa18d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.**
 
-**HEAD:** `a08892c`.
+**HEAD:** `2b139d3`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
