@@ -1,0 +1,96 @@
+# system_overview.yaml — Operator-facing capability descriptions for CIS build_plan_nodes
+# Keyed by node_label (matches build_plan_nodes.node_label).
+# Maintained by hand. Updated when new tiers are added.
+# Loaded by dashboard_api.py at startup, cached in memory.
+
+- node_label: "Tier 0 — Deliberation Engine"
+  operator_description: "Multi-model debate system. Drafter writes proposals, Reviewer checks them using a different AI model so blind spots are caught independently."
+  capability_area: "Monitor"
+
+- node_label: "Tier 1 — Deterministic Verification Gates"
+  operator_description: "Bash and Python scripts that verify every claim the agents make. No claim is accepted without machine-checked evidence."
+  capability_area: "Monitor"
+
+- node_label: "Tier 2 — Kanban Coordination Layer"
+  operator_description: "Temporary task-tracking board used during early pipeline development. Retired after the SQLite spine became authoritative."
+  capability_area: "Monitor"
+
+- node_label: "Tier 3 — Pipeline Smoke Test"
+  operator_description: "First end-to-end test of the Drafter→Reviewer→Eric Gate pipeline. Proved the deliberation loop works before building permanent infrastructure."
+  capability_area: "Monitor"
+
+- node_label: "Tier 4 — SQLite Spine"
+  operator_description: "Permanent project memory. Stores every workflow run, deliberation round, decision, and approval in a single database that agents and operators can query."
+  capability_area: "Monitor"
+
+- node_label: "Tier 5 — Context Export Pipeline"
+  operator_description: "Auto-generates AGENTS.md and the HCP advisor packet from spine state. When ChatGPT or Claude review the project, they read machine-generated context, not stale hand-edited files."
+  capability_area: "Monitor"
+
+- node_label: "Tier 6 — Pipeline Integration"
+  operator_description: "Connected the orchestrator, gates, and spine into a single closeout flow. Each tier completion now runs verification gates and writes state automatically."
+  capability_area: "Monitor"
+
+- node_label: "Tier 7 — Full Durable Router Pipeline"
+  operator_description: "The original router automation plan. Deferred — the project pivoted to a more flexible intent-to-workflow architecture instead."
+  capability_area: "Monitor"
+
+- node_label: "Tier 7.1 — Router Reclassification (archive route)"
+  operator_description: "Added archive discovery routing so prompts about past sessions are classified and routed to the correct agent."
+  capability_area: "Monitor"
+
+- node_label: "Tier 7.5a — Corpus Audit"
+  operator_description: "Full inventory of every session transcript and document in the archive. Knows what exists before building search."
+  capability_area: "Knowledge"
+
+- node_label: "Tier 7.5b — Clean Subset Import + FTS5"
+  operator_description: "Imported clean session transcripts into SQLite with full-text search. You can now search your own conversation history from the terminal."
+  capability_area: "Knowledge"
+
+- node_label: "Tier 8 — MCP Bridge"
+  operator_description: "Standardized tool interface for the spine. External AI models (ChatGPT, Claude) can query pipeline state through the same tools the dashboard uses."
+  capability_area: "Monitor"
+
+- node_label: "Tier 9 — Chroma/VDB"
+  operator_description: "Vector database for semantic search. Instead of exact keyword match, finds sessions by meaning — 'show me conversations about client intake' returns relevant results even if the word intake isn't used."
+  capability_area: "Knowledge"
+
+- node_label: "Tier 10 — CIS UI / Custom Display Views"
+  operator_description: "Pipeline visibility pages. Shows build plan status, recent runs, Eric Gate approvals, and archive search — all in the browser instead of terminal commands."
+  capability_area: "Monitor"
+
+- node_label: "Component 3.5 — Build-Plan Spine Authority"
+  operator_description: "Made the build plan a first-class database object. AGENTS.md and HCP exports now read live state from the spine instead of hand-edited strings."
+  capability_area: "Monitor"
+
+- node_label: "Tier 7R — Intent-to-Workflow Architecture Specification"
+  operator_description: "Redesigned the router as an intent-to-workflow system. Prompts like 'find sessions about client schedules' are classified by intent type (archive discovery, knowledge intake, workflow action) and routed accordingly."
+  capability_area: "Monitor"
+
+- node_label: "7R.1 — WorkIntent schema + scope registry + Micro1 exclusion"
+  operator_description: "Core data model for workflow intents. Defines what types of work the system recognizes and explicitly excludes out-of-scope domains."
+  capability_area: "Monitor"
+
+- node_label: "7R.2 — CISAdapter (CIS domain only)"
+  operator_description: "Adapter that translates CIS-specific workflows (pipeline ops, archive queries) into the intent-to-workflow system."
+  capability_area: "Monitor"
+
+- node_label: "7R.3 — SWAAdapter (validation use case)"
+  operator_description: "Adapter for the Social Worker Application domain. Validates client-related workflows like intake scheduling and progress note generation."
+  capability_area: "Work"
+
+- node_label: "7R.4 — Process Manager (state machine)"
+  operator_description: "State machine that enforces allowed transitions between workflow states. A proposal can't jump from draft directly to executed — it must pass review and approval."
+  capability_area: "Monitor"
+
+- node_label: "7R.5 — Human approval gate integration"
+  operator_description: "Wired the Eric Gate into the state machine. No state-changing action proceeds without human approval recorded in the spine."
+  capability_area: "Monitor"
+
+- node_label: "7R.6 — Dead Letter / blocked handling"
+  operator_description: "Handles stalled or failed workflows. Blocked items are surfaced to the operator instead of silently failing."
+  capability_area: "Monitor"
+
+- node_label: "7R.7 — Acceptance test suite"
+  operator_description: "Six end-to-end tests proving the intent-to-workflow system handles real scenarios across CIS and SWA domains."
+  capability_area: "Monitor"

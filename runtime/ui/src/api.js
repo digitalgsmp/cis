@@ -150,4 +150,8 @@ export const api = {
     fetch(`/api/archive/search/semantic?q=${encodeURIComponent(query)}&top_k=${topK}`).then(r => r.json()),
   archiveSearchFts: (query, limit = 20) =>
     fetch(`/api/archive/search/fts?q=${encodeURIComponent(query)}&limit=${limit}`).then(r => r.json()),
+
+  // ── Tier 11A: Dashboard full ──────────────────────────────────────────
+  dashboardFull: () =>
+    fetch('/api/dashboard/full').then(r => r.json()),
 }

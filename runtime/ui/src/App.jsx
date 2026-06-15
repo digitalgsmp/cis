@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import { api } from './api'
+import NavGroup from './components/NavGroup'
+import DashboardPage from './pages/DashboardPage'
 import IdeasPage from './pages/IdeasPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectDetail from './pages/ProjectDetail'
@@ -14,7 +16,6 @@ import SpineGraphPage from './pages/SpineGraphPage'
 import InfraPage from './pages/InfraPage'
 import ChatConsole from './pages/ChatConsole'
 import AdvisorChat from './pages/infra/AdvisorChat'
-import HomePage from './pages/HomePage'
 import PipelinePage from './pages/PipelinePage'
 import EricGatePage from './pages/EricGatePage'
 import ArchiveSearchPage from './pages/ArchiveSearchPage'
@@ -22,23 +23,41 @@ import SessionArchivePage from './pages/SessionArchivePage'
 import DecisionsPage from './pages/DecisionsPage'
 import './index.css'
 
-const NAV = [
-  { path: '/ideas', label: 'Ideas' },
-  { path: '/projects', label: 'Projects' },
-  { path: '/schedule', label: 'Schedule' },
-  { path: '/dam', label: 'DAM' },
-  { path: '/learn', label: 'Learn' },
-  { path: '/review', label: 'Review' },
-  { path: '/ingest', label: 'Ingestion' },
-  { path: '/spines', label: 'Map' },
-  { path: '/infra', label: 'Infra' },
-  { path: '/chat', label: 'Chat' },
-  { path: '/advisor-chat', label: 'Advisor Chat' },
-  { path: '/pipeline', label: 'Pipeline' },
-  { path: '/eric-gate', label: 'Eric Gate' },
-  { path: '/archive/search', label: 'Archive' },
-  { path: '/archive/sessions', label: 'Sessions' },
-  { path: '/decisions', label: 'Decisions' },
+// ── Nav groups (Tier 11A) ────────────────────────────────────────────────────
+const NAV_GROUPS = [
+  {
+    label: 'Monitor',
+    items: [
+      { path: '/pipeline', label: 'Pipeline' },
+      { path: '/eric-gate', label: 'Eric Gate' },
+      { path: '/archive/search', label: 'Archive' },
+      { path: '/archive/sessions', label: 'Sessions' },
+      { path: '/decisions', label: 'Decisions' },
+    ]
+  },
+  {
+    label: 'Work',
+    items: [
+      { path: '/ideas', label: 'Ideas' },
+      { path: '/projects', label: 'Projects' },
+      { path: '/schedule', label: 'Schedule' },
+      { path: '/dam', label: 'DAM' },
+      { path: '/advisor-chat', label: 'Advisor Chat' },
+    ]
+  },
+  {
+    label: 'Knowledge',
+    items: [
+      { path: '/learn', label: 'Learn' },
+      { path: '/review', label: 'Review' },
+    ]
+  },
+  {
+    label: 'Infra',
+    items: [
+      { path: '/infra', label: 'Infra' },
+    ]
+  },
 ]
 
 export default function App() {
@@ -55,11 +74,8 @@ export default function App() {
       <div className="topbar">
         <div className="tb-logo" style={{cursor:'pointer'}} onClick={() => navigate('/')}>CIS █</div>
         <div className="tb-nav">
-          {NAV.map(n => (
-            <NavLink key={n.path} to={n.path}
-              className={({ isActive }) => isActive ? 'active' : ''}>
-              {n.label}
-            </NavLink>
+          {NAV_GROUPS.map(group => (
+            <NavGroup key={group.label} label={group.label} items={group.items} />
           ))}
         </div>
         <div style={{ flex: 1 }} />
@@ -71,7 +87,7 @@ export default function App() {
       {/* Content */}
       <div className="main">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<DashboardPage />} />
           <Route path="/ideas" element={<IdeasPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -80,10 +96,11 @@ export default function App() {
           <Route path="/dam/:id" element={<AssetDetail />} />
           <Route path="/review" element={<ReviewQueue />} />
           <Route path="/learn" element={<LearningPage />} />
+          {/* Removed from nav but accessible via direct URL (E5) */}
           <Route path="/ingest" element={<IngestionPage />} />
           <Route path="/spines" element={<SpineGraphPage />} />
-          <Route path="/infra" element={<InfraPage />} />
           <Route path="/chat" element={<ChatConsole />} />
+          <Route path="/infra" element={<InfraPage />} />
           <Route path="/advisor-chat" element={<AdvisorChat />} />
           <Route path="/pipeline" element={<PipelinePage />} />
           <Route path="/eric-gate" element={<EricGatePage />} />
