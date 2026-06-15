@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-15 06:31 UTC | Run: run-80bf425cf2e4 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-15 06:41 UTC | Run: run-daf674dea9b4 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -72,7 +72,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified
-- [BLK-SEED-005] hermes-gateway.service auto-overwrite mechanism may reintroduce service misconfiguration. Service was repaired at commit 353cef5 after being overwritten from Flash/Research profile to r1 profile. Manual service identity check recommended at session start until root cause is fixed.
+- [BLK-SEED-005] BLK-SEED-005 CONFIRMED ACTIVE (2026-06-15): hermes-gateway-r1.service stuck in fail-restart loop (exit code 1, restarting every 5s). Port 8643 held by manual '--replace' process (pid 1601, HERMES_HOME=/home/eric/.hermes-r1 confirmed correct). Systemd cannot bind because port is taken. Manual process has been running since Jun14 and is healthy but unmanaged. Fix: stop manual process, let systemd bind cleanly. Root cause of auto-overwrite still unknown — service was repaired at commit 353cef5 but rebinding mechanism persists. Role identity confusion observed this session: model did not self-identify as Reviewer until explicitly directed, likely context-loading issue (AGENTS.md/TERMINAL_CWD) not process misbinding.
 
 ## 8. Recent Pipeline Runs (last 5)
 - [run-88032ce506724] Draft a brief proposal for replacing Kanban pipeline transport with SQLite spine — ERROR (0 rounds, incomplete)

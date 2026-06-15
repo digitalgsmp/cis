@@ -4,7 +4,7 @@ Date: 2026-06-15
 Authority: Eric (Architect)
 Status: Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
 
-Generated: 2026-06-15 06:31 UTC | Run: run-80bf425cf2e4
+Generated: 2026-06-15 06:41 UTC | Run: run-daf674dea9b4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.**
 
-**HEAD:** `8c4e113`.
+**HEAD:** `c002dc3`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -259,7 +259,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 ## Active Blockers
 
 1. [BLK-SEED-004] Google Drive backup integrity unverified
-2. [BLK-SEED-005] hermes-gateway.service auto-overwrite mechanism may reintroduce service misconfiguration. Service was repaired at commit 353cef5 after being overwritten from Flash/Research profile to r1 profile. Manual service identity check recommended at session start until root cause is fixed.
+2. [BLK-SEED-005] BLK-SEED-005 CONFIRMED ACTIVE (2026-06-15): hermes-gateway-r1.service stuck in fail-restart loop (exit code 1, restarting every 5s). Port 8643 held by manual '--replace' process (pid 1601, HERMES_HOME=/home/eric/.hermes-r1 confirmed correct). Systemd cannot bind because port is taken. Manual process has been running since Jun14 and is healthy but unmanaged. Fix: stop manual process, let systemd bind cleanly. Root cause of auto-overwrite still unknown — service was repaired at commit 353cef5 but rebinding mechanism persists. Role identity confusion observed this session: model did not self-identify as Reviewer until explicitly directed, likely context-loading issue (AGENTS.md/TERMINAL_CWD) not process misbinding.
 
 ---
 
