@@ -154,4 +154,12 @@ export const api = {
   // ── Tier 11A: Dashboard full ──────────────────────────────────────────
   dashboardFull: () =>
     fetch('/api/dashboard/full').then(r => r.json()),
+
+  // ── Tier 11B: Eric Gate approve ────────────────────────────────────────
+  approveRun: (runId, rationale) =>
+    fetch('/api/dashboard/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_id: runId, rationale: rationale || '' }),
+    }).then(r => r.json()),
 }

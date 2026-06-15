@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-15 00:34 UTC | Run: run-27d7fb1d652c | Latest pipeline: run-88032ce506724
+Generated: 2026-06-15 00:52 UTC | Run: run-da3ef10c3e75 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 11A COMPLETE. Dashboard live, nav groups active, system overview wired. Tier 11B Eric Gate Approval Record next.
+Tier 11B COMPLETE. Eric Gate APPROVE endpoint live. Approval writes to eric_gate_approvals. Idempotency enforced. 11C blocked pending lifecycle_events/dispatch_log tables.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start

@@ -6,11 +6,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // 11B: Eric Gate approval state
+  const [approveRunId, setApproveRunId] = useState('')
+  const [approveRationale, setApproveRationale] = useState('')
+  const [approveResult, setApproveResult] = useState(null)
+  const [approving, setApproving] = useState(false)
+
   useEffect(() => {
     api.dashboardFull()
       .then(d => { setData(d); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
+
+  const handleApprove = () => {
+    if (!approveRunId.trim()) return
+    setApproving(true)
+    setApproveResult(null)
+    api.approveRun(approveRunId.trim(), approveRationale.trim())
+      .then(r => { setApproveResult(r); setApproving(false) })
+      .catch(e => { setApproveResult({ status: 'error', error: e.message }); setApproving(false) })
+  }
 
   if (loading) return <div className="empty-state">Loading dashboard...</div>
   if (error) return <div className="empty-state" style={{ color: 'var(--red)' }}>Dashboard error: {error}</div>
@@ -56,6 +71,61 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* 11B: Eric Gate Approval */}
+      <div className="card" style={{ marginBottom: 20, borderColor: 'rgba(61,255,160,0.3)' }}>
+        <div className="card-title" style={{ color: 'var(--green)' }}>Eric Gate — Approve</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="field-row" style={{ flex: 1, minWidth: 200 }}>
+            <span className="field-label">Run ID</span>
+            <input
+              className="cis-input"
+              value={approveRunId}
+              onChange={e => setApproveRunId(e.target.value)}
+              placeholder="run-88032ce506724"
+              style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 11 }}
+            />
+          </div>
+          <div className="field-row" style={{ flex: 1, minWidth: 200 }}>
+            <span className="field-label">Rationale (optional)</span>
+            <input
+              className="cis-input"
+              value={approveRationale}
+              onChange={e => setApproveRationale(e.target.value)}
+              placeholder="Spec looks good, pass to Reviewer"
+              style={{ fontSize: 11 }}
+            />
+          </div>
+          <button
+            className="btn btn-green"
+            onClick={handleApprove}
+            disabled={approving || !approveRunId.trim()}
+            style={{ height: 38, padding: '0 24px', marginBottom: 8 }}
+          >
+            {approving ? 'Recording...' : 'APPROVE'}
+          </button>
+        </div>
+
+        {approveResult && (
+          <div style={{
+            marginTop: 10, padding: '8px 12px', borderRadius: 4,
+            border: '1px solid',
+            borderColor: approveResult.status === 'approved' ? 'rgba(61,255,160,0.4)'
+              : approveResult.status === 'already_approved' ? 'rgba(255,184,48,0.4)'
+              : 'rgba(255,74,106,0.4)',
+            background: approveResult.status === 'approved' ? 'rgba(61,255,160,0.06)'
+              : approveResult.status === 'already_approved' ? 'rgba(255,184,48,0.06)'
+              : 'rgba(255,74,106,0.06)',
+          }}>
+            <span style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 10, color: approveResult.status === 'approved' || approveResult.status === 'already_approved' ? 'var(--green)' : 'var(--red)' }}>
+              [{approveResult.status}]
+            </span>{' '}
+            <span style={{ fontSize: 11, color: 'var(--t2)' }}>
+              {approveResult.error || approveResult.message || `Approval ${approveResult.approval_id} recorded.`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Row 2: Recent Runs */}
