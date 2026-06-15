@@ -1,7 +1,57 @@
 # Files Changed Recently
-Generated: 2026-06-14 21:12 UTC | Run: run-b216e76e7fde
+Generated: 2026-06-15 00:34 UTC | Run: run-27d7fb1d652c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 2ab4d1b feat(Tier 11A): Dashboard, nav groups, system overview
+
+## cis_kernel/source/SESSION_LOG.md 
+
+## docs/CIS_TIER_11_UI_USABILITY_SPECIFICATION.md 
+
+## runtime/api/dashboard_api.py 
+
+## runtime/api/system_overview.yaml 
+
+## runtime/app.py 
+
+## runtime/ui/src/App.jsx 
+
+## runtime/ui/src/api.js 
+
+## runtime/ui/src/components/NavGroup.jsx 
+
+## runtime/ui/src/pages/DashboardPage.jsx 
+
+## runtime/ui_archive/HomePage.jsx 
+
+## 5be724d state: Tier 10 runtime-verified after CIS_SPINE_PATH env repair
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 62fba66 chore: commit regenerated HCP context after wrapper policy change
 
@@ -280,50 +330,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 54be5e3 Regenerate context after session closeout
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## ae387cc feat(Tier 9): Chroma/VDB — local vector search for CIS spine
-
-## runtime/mcp_bridge/chroma_index.py 
-
-## runtime/mcp_bridge/tools.py 
-
-## tests/mcp_bridge/test_chroma_index.py 
-
-## tests/mcp_bridge/test_security.py 
-
-## tests/mcp_bridge/test_tools.py 
-
-## tools/gates/gate_chroma_no_secrets_in_results.py 
-
-## tools/gates/gate_chroma_secret_filter.py 
-
-## 27821d5 Regenerate context after session closeout
 
 ## AGENTS.md 
 
