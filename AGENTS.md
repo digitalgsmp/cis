@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-15 00:52 UTC | Run: run-da3ef10c3e75 | Latest pipeline: run-88032ce506724
+Generated: 2026-06-15 04:00 UTC | Run: run-e34cd8be659c | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 11B COMPLETE. Eric Gate APPROVE endpoint live. Approval writes to eric_gate_approvals. Idempotency enforced. 11C blocked pending lifecycle_events/dispatch_log tables.
+Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -68,6 +68,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
+- [Tier 11C — Drafter-to-Reviewer Handoff] (Tier 11C) Tier 11C — Drafter-to-Reviewer Handoff
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified

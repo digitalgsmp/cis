@@ -1,5 +1,5 @@
 # Open Questions — Hermes Harness / CIS
-Generated: 2026-06-15 00:52 UTC | Run: run-da3ef10c3e75
+Generated: 2026-06-15 04:00 UTC | Run: run-e34cd8be659c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
