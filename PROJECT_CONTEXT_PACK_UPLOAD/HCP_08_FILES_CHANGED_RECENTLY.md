@@ -1,7 +1,61 @@
 # Files Changed Recently
-Generated: 2026-06-15 06:18 UTC | Run: run-673c502aa18d
+Generated: 2026-06-15 06:29 UTC | Run: run-8ada54299e40
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 15e21fc closeout: Tier 11C COMPLETE — Drafter-to-Reviewer handoff verified
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/ADR-SEED-014_TEMPORARY_DRAFT_INITIATION_CONTRACT.md 
+
+## docs/CIS_TIER_11C_DRAFTER_REVIEWER_HANDOFF_SPECIFICATION.md 
+
+## docs/CIS_VERIFIER_REGISTRY_SPECIFICATION.md 
+
+## docs/CLOSEOUT_INSTRUCTION.md 
+
+## docs/SESSION_OPEN_ITEMS_20260614.md 
+
+## runtime/config/verifier_registry.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/schema/migrations/0012_workflow_run_link.sql 
+
+## tools/gates/gate_drafter_closeout.sh 
+
+## tools/pipeline/drafter_closeout.py 
+
+## tools/pipeline/drafter_session_init.py 
+
+## tools/pipeline/drafter_start.py 
+
+## tools/regenerate_verifier_registry.py 
+
+## tools/validate_verifier_registry.py 
 
 ## 2b139d3 infra: create lifecycle tables for 11C prerequisite (migration 0011)
 
@@ -384,7 +438,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## config/agents_static.yaml 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## c2a3f20 docs: revise Tier 10 CIS UI specification after review
-
-## docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md 

@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-15 06:18 UTC | Run: run-673c502aa18d | Latest pipeline: run-88032ce506724
+Generated: 2026-06-15 06:29 UTC | Run: run-8ada54299e40 | Latest pipeline: run-88032ce506724
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.
+Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start

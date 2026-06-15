@@ -2,9 +2,9 @@
 Version: 2.8
 Date: 2026-06-15
 Authority: Eric (Architect)
-Status: Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.
+Status: Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
 
-Generated: 2026-06-15 06:18 UTC | Run: run-673c502aa18d
+Generated: 2026-06-15 06:29 UTC | Run: run-8ada54299e40
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 11B COMPLETE. Lifecycle tables created (migration 0011). DRAFT_READY→REVIEW_PENDING transition demonstrated. 11C Drafter→Reviewer Handoff next.**
+**Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.**
 
-**HEAD:** `2b139d3`.
+**HEAD:** `15e21fc`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
