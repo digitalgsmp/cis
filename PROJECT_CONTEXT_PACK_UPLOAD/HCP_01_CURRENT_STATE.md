@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-15
+Date: 2026-06-16
 Authority: Eric (Architect)
 Status: Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
 
-Generated: 2026-06-15 06:41 UTC | Run: run-daf674dea9b4
+Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -14,7 +14,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.**
 
-**HEAD:** `c002dc3`.
+**HEAD:** `5e9e633`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
