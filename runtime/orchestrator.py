@@ -76,33 +76,83 @@ def load_config(config_path=None):
 # ── Agent communication ───────────────────────────────────────────────
 
 def call_agent(agent_name, content, thread_id, config):
-    """Call a named agent via /api/advisor/chat. Returns response JSON or raises."""
-    url = f"{config['api_base_url']}{config['chat_endpoint']}"
-    headers = {
-        "Content-Type": "application/json",
-        "X-CIS-API-Key": config["api_key"],
-    }
+    """Call a named agent. Returns dict with 'content' and optionally 'reasoning_content'."""
+    direct = config.get("direct_gateway_call", False)
+    
+    if direct:
+        # Call gateway directly via OpenAI-compatible API — bypasses NeMo Fast
+        if agent_name == config.get("drafter_agent"):
+            gateway_url = config.get("drafter_gateway_url")
+            api_key_env = config.get("drafter_api_key_env", "DEEPSEEK_API_KEY")
+            model = config.get("drafter_model", "deepseek-v4-pro")
+        elif agent_name == config.get("reviewer_agent"):
+            gateway_url = config.get("reviewer_gateway_url")
+            api_key_env = config.get("reviewer_api_key_env", "DEEPSEEK_API_KEY")
+            model = config.get("reviewer_model", "deepseek-v4-pro")
+        else:
+            raise ValueError(f"Unknown agent for direct call: {agent_name}")
+        
+        api_key = os.environ.get(api_key_env, "")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 4000,
+        }
+        timeout = config.get("request_timeout", 300)
+        response = requests.post(gateway_url, headers=headers, json=payload, timeout=timeout)
+        response.raise_for_status()
+        body = response.json()
+        choice = body["choices"][0]["message"]
+        return {
+            "content": choice.get("content", ""),
+            "reasoning_content": choice.get("reasoning_content", ""),
+        }
+    else:
+        # Legacy: call via CIS Flask app proxy
+        url = f"{config.get('api_base_url', 'http://127.0.0.1:5000')}{config.get('chat_endpoint', '/api/advisor/chat')}"
+        headers = {
+            "Content-Type": "application/json",
+            "X-CIS-API-Key": config.get("api_key", ""),
+        }
+        payload = {
+            "agent": agent_name,
+            "thread_id": thread_id,
+            "content": content,
+        }
+        timeout = config.get("request_timeout", 300)
+        if agent_name == config.get("drafter_agent") and config.get("drafter_timeout") is not None:
+            timeout = config["drafter_timeout"]
+        elif agent_name == config.get("reviewer_agent") and config.get("reviewer_timeout") is not None:
+            timeout = config["reviewer_timeout"]
+        response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        response.raise_for_status()
+        return response.json()
+
+
+# ── Second reviewer (Qwen) ────────────────────────────────────────────
+
+def call_second_reviewer(prompt, config):
+    """Call the second reviewer (Qwen on llama.cpp, no auth needed)."""
+    url = config.get("second_reviewer_gateway_url")
+    model = config.get("second_reviewer_model", "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf")
     payload = {
-        "agent": agent_name,
-        "thread_id": thread_id,
-        "content": content,
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 4000,
+        "temperature": 0,
     }
-
-    # Per-agent timeout: drafter_timeout / reviewer_timeout, fall back to request_timeout
     timeout = config.get("request_timeout", 300)
-    if agent_name == config.get("drafter_agent") and config.get("drafter_timeout") is not None:
-        timeout = config["drafter_timeout"]
-    elif agent_name == config.get("reviewer_agent") and config.get("reviewer_timeout") is not None:
-        timeout = config["reviewer_timeout"]
-
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=timeout,
-    )
+    response = requests.post(url, json=payload, timeout=timeout)
     response.raise_for_status()
-    return response.json()
+    body = response.json()
+    choice = body["choices"][0]["message"]
+    return {
+        "content": choice.get("content", ""),
+    }
 
 
 # ── Signal detection ──────────────────────────────────────────────────
@@ -183,6 +233,15 @@ def detect_objections(reviewer_response_text, config):
 
 # ── Tier 6.3: Kanban integration helpers ──────────────────────────────
 
+def _spine_connect():
+    """Open spine database with WAL-mode busy timeout."""
+    import sqlite3 as _sqlite3
+    db_path = _spine_db_path()
+    conn = _sqlite3.connect(db_path)
+    conn.execute("PRAGMA busy_timeout = 5000")
+    return conn
+
+
 def _spine_db_path():
     """Return path to the CIS spine database."""
     return os.environ.get(
@@ -192,19 +251,19 @@ def _spine_db_path():
 
 
 def read_workflow_run(run_id):
-    """Return (topic, status, max_rounds) from workflow_runs by id.
-    Raises RuntimeError if not found."""
+    """Return (topic, status, max_rounds, rounds_completed, intent) from workflow_runs by id.
+    Raises RuntimeError if not found. intent may be NULL for pre-migration rows."""
     db_path = _spine_db_path()
     try:
-        conn = sqlite3.connect(db_path)
+        conn = _spine_connect()
         row = conn.execute(
-            "SELECT topic, status, max_rounds, rounds_completed FROM workflow_runs WHERE id = ?",
+            "SELECT topic, status, max_rounds, rounds_completed, intent FROM workflow_runs WHERE id = ?",
             (run_id,),
         ).fetchone()
         conn.close()
         if row is None:
             raise RuntimeError(f"Workflow run not found: {run_id}")
-        return row[0], row[1], row[2], row[3]
+        return row[0], row[1], row[2], row[3], row[4]
     except sqlite3.Error as e:
         raise RuntimeError(f"Spine read failed: {e}")
 
@@ -214,7 +273,7 @@ def update_workflow_status(run_id, status, result=None, round_num=None):
     db_path = _spine_db_path()
     now = datetime.now(timezone.utc).isoformat()
     try:
-        conn = sqlite3.connect(db_path)
+        conn = _spine_connect()
         if round_num is not None:
             conn.execute(
                 "UPDATE workflow_runs SET status=?, updated_at=?, rounds_completed=? WHERE id=?",
@@ -242,9 +301,9 @@ def insert_deliberation_round(run_id, round_number, drafter_output, reviewer_out
     db_path = _spine_db_path()
     now = datetime.now(timezone.utc).isoformat()
     try:
-        conn = sqlite3.connect(db_path)
+        conn = _spine_connect()
         conn.execute("""
-            INSERT INTO deliberation_rounds
+            INSERT OR REPLACE INTO deliberation_rounds
                 (run_id, round_number, drafter_role, drafter_output,
                  reviewer_role, reviewer_signal, objections_json,
                  revision_number, requires_eric_review, created_at)
@@ -281,11 +340,12 @@ def validate_proposal_sections(drafter_output):
 
 # ── Main deliberation loop ────────────────────────────────────────────
 
-def run_deliberation(topic, config, run_id=None):
+def run_deliberation(topic, config, run_id=None, intent=None):
     """Run the Drafter->Reviewer deliberation loop. Returns final output dict.
 
     If run_id is provided (spine-native), writes state to workflow_runs and
-    deliberation_rounds via SQLite. If None, raw topic mode (no persistence)."""
+    deliberation_rounds via SQLite. If None, raw topic mode (no persistence).
+    intent: the deeper need/goal — if provided, prepended to Drafter prompt."""
     # RETIRED — Kanban retired per ADR-013. All kanban_card_id paths removed.
     run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
     thread_id = f"orch-{run_id}"
@@ -339,7 +399,19 @@ def run_deliberation(topic, config, run_id=None):
         t0 = time.time()
 
         if round_num == 1:
-            drafter_prompt = test_prefix + topic + PROPOSAL_STRUCTURE_REQUIREMENT
+            # Drafter reads intent from spine — prompt only carries run_id + topic
+            prompt_parts = [test_prefix]
+            if run_id:
+                prompt_parts.append(
+                    f"SPINE_RUN_ID: {run_id}\n"
+                    f"TOPIC: {topic}\n\n"
+                    f"Query the spine for intent and criteria before drafting.\n"
+                    f"Run: sqlite3 /mnt/projects/cis/data/cis_memory.db \"SELECT intent, topic FROM workflow_runs WHERE id = '{run_id}'\"\n"
+                )
+            else:
+                prompt_parts.append(topic)
+            prompt_parts.append(PROPOSAL_STRUCTURE_REQUIREMENT)
+            drafter_prompt = "".join(prompt_parts)
         else:
             # Build revision prompt with objections from Reviewer
             objections_text = "\n".join(f"  - {o}" for o in objections)
@@ -422,11 +494,36 @@ def run_deliberation(topic, config, run_id=None):
         reviewer_elapsed = time.time() - t0
         print(f"  ROUND {round_num} REVIEW complete ({reviewer_elapsed:.1f}s, {len(reviewer_output)} chars)", flush=True)
 
-        # ── Detect consensus ───────────────────────────────────────
+        # ── Second Reviewer (Qwen — different training data) ────────
+        second_output = ""
+        if config.get("second_reviewer_enabled"):
+            print(f"  ROUND {round_num} SECOND REVIEW started (qwen)", flush=True)
+            t2 = time.time()
+            try:
+                second_resp = call_second_reviewer(reviewer_prompt, config)
+                second_output = second_resp.get("content", "")
+                second_elapsed = time.time() - t2
+                print(f"  ROUND {round_num} SECOND REVIEW complete ({second_elapsed:.1f}s, {len(second_output)} chars)", flush=True)
+            except Exception as e:
+                print(f"  ROUND {round_num} SECOND REVIEW FAILED: {e}", flush=True)
+                second_output = f"SECOND_REVIEWER_ERROR: {e}"
+
+        # ── Detect consensus from first reviewer ──────────────────
         is_consensus = detect_consensus(reviewer_output, config)
 
-        # ── Detect objections ──────────────────────────────────────
+        # ── Detect objections from both reviewers ──────────────────
         detected_objections = detect_objections(reviewer_output, config)
+        second_consensus = False
+        second_objections = []
+        if second_output and "SECOND_REVIEWER_ERROR" not in second_output:
+            second_consensus = detect_consensus(second_output, config)
+            second_objections = detect_objections(second_output, config)
+            if second_objections:
+                print(f"  second reviewer objections: {len(second_objections)} found", flush=True)
+                detected_objections = (detected_objections or []) + second_objections
+            if second_consensus:
+                print(f"  second reviewer: CONSENSUS_REACHED", flush=True)
+
         if not detected_objections and not is_consensus:
             # No structured signals — treat as unclear
             print(f"  no structured signals detected in Reviewer output for Round {round_num}")
@@ -449,6 +546,8 @@ def run_deliberation(topic, config, run_id=None):
         # ── Act on consensus ───────────────────────────────────────
         if is_consensus:
             print(f"\n  >>> consensus detected: CONSENSUS_REACHED in Round {round_num} <<<")
+            if second_output:
+                print(f"  second reviewer status: {'CONSENSUS' if second_consensus else 'OBJECTIONS'}")
             print()
             # RETIRED — Kanban retired per ADR-013
             if run_id:
@@ -468,6 +567,7 @@ def run_deliberation(topic, config, run_id=None):
                 "drafter_reasoning": drafter_reasoning,
                 "reviewer_output": reviewer_output,
                 "reviewer_reasoning": reviewer_reasoning,
+                "second_reviewer_output": second_output,
                 "total_rounds": round_num,
                 "max_rounds": config["max_rounds"],
                 "requires_eric_review": True,
@@ -555,13 +655,16 @@ def main():
         config["test_mode"] = True
 
     # ── Spine-native: workflow_runs topic resolution ───────────────
+    intent = None  # populated when reading from spine
     if args.run_id:
         try:
-            topic, status, max_rounds, rounds_done = read_workflow_run(args.run_id)
+            topic, status, max_rounds, rounds_done, intent = read_workflow_run(args.run_id)
             if not topic:
                 print(f"Error: Workflow run {args.run_id} has no topic")
                 sys.exit(1)
             print(f"Topic from spine: {topic[:200]}{'...' if len(topic) > 200 else ''}")
+            if intent:
+                print(f"Intent from spine: {intent[:200]}{'...' if len(intent) > 200 else ''}")
             print(f"Status: {status}, Rounds completed: {rounds_done}")
         except Exception as e:
             print(f"Error: Failed to read workflow run {args.run_id}: {e}")
@@ -582,7 +685,7 @@ def main():
 
     # Run deliberation
     # RETIRED — kanban_card_id retired per ADR-013
-    result = run_deliberation(topic, config, run_id=args.run_id)
+    result = run_deliberation(topic, config, run_id=args.run_id, intent=intent)
 
     # Output
     print("═══ Final Result ═══")

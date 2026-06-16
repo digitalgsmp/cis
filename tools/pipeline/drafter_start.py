@@ -4,11 +4,13 @@ drafter_start.py — Tier 11C: Create workflow_run + proposal, initiate Drafter 
 ADR-SEED-014 Clause 2 / Choice 1.
 
 Usage:
-  python3 tools/pipeline/drafter_start.py "Eric's intent text"
-  python3 tools/pipeline/drafter_start.py "intent" --session-id sess-123
+  python3 tools/pipeline/drafter_start.py "topic summary" --intent "deeper purpose"
+  python3 tools/pipeline/drafter_start.py "topic" --session-id sess-123
 
 Creates: workflow_run_id (run-<hex>), proposal_id (UUID), lifecycle events
          IDLE→ROUTING→DRAFTING. Idempotent by topic hash.
+  topic:  what to build (summary for routing/tracking)
+  intent: why to build it (the underlying need — drives Drafter, Reviewer)
 """
 
 import argparse
@@ -108,8 +110,12 @@ def main():
         description="CIS Tier 11C — Drafter workflow initiation"
     )
     parser.add_argument(
-        "intent_text", nargs="?", default=None,
-        help="Eric's stated initiating intent (or read from stdin if omitted)"
+        "topic", nargs="?", default=None,
+        help="Topic summary — what to build (or read from stdin if omitted)"
+    )
+    parser.add_argument(
+        "--intent", default=None,
+        help="Deeper intent — the underlying need/goal. If omitted, intent = topic."
     )
     parser.add_argument(
         "--session-id", default=None,
@@ -117,26 +123,29 @@ def main():
     )
     args = parser.parse_args()
 
-    # Resolve intent text
-    if args.intent_text:
-        intent = args.intent_text.strip()
+    # Resolve topic text
+    if args.topic:
+        topic = args.topic.strip()
     elif not sys.stdin.isatty():
-        intent = sys.stdin.read().strip()
+        topic = sys.stdin.read().strip()
     else:
-        print("ERROR: No intent text provided.", file=sys.stderr)
+        print("ERROR: No topic text provided.", file=sys.stderr)
         sys.exit(1)
 
-    if not intent:
-        print("ERROR: Intent text must be non-empty.", file=sys.stderr)
+    if not topic:
+        print("ERROR: Topic text must be non-empty.", file=sys.stderr)
         sys.exit(1)
+
+    # Intent = provided intent, else topic (backward compatible)
+    intent = args.intent.strip() if args.intent else topic
 
     intent_hash = hashlib.sha256(intent.encode("utf-8")).hexdigest()
     session_id = args.session_id or datetime.now(timezone.utc).isoformat()
 
     db = get_db()
 
-    # --- Idempotency check ---
-    existing_run, existing_prop = check_idempotent(intent, db)
+    # --- Idempotency check (by topic) ---
+    existing_run, existing_prop = check_idempotent(topic, db)
     if existing_run:
         print(f"EXISTING workflow_run_id={existing_run} proposal_id={existing_prop}")
         db.close()
@@ -150,10 +159,10 @@ def main():
     # --- Insert workflow_runs row ---
     db.execute(
         """INSERT INTO workflow_runs
-           (id, topic, result, requires_eric_review, max_rounds,
+           (id, topic, intent, result, requires_eric_review, max_rounds,
             max_consecutive_revisions, rounds_completed, created_at, status)
-           VALUES (?, ?, 'CONSENSUS_REACHED', 1, 3, 3, 0, ?, 'PENDING')""",
-        (workflow_run_id, intent, now)
+           VALUES (?, ?, ?, 'CONSENSUS_REACHED', 1, 3, 3, 0, ?, 'PENDING')""",
+        (workflow_run_id, topic, intent, now)
     )
 
     # --- Import orchestration module ---

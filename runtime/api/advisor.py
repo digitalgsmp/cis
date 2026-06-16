@@ -1255,6 +1255,7 @@ def _create_workflow_run(topic, route, agent=None):
     now = datetime.now(timezone.utc).isoformat()
     max_rounds = 3
     conn = sqlite3.connect(SPINE_DB_PATH)
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("""
         INSERT INTO workflow_runs
             (id, topic, route, status, result, requires_eric_review,

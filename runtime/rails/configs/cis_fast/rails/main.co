@@ -61,6 +61,10 @@ define user ask creative question
   "can we talk about"
   "what do you think about"
   "I want to explore"
+  "SPINE_RUN_ID *""
+  "Review this proposal critically *"
+  "REVISION REQUEST *"
+  "Original topic: *"
 
 define flow
   user ask creative question
@@ -177,4 +181,19 @@ define user ask to do execution work
 define flow
   user ask to do execution work
   $result = execute block_execution_claim
+  bot $result
+
+
+# ── Catch-All Pass-Through ─────────────────────────────────────────────
+# Any message that doesn't match a specific flow above passes through.
+# This handles orchestrator directives, system-to-system messages, and
+# future prompt variants that haven't been explicitly patterned yet.
+# Must be LAST — execution block patterns fire first for actual execution
+# claims, then everything else falls through to this.
+define user ask anything else
+  "*"
+
+define flow
+  user ask anything else
+  $result = execute pass_through_query(query=$user_message)
   bot $result

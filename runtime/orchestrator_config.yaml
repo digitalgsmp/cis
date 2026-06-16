@@ -23,13 +23,22 @@ require_structured_reviewer_signal: true
 # Objections detection: lines starting with "- " after "OBJECTIONS" header
 objections_header: OBJECTIONS
 
-# CIS API endpoint
-api_base_url: http://127.0.0.1:5000
-chat_endpoint: /api/advisor/chat
+# Gateway URLs — orchestrator calls gateways directly (bypasses NeMo Fast)
+drafter_gateway_url: http://127.0.0.1:8645/v1/chat/completions
+reviewer_gateway_url: http://127.0.0.1:8643/v1/chat/completions
+drafter_api_key_env: V4PRO_API_SERVER_KEY
+reviewer_api_key_env: R1_API_SERVER_KEY
+drafter_model: deepseek-v4-pro
+reviewer_model: deepseek-v4-pro
 
-# API key for CIS (same as CIS_API_KEY env var)
-# Override with ORCHESTRATOR_API_KEY env var
-api_key: ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd
+# Second reviewer: local Qwen3-VL-30B on llama.cpp (CPU, port 8002)
+# Genuinely different training data — catches what DeepSeek misses
+second_reviewer_enabled: true
+second_reviewer_gateway_url: http://127.0.0.1:8002/v1/chat/completions
+second_reviewer_model: qwen3-vl-30b-a3b-instruct-q4_k_m.gguf
+
+# Direct-call mode: true = call gateways directly, false = use Flask app proxy
+direct_gateway_call: true
 
 # Request timeout in seconds (global fallback)
 request_timeout: 300
