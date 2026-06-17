@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059 | Latest pipeline: run-0570610976d74
+Generated: 2026-06-17 15:17 UTC | Run: none | Latest pipeline: run-0570610976d74
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.
+Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -38,7 +38,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 | V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Reviewer | hermes-r1 | 8643 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running |
-| Qwen | hermes-qwen | 8644 | qwen3-vl-30b | none | No | Paused |
+| Qwen | hermes-qwen | 8644 | qwen3-vl-30b | none | No | Running |
 
 ### Hermes Source Patches
 - /home/eric/.hermes/hermes-agent/run_agent.py:9782 — Added api.deepseek.com to _supports_reasoning_extra_body() allowlist
@@ -77,7 +77,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-005] BLK-SEED-005 CONFIRMED ACTIVE (2026-06-15): hermes-gateway-r1.service stuck in fail-restart loop (exit code 1, restarting every 5s). Port 8643 held by manual '--replace' process (pid 1601, HERMES_HOME=/home/eric/.hermes-r1 confirmed correct). Systemd cannot bind because port is taken. Manual process has been running since Jun14 and is healthy but unmanaged. Fix: stop manual process, let systemd bind cleanly. Root cause of auto-overwrite still unknown — service was repaired at commit 353cef5 but rebinding mechanism persists. Role identity confusion observed this session: model did not self-identify as Reviewer until explicitly directed, likely context-loading issue (AGENTS.md/TERMINAL_CWD) not process misbinding.
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (3 rounds, incomplete)
 - [run-3ffbdb7147834] home automation system — CONSENSUS_REACHED (1 rounds, 2026-06-16T22:06:15.683507+00:00)
 - [run-55212af059994] expense tracker — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-d9004b2a08e84] test topic — CONSENSUS_REACHED (0 rounds, incomplete)

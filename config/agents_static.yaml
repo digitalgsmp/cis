@@ -53,7 +53,7 @@ gateways:
     model: "qwen3-vl-30b"
     reasoning: "none"
     nemo: false
-    status: "Paused"
+    status: "Running"
 
 hermes_patches:
   base_path: "/home/eric/.hermes/hermes-agent/"
