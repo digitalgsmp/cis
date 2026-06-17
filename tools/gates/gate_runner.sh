@@ -97,7 +97,15 @@ fi
 
 run_gate "gate_export_agreement" "${SCRIPT_DIR}/gate_export_agreement.sh" || exit $FAILED
 
-# ── Gate 7: Eric approval (optional, requires workflow run ID) ───────
+# ── Gate 7: Pre-execution oversight (staleness + deliberation) ──────
+# Fires automatically before Eric approval. Skips gracefully if no
+# proposal file is configured (set $CIS_OVERSIGHT_PROPOSAL to enable).
+
+run_gate "gate_pre_execution_oversight" \
+    "${SCRIPT_DIR}/gate_pre_execution_oversight.sh" \
+    --proposal-file "${CIS_OVERSIGHT_PROPOSAL:-}" || exit $FAILED
+
+# ── Gate 8: Eric approval (optional, requires workflow run ID) ───────
 
 if [ -n "${GATE_ERIC_APPROVAL_RUN_ID:-}" ]; then
     run_gate "gate_eric_approval" python3 "${SCRIPT_DIR}/gate_eric_approval.py" \
