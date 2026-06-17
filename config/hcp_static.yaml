@@ -165,7 +165,7 @@ hcp_01:
 
   phase_0_recovery: |
     **Phase 0 recovery is COMPLETE.** Git versioning at github.com/digitalgsmp/cis.
-    All three V4 Pro gateways healthy, context-aware, deepseek-v4-pro xhigh. Qwen paused.
+    All four V4 Pro gateways healthy. Qwen active — port 8644, model qwen3-vl-30b, serving as second reviewer/evaluator. Deliberation is DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review.
     **AdvisorChat Input Router v0.1 is COMPLETE.** classify_route() dispatches to correct agent.
 
   # Model roles table (static narrative, not just the table)
@@ -220,7 +220,7 @@ hcp_01:
     - `hermes-gateway-r1.service` — V4 Reviewer (HERMES_HOME=/home/eric/.hermes-r1, port 8643)
     - `hermes-gateway-v4pro.service` — V4 Drafter (HERMES_HOME=/home/eric/.hermes-v4pro, port 8645)
     - `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl, port 8646)
-    - `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen, port 8644, paused)
+    - `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen, port 8644, active — second reviewer/evaluator)
     - `nemo-fast.service` — NeMo Guardrails on port 8800
 
     NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `configs/`)
@@ -734,7 +734,7 @@ hcp_09:
     - {name: "hermes-v4pro", label: "V4 Drafter", lane: "DRAFT"}
     - {name: "hermes-r1", label: "V4 Reviewer", lane: "REVIEW"}
     - {name: "hermes-v4impl", label: "V4 Implementer", lane: "IMPLEMENT"}
-    - {name: "hermes-qwen", label: "Qwen (paused)", lane: "—"}
+    - {name: "hermes-qwen", label: "Qwen (second reviewer)", lane: "REVIEW"}
 
   tier_0_1_terms:
     "orchestrator": "`runtime/orchestrator.py` — Python state machine that runs Drafter→Reviewer deliberation loop. Removes Eric from manual API relay. Bounded by timeouts and input truncation."
