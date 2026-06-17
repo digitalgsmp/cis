@@ -166,26 +166,22 @@ Eight phases, each with a defined Hermes primitive as the target.
 
 | Phase | What | Hermes Primitive | Prerequisite |
 |-------|------|-----------------|-------------|
-| **P0** | Fix BLK-SEED-005 (r1 service loop) | systemd unit stability | None |
-| **P1** | Collapse 5 installs → 1 install, 5 profiles | **Profiles system** | P0 |
+| **P1** | Collapse 5 installs → 1 install, 5 profiles | **Profiles system** | None |
 | **P2** | Define per-profile SOUL.md + skill bundles | **Skills marketplace** | P1 |
-| **P3** | CIS ↔ Hermes abstraction layer | **MCP client/server** | P1 |
+| **P3** | CIS ↔ Hermes integration layer (MCP-based) | **MCP client/server** | P1 |
 | **P4** | Oversight skill (tool-call hooks) | **Skills enforcement** | P2, P3 |
 | **P5** | Gate migration (bash → skills) | **Skills marketplace** | P4 |
-| **P6** | UI overhaul — dashboard views | **Web dashboard** | P3 |
+| **P6** | UI overhaul — CIS dashboard (standalone app surface) | CIS application | P3 |
 | **P7** | External advisor integration | **MCP client** | P3 |
 | **P8** | WIAS domain adapter operational | **Profiles + MCP** | P5 |
 | **P9** | SWA domain adapter operational | **Profiles + MCP** | P8 |
 
 ### Phase Detail
 
-**P0 — BLK-SEED-005:** hermes-gateway-r1.service in fail-restart loop. Port 8643
-held by manual `--replace` process. Fix: stop manual process, verify systemd binds
-cleanly, test reboot. < 1 hour.
-
 **P1 — Profiles:** `hermes profile create drafter`, `hermes profile create reviewer`,
 etc. Migrate config.yaml, .env, SOUL.md from current installs. Verify each profile's
-gateway starts on its port. ~2-4 hours.
+gateway starts on its port. ~4 hours. Starts from one install — BLK-SEED-005 already
+resolved (false positive; prime gateway was never poisoned; patch #7 applied June 16).
 
 **P2 — SOUL.md + Skills:** Each profile gets a role-specific SOUL.md (Drafter: "You
 author specifications. You do not implement. You do not review."). Each profile
@@ -244,13 +240,12 @@ in the SWA project. ~8-16 hours.
 
 ## 8. First Action
 
-The oversight SKILL (P4) should NOT be built first — it needs profiles (P1),
-SOUL.md (P2), and MCP (P3) as prerequisites. The correct first action is:
+Start with P1 — collapse to profiles. BLK-SEED-005 was investigated June 16 and
+found to be a false positive: prime gateway was never actively poisoned, the
+`--replace` flag is benign managed behavior, patch #7 already applied. No blocker
+stands in the way.
 
-**P0 → P1 → P2 → P3 → then P4.**
-
-Start with BLK-SEED-005. Any reboot without fixing it means the Reviewer is down
-and the pipeline cannot function.
+P1 → P2 → P3 → then P4. Profiles first, then the oversight skill has a home.
 
 ## 9. Approval Conditions
 

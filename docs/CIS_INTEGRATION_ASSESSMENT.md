@@ -296,8 +296,8 @@ in the Hermes-integrated system.
 
 | Phase | What | Prerequisite | Status |
 |-------|------|-------------|--------|
-| **P0** | Resolve BLK-SEED-005 (hermes-gateway-r1 service loop) | None | PENDING |
-| **P1** | Collapse 5 installs → 1 install with 5 Hermes profiles | BLK-SEED-005 resolved | **CONFIRMED by Eric** |
+| **P0** | Resolve BLK-SEED-005 (hermes-gateway-r1 service loop) | None | **RESOLVED** — false positive; patch #7 applied June 16; prime not poisoned |
+| **P1** | Collapse 5 installs → 1 install with 5 Hermes profiles | None (BLK-SEED-005 resolved — false positive, patch #7 applied June 16) | **CONFIRMED by Eric** |
 | **P2** | Define per-profile SOUL.md and skill bundles | P1 | PENDING |
 | **P3** | Build CIS ↔ Hermes adapter layer (MCP-based) | P1 | PENDING |
 | **P4** | Build oversight skill with tool-call hooks | P2, P3 | PENDING |
