@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-06-16
+Date: 2026-06-17
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `5e9e633`
+HEAD: `a04359c`
 
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -54,7 +54,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## Exact Next Action
 
 
-Tier 11C — Drafter-to-Reviewer Handoff.
+(No eligible PENDING node in build plan.)
 
 ## Eric Gate Approval Status
 

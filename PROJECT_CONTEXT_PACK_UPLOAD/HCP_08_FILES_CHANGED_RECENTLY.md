@@ -1,7 +1,57 @@
 # Files Changed Recently
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a04359c fix: correct Qwen paused→active in hcp_static, add Tier 11D pipeline specs
+
+## config/hcp_static.yaml 
+
+## docs/CIS_TIER_11D_REVIEWER_SIDE_HANDOFF_SPECIFICATION.md 
+
+## docs/TIER_11D_REVIEW1_FEEDBACK.md 
+
+## 71d625a feat(pipeline): intent column, second reviewer (Qwen), NeMo bypass, WAL mode
+
+## runtime/api/advisor.py 
+
+## runtime/orchestrator.py 
+
+## runtime/orchestrator_config.yaml 
+
+## runtime/rails/configs/cis_fast/rails/main.co 
+
+## runtime/schema/migrations/0013_workflow_runs_intent.sql 
+
+## tools/pipeline/drafter_start.py 
+
+## e2ef83d Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 5e9e633 docs: regenerate context after BLK-SEED-005 blocker update
 
@@ -344,97 +394,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/config/bin/hermes.wrapper 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 2fa38e4 Regenerate context after session closeout
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## bbab96e chore: Tier 10 closeout — update do_not_start, regenerate context
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## config/agents_static.yaml 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 05596eb feat: Tier 10 CIS UI / Custom Display Views implementation
-
-## runtime/api/pipeline_views.py 
-
-## runtime/app.py 
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/api.js 
-
-## runtime/ui/src/pages/ArchiveSearchPage.jsx 
-
-## runtime/ui/src/pages/DecisionsPage.jsx 
-
-## runtime/ui/src/pages/EricGatePage.jsx 
-
-## runtime/ui/src/pages/PipelinePage.jsx 
-
-## runtime/ui/src/pages/SessionArchivePage.jsx 
-
-## tests/ui/test_pipeline_views.py 
-
-## tests/ui/test_ui_integration.py 
-
-## tests/ui/test_ui_security.py 
-
-## tools/gates/gate_ui_acceptance.sh 
-
-## tools/gates/gate_ui_method_allowlist.sh 
-
-## tools/gates/gate_ui_no_pipeline_bypass.py 
-
-## tools/gates/gate_ui_no_secrets_in_jsx.sh 
-
-## tools/gates/gate_ui_no_write_endpoints.sh 

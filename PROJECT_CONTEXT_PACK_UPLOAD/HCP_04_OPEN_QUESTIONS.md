@@ -1,7 +1,13 @@
 # Open Questions — Hermes Harness / CIS
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## OQ-SEED-006 — deliberation_rounds schema is lossy: no reviewer_output column exists, only reviewer_signal. Reviewe
+Status: OPEN
+
+## OQ-SEED-007 — 4-independent-installs migration scope contradiction: Qwen (port 8644) is out-of-scope in the spec b
+Status: OPEN
 
 ## OQ-SEED-005 — Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Imp
 Status: OPEN

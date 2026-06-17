@@ -1,10 +1,11 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-06-16 | [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit: ROOT CAUSE: get_d | Diagnosed across 5 investigation turns. Empirical test re-run this session and c | DECIDED | spine record |
 | 2026-06-09 | [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON blo | The router/Kanban canary failed with ERROR because Drafter Round 2 output was mi | DECIDED | spine record |
 | 2026-06-09 | [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate | Kanban was documented as temporary scaffolding in the June 6 smoke test. The spi | DECIDED | spine record |
 | 2026-06-08 | [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. Th | Eric Gate approved 2026-06-08 | DECIDED | spine record |

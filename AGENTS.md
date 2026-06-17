@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e | Latest pipeline: run-88032ce506724
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059 | Latest pipeline: run-0570610976d74
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
+Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -47,6 +47,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - /home/eric/.hermes/hermes-agent/agent/usage_pricing.py:731 — Added completion_tokens_details.reasoning_tokens fallback
 
 ## 4. Active Decisions
+- [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit: ROOT CAUSE: get_default_hermes_root() in hermes_constants.py (line 71) returns sibling HERMES_HOME paths like ~/.hermes-r1 as the default root — the fallthrough logic treats any HERMES_HOME outside ~/.hermes/ as a Docker/custom home and returns it verbatim. _profile_suffix() then sees home == default, collapses suffix to empty string, derives service name "hermes-gateway" (the DEFAULT/prime unit), and refresh_systemd_unit_if_needed() can overwrite the prime systemd unit with a non-prime HERMES_HOME. Verified against source (hermes_constants.py:71, gateway.py _profile_suffix) and live empirical test this session: HERMES_HOME=/home/eric/.hermes-r1 → suffix="", service="hermes-gateway", default_root=/home/eric/.hermes-r1. CURRENT STATUS (verified 2026-06-16): Prime is NOT actively poisoned. systemd MainPID=214645 matches the --replace process; prime HERMES_HOME is correct (/home/eric/.hermes). The --replace flag in prime's unit is benign on a correctly-homed process — it is the configured, managed behavior for port binding on restart. The collapse bug is a LATENT architectural risk, not an active runtime issue on prime. Commit 71d625a did NOT touch service files (it was the intent pipeline commit) — the earlier claim of a committed fix awaiting restart was incorrect. Fix paths remain: (a) relocate sibling homes into ~/.hermes/profiles/ layout, or (b) apply Patch#7.
 - [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON block. Freeform model body is stored as documentation and never parsed for routing. Every Drafter and Reviewer response must end with a FINAL_JSON block containing role, status, summary, recommendation, next_action. Role-scoped status values: Drafter emits PROPOSAL_READY or REVISION_READY only. Reviewer emits CONSENSUS_REACHED, OBJECTIONS, or ESCALATE only. If FINAL_JSON is missing or malformed, orchestrator issues one repair prompt then falls back to constrained text-scanning. Markdown heading presence (### Summary, ### Recommendation) must never cause validation failure.
 - [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate, or closeout execution. workflow_runs is the authoritative in-flight work object. deliberation_rounds stores per-round Drafter/Reviewer history. Router creates a workflow_runs row and returns run_id. Orchestrator accepts --run-id and reads topic from workflow_runs. Gates verify from SQLite. Kanban code paths are commented out and preserved as legacy. kanban_card_id is null on all new pipeline runs.
 - [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. The CIS toolchain (generators, gates, database layer, static config templates) may be copied or bootstrapped into a new project repo. Projects do not share one runtime spine. Projects do not import a central CIS repo as a live dependency for generated context or state. Cross-project contamination is avoided through filesystem and repo isolation. A second project initializes its own repo with its own spine, static config, and generated outputs. The --project-root model requires no database schema migration, no generator refactoring, and no multi-project routing logic. It is a zero-implementation decision.
@@ -61,6 +62,8 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [ADR-SEED-007] AGENTS.md gateway loading mechanism: AGENTS.md is loaded from cwd or TERMINAL_CWD in gateway mode, not automatically from git root. Gateway processes require TERMINAL_CWD=/mnt/projects/cis to load CIS AGENTS.md. CLI sessions may load CIS AGENTS.md when launched from the CIS repo root.
 
 ## 5. Open Questions
+- [OQ-SEED-006] deliberation_rounds schema is lossy: no reviewer_output column exists, only reviewer_signal. Reviewer reasoning and full output are discarded at the spine layer — they exist only in orchestrator stdout. This undercuts the project goal of preserving actual reasoning. Schema needs a reviewer_output TEXT column to durably persist reviewer deliberation content.
+- [OQ-SEED-007] 4-independent-installs migration scope contradiction: Qwen (port 8644) is out-of-scope in the spec but is now load-bearing as second reviewer on the shared venv. Migrating 4 profiles to independent installs while leaving Qwen shared re-creates the exact coupling the migration exists to remove, on a now-critical component. Scope is likely 5, not 4. Additionally, Hermes v0.13.0+ supports native profile-based per-provider configuration which may obsolete the entire migration — evaluate before implementing. Flag on spec before any execution.
 - [OQ-SEED-005] Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Implementer correctly inferred that a test suite was useful from the design test plan, but created the test script before it was explicitly named in the approved directive. Desired behavior: Implementer may use xhigh reasoning to detect gaps and recommend missing deliverables, but must stop before executing unapproved work. Future FINAL_DIRECTIVE packets need an Approved File Manifest generated by Drafter, challenged by Reviewer, approved at Eric Gate, and enforced during Implement. Any file outside the manifest requires Implementer to stop and request explicit authorization.
 - [OQ-SEED-003] Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or be done manually before Tier 5 build begins?
 - [OQ-SEED-002] hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric/.hermes but service file may differ
@@ -68,18 +71,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Tier 11C — Drafter-to-Reviewer Handoff] (Tier 11C) Tier 11C — Drafter-to-Reviewer Handoff
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified
 - [BLK-SEED-005] BLK-SEED-005 CONFIRMED ACTIVE (2026-06-15): hermes-gateway-r1.service stuck in fail-restart loop (exit code 1, restarting every 5s). Port 8643 held by manual '--replace' process (pid 1601, HERMES_HOME=/home/eric/.hermes-r1 confirmed correct). Systemd cannot bind because port is taken. Manual process has been running since Jun14 and is healthy but unmanaged. Fix: stop manual process, let systemd bind cleanly. Root cause of auto-overwrite still unknown — service was repaired at commit 353cef5 but rebinding mechanism persists. Role identity confusion observed this session: model did not self-identify as Reviewer until explicitly directed, likely context-loading issue (AGENTS.md/TERMINAL_CWD) not process misbinding.
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-3ffbdb7147834] home automation system — CONSENSUS_REACHED (1 rounds, 2026-06-16T22:06:15.683507+00:00)
+- [run-55212af059994] expense tracker — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-d9004b2a08e84] test topic — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-88032ce506724] Draft a brief proposal for replacing Kanban pipeline transport with SQLite spine — ERROR (0 rounds, incomplete)
-- [run-3a0ee8f0fa724] Spine-native canary after deliberation_rounds persistence patch: confirm orchest — ERROR (0 rounds, incomplete)
-- [run-b77483fe75234] spine canary quick test — CONSENSUS_REACHED (1 rounds, 2026-06-09T05:09:44.255404+00:00)
-- [run-9957d6ad08f44] Spine-native canary: confirm orchestrator runs from workflow_runs without Kanban — ERROR (0 rounds, incomplete)
-- [run-05b24781207e] Is the CIS Kanban card schema (title prefix + structured body + tenant) sufficie — ESCALATE (3 rounds, 2026-06-06T09:35:00)
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)

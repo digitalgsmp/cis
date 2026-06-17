@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-16
+Date: 2026-06-17
 Authority: Eric (Architect)
-Status: Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.
+Status: Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.
 
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Tier 11C COMPLETE. Drafter-to-Reviewer handoff implemented (commit 15e21fc). Migration 0012 applied, 3 pipeline scripts + gate independently verified. Lifecycle tables exercised with first operational DRAFT_READY→REVIEW_PENDING transition. Standing by for next action.**
+**Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.**
 
-**HEAD:** `5e9e633`.
+**HEAD:** `a04359c`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -98,7 +98,7 @@ TRIAGE → RESEARCH → DRAFT → REVIEW ↔ LOOP → CONSENSUS → ERIC_GATE
 - **DONE:** Pipeline run complete. Blackboard artifacts archived. Spine enriched.
 
 **Phase 0 recovery is COMPLETE.** Git versioning at github.com/digitalgsmp/cis.
-All three V4 Pro gateways healthy, context-aware, deepseek-v4-pro xhigh. Qwen paused.
+All four V4 Pro gateways healthy. Qwen active — port 8644, model qwen3-vl-30b, serving as second reviewer/evaluator. Deliberation is DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review.
 **AdvisorChat Input Router v0.1 is COMPLETE.** classify_route() dispatches to correct agent.
 
 **Verification-hardening rule (2026-05-31):** V4 Implementer self-report is not a source of truth. Completion is accepted only after deterministic evidence verifies the result. Accepted evidence:   1. git diff / file system state   2. build and test command output   3. database queries   4. endpoint/curl responses   5. service health checks   6. browser/UI verification   7. independent reviewer/verifier pass/fail Implementer reports claimed changes → separate verification gate checks deterministic evidence → PASS only if evidence matches directive scope. Missing/ambiguous/self-reported evidence → status remains UNVERIFIED.
@@ -195,7 +195,7 @@ Service files (all user-mode systemd — topology repaired 2026-06-07):
 - `hermes-gateway-r1.service` — V4 Reviewer (HERMES_HOME=/home/eric/.hermes-r1, port 8643)
 - `hermes-gateway-v4pro.service` — V4 Drafter (HERMES_HOME=/home/eric/.hermes-v4pro, port 8645)
 - `hermes-gateway-v4impl.service` — V4 Implementer (HERMES_HOME=/home/eric/.hermes-v4impl, port 8646)
-- `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen, port 8644, paused)
+- `hermes-gateway-qwen.service` — Qwen (HERMES_HOME=/home/eric/.hermes-qwen, port 8644, active — second reviewer/evaluator)
 - `nemo-fast.service` — NeMo Guardrails on port 8800
 
 NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `configs/`)
@@ -265,7 +265,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-**Tier 11C — Drafter-to-Reviewer Handoff (Tier 11C)**
+(No eligible PENDING node in build plan.)
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -293,20 +293,21 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 23. 7R.7 — Acceptance test suite ✅ COMPLETE
 24. Tier 11A — Dashboard, Navigation, System Overview ✅ COMPLETE
 25. Tier 11B — Eric Gate Approval Record ✅ COMPLETE
-26. Tier 11C — Drafter-to-Reviewer Handoff ⬜ PENDING
-27. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
-28. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
-29. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
-30. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
-31. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
-32. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
-33. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
-34. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
-35. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
-36. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
-37. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
-38. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
-39. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
+26. Tier 11C — Drafter-to-Reviewer Handoff ✅ COMPLETE
+27. Tier 11D — Reviewer-Side Handoff PROPOSED
+28. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
+29. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
+30. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
+31. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
+32. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
+33. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
+34. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
+35. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
+36. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
+37. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
+38. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
+39. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
+40. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
 
 ---
 
@@ -366,6 +367,8 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 | ID | Question | Status |
 |----|----------|--------|
+| OQ-SEED-006 | deliberation_rounds schema is lossy: no reviewer_output column exists, only reviewer_signal. Reviewe | OPEN |
+| OQ-SEED-007 | 4-independent-installs migration scope contradiction: Qwen (port 8644) is out-of-scope in the spec b | OPEN |
 | OQ-SEED-005 | Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Imp | OPEN |
 | OQ-SEED-003 | Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or | OPEN |
 | OQ-SEED-002 | hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric | OPEN |
@@ -379,10 +382,10 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 | Table | Rows |
 |-------|------|
-| workflow_runs | 5 |
-| deliberation_rounds | 4 |
-| project_decisions | 13 |
-| open_questions | 6 |
+| workflow_runs | 9 |
+| deliberation_rounds | 8 |
+| project_decisions | 14 |
+| open_questions | 8 |
 | next_actions | 13 |
 | active_blockers | 6 |
 

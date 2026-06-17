@@ -1,11 +1,12 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-16 04:51 UTC | Run: run-404460a49d5e
+Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**Tier 11C — Drafter-to-Reviewer Handoff**
+(No eligible PENDING node in build plan.)
+Deferred: Tier 7 DEFERRED.
 
 Do NOT start:
 
@@ -50,7 +51,8 @@ Do NOT start:
 | 7R.7 | 7R.7 — Acceptance test suite | ✅ COMPLETE | |
 | 11A | Tier 11A — Dashboard, Navigation, System Overview | ✅ COMPLETE | |
 | 11B | Tier 11B — Eric Gate Approval Record | ✅ COMPLETE | |
-| 11C | Tier 11C — Drafter-to-Reviewer Handoff | ⬜ PENDING | |
+| 11C | Tier 11C — Drafter-to-Reviewer Handoff | ✅ COMPLETE | |
+| 11D | Tier 11D — Reviewer-Side Handoff | PROPOSED | |
 | Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | COMPLETE | |
 | Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE | |
 | Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE | |
