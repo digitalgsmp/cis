@@ -197,26 +197,89 @@ message: "This action requires pre-execution oversight. Run gate_runner.sh first
 
 ---
 
-## 7. Migration Phases (Recommended Order)
+## 7. CIS ↔ Hermes v0.16.0 Feature Correlation
 
-| Phase | What | Prerequisite |
-|-------|------|-------------|
-| **P0** | Resolve BLK-SEED-005 (hermes-gateway-r1 service loop) | None — any reboot risks Reviewer down |
-| **P1** | Evaluate profiles: can 5 installs → 1 install with 5 profiles? | OQ-SEED-007 |
-| **P2** | Define CIS skill bundle per role (section 6.3) | P1 |
-| **P3** | Build abstraction layer — adapter that maps CIS needs to Hermes features | P1 |
-| **P4** | Build oversight skill with tool-call hooks (section 6.4) | P2, P3 |
-| **P5** | Migrate gates from bash to skills where sensible | P4 |
-| **P6** | UI overhaul — Hermes dashboard or MCP views | P3 |
-| **P7** | External advisor integration via MCP (replace custom HTTP in reconcile.py) | P3 |
-| **P8** | Closeout triggers via Hermes cron | P3 |
+Eric has concluded: 5 separate installs are not required. Profiles satisfy the isolation
+that was thought to need independent installations. This resolves OQ-SEED-007.
+
+CIS will register as a Hermes **add-on** — a specialized UI and pipeline layer that
+exposes CIS-specific functionality (adversarial deliberation, evidence-backed
+verification, Eric Gate) on top of Hermes primitives. Below is the complete correlation
+of every CIS feature to its Hermes v0.16.0 target.
+
+### 7.1 Feature Correlation Table
+
+| CIS Feature | Current (Custom) | Hermes v0.16.0 Target | Action |
+|------------|-----------------|----------------------|--------|
+| **Role isolation** (Drafter/Reviewer/Implementer/Prime) | 5 independent installs at ~/.hermes, ~/.hermes-r1, ~/.hermes-v4pro, ~/.hermes-v4impl, ~/.hermes-qwen | **Profiles** — `hermes profile create drafter` → isolated config, model, skills, SOUL.md per role | **Collapse to 1 install with 5 profiles** |
+| **Per-role model assignment** | Manual config per install | **Model picker** — per-profile model assignment. Drafter=deepseek-v4-pro, Reviewer=deepseek-v4-pro or Claude, Qwen=qwen3-vl-30b | Assign via dashboard or config.yaml per profile |
+| **Per-role personality** | AGENTS.md loaded by TERMINAL_CWD | **SOUL.md per profile** — each profile gets its own role-specific briefing | Migrate AGENTS.md role sections to per-profile SOUL.md |
+| **Skill loading per role** | Manual skill_view() calls during session | **Skills marketplace** — Drafter auto-loads cis-specification-authoring, Reviewer loads cis-specification-review, Implementer loads subagent-driven-development | Publish CIS bundle; profiles auto-load role skills |
+| **Pipeline dispatch** | Bash scripts + Python orchestrator calling gateway APIs | **MCP server per profile** — Orchestrator queries Drafter/Reviewer state via MCP instead of custom HTTP | Replace direct API calls with MCP tool invocations |
+| **Deliberation engine** | `reviewer_reconcile.py` — urllib to gateway ports | **MCP coordination** — two profile servers queried independently, results compared | Wrap reconciliation in MCP tool; profiles expose `review_proposal` endpoint |
+| **Closeout triggers** | Manual: Eric runs closeout scripts | **Hermes cron** — `hermes cron "Check stale workflow_runs and trigger closeout" every 4h` | Natural-language cron job, replaces custom trigger code |
+| **Implementer parallel builds** | Custom Python subprocess management | **Sub-agent delegation** — `delegate_task` spawns parallel workers with isolated contexts | Replace custom subprocess with delegate_task calls |
+| **External advisor integration** | `call_openai()` / `call_anthropic()` in reconcile.py | **MCP client** — query ChatGPT/Claude through MCP server connections | Register external models as MCP tools; remove custom HTTP |
+| **Eric Gate notifications** | Custom Telegram bot code | **Hermes multi-platform messaging** — already connected to Telegram, Discord, Slack, etc. | Use Hermes send_message; Eric replies from any platform |
+| **CIS UI dashboard** | Flask blueprint + 6 React views (Tier 10) | **Hermes web dashboard** — admin panel with point-and-click management | Expose CIS views as dashboard extensions or MCP views |
+| **Staleness checking** | `staleness_check.py` — DDG + GitHub API | **Hermes web_search tool** — available to any profile via skill | Wrap staleness check as a Hermes skill using web_search tool |
+| **Gate sequence (37 bash scripts)** | `tools/gates/*.sh` invoked by gate_runner.sh | **Hermes skills** — procedural knowledge documents loaded on demand | Migrate gate logic to skills; bash remains as audit trail |
+| **Pipeline state tracking** | SQLite spine (`cis_memory.db`, 380MB) | **Per-profile state DB** — each profile has its own SQLite | Spine stays as cross-profile source of truth; profiles query it via MCP |
+| **AGENTS.md generation** | `generate_agents_md.py` from spine + static YAML | **Hermes dashboard view** — live view of build plan, blockers, next actions | Replace static doc with live dashboard; keep AGENTS.md as export snapshot |
+| **HCP export** | `generate_hcp.py` + `generate_all.py` | **MCP exposure** — external advisors query pipeline state through MCP instead of static packet | Replace static HCP with live MCP queries |
+
+### 7.2 What This Means for the Architecture
+
+**Before (current):**
+```
+5 independent Hermes installs → 5 venvs → shared source patches
+Custom Python scripts → direct HTTP to gateway ports
+Custom Flask UI → React frontend
+Bash gate scripts → invoked manually or by orchestrator
+Eric Gate → custom Telegram bot
+```
+
+**After (target):**
+```
+1 Hermes install → 5 profiles (each: own config, model, SOUL.md, skills)
+MCP coordination → profiles expose pipeline state as MCP tools
+Hermes dashboard → CIS views as extensions
+Skills → gate logic loaded per profile, enforced at tool-call level
+Hermes messaging → Eric Gate notifications on any platform
+```
+
+### 7.3 Resolved Questions
+
+| Question | Resolution |
+|----------|-----------|
+| OQ-SEED-007: 4-install migration scope | **Resolved.** 5 installs → 1 install with 5 profiles. Migration scope is now: consolidate configs, create profiles, migrate SOUL.md content. |
+| OQ-SEED-006: deliberation_rounds schema lossy | **Still open.** Profiles sharing one spine need `reviewer_output` column. Add before MCP exposure. |
+| Source-patch fragility | **Mitigated by profiles.** Patches applied once to the single install, all profiles inherit. Updates don't require per-install re-patching. |
+| Role enforcement (ADR-SEED-003/004) | **Profiles provide native isolation.** Drafter profile has no Implementer tools. Reviewer profile has no write access. Hermes enforces per-profile toolset configuration. |
+
+### 7.4 WIASW and SWA
+
+Eric referenced "wiasw" and "SWA" as additional functionality requiring UI and
+pipeline exposure. SWA ("Schedule field-use work") is listed in the Do Not Start
+section of AGENTS.md. WIASW is not yet defined in CIS documentation — clarification
+needed on scope and relationship to the CIS pipeline.
 
 ---
 
-## 8. Summary
+## 8. Revised Migration Phases
 
-**CIS prevents 16 specific failure modes** across 4 categories (trust, knowledge, process, protocol). Seven of these are unique to CIS and have no Hermes equivalent. Nine are partially or fully duplicated by Hermes v0.16.0 features.
+| Phase | What | Prerequisite | Status |
+|-------|------|-------------|--------|
+| **P0** | Resolve BLK-SEED-005 (hermes-gateway-r1 service loop) | None | PENDING |
+| **P1** | Collapse 5 installs → 1 install with 5 Hermes profiles | BLK-SEED-005 resolved | **CONFIRMED by Eric** |
+| **P2** | Define per-profile SOUL.md and skill bundles | P1 | PENDING |
+| **P3** | Build CIS ↔ Hermes adapter layer (MCP-based) | P1 | PENDING |
+| **P4** | Build oversight skill with tool-call hooks | P2, P3 | PENDING |
+| **P5** | Migrate gates from bash to skills where sensible | P4 | PENDING |
+| **P6** | UI overhaul — Hermes dashboard views for deliberation, build plan, Eric Gate | P3 | PENDING |
+| **P7** | External advisor integration via MCP | P3 | PENDING |
+| **P8** | Closeout triggers via Hermes cron | P3 | PENDING |
 
-**The integration strategy:** CIS keeps its methodology (adversarial review, evidence-backed responses, Eric Gate, FINAL_JSON). The implementation layer adapts to use Hermes primitives instead of custom code. An abstraction layer isolates CIS from Hermes version changes.
+---
 
-**The oversight skill should wait** until the install question, source-patch dependency, and role-skill mapping are resolved. Building it now on the current architecture would create rework when profiles are adopted.
+## 9. Summary (Revised)
