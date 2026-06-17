@@ -338,14 +338,6 @@ def main():
     now = datetime.now(timezone.utc).isoformat()
     new_rounds_completed = (run["rounds_completed"] or 0) + 1
 
-    # Determine result (M1: result field for OBJECTIONS path)
-    if status == "CONSENSUS_REACHED":
-        result = "CONSENSUS_REACHED"
-    elif status == "ESCALATE" or escalation_forced:
-        result = "ESCALATE"
-    else:  # OBJECTIONS with rounds remaining (M1 fix)
-        result = "OBJECTIONS"
-
     # Determine status for workflow_runs
     if routing == "REVISE_REQUESTED":
         wf_status = "REVISE_REQUESTED"
@@ -354,12 +346,31 @@ def main():
     else:  # ESCALATE
         wf_status = "ESCALATE"
 
-    db.execute(
-        """UPDATE workflow_runs
-           SET status = ?, result = ?, rounds_completed = ?,
-               updated_at = ?
-           WHERE id = ?""",
-        (wf_status, result, new_rounds_completed, now, run_id))
+    # M1: result field — only updated for terminal verdicts.
+    # REVISE_REQUESTED (OBJECTIONS with rounds remaining) is not terminal;
+    # the existing result stays unchanged until a final verdict is reached.
+    # CHECK constraint on result: IN ('CONSENSUS_REACHED', 'ESCALATE', 'ERROR')
+    if status == "CONSENSUS_REACHED":
+        db.execute(
+            """UPDATE workflow_runs
+               SET status = ?, result = 'CONSENSUS_REACHED', rounds_completed = ?,
+                   updated_at = ?
+               WHERE id = ?""",
+            (wf_status, new_rounds_completed, now, run_id))
+    elif status == "ESCALATE" or escalation_forced:
+        db.execute(
+            """UPDATE workflow_runs
+               SET status = ?, result = 'ESCALATE', rounds_completed = ?,
+                   updated_at = ?
+               WHERE id = ?""",
+            (wf_status, new_rounds_completed, now, run_id))
+    else:  # OBJECTIONS with rounds remaining — result is NOT final, leave unchanged
+        db.execute(
+            """UPDATE workflow_runs
+               SET status = ?, rounds_completed = ?,
+                   updated_at = ?
+               WHERE id = ?""",
+            (wf_status, new_rounds_completed, now, run_id))
     db.commit()
 
     # --- Update dispatch log: mark drafter dispatch as SUCCESS ---
