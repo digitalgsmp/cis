@@ -257,12 +257,38 @@ Hermes messaging → Eric Gate notifications on any platform
 | Source-patch fragility | **Mitigated by profiles.** Patches applied once to the single install, all profiles inherit. Updates don't require per-install re-patching. |
 | Role enforcement (ADR-SEED-003/004) | **Profiles provide native isolation.** Drafter profile has no Implementer tools. Reviewer profile has no write access. Hermes enforces per-profile toolset configuration. |
 
-### 7.4 WIASW and SWA
+### 7.4 WIAS and SWA — Domain Definitions
 
-Eric referenced "wiasw" and "SWA" as additional functionality requiring UI and
-pipeline exposure. SWA ("Schedule field-use work") is listed in the Do Not Start
-section of AGENTS.md. WIASW is not yet defined in CIS documentation — clarification
-needed on scope and relationship to the CIS pipeline.
+From the archive (WIAS Project Manager spreadsheet, CIS_Chat_2026-04_013, CIS_Chat_2026-04_016):
+
+**WIAS** = **W**ord, **I**mage, **A**ction, **S**ound, **W**eb — Eric's creative production
+workflow. Each stage represents a phase in the creative process:
+- **W**ord: planning, concept, writing, research
+- **I**mage: visual design, aesthetic language, imagery
+- **A**ction: execution, interaction, motion, implementation
+- **S**ound: final resonance, polish, audio, refinement
+- **W**eb: distribution, publishing, social/public life
+
+WIAS is not a linear pipeline — projects can enter any stage and exit from any stage.
+Multi-exit paths are a core design requirement.
+
+**SWA** = "Schedule field-use work" — a separate project at `/mnt/projects/swa/`
+for case management (client intake, appointments, D.A.P. notes, goal tracking).
+CIS Tier 7R treats SWA as a validation use case: the architecture must handle
+SWA-domain intents, but CIS must not implement SWA features or modify the SWA codebase.
+
+**LIFE** = Home, Body, Mind — the life management domain. Discovered during archive
+analysis: the WIAS Project Manager spreadsheet always contained both creation (WIAS)
+and life management (LIFE) as co-equal halves. The CIS build plan had assumed WIAS-only
+until the spreadsheet was recovered. LIFE domain objects (home maintenance, fitness,
+mindfulness) are structurally different from creative production assets.
+
+**CIS** orchestrates all three domains through a common pipeline: WorkIntent →
+Domain Classifier (CIS/SWA/WIAS/OUT_OF_SCOPE) → Domain Adapter → Process Manager →
+Human Approval Gate.
+
+**Eric requires UI and pipeline exposure for all three domains** (CIS, WIAS, SWA)
+in the Hermes-integrated system.
 
 ---
 
