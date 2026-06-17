@@ -42,10 +42,10 @@ REVIEWERS = {
     },
     "qwen": {
         "name": "Qwen Reviewer (qwen3-vl-30b)",
-        "url": "http://127.0.0.1:8644/v1/chat/completions",
-        "api_key": "e85b13cd0e17d48a1e6ad7c0758fc0b24ee324f844e2a08a",
-        "model": "hermes-agent",
-        "max_input_chars": None,  # Qwen handles full specs fine
+        "url": "http://127.0.0.1:8002/v1/chat/completions",  # Direct llama-server — bypasses Hermes agent loop (avoids tool-approval hangs)
+        "api_key": "not-needed",  # llama-server doesn't require auth
+        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m",  # Use the actual model name, not "hermes-agent" which triggers the full agent loop
+        "max_input_chars": 20000,
     },
 }
 
@@ -242,7 +242,112 @@ You are NOT voting. Your job is to provide a clear advisory opinion:
 ```"""
 
 
-# ── Reconciliation Logic ────────────────────────────────────────────────
+# ── Chunking ────────────────────────────────────────────────────────────
+
+def chunk_proposal(text: str, max_chars: int, overlap: int = 200) -> list[str]:
+    """Split proposal into chunks that fit within max_chars.
+
+    Tries to split on paragraph/section boundaries. Each chunk includes
+    a header noting its position (e.g., '[Chunk 1/5 of proposal]').
+    Overlap preserves context across chunk boundaries.
+    """
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks = []
+    remaining = text
+    chunk_num = 0
+    total_chunks = (len(text) // max_chars) + 1
+
+    while remaining:
+        chunk_num += 1
+        header = f"[Chunk {chunk_num}/{total_chunks} — CIS Oversight Review]\n\n"
+
+        if len(remaining) <= max_chars:
+            chunks.append(header + remaining)
+            break
+
+        # Try to split on a paragraph boundary near max_chars
+        chunk_text = remaining[:max_chars]
+        # Find last paragraph break (double newline) in the chunk
+        last_break = chunk_text.rfind('\n\n')
+        if last_break > max_chars // 2:
+            chunk_text = remaining[:last_break]
+        else:
+            # Fall back to sentence boundary
+            for punct in ['. ', '! ', '? ', ':\n', '\n']:
+                last_sentence = chunk_text.rfind(punct)
+                if last_sentence > max_chars // 2:
+                    chunk_text = remaining[:last_sentence + 1]
+                    break
+
+        chunks.append(header + chunk_text)
+
+        # Advance with overlap
+        advance = len(chunk_text) - overlap
+        if advance <= 0:
+            advance = len(chunk_text)
+        remaining = remaining[advance:]
+
+    # Update total after actual split
+    for i, chunk in enumerate(chunks):
+        chunks[i] = chunk.replace(f"/{total_chunks}", f"/{len(chunks)}", 1)
+
+    return chunks
+
+
+def chunked_reconcile(run_id: str, proposal: str, max_rounds: int,
+                      do_escalate: bool, verbose: bool,
+                      chunk_size: int) -> dict:
+    """Run reconciliation on chunked proposal for large documents.
+
+    Each chunk is reviewed independently. Results are aggregated into
+    a single combined verdict.
+    """
+    chunks = chunk_proposal(proposal, chunk_size)
+
+    print(f"═══ Chunked Reconciliation ═══")
+    print(f"Proposal: {len(proposal)} chars → {len(chunks)} chunks of ~{chunk_size} chars")
+    print()
+
+    all_results = []
+    all_objections = []
+    consensus_count = 0
+
+    for i, chunk in enumerate(chunks, 1):
+        print(f"─── Chunk {i}/{len(chunks)} ({len(chunk)} chars) ───")
+        result = reconcile(
+            run_id=f"{run_id or 'chunked'}-c{i}",
+            proposal=chunk,
+            max_rounds=1,  # Single round per chunk (speed)
+            do_escalate=False,  # No external escalation per chunk
+            verbose=verbose,
+        )
+        all_results.append(result)
+
+        if result.get("status") == "CONSENSUS_REACHED":
+            consensus_count += 1
+        elif result.get("r1_objections"):
+            all_objections.extend(result.get("r1_objections", []))
+        if result.get("qwen_objections"):
+            all_objections.extend(result.get("qwen_objections", []))
+
+    # Aggregate verdict
+    if consensus_count == len(chunks):
+        overall = "CONSENSUS_REACHED"
+    elif consensus_count > len(chunks) * 0.7:
+        overall = "PARTIAL_CONSENSUS"
+    else:
+        overall = "OBJECTIONS"
+
+    return {
+        "status": overall,
+        "round": 0,  # chunked doesn't use rounds
+        "chunks_total": len(chunks),
+        "chunks_consensus": consensus_count,
+        "aggregated_objections": all_objections[:20],  # top 20
+        "per_chunk_results": all_results,
+    }
 
 def escalate_to_external(proposal: str, r1_status: str, qwen_status: str,
                          r1_objs: list, qwen_objs: list,
@@ -343,19 +448,22 @@ def reconcile(run_id: str, proposal: str, max_rounds: int = 3,
             prev = history["rounds"][-1]
             if prev.get("qwen_objections"):
                 obj_text = "\n".join(f"• {o}" for o in prev["qwen_objections"])
+                # Compact: don't repeat full proposal (already seen in round 1)
                 r1_prompt = (
-                    f"The OTHER reviewer (Qwen) had these objections in the "
-                    f"previous round. Address each one, then re-evaluate:\n\n"
-                    f"{obj_text}\n\n"
-                    f"─── Original Proposal ───\n\n{proposal}"
+                    f"ROUND {round_num} CROSS-REVIEW\n"
+                    f"Qwen objections from round {round_num-1}:\n{obj_text}\n\n"
+                    f"Address each objection. Re-evaluate. Return FINAL_JSON.\n"
+                    f"Proposal (same as round 1): {proposal[:500] if len(proposal) > 500 else proposal}"
                 )
             if prev.get("r1_objections"):
                 obj_text = "\n".join(f"• {o}" for o in prev["r1_objections"])
+                # Compact cross-feed: only first 2000 chars of proposal (already seen)
+                prop_snip = proposal[:2000] if len(proposal) > 2000 else proposal
                 qwen_prompt = (
-                    f"The OTHER reviewer (R1) had these objections in the "
-                    f"previous round. Address each one, then re-evaluate:\n\n"
-                    f"{obj_text}\n\n"
-                    f"─── Original Proposal ───\n\n{proposal}"
+                    f"ROUND {round_num} CROSS-REVIEW\n"
+                    f"R1 objections from round {round_num-1}:\n{obj_text}\n\n"
+                    f"Address each objection. Re-evaluate. Return FINAL_JSON.\n"
+                    f"Proposal (same as round 1, truncated): {prop_snip}"
                 )
 
         print("  → Querying R1 (8643)...")
@@ -505,6 +613,11 @@ def main():
     parser.add_argument("--no-escalate", dest="escalate", action="store_false",
                         help="Disable external escalation")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Show what each reviewer would receive without calling APIs")
+    parser.add_argument("--chunk-size", type=int, default=None,
+                        help="Split proposals larger than this many chars into chunks. "
+                             "Each chunk is reviewed independently. Default: no chunking.")
 
     args = parser.parse_args()
 
@@ -515,21 +628,77 @@ def main():
         print("ERROR: Empty proposal file.", file=sys.stderr)
         sys.exit(1)
 
-    result = reconcile(
-        run_id=args.run_id or "",
-        proposal=proposal,
-        max_rounds=args.max_rounds,
-        do_escalate=args.escalate,
-        verbose=args.verbose,
-    )
+    # ── Dry-run mode ──────────────────────────────────────────────────
+    if args.dry_run:
+        print("═══ DRY RUN — No API calls ═══")
+        print(f"Proposal: {args.proposal_file}")
+        print(f"Proposal length: {len(proposal)} chars")
+        print()
+
+        for key, reviewer in REVIEWERS.items():
+            limit = reviewer.get("max_input_chars")
+            effective = proposal
+            truncated = False
+            if limit and len(proposal) > limit:
+                effective = proposal[:limit]
+                truncated = True
+
+            # Rough token estimate (avg 4 chars per token)
+            system_tokens = len(REVIEW_SYSTEM) // 4
+            prompt_tokens = len(effective) // 4
+            total_tokens = system_tokens + prompt_tokens
+
+            print(f"─── {reviewer['name']} ───")
+            print(f"  Model: {reviewer['model']}")
+            print(f"  Max input chars: {limit or 'unlimited'}")
+            print(f"  Effective prompt: {len(effective)} chars")
+            print(f"  System prompt: {len(REVIEW_SYSTEM)} chars")
+            print(f"  Estimated tokens: ~{system_tokens} (system) + ~{prompt_tokens} (prompt) = ~{total_tokens}")
+            if truncated:
+                cut = (limit or 0)
+                print(f"  ⚠ TRUNCATED: {len(proposal) - cut} chars cut")
+            print(f"  Headroom: {'✅ OK' if total_tokens < 28000 else '⚠️ TIGHT' if total_tokens < 32000 else '🔴 OVERFLOW LIKELY'}")
+            print(f"  First 200 chars: {effective[:200]}…")
+            print()
+
+        print("Dry run complete. Remove --dry-run to execute.")
+        sys.exit(0)
+
+    # ── Chunked mode ──────────────────────────────────────────────────
+    if args.chunk_size and len(proposal) > args.chunk_size:
+        print(f"Proposal ({len(proposal)} chars) exceeds chunk size ({args.chunk_size}).")
+        print(f"Running chunked reconciliation...")
+        print()
+        result = chunked_reconcile(
+            run_id=args.run_id or "",
+            proposal=proposal,
+            max_rounds=args.max_rounds,
+            do_escalate=args.escalate,
+            verbose=args.verbose,
+            chunk_size=args.chunk_size,
+        )
+    else:
+        result = reconcile(
+            run_id=args.run_id or "",
+            proposal=proposal,
+            max_rounds=args.max_rounds,
+            do_escalate=args.escalate,
+            verbose=args.verbose,
+        )
 
     print("\n═══ FINAL RESULT ═══")
     output = {
         "status": result["status"],
-        "rounds_taken": result["round"],
+        "rounds_taken": result.get("round", 0),
         "r1_verdict": result.get("r1_status", result.get("r1_summary", "")),
         "qwen_verdict": result.get("qwen_status", result.get("qwen_summary", "")),
     }
+    if result.get("chunks_total"):
+        output["chunks"] = {
+            "total": result["chunks_total"],
+            "consensus": result["chunks_consensus"],
+            "objections_count": len(result.get("aggregated_objections", [])),
+        }
     if result.get("external"):
         ext = result["external"]
         output["external_advisors"] = {
