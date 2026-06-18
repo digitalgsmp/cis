@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-18 04:31 UTC | Run: run-8c2cc61f1084 | Latest pipeline: run-0570610976d74
+Generated: 2026-06-18 05:43 UTC | Run: run-3f5ce724bddb | Latest pipeline: run-gate-20260618
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -73,11 +73,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-gate-20260618] Gate runner approval — all gates passed — CONSENSUS_REACHED (1 rounds, incomplete)
 - [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (3 rounds, incomplete)
 - [run-3ffbdb7147834] home automation system — CONSENSUS_REACHED (1 rounds, 2026-06-16T22:06:15.683507+00:00)
 - [run-55212af059994] expense tracker — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-d9004b2a08e84] test topic — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-88032ce506724] Draft a brief proposal for replacing Kanban pipeline transport with SQLite spine — ERROR (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)

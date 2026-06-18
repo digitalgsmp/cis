@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-06-18 04:31 UTC | Run: run-8c2cc61f1084
+Generated: 2026-06-18 05:43 UTC | Run: run-3f5ce724bddb
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 1b3f141 docs: add CIS Enforcement Architecture v3.0 — combined Claude outline + live system facts
+
+## docs/CIS_ENFORCEMENT_ARCHITECTURE_V3.md 
+
+## 2d177d6 chore: regenerate all exports (agents_md + hcp + manifest)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## ea3f6d5 chore: regenerate AGENTS.md from spine
 
@@ -82,19 +114,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/pipeline/reviewer_reconcile.py 
 
 ## tools/pipeline/staleness_check.py 
-
-## 742c6ed Tier 11D M1 fix: result field CHECK constraint — REVISE_REQUESTED leaves result unchanged
-
-## tools/pipeline/reviewer_closeout.py 
-
-## c476dbd Tier 11D: Reviewer-side handoff — reviewer_pickup, session_init, closeout, gate
-
-## tools/gates/gate_reviewer_closeout.sh 
-
-## tools/pipeline/reviewer_closeout.py 
-
-## tools/pipeline/reviewer_pickup.py 
-
-## tools/pipeline/reviewer_reconcile.py 
-
-## tools/pipeline/reviewer_session_init.py 
