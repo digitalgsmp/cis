@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
+Generated: 2026-06-18 04:31 UTC | Run: run-8c2cc61f1084
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -34,7 +34,7 @@ profiles regardless of which profile receives the session start signal.
 | V4 Drafter | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
 | V4 Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
 | V4 Implementer | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
-| Qwen (paused) | hermes-qwen | 8644 | Future judge/evaluator role |
+| Qwen | hermes-qwen | 8644 | Future judge/evaluator role |
 
 ## External Advisor Protocol
 

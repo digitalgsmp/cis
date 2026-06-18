@@ -1,396 +1,100 @@
 # Files Changed Recently
-Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
+Generated: 2026-06-18 04:31 UTC | Run: run-8c2cc61f1084
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
-## a04359c fix: correct Qwen paused→active in hcp_static, add Tier 11D pipeline specs
-
-## config/hcp_static.yaml 
-
-## docs/CIS_TIER_11D_REVIEWER_SIDE_HANDOFF_SPECIFICATION.md 
-
-## docs/TIER_11D_REVIEW1_FEEDBACK.md 
-
-## 71d625a feat(pipeline): intent column, second reviewer (Qwen), NeMo bypass, WAL mode
-
-## runtime/api/advisor.py 
-
-## runtime/orchestrator.py 
-
-## runtime/orchestrator_config.yaml 
-
-## runtime/rails/configs/cis_fast/rails/main.co 
-
-## runtime/schema/migrations/0013_workflow_runs_intent.sql 
-
-## tools/pipeline/drafter_start.py 
-
-## e2ef83d Regenerate context after session closeout
+## ea3f6d5 chore: regenerate AGENTS.md from spine
 
 ## AGENTS.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+## 35db8fa fix: revert broken clearance-token hook mechanism, restore 24h SQLite gate; add .gitignore for session dumps
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+## .gitignore 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+## docs/CIS_FINAL_BUILD_DIRECTION.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+## docs/CIS_FRONT_DOOR_BUILD_PLAN.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+## docs/CIS_FRONT_DOOR_SPECIFICATION.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+## docs/CIS_HERMES_HARDENING_SPECIFICATION.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+## docs/CIS_NEXT_MAJOR_PROJECT.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+## runtime/memory/current_context.json 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+## tools/hooks/cis_open_questions.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+## 2d485ff feat(hardening): cis_pre_tool_gate.sh — shell hook enforcement of pre-execution oversight
 
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+## tools/hooks/cis_pre_tool_gate.sh 
 
-## runtime/manifests/EXPORT_MANIFEST.json 
+## 4715758 fix: BLK-SEED-005 RESOLVED — false positive, patch #7 applied June 16. P0 removed from build plan.
 
-## 5e9e633 docs: regenerate context after BLK-SEED-005 blocker update
+## docs/CIS_FINAL_BUILD_DIRECTION.md 
 
-## AGENTS.md 
+## docs/CIS_INTEGRATION_ASSESSMENT.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+## 946b771 docs: re-frame CIS as standalone application powered by Hermes — not plugin, not add-on, full product identity
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+## docs/CIS_FINAL_BUILD_DIRECTION.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+## 9c6c83c docs: CIS final build direction — 9-phase Hermes integration, 16 failure modes mapped, 3-domain architecture
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+## docs/CIS_FINAL_BUILD_DIRECTION.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+## 425ad83 docs: WIAS/SWA/LIFE domain definitions from archive — Word/Image/Action/Sound/Web + Schedule field-use work + Home/Body/Mind
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+## docs/CIS_INTEGRATION_ASSESSMENT.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+## 63308c3 docs: CIS-Hermes correlation — v0.16.0 feature mapping, profiles confirmed, OQ-SEED-007 resolved
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+## docs/CIS_INTEGRATION_ASSESSMENT.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+## 8796c24 docs: CIS integration assessment — what CIS prevents, what Hermes provides, what must be preserved
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+## docs/CIS_INTEGRATION_ASSESSMENT.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+## ef01da0 docs: CIS Next Major Project — Hermes integration, abstraction layer, oversight transition, UI overhaul
 
-## runtime/manifests/EXPORT_MANIFEST.json 
+## docs/CIS_NEXT_MAJOR_PROJECT.md 
 
-## c002dc3 chore: remove stale Kanban smoke card reference from hcp_static.yaml, regenerate context
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## config/hcp_static.yaml 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 8c4e113 fix: correct build phase — Tier 11C COMPLETE, false transition demonstrated claim removed
+## 82b0a6b chore: regenerate AGENTS.md from spine — v0.16.0, oversight pipeline, Qwen Running
 
 ## AGENTS.md 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+## config/agents_static.yaml 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+## 756d0d9 feat: wire pre-execution oversight into gate_runner.sh (Gate 7)
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+## tools/gates/gate_pre_execution_oversight.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+## tools/gates/gate_runner.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+## 598a921 feat: pre-execution oversight pipeline — automatic staleness check + dual-review deliberation
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+## tools/gates/gate_deliberation.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+## tools/gates/gate_staleness.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+## tools/pipeline/pipeline_dispatch.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+## tools/pipeline/reviewer_reconcile.py 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+## tools/pipeline/staleness_check.py 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+## 742c6ed Tier 11D M1 fix: result field CHECK constraint — REVISE_REQUESTED leaves result unchanged
 
-## runtime/manifests/EXPORT_MANIFEST.json 
+## tools/pipeline/reviewer_closeout.py 
 
-## 15e21fc closeout: Tier 11C COMPLETE — Drafter-to-Reviewer handoff verified
+## c476dbd Tier 11D: Reviewer-side handoff — reviewer_pickup, session_init, closeout, gate
 
-## AGENTS.md 
+## tools/gates/gate_reviewer_closeout.sh 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+## tools/pipeline/reviewer_closeout.py 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+## tools/pipeline/reviewer_pickup.py 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+## tools/pipeline/reviewer_reconcile.py 
 
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/ADR-SEED-014_TEMPORARY_DRAFT_INITIATION_CONTRACT.md 
-
-## docs/CIS_TIER_11C_DRAFTER_REVIEWER_HANDOFF_SPECIFICATION.md 
-
-## docs/CIS_VERIFIER_REGISTRY_SPECIFICATION.md 
-
-## docs/CLOSEOUT_INSTRUCTION.md 
-
-## docs/SESSION_OPEN_ITEMS_20260614.md 
-
-## runtime/config/verifier_registry.yaml 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/schema/migrations/0012_workflow_run_link.sql 
-
-## tools/gates/gate_drafter_closeout.sh 
-
-## tools/pipeline/drafter_closeout.py 
-
-## tools/pipeline/drafter_session_init.py 
-
-## tools/pipeline/drafter_start.py 
-
-## tools/regenerate_verifier_registry.py 
-
-## tools/validate_verifier_registry.py 
-
-## 2b139d3 infra: create lifecycle tables for 11C prerequisite (migration 0011)
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## a08892c feat: lifecycle_events, dispatch_log, dispatch_events tables for 11C prerequisite
-
-## runtime/schema/migrations/0011_lifecycle_dispatch.sql 
-
-## 5bd4847 closeout: Tier 11B COMPLETE — Eric Gate APPROVE endpoint, 7 gates pass
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/api/dashboard_api.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/ui/src/api.js 
-
-## runtime/ui/src/pages/DashboardPage.jsx 
-
-## tools/gates/gate_11b_approve_schema.sh 
-
-## tools/gates/gate_11b_concurrency.sh 
-
-## tools/gates/gate_11b_idempotency.sh 
-
-## tools/gates/gate_11b_no_goal_reference_create.sh 
-
-## tools/gates/gate_11b_no_orchestrator_import.sh 
-
-## tools/gates/gate_11b_no_veto.sh 
-
-## tools/gates/gate_11b_one_post_only.sh 
-
-## 478228d closeout: Tier 11A COMPLETE — gates pass, context regenerated
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/gates/gate_11a_layout_no_overlap.sh 
-
-## tools/gates/gate_11a_nav_groups.sh 
-
-## tools/gates/gate_11a_no_writes.sh 
-
-## tools/gates/gate_11a_regression_pages.sh 
-
-## tools/gates/gate_11a_removed_nav.sh 
-
-## tools/gates/gate_11a_system_overview.sh 
-
-## 2ab4d1b feat(Tier 11A): Dashboard, nav groups, system overview
-
-## cis_kernel/source/SESSION_LOG.md 
-
-## docs/CIS_TIER_11_UI_USABILITY_SPECIFICATION.md 
-
-## runtime/api/dashboard_api.py 
-
-## runtime/api/system_overview.yaml 
-
-## runtime/app.py 
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/api.js 
-
-## runtime/ui/src/components/NavGroup.jsx 
-
-## runtime/ui/src/pages/DashboardPage.jsx 
-
-## runtime/ui_archive/HomePage.jsx 
-
-## 5be724d state: Tier 10 runtime-verified after CIS_SPINE_PATH env repair
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 62fba66 chore: commit regenerated HCP context after wrapper policy change
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## d2b824a fix: change AGENTS.md staleness check from HARD FAIL to WARNING
-
-## AGENTS.md 
-
-## runtime/config/bin/hermes.wrapper 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
+## tools/pipeline/reviewer_session_init.py 

@@ -1,10 +1,10 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-17
+Date: 2026-06-18
 Authority: Eric (Architect)
-Status: Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.
+Status: Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
 
-Generated: 2026-06-17 04:25 UTC | Run: run-bb3dfcb72059
+Generated: 2026-06-18 04:31 UTC | Run: run-8c2cc61f1084
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -12,9 +12,9 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Objective
 
-**Intent-pipeline operational (DeepSeek v4-pro draft + DeepSeek v4-pro & Qwen dual review). NeMo-bypassed on deliberation path (orchestrator calls gateways direct on :8645/:8643). WAL mode active on cis_memory.db. Commit 71d625a. Qwen active as second reviewer on port 8644 (model qwen3-vl-30b). Spine corrections recorded: BLK-SEED-005 root cause (ADR-SEED-014), lossy deliberation_rounds schema gap (OQ-SEED-006), 4-install migration scope contradiction (OQ-SEED-007). HCP static config corrected (Qwen paused -> active). BLK-SEED-005 STATUS (verified 2026-06-16): Prime is NOT actively poisoned — systemd MainPID=214645, HERMES_HOME=/home/eric/.hermes (correct), --replace flag is benign managed behavior. The get_default_hermes_root collapse is a LATENT architectural risk requiring profile-layout fix, not a runtime emergency. Hermes v0.13.0 — 3,571 commits behind; profile-based per-provider config available but untested at this version.**
+**Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.**
 
-**HEAD:** `a04359c`.
+**HEAD:** `ea3f6d5`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -186,7 +186,7 @@ does not satisfy Eric. No direct execution authority.
 | V4 Drafter (hermes-v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | No | Running |
 | V4 Reviewer (hermes-r1) | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Implementer (hermes-v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | No | Running |
-| Qwen (hermes-qwen) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b | none | No | Paused |
+| Qwen (hermes-qwen) | 8644 | /home/eric/.hermes-qwen | qwen3-vl-30b | none | No | Running |
 
 **Context:** AGENTS.md auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis. HERMES_CIS_BRIEFING_PATH retired.
 
@@ -259,7 +259,6 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 ## Active Blockers
 
 1. [BLK-SEED-004] Google Drive backup integrity unverified
-2. [BLK-SEED-005] BLK-SEED-005 CONFIRMED ACTIVE (2026-06-15): hermes-gateway-r1.service stuck in fail-restart loop (exit code 1, restarting every 5s). Port 8643 held by manual '--replace' process (pid 1601, HERMES_HOME=/home/eric/.hermes-r1 confirmed correct). Systemd cannot bind because port is taken. Manual process has been running since Jun14 and is healthy but unmanaged. Fix: stop manual process, let systemd bind cleanly. Root cause of auto-overwrite still unknown — service was repaired at commit 353cef5 but rebinding mechanism persists. Role identity confusion observed this session: model did not self-identify as Reviewer until explicitly directed, likely context-loading issue (AGENTS.md/TERMINAL_CWD) not process misbinding.
 
 ---
 
@@ -270,7 +269,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
 2. Tier 1 — Deterministic Verification Gates ✅ COMPLETE
-3. Tier 2 — Kanban Coordination Layer ✅ COMPLETE
+3. Tier 2 — Kanban Coordination Layer ⏸ DEFERRED
 4. Tier 3 — Pipeline Smoke Test ✅ COMPLETE
 5. Tier 4 — SQLite Spine ✅ COMPLETE
 6. Tier 5 — Context Export Pipeline ✅ COMPLETE
@@ -286,7 +285,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 16. Tier 7R — Intent-to-Workflow Architecture Specification ✅ COMPLETE
 17. 7R.1 — WorkIntent schema + scope registry + Micro1 exclusion ✅ COMPLETE
 18. 7R.2 — CISAdapter (CIS domain only) ✅ COMPLETE
-19. 7R.3 — SWAAdapter (validation use case) ✅ COMPLETE
+19. 7R.3 — SWAAdapter (validation use case) ⏸ DEFERRED
 20. 7R.4 — Process Manager (state machine) ✅ COMPLETE
 21. 7R.5 — Human approval gate integration ✅ COMPLETE
 22. 7R.6 — Dead Letter / blocked handling ✅ COMPLETE
@@ -294,7 +293,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 24. Tier 11A — Dashboard, Navigation, System Overview ✅ COMPLETE
 25. Tier 11B — Eric Gate Approval Record ✅ COMPLETE
 26. Tier 11C — Drafter-to-Reviewer Handoff ✅ COMPLETE
-27. Tier 11D — Reviewer-Side Handoff PROPOSED
+27. Tier 11D — Reviewer-Side Handoff ✅ COMPLETE
 28. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
 29. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
 30. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
@@ -367,11 +366,17 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 | ID | Question | Status |
 |----|----------|--------|
+| q-001 | ComfyUI role in CIS/WIAS — is it running? How integrated? | OPEN |
+| q-002 | Archive drives — /mnt/archive/ mounted? Contents? | OPEN |
+| q-003 | CIS Flask app (Tier 10 UI) — running? What does Eric see? | OPEN |
+| q-004 | Build plan FD.1-FD.4 — pending dual review + Eric approval | OPEN |
+| q-005 | Escalation wiring — what is actually wired for ChatGPT/Claude? | OPEN |
+| q-006 | Remaining gaps — anything else needed before CIS usable? | OPEN |
 | OQ-SEED-006 | deliberation_rounds schema is lossy: no reviewer_output column exists, only reviewer_signal. Reviewe | OPEN |
-| OQ-SEED-007 | 4-independent-installs migration scope contradiction: Qwen (port 8644) is out-of-scope in the spec b | OPEN |
-| OQ-SEED-005 | Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Imp | OPEN |
+| OQ-SEED-007 | 4-independent-installs migration scope contradiction: Qwen (port 8644) is out-of-scope in the spec b | RESOLVED (Resolved 2026-06-17) |
+| OQ-SEED-005 | Implementer scope expansion from inferred deliverables: Tier 6.4 exposed a scope-control gap. V4 Imp | RESOLVED (Resolved 2026-06-17) |
 | OQ-SEED-003 | Should stale context pack folder cleanup (Tier 5.7) wait for first successful generate_all.py run or | OPEN |
-| OQ-SEED-002 | hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric | OPEN |
+| OQ-SEED-002 | hermes-gateway.service HERMES_HOME anomaly (OQ-009) — prime profile HERMES_HOME confirmed /home/eric | DEFERRED (Deferred — BLK-SEED-005 resolved as false positive) |
 | OQ-SEED-001 | Google Drive backup integrity unverified | OPEN |
 | OQ-T44-001 | Tier 4.4 migration applied cleanly? | RESOLVED (Verified by gate) |
 | OQ-SEED-004 | Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/buil | OPEN |
@@ -383,9 +388,9 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 | Table | Rows |
 |-------|------|
 | workflow_runs | 9 |
-| deliberation_rounds | 8 |
+| deliberation_rounds | 9 |
 | project_decisions | 14 |
-| open_questions | 8 |
+| open_questions | 14 |
 | next_actions | 13 |
 | active_blockers | 6 |
 
