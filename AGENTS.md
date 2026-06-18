@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-18 05:50 UTC | Run: run-fix | Latest pipeline: run-gate-20260618
+Generated: 2026-06-18 20:51 UTC | Run: run-ca626a371380 | Latest pipeline: run-c3452fddb26d4
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -73,11 +73,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-c3452fddb26d4] Build CIS as a functioning application with real UI and enforced role constraint — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-d99af34b845c] DESIGN_TWO_PASS_CATALOGING_AND_INDEXING.md formal implementation specification — CONSENSUS_REACHED (2 rounds, 2026-06-18T18:14:13.181443+00:00)
 - [run-gate-20260618] Gate runner approval — all gates passed — CONSENSUS_REACHED (1 rounds, incomplete)
 - [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (3 rounds, incomplete)
 - [run-3ffbdb7147834] home automation system — CONSENSUS_REACHED (1 rounds, 2026-06-16T22:06:15.683507+00:00)
-- [run-55212af059994] expense tracker — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-d9004b2a08e84] test topic — CONSENSUS_REACHED (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)

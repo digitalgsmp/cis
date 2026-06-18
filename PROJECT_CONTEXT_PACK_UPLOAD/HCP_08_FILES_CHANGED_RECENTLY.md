@@ -1,7 +1,75 @@
 # Files Changed Recently
-Generated: 2026-06-18 05:43 UTC | Run: run-3f5ce724bddb
+Generated: 2026-06-18 20:51 UTC | Run: run-ca626a371380
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## dc935c4 chore: DEV-PIVOT naming convention - 16 docs unified under sequential numbering
+
+## AGENTS.md 
+
+## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
+
+## docs/DEV-PIVOT-02_ENFORCEMENT_ARCHITECTURE_V3.md 
+
+## docs/DEV-PIVOT-03_HERMES_HARDENING_SPEC.md 
+
+## docs/DEV-PIVOT-04_APPLICATION_ENFORCEMENT_SPEC.md 
+
+## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
+
+## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
+
+## docs/DEV-PIVOT-07_NEXT_MAJOR_PROJECT.md 
+
+## docs/DEV-PIVOT-08_FRONT_DOOR_SPEC.md 
+
+## docs/DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md 
+
+## docs/DEV-PIVOT-10_ADR-SEED-014_CONTRACT.md 
+
+## docs/DEV-PIVOT-11_CORPUS_SCRAPING_PROPOSAL.md 
+
+## docs/DEV-PIVOT-12_TWO_PASS_CATALOG_DESIGN.md 
+
+## docs/DEV-PIVOT-13_CATALOG_IMPLEMENTATION_SPEC.md 
+
+## docs/DEV-PIVOT-14_CLOSEOUT_INSTRUCTION.md 
+
+## docs/DEV-PIVOT-15_SESSION_OPEN_ITEMS.md 
+
+## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
+
+## 5521c98 chore: trim ADR-SEED-014 — BLK-SEED-005 was false positive, stop regenerating verbose root-cause analysis
+
+## AGENTS.md 
+
+## 7ba92b4 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 1b3f141 docs: add CIS Enforcement Architecture v3.0 — combined Claude outline + live system facts
 
@@ -90,27 +158,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## ef01da0 docs: CIS Next Major Project — Hermes integration, abstraction layer, oversight transition, UI overhaul
 
 ## docs/CIS_NEXT_MAJOR_PROJECT.md 
-
-## 82b0a6b chore: regenerate AGENTS.md from spine — v0.16.0, oversight pipeline, Qwen Running
-
-## AGENTS.md 
-
-## config/agents_static.yaml 
-
-## 756d0d9 feat: wire pre-execution oversight into gate_runner.sh (Gate 7)
-
-## tools/gates/gate_pre_execution_oversight.sh 
-
-## tools/gates/gate_runner.sh 
-
-## 598a921 feat: pre-execution oversight pipeline — automatic staleness check + dual-review deliberation
-
-## tools/gates/gate_deliberation.sh 
-
-## tools/gates/gate_staleness.sh 
-
-## tools/pipeline/pipeline_dispatch.sh 
-
-## tools/pipeline/reviewer_reconcile.py 
-
-## tools/pipeline/staleness_check.py 
