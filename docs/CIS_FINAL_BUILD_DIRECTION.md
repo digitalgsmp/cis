@@ -1,6 +1,6 @@
 # CIS Final Build Direction — Standalone Application, Hermes-Powered
 
-**Date:** 2026-06-17 | **Author:** R1 Reviewer | **Status:** PENDING ERIC APPROVAL
+**Date:** 2026-06-17 (revised same day) | **Author:** R1 Reviewer | **Status:** PENDING ERIC APPROVAL
 
 ## 1. Target End State
 
@@ -10,112 +10,46 @@ agentic backend: profiles for role separation, skills for procedural knowledge,
 MCP for inter-profile coordination, messaging for Eric Gate delivery, cron for
 automation, and the model picker for adversarial diversity.
 
-The relationship: **CIS is to Hermes what a SaaS app is to AWS.** The platform
-provides compute, storage, and primitives. The application provides the user
-experience, business logic, and domain-specific features. The user never logs
-into AWS. They log into the app.
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     CIS APPLICATION                       │
-│                                                          │
-│  ┌──────────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │  CIS Dashboard   │  │ WIAS Console │  │SWA Console │ │
-│  │  Build monitor   │  │ Project view │  │Intake view │ │
-│  │  Deliberation    │  │ Stage tracker│  │Appointment │ │
-│  │  Eric Gate       │  │ Asset browser│  │Notes       │ │
-│  └────────┬─────────┘  └──────┬───────┘  └─────┬──────┘ │
-│           │                   │                 │        │
-│  ┌────────┴───────────────────┴─────────────────┴──────┐ │
-│  │              CIS APPLICATION LOGIC                   │ │
-│  │  Domain classification, pipeline routing,            │ │
-│  │  FINAL_JSON protocol, Eric Gate flow,                │ │
-│  │  deliberation orchestration, build plan management   │ │
-│  └────────────────────────┬─────────────────────────────┘ │
-└───────────────────────────┼───────────────────────────────┘
-                            │
-┌───────────────────────────┴───────────────────────────────┐
-│               CIS → HERMES INTEGRATION LAYER               │
-│  Maps CIS application logic to Hermes primitives.          │
-│  Changes when Hermes updates. CIS application doesn't.     │
-└───────────────────────────┬───────────────────────────────┘
-                            │
-┌───────────────────────────┴───────────────────────────────┐
-│                   HERMES PLATFORM                          │
-│  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌────────┐        │
-│  │ Profiles │ │ Skills │ │   MCP    │ │ Model  │  ...   │
-│  │ (roles)  │ │(proced)│ │(interop) │ │ Picker │        │
-│  └──────────┘ └────────┘ └──────────┘ └────────┘        │
-│  ┌──────────┐ ┌──────────┐ ┌────────────────────┐        │
-│  │  Cron    │ │Messaging │ │ Sub-Agent Delegation│        │
-│  │(triggers)│ │(delivery)│ │ (parallel builds)   │        │
-│  └──────────┘ └──────────┘ └────────────────────┘        │
-└───────────────────────────────────────────────────────────┘
-```
-
-**The user experience:**
-- Opens CIS dashboard at `cis.local` (or hosted URL)
-- Sees build plan status, deliberation rounds, WIAS project stages, SWA intake
-- Eric approves from phone via Telegram — Hermes messaging delivers, CIS owns the flow
-- Never touches Hermes CLI, Hermes config, or Hermes dashboard
-
-**The architecture underneath:**
-- One Hermes install with 5 profiles (Drafter, Reviewer, Implementer, Prime, Qwen)
-- Profiles communicate via MCP — CIS application logic orchestrates them
-- Skills load per profile from the marketplace — CIS publishes its bundle once
-- Hermes cron triggers closeout, staleness checks, regeneration
-- Hermes sub-agents run parallel implementer builds
+The relationship: **CIS is to Hermes what a SaaS app is to AWS.**
 
 ## 2. What This Is NOT
 
-- **NOT a Hermes plugin or add-on** — you don't install CIS into Hermes. CIS is the product.
-- **NOT a Hermes dashboard theme** — the CIS UI is purpose-built for adversarial pipeline management, not a reskin.
-- **NOT a fork of Hermes** — Hermes updates independently. CIS stays current through the integration layer.
-- **NOT dependent on a specific Hermes version** — the integration layer absorbs API changes.
+- **NOT a Hermes plugin or add-on**
+- **NOT a Hermes dashboard theme**
+- **NOT a fork of Hermes** — Hermes updates independently
+- **NOT the home for SWA** — SWA is a separate application, a product OF the CIS process, with its own Hermes backend and its own repo
+- **NOT the home for WIAS** — WIAS is a creative pipeline methodology, pre-AI analog workflow being converted to LLM. Lives within the CIS creative platform as a domain, not a separate app.
 
-## 3. How the 16 Failure Modes Are Addressed
+## 3. Current State
 
-Every CIS guard-rail maps to a specific Hermes primitive in the target architecture.
+### What's Complete
 
-### 3.1 Trust Failures → Profiles + Skills
+| Component | Status |
+|-----------|--------|
+| Build plan (25/27 nodes) | COMPLETE |
+| Deliberation engine (R1 + Qwen) | COMPLETE |
+| Gate runner (5 gates) | COMPLETE |
+| CIS UI / display views (Tier 10) | COMPLETE |
+| Drafter-to-Reviewer handoff (Tier 11C) | COMPLETE |
+| Reviewer-side handoff (Tier 11D) | COMPLETE |
+| Hermes hardening v2.0 (shell hooks) | COMPLETE — deployed on 4 profiles |
+| Reconciliation engine | COMPLETE |
+| Staleness check engine | COMPLETE |
 
-| Failure | CIS Guard-Rail | Hermes Target |
-|---------|---------------|---------------|
-| Self-reported completion | Verification Hardening Rule | Reviewer profile auto-verifies implementer output via MCP query |
-| Hallucinated claims | Evidence-Backed Response Rule | Skill enforces COMMAND/OUTPUT format; dashboard shows raw evidence |
-| Rubber-stamp reviews | Dual-reviewer deliberation | Two profiles (R1 + Qwen) with different models, cross-feed objections via MCP |
+### Critical Gap: Eric Isn't Using CIS
 
-### 3.2 Knowledge Failures → Dashboard + Cron
+Eric interacts with Hermes bots directly via Telegram. The CIS pipeline
+(Drafter → Reviewer → Eric Gate → Implementer) exists but never fires
+for real work. Eric sends messages to @cis_hermes_r1bot — the router,
+deliberation engine, and gate sequence are bypassed on every interaction.
 
-| Failure | CIS Guard-Rail | Hermes Target |
-|---------|---------------|---------------|
-| Training-data staleness | Staleness gate | Hermes `web_search` skill, cron-checked daily |
-| Context amnesia | SQLite spine + AGENTS.md | Hermes state DB per profile + dashboard build monitor |
-| Version drift | generate_agents_md.py from DB | Dashboard live view; AGENTS.md as cron-generated export snapshot |
-
-### 3.3 Process Failures → Profiles + Skills + Cron
-
-| Failure | CIS Guard-Rail | Hermes Target |
-|---------|---------------|---------------|
-| Scope creep | Approved File Manifest | Implementer profile has restricted toolset; Reviewer verifies manifest |
-| Constraint bypass | NOT NULL FK enforcement | Spine schema with CHECK constraints; gate skills verify |
-| Pipeline bypass | Gate sequence | Oversight SKILL hooks tool calls; no write without gate record |
-| Role confusion | HERMES_HOME + gateway endpoint | Per-profile SOUL.md + toolset configuration; Hermes enforces |
-| Silent gate failures | PASS/FAIL + COMMAND/OUTPUT | Gate skills produce structured output; dashboard shows gate history |
-| Concurrency races | Atomic UPDATE...WHERE + rowcount | Hermes cron ensures single dispatch; sub-agents inherit isolation |
-
-### 3.4 Protocol Failures → MCP + FINAL_JSON
-
-| Failure | CIS Guard-Rail | Hermes Target |
-|---------|---------------|---------------|
-| Unstructured output | FINAL_JSON required | Skill enforces; MCP tool returns structured verdict |
-| Missing FINAL_JSON | Repair prompt → fallback scan | Skill retry + escalation to Eric via messaging |
-| Fake consensus | Cross-feed objections | MCP coordination: R1 response → Qwen review → compare → cross-feed if split |
-| Single-model blind spots | Two reviewers, different models | Model picker: Reviewer=deepseek-v4-pro, Qwen=qwen3-vl-30b, External=Claude via MCP |
+**CIS needs a front door.** One entry point. Eric submits an intent.
+CIS classifies it, routes it through the full adversarial pipeline,
+and returns results. Eric approves from his phone.
 
 ## 4. Domain Coverage
 
-The three domains share one pipeline, one spine, one approval gate.
+Three domains share one pipeline, one spine, one approval gate.
 
 ```
                        WorkIntent
@@ -124,96 +58,81 @@ The three domains share one pipeline, one spine, one approval gate.
                            │
          ┌─────────────────┼─────────────────┐
          │                 │                 │
-    CIS Domain         WIAS Domain       SWA Domain
-    (adversarial       (creative         (case
-     build pipeline)    production)       management)
+    CIS Domain         WIAS Domain       External Projects
+    (adversarial       (creative         (SWA, LIFE, etc.)
+     build pipeline)    production)      
          │                 │                 │
-    ┌────┴────┐      ┌────┴────┐      ┌────┴────┐
-    │Drafter  │      │WIAS     │      │SWA      │
-    │Reviewer │      │Adapter  │      │Adapter  │
-    │Implem-  │      │         │      │         │
-    │enter    │      │         │      │         │
-    └────┬────┘      └────┬────┘      └────┬────┘
-         │                 │                 │
-         └─────────────────┼─────────────────┘
-                           │
-                    Process Manager
-                           │
-                     Eric Gate
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-         CIS Action    WIAS Action  SWA Action
+    ┌────┴────┐      ┌────┴────┐      Deferred — separate
+    │Drafter  │      │WIAS     │      apps built through
+    │Reviewer │      │Adapter  │      the CIS process
+    │Implement│      │         │
+    └────┬────┘      └────┬────┘
+         │                 │
+         └─────────────────┘
+                  │
+           Process Manager
+                  │
+            Eric Gate
 ```
 
-**CIS Domain:** Drafter authors specs, Reviewer verifies, Implementer builds. Eric approves.
-This is live today — Tier 11D complete, 25/27 build nodes done.
+**CIS Domain:** Adversarial build pipeline. Drafter authors, Reviewer verifies,
+Implementer builds. Eric approves. Live today — Tier 11D complete.
 
-**WIAS Domain:** Project intake → WIAS stage inference → tool/template surfacing →
-production tracking → output → knowledge return. Multi-exit per stage. This is the
-next domain to operationalize after CIS build completes.
+**WIAS Domain:** Word/Image/Action/Sound/Web — pre-AI analog creative pipeline
+being converted to LLM workflow. WIAS adapter exists (Tier 7R.2) for intent
+classification. Full operationalization deferred until CIS is feature-complete.
 
-**SWA Domain:** Validation use case only today (Tier 7R.3 SWAAdapter). CIS classifies
-SWA intents but does not implement SWA features. Full SWA operationalization is
-deferred — SWA is a separate project with its own development lifecycle.
+**External Projects (SWA, LIFE):** Separate applications, each with their own
+Hermes backend and repo. Built THROUGH the CIS process, not integrated INTO CIS.
+SWA removed from CIS build plan 2026-06-17.
 
-**LIFE Domain:** Home/Body/Mind. Identified in the WIAS Project Manager spreadsheet.
-No adapter, no implementation. Deferred until WIAS is operationalized.
+## 5. The Archive and Knowledge Base
 
-## 5. Build Sequence
+The archive drives contain Eric's own words — collected over time because LLMs
+couldn't understand the vision being built. This is the **source material** for
+the shared knowledge base.
 
-Eight phases, each with a defined Hermes primitive as the target.
+**The archive is the knowledge base.** It's not MCP. It's not a vector database.
+Those are access layers. The archive is the raw material — Eric's writing, his
+vision, his workflow documents.
 
-| Phase | What | Hermes Primitive | Prerequisite |
-|-------|------|-----------------|-------------|
-| **P1** | Collapse 5 installs → 1 install, 5 profiles | **Profiles system** | None |
-| **P2** | Define per-profile SOUL.md + skill bundles | **Skills marketplace** | P1 |
-| **P3** | CIS ↔ Hermes integration layer (MCP-based) | **MCP client/server** | P1 |
-| **P4** | Oversight skill (tool-call hooks) | **Skills enforcement** | P2, P3 |
-| **P5** | Gate migration (bash → skills) | **Skills marketplace** | P4 |
-| **P6** | UI overhaul — CIS dashboard (standalone app surface) | CIS application | P3 |
-| **P7** | External advisor integration | **MCP client** | P3 |
-| **P8** | WIAS domain adapter operational | **Profiles + MCP** | P5 |
-| **P9** | SWA domain adapter operational | **Profiles + MCP** | P8 |
+Role of the VDB (Chroma, Tier 9): Vectorized access layer. Enables semantic
+search across the archive. Already built (Tier 9 COMPLETE).
 
-### Phase Detail
+Role of MCP: Inter-profile coordination. Allows Drafter to query the knowledge
+base, Reviewer to cross-reference claims, Implementer to verify against specs.
+NOT the knowledge base itself — the transport layer.
 
-**P1 — Profiles:** `hermes profile create drafter`, `hermes profile create reviewer`,
-etc. Migrate config.yaml, .env, SOUL.md from current installs. Verify each profile's
-gateway starts on its port. ~4 hours. Starts from one install — BLK-SEED-005 already
-resolved (false positive; prime gateway was never poisoned; patch #7 applied June 16).
+**Open question:** How are the archive drives integrated into the current build
+plan? This needs its own specification before wiring.
 
-**P2 — SOUL.md + Skills:** Each profile gets a role-specific SOUL.md (Drafter: "You
-author specifications. You do not implement. You do not review."). Each profile
-auto-loads its role skills from the marketplace. ~2-4 hours.
+## 6. Build Sequence (Revised)
 
-**P3 — Abstraction Layer:** MCP tools per profile: `review_proposal`, `draft_spec`,
-`implement_directive`, `closeout_tier`. Orchestrator queries via MCP instead of
-direct HTTP. External advisors (ChatGPT, Claude) connect via MCP. ~4-8 hours.
+The profiles migration and Hermes refactor are deferred until CIS is
+feature-complete and Eric is actively using the pipeline.
 
-**P4 — Oversight Skill:** Loaded automatically when working in CIS project directory.
-Hooks: before `write_file`/`patch` → check for deliberation record. Before `sqlite3 INSERT` →
-check for migration approval. Before `git commit` → verify gate sequence passed. ~4-8 hours.
+| Phase | What | Status |
+|-------|------|--------|
+| **NOW** | Wire the CIS front door — Eric submits intents, pipeline fires | 🔴 Critical |
+| **NOW** | Archive/knowledge base integration specification | 🔴 Critical |
+| **SOON** | Complete remaining CIS functionality (external escalation wiring) | ⬜ Deferred |
+| **LATER** | Profiles migration (P1) | ⬜ After CIS is feature-complete |
+| **LATER** | UI overhaul + abstraction layer | ⬜ After profiles |
+| **DEFERRED** | SWA application | ⬜ Separate project |
+| **DEFERRED** | WIAS full operationalization | ⬜ After CIS complete |
+| **PAUSED** | External escalation API keys | Keep wiring, don't activate charges |
 
-**P5 — Gate Migration:** 37 bash gates → Hermes skills. Keep bash as audit trail.
-Skills encode the logic; bash verifies deterministically. ~4-8 hours.
+### Why Profiles Migration Is Deferred
 
-**P6 — UI Overhaul:** Dashboard views: build plan monitor (nodes, gates, closeout),
-deliberation viewer (R1 vs Qwen side-by-side), Eric Gate panel (approve/revise/kill),
-staleness feed, profile manager. Prefer dashboard extensions over custom React. ~8-16 hours.
+1. CIS is 90% complete but Eric isn't using the pipeline — the front door
+   problem is higher priority than architectural refactoring
+2. The current 5-install architecture WORKS. The hardening we just deployed
+   works on it. There's no urgency to migrate.
+3. Migrating to profiles while the front door is broken creates risk without
+   benefit — we'd be refactoring infrastructure nobody's walking through
+4. Finish CIS, make it usable, THEN refactor onto profiles
 
-**P7 — External Advisors:** Register ChatGPT and Claude as MCP tools. Remove custom
-`call_openai()`/`call_anthropic()` from reconcile.py. External escalation fires via
-MCP when local reviewers deadlock. ~2-4 hours.
-
-**P8 — WIAS Operational:** WIAS adapter classifies creative intents, infers WIAS stage,
-surfaces stage-appropriate tools/templates. Projects tracked through stages. ~8-16 hours.
-
-**P9 — SWA Operational:** SWA adapter for case management intents. Client intake,
-appointment tracking, note generation. Full SWA pipeline but SWA features remain
-in the SWA project. ~8-16 hours.
-
-## 6. What Stays CIS, What Moves to Hermes
+## 7. What Stays CIS, What Moves to Hermes (Eventually)
 
 | Stays CIS (Methodology) | Moves to Hermes (Implementation) |
 |------------------------|----------------------------------|
@@ -224,35 +143,34 @@ in the SWA project. ~8-16 hours.
 | Build plan spine (DB) | custom Flask UI → dashboard views |
 | Dual-model deliberation | staleness script → web_search skill |
 | Role enforcement (ADR-SEED-003/004) | Eric Gate delivery → messaging |
-| Domain classification (CIS/WIAS/SWA) | external advisors → MCP tools |
+| The archive (Eric's knowledge base) | VDB access layer (Chroma, Tier 9) |
 
-## 7. What Does NOT Change
+## 8. What Does NOT Change
 
-- **CIS is still CIS.** Adversarial review, evidence-backed responses, Eric Gate,
-  FINAL_JSON — these are the methodology. They don't change when the implementation
-  moves to Hermes primitives.
-- **The spine is still authoritative.** `cis_memory.db` remains the source of truth.
-  Profiles query it via MCP; it does not become per-profile state.
-- **Eric always approves.** No auto-execute. The Eric Gate is human-in-the-loop,
-  now delivered through Hermes messaging to any platform.
-- **Hermes does not absorb CIS.** CIS registers on Hermes, not inside it. The
-  abstraction layer ensures CIS methodology survives Hermes version updates.
+- **CIS is still CIS.** Methodology doesn't change when implementation moves.
+- **The spine is authoritative.** `cis_memory.db` remains source of truth.
+- **Eric always approves.** No auto-execute. Human-in-the-loop.
+- **Hermes does not absorb CIS.** CIS registers on Hermes, not inside it.
+- **SWA is separate.** Removed from CIS build plan. Own repo, own backend.
+- **Escalation is paused.** API keys not activated. Eric manually audits with Claude/ChatGPT.
 
-## 8. First Action
+## 9. Next Actions (Immediate)
 
-Start with P1 — collapse to profiles. BLK-SEED-005 was investigated June 16 and
-found to be a false positive: prime gateway was never actively poisoned, the
-`--replace` flag is benign managed behavior, patch #7 already applied. No blocker
-stands in the way.
+1. **Wire the CIS front door** — Eric needs one entry point that routes intents
+   through the full pipeline. The router, deliberation engine, and gates exist.
+   They need to fire when Eric sends a message, not sit idle.
 
-P1 → P2 → P3 → then P4. Profiles first, then the oversight skill has a home.
+2. **Archive integration specification** — Define how the archive drives
+   connect to the shared knowledge base, how the VDB indexes them, and how
+   MCP provides access to all profiles.
 
-## 9. Approval Conditions
+3. **Let the hardening settle** — Use CIS for a few days. Verify shell hooks
+   fire correctly in real use. Find edge cases before building more on top.
 
-Eric must explicitly approve this direction before any implementation begins.
-This document defines the target architecture for the next major push.
-Once approved, implementation proceeds P0 → P1 → P2...
+## 10. Approval
 
 ```
 Decision: APPROVE / REVISE / BLOCK
 ```
+
+Eric must explicitly approve this revised direction.
