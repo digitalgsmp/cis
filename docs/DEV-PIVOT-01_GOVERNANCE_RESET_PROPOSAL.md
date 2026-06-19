@@ -137,9 +137,9 @@ The current build direction:
 Build the functional intake path:
 
 1. Inventory available VM files, old Hermes sessions, CIS docs, SWA docs,
-   WIAS/WIASW docs, build plans, scratchpads, and handoffs.
+   WIASW workflow resources, build plans, scratchpads, and handoffs.
 2. Extract Eric's verbatim intent descriptions with source provenance.
-3. Categorize into CIS infrastructure, WIAS creative pipeline, SWA field-work,
+3. Categorize into CIS infrastructure, SWA field-work (including WIASW creative workflow),
    mixed, or unknown.
 4. Stage extracted desires/features into a wishlist/backlog table.
 5. Add a simple UI for Eric to approve, reject, merge, or prioritize wishlist items.
@@ -220,9 +220,9 @@ AGENTS.md serves Hermes-native internal context. Same reset principles apply:
 
 Stop expanding governance documents. Build the functional intake path:
 
-1. **Inventory the corpus.** All available VM files, old Hermes sessions, CIS docs, SWA docs, WIAS/WIASW docs, build plans, scratchpads, and handoffs.
+1. **Inventory the corpus.** All available VM files, old Hermes sessions, CIS docs, SWA docs, WIASW workflow resources, build plans, scratchpads, and handoffs.
 2. **Extract verbatim intent.** Pull Eric's exact words describing what he wants, with source file provenance. No summaries.
-3. **Categorize.** Sort into: CIS infrastructure, WIAS creative pipeline, SWA field-work app, mixed, or unknown.
+3. **Categorize.** Sort into: CIS infrastructure, SWA field-work app (including WIASW creative workflow), mixed, or unknown.
 4. **Stage into wishlist.** A `wishlist` table in the spine: description, source provenance, category, status (pending/approved/rejected/merged), priority.
 5. **Build approval UI.** Simple UI at port 5000 for Eric to approve, reject, merge, or prioritize wishlist items. One page. Buttons that work.
 6. **Convert to build-plan nodes.** Approved wishlist items → proposed `build_plan_nodes` rows.

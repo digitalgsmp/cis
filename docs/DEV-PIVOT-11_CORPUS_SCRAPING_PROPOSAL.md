@@ -49,16 +49,16 @@ Relevant tables for intent extraction:
 | `lifecycle_events` | State transitions |
 | `session_closeouts` | Session close records with generated context |
 
-### 1.4 Archive Structure — WIAS Development Files
+### 1.4 Archive Structure — WIASW Workflow Resources
 
 **Location:** `/mnt/archive/WIAS/`
 
 | Directory | Contents | Relevance |
 |---|---|---|
-| `0admin/` | WIAS Project Manager.xlsx (705KB), WIAS Project App.xlsx (187KB), WIAS Project Manager v1 (746KB) | **PRIMARY** — WIAS project definition spreadsheets |
+| `0admin/` | WIAS Project Manager.xlsx (705KB), WIAS Project App.xlsx (187KB), WIAS Project Manager v1 (746KB) | **PRIMARY** — WIASW workflow definition spreadsheets (used by SWA) |
 | `1life/` | Life domain: 1space, 2mind, 3body | Life management structure |
-| `2production/` | Production pipeline: 1word, 2image, 3action, 4sound, 5web, 6products | WIAS creative production workflow |
-| `3ideabank/` | Idea definitions + ideas (A-Z catalog) | Creative ideas to be developed through WIAS/CIS |
+| `2production/` | Production pipeline: 1word, 2image, 3action, 4sound, 5web, 6products | WIASW creative production workflow |
+| `3ideabank/` | Idea definitions + ideas (A-Z catalog) | Creative ideas to be developed through WIASW workflow |
 | `WIAS/` | WIAS Project App.xlsx (187KB), WIAS Project Manager.xlsx (705KB), WIASProjects.xlsx (748KB) | Duplicate/versioned spreadsheets |
 
 ### 1.5 CIS Plain Language Build Files
@@ -95,10 +95,10 @@ Relevant tables for intent extraction:
 4. **SWA chat transcripts** (584 files in `01_CORE/`) — Eric's SWA development conversations
 
 **Tier 2 — High value:**
-5. WIAS production pipeline structure (1word through 6products) — Creative workflow design
+5. WIASW production pipeline structure (1word through 6products) — Creative workflow design
 6. SWA triage_master_list.csv (1.6MB) — Classification data
 7. SWA email export — Eric's SWA correspondence
-8. Idea Bank A-Z — Creative projects to be developed through WIAS/CIS
+8. Idea Bank A-Z — Creative projects to be developed through WIASW workflow
 
 **Tier 3 — Supplemental:**
 9. Hermes session files (~513MB) — Recent development iteration
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS wishlist (
     source_file TEXT,
     source_line INTEGER,
     source_timestamp TEXT,
-    project TEXT CHECK(project IN ('CIS','SWA','WIAS','MIXED','UNKNOWN')),
+    project TEXT CHECK(project IN ('CIS','SWA','MIXED','UNKNOWN')),
     category TEXT,
     priority INTEGER DEFAULT 0,
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','merged','duplicate')),
@@ -217,17 +217,17 @@ All `.tar.gz` backups may contain older versions of session files, databases, an
 
 ## 4. VM and Storage Assessment Framework
 
-Before building three separate projects, assess:
+Before building the two projects (CIS and SWA), assess:
 
 1. **Storage allocation** — Does each project need its own partition? Current layout:
-   - `/mnt/projects` (250GB): CIS + could host SWA and WIAS repos
+   - `/mnt/projects` (250GB): CIS + SWA repos
    - `/mnt/archive` (9.1TB): Long-term storage, backups, media assets
    - `/mnt/cache` (111.8GB): Fast scratch space
    - `/mnt/models` + `/mnt/models2` (~465GB): AI model storage
 
-2. **Isolation model** — Per ADR-SEED-010: each CIS-managed project gets its own git repo and project root. SWA and WIAS should follow same pattern.
+2. **Isolation model** — Per ADR-SEED-010: each CIS-managed project gets its own git repo and project root. SWA follows same pattern.
 
-3. **Shared infrastructure** — Hermes profiles, gateway, Flask/React stack. CIS provides agentic backend. SWA and WIAS are separate applications using CIS as their engine.
+3. **Shared infrastructure** — Hermes profiles, gateway, Flask/React stack. CIS provides agentic backend. SWA is a separate application using CIS as its engine.
 
 4. **Database strategy** — Per-project spines or shared spine with project_id filtering? Resolution needed before build begins.
 

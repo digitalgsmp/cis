@@ -135,7 +135,7 @@ Logic:
     os.walk(root)
     skip .git/, __pycache__/, node_modules/, .venv/, *.pyc
     stat each file
-    assign project tag: CIS, SWA, WIAS, HERMES_SESSIONS, or ARCHIVE
+    assign project tag: CIS, SWA, HERMES_SESSIONS, or ARCHIVE
     write record
 
 Exit codes: 0 = success, 1 = no files found, 2 = root directory missing
@@ -271,7 +271,7 @@ Reads from catalog/eric_catalog.db
 Options:
   --query     FTS5 search string (required, supports boolean: AND/OR/NOT)
   --domain    Filter: cis, swa, wias, shared (comma-separated OK)
-  --project   Filter: CIS, SWA, WIAS, SHARED, UNKNOWN
+  --project   Filter: CIS, SWA, SHARED, UNKNOWN
   --speaker   Filter: eric_verbatim, eric_framing, system_generated, unknown
   --limit     Max results (default: 20)
   --format    text (default, readable) or json (machine-parseable)
@@ -288,7 +288,7 @@ Exit codes: 0 = success, 1 = query syntax error, 2 = no matches
 usage: generate_build_plan.py [-h] [--db DB] [--project PROJECT] [--output-dir OUTPUT_DIR]
 
 Generate per-project build plan from catalog queries.
-Produces: catalog/build_plans/{cis,swa,wias,shared_infrastructure}.md
+Produces: catalog/build_plans/{cis,swa,shared_infrastructure}.md
 
 Input:  catalog/eric_catalog.db
 Output: Markdown build plan documents
@@ -296,7 +296,6 @@ Output: Markdown build plan documents
 Per-project queries:
   CIS:    SELECT raw_text FROM eric_catalog WHERE project='CIS' AND speaker IN ('eric_verbatim','eric_framing') ORDER BY source_timestamp
   SWA:    SELECT raw_text FROM eric_catalog WHERE project='SWA' AND speaker IN ('eric_verbatim','eric_framing') ORDER BY source_timestamp
-  WIAS:   SELECT raw_text FROM eric_catalog WHERE project='WIAS' AND speaker IN ('eric_verbatim','eric_framing') ORDER BY source_timestamp
   SHARED: SELECT raw_text FROM eric_catalog WHERE project='SHARED' AND speaker IN ('eric_verbatim','eric_framing') ORDER BY source_timestamp
 
 Output format: Each build plan is a markdown file with:
@@ -453,7 +452,7 @@ Output: Self-contained HTML file with embedded D3.js (CDN-loaded, no local deps)
 
 Visualization:
   - Force-directed layout (d3-force)
-  - Node color by project: CIS=blue, SWA=green, WIAS=orange, SHARED=gray
+  - Node color by project: CIS=blue, SWA=green, SHARED=gray
   - Node shape by type: file=square, requirement=circle, decision=diamond,
     build_task=triangle, infrastructure=hexagon
   - Edge color by type: DEPENDS_ON=red, REFERENCES=blue, CONTAINS=gray,

@@ -490,7 +490,7 @@ Sources                          Extraction              Organization
 Hermes session logs  ─┐                                 
   (~/.hermes*/sessions/)├──→ Extract Eric's    ──→ CIS goals/intent
 Saved chat exports    ─┤    messages only          SWA goals/intent  
-  (ChatGPT, Claude,    │    (role='user' or        WIAS goals/intent
+  (ChatGPT, Claude,    │    (role='user' or        SWA/WIASW workflow
    ad hoc files)      ─┤     speaker='Eric')       Architecture vision
 Architecture atlas     │                            Contradictions
   extraction analyses ─┘    Skip: LLM responses,    Evolution over time
@@ -515,7 +515,7 @@ Architecture atlas     │                            Contradictions
 2. **Already-extracted first** — the 21 architecture atlas extraction analyses
    are pre-processed Eric intent. Index these immediately as the seed corpus.
 3. **Organize by domain** — tag each extracted statement with project domain
-   (CIS, SWA, WIAS, architecture, general) for targeted retrieval.
+   (CIS, SWA, WIASW workflow, architecture, general) for targeted retrieval.
 4. **Surface evolution** — preserve timestamps. Eric's thinking evolved.
    Early ideas vs refined concepts are both valuable.
 5. **Surface contradictions** — if Eric said different things at different
@@ -1039,7 +1039,7 @@ to search Eric's intent before responding:
 {
     "name": "cis_search_intent",
     "description": (
-        "Search Eric's stated intent and goals across CIS, SWA, and WIAS projects. "
+        "Search Eric's stated intent and goals across CIS and SWA projects (including WIASW workflow). "
         "Use BEFORE drafting proposals or making architectural decisions to ensure "
         "alignment with Eric's vision. Returns verbatim excerpts from Eric's own words."
     ),

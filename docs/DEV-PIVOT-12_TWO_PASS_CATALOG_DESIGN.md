@@ -9,7 +9,7 @@
 
 ## Pass 1: Flat Catalog — Eric's Words, Per-Project, Immediately Usable
 
-**Goal:** Extract every verbatim Eric statement about CIS, SWA, and WIAS into a flat, searchable catalog. Produce per-project build plans from Eric's actual words. No graph theory. No dependency inference. Just Eric's words, categorized, ready to read.
+**Goal:** Extract every verbatim Eric statement about CIS and SWA (including WIASW workflow resources) into a flat, searchable catalog. Produce per-project build plans from Eric's actual words. No graph theory. No dependency inference. Just Eric's words, categorized, ready to read.
 
 **Design principle:** Pass 1 preserves work that doesn't have to be figured out again. Every extracted fragment has source provenance. Nothing is summarized. Nothing is inferred.
 
@@ -21,13 +21,13 @@ Source files → Text extraction → Eric-filter → Domain tagging → Catalog 
 
 **Step 1: File Discovery**
 
-Walk three root directories, catalog every file with metadata:
+Walk source directories for two projects, catalog every file with metadata:
 
 | Project | Root | File types |
-|---|---|---|
+|---|---|---|---|
 | CIS | `/mnt/projects/cis/` | .md, .yaml, .py, .json, .db |
-| WIAS | `/mnt/archive/WIAS/` | .xlsx, .xlsb, .md, .csv |
 | SWA | `/mnt/projects/swa/` | .md, .py, .csv, .json, .txt |
+| SWA/WIASW | `/mnt/archive/WIAS/` | .xlsx, .xlsb, .md, .csv (WIASW workflow resources used by SWA) |
 | Sessions | `~/.hermes*/sessions/` | .jsonl |
 | Archive | `/mnt/archive/` | .md, .txt, .xlsx, .mmap |
 
@@ -81,7 +81,7 @@ CREATE TABLE eric_catalog (
     source_file TEXT NOT NULL,
     source_line INTEGER,
     source_timestamp TEXT,
-    project TEXT NOT NULL CHECK(project IN ('CIS','SWA','WIAS','SHARED','UNKNOWN')),
+    project TEXT NOT NULL CHECK(project IN ('CIS','SWA','SHARED','UNKNOWN')),
     domain TEXT NOT NULL,
     speaker TEXT NOT NULL CHECK(speaker IN ('eric_verbatim','eric_framing','system_generated','unknown')),
     raw_text TEXT NOT NULL,
@@ -100,15 +100,13 @@ CREATE VIRTUAL TABLE eric_catalog_fts USING fts5(raw_text, content=eric_catalog,
 
 ### 1.2 Per-Project Build Plans
 
-From the flat catalog, generate three build plans:
+From the flat catalog, generate two build plans plus shared infrastructure:
 
 **CIS Build Plan:** Filter `project = 'CIS'`. Source: Plain Language Roadmap (§Phases PD-2) + Hermes sessions + spine decisions. Output: ordered build phases.
 
-**SWA Build Plan:** Filter `project = 'SWA'`. Source: SWA kernel structure + chat transcripts + triage_master_list.csv. Output: clinical modules, data pipeline, guardrail system.
+**SWA Build Plan:** Filter `project = 'SWA'`. Source: SWA kernel structure + chat transcripts + triage_master_list.csv. Output: clinical modules, data pipeline, guardrail system. Includes WIASW workflow resources extracted from `/mnt/archive/WIAS/` project manager spreadsheets (creative production workflow, domain tools).
 
-**WIAS Build Plan:** Filter `project = 'WIAS'`. Source: WIAS Project Manager spreadsheets + production pipeline structure. Output: creative production workflow, domain tools.
-
-**Shared Infrastructure:** Filter `project = 'SHARED'`. Output: VM/storage allocation, Hermes gateway config, Docker setup. Referenced by all three project plans.
+**Shared Infrastructure:** Filter `project = 'SHARED'`. Output: VM/storage allocation, Hermes gateway config, Docker setup. Referenced by both project plans.
 
 ### 1.3 Pass 1 Outputs
 
@@ -121,7 +119,7 @@ catalog/
 ├── build_plans/
 │   ├── cis_build_plan.md        # From Eric's CIS words
 │   ├── swa_build_plan.md        # From Eric's SWA words
-│   ├── wias_build_plan.md       # From Eric's WIAS words
+│   │   └── swa_wiasw_resources.md # WIASW workflow resources (part of SWA)
 │   └── shared_infrastructure.md # Cross-project infrastructure
 └── wishlist.db                  # Wishlist items extracted from catalog
 ```
@@ -143,9 +141,9 @@ tools/catalog/
 
 ## Pass 2: Knowledge Graph — Structural Dependencies, Unified Build Order
 
-**Goal:** Consume Pass 1 outputs. Build a knowledge graph connecting files, requirements, decisions, and build tasks across all three projects. Produce a unified dependency graph showing what must be built before what, across projects.
+**Goal:** Consume Pass 1 outputs. Build a knowledge graph connecting files, requirements, decisions, and build tasks across both projects. Produce a unified dependency graph showing what must be built before what, across projects.
 
-**Design principle:** Pass 2 discovers what Pass 1 couldn't — that a SWA guardrail depends on a CIS gate script, that a WIAS rendering pipeline needs a model from shared infrastructure, that a decision in one project contradicts a requirement in another.
+**Design principle:** Pass 2 discovers what Pass 1 couldn't — that a SWA guardrail depends on a CIS gate script, that a SWA rendering pipeline (WIASW workflow) needs a model from shared infrastructure, that a decision in one project contradicts a requirement in another.
 
 ### 2.1 Node Types
 
@@ -156,7 +154,7 @@ tools/catalog/
 | `decision` | eric_catalog where category='decision' | ADR-SEED-010: project isolation model |
 | `build_task` | Pass 1 build plans | "Build intake pipeline" |
 | `dependency` | Inferred from text | SWA guardrail → CIS gate script |
-| `contradiction` | Cross-reference | "WIAS needs real-time rendering" vs "model runs on CPU only" |
+| `contradiction` | Cross-reference | "SWA needs real-time rendering" vs "model runs on CPU only" |
 | `infrastructure` | Shared infra plan | VM storage allocation, Docker config |
 
 ### 2.2 Edge Types
@@ -201,7 +199,7 @@ Cross-reference requirements across projects. Flag pairs where:
 
 **Phase 4: Unified build order**
 
-Topological sort of the dependency graph. Nodes with no unfulfilled dependencies → ready to build. Output: ordered build sequence across all three projects.
+Topological sort of the dependency graph. Nodes with no unfulfilled dependencies → ready to build. Output: ordered build sequence across both projects.
 
 ### 2.4 Graph Storage
 
@@ -293,4 +291,4 @@ Before either pass executes, assess:
 2. **Database location** — `cis_memory.db` already at 364MB. New catalog adds ~50-100MB. Separate DB or new tables in existing spine?
 3. **Backup strategy** — Pass 1 outputs are derived (can regenerate). Back up the source files, not the catalog.
 
-Assessment deferred to separate proposal per Eric's instruction: "the VM and storage will be assessed and prioritized for the build of the three separate projects."
+Assessment deferred to separate proposal per Eric's instruction: "the VM and storage will be assessed and prioritized for the build of the two projects (CIS and SWA)."
