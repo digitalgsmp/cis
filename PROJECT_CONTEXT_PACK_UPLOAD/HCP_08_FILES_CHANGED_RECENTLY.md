@@ -1,7 +1,53 @@
 # Files Changed Recently
-Generated: 2026-06-18 20:51 UTC | Run: run-ca626a371380
+Generated: 2026-06-19 03:33 UTC | Run: run-c62a82567208
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 06ac1aa docs: WIAS→WIASW workflow correction across DEV-PIVOT + 3 pivot reference docs
+
+## docs/CIS_KERNEL_PIPELINE_REDISCOVERY_20260618.md 
+
+## docs/CLAUDE_RESPONSE_KERNEL_REDISCOVERY_20260618.md 
+
+## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
+
+## docs/DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md 
+
+## docs/DEV-PIVOT-11_CORPUS_SCRAPING_PROPOSAL.md 
+
+## docs/DEV-PIVOT-12_TWO_PASS_CATALOG_DESIGN.md 
+
+## docs/DEV-PIVOT-13_CATALOG_IMPLEMENTATION_SPEC.md 
+
+## docs/PIVOT_CONVERSATION_20260618.md 
+
+## 9d51cfa Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## dc935c4 chore: DEV-PIVOT naming convention - 16 docs unified under sequential numbering
 
@@ -150,11 +196,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 63308c3 docs: CIS-Hermes correlation — v0.16.0 feature mapping, profiles confirmed, OQ-SEED-007 resolved
 
 ## docs/CIS_INTEGRATION_ASSESSMENT.md 
-
-## 8796c24 docs: CIS integration assessment — what CIS prevents, what Hermes provides, what must be preserved
-
-## docs/CIS_INTEGRATION_ASSESSMENT.md 
-
-## ef01da0 docs: CIS Next Major Project — Hermes integration, abstraction layer, oversight transition, UI overhaul
-
-## docs/CIS_NEXT_MAJOR_PROJECT.md 
