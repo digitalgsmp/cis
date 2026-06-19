@@ -2,9 +2,9 @@
 Date: 2026-06-19
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `06ac1aa`
+HEAD: `20398a0`
 
-Generated: 2026-06-19 03:33 UTC | Run: run-c62a82567208
+Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -48,6 +48,47 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 - TERMINAL_CWD=/mnt/projects/cis retained in all .env files for gateway AGENTS.md discovery
 - All 4 active gateways pass AGENTS.md canary
 - Service template backups updated
+
+## Docker Containment PROVEN on creative-vm (2026-06-19)
+
+**Stage 1 — Docker install:**
+- Docker 29.6.0 installed successfully
+- Qwen/llama.cpp on host port 8002 remained healthy (PID 1611, 4002MiB GPU)
+- Hermes configs were not changed
+
+**Stage 2 — Hermes r1 CLI containment proof:**
+- Kernel-enforced read-only mounts blocked writes to:
+  /mnt/archive, /mnt/projects/cis, /mnt/projects/swa
+- Writable catalog mount succeeded: /mnt/cache/catalog
+- Direct docker run proof passed
+- Hermes-through-Docker r1 CLI proof passed
+- Host cross-check confirmed no forbidden source-root files were created
+- r1 config restored to local backend after proof
+- Qwen/llama.cpp still healthy after proof
+
+**Framing correction — the 16 failure modes should use four pillars, not a 16-item checklist:**
+1. Containment — execution boundary (PROVEN on r1 CLI)
+2. Spine-gates — authority and state transition enforcement
+3. Cognition — verifier, deliberation, evidence, staleness, cross-model review
+4. Eric veto — human final authority and residual judgment
+
+Progress measured by pillars proven, not by claiming all 16 failures are individually "solved."
+Containment proven on r1 CLI. Not yet extended to gateway path or implementer path.
+Cognition failures are mitigated by design, not completed forever.
+
+**Next actions:**
+1. Extend containment proof from CLI to gateway path and to scrape profile
+2. Spine-gate pillar audit (READ ONLY) — identify which gates exist, run, and reject bad input
+3. Drafter writes spec from audit findings → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement
+
+**Open / unverified (do not assume):**
+- Gateway-with-Docker-backend is unproven (only CLI proof passed)
+- v4impl pre_tool_call hook behavior inside container is unknown
+- Correct scrape container image is undecided (bare ubuntu insufficient)
+- Verifier Registry (DEV-PIVOT-16) is specified but build/commit status unverified
+- Docker group refresh may still be required for gateway non-sudo access
+- /mnt/cache/catalog exists and is the intended writable catalog root
+- docs/DOCKER_CONTAINMENT_PROPOSAL.md committed this session
 
 - runtime/config/systemd/live_backups/ untracked in git
 

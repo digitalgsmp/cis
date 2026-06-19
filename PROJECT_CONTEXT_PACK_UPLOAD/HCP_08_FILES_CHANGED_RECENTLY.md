@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-06-19 03:33 UTC | Run: run-c62a82567208
+Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 20398a0 feat(hcp): add Docker containment milestone + next actions to export sources
+
+## config/hcp_static.yaml 
+
+## tools/export/generate_hcp.py 
+
+## 0a8225a docs: add Docker containment proposal from Claude+ChatGPT reconciliation
+
+## docs/DOCKER_CONTAINMENT_PROPOSAL.md 
+
+## fd8e2ac Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 06ac1aa docs: WIAS→WIASW workflow correction across DEV-PIVOT + 3 pivot reference docs
 
@@ -184,15 +222,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 946b771 docs: re-frame CIS as standalone application powered by Hermes — not plugin, not add-on, full product identity
 
 ## docs/CIS_FINAL_BUILD_DIRECTION.md 
-
-## 9c6c83c docs: CIS final build direction — 9-phase Hermes integration, 16 failure modes mapped, 3-domain architecture
-
-## docs/CIS_FINAL_BUILD_DIRECTION.md 
-
-## 425ad83 docs: WIAS/SWA/LIFE domain definitions from archive — Word/Image/Action/Sound/Web + Schedule field-use work + Home/Body/Mind
-
-## docs/CIS_INTEGRATION_ASSESSMENT.md 
-
-## 63308c3 docs: CIS-Hermes correlation — v0.16.0 feature mapping, profiles confirmed, OQ-SEED-007 resolved
-
-## docs/CIS_INTEGRATION_ASSESSMENT.md 

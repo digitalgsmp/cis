@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-19 03:33 UTC | Run: run-c62a82567208
+Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -69,7 +69,20 @@ Do NOT start:
 
 ## Known Limitations
 
-- Orchestrator --output preserves only final-round detail (Tier 6 backlog)
-- Hermes Kanban v0.13 has no custom lanes (CIS stages in card metadata)
-- HCP files manually reconciled until Tier 5.4–5.6 complete
-- TERMINAL_CWD required for gateway AGENTS.md discovery (deprecated but functionally required)
+- Docker containment PROVEN on r1 CLI only — not yet extended to gateway path or scrape profile
+- v4impl pre_tool_call hook behavior inside Docker container is unknown
+- Correct scrape container image undecided (bare ubuntu insufficient; needs python-nodejs)
+- Verifier Registry (DEV-PIVOT-16) specified but build/commit status unverified from spine
+
+## Priority Next Actions
+
+- 1. Extend containment proof from CLI to gateway path and to scrape profile (Docker backend, read-only source mounts, catalog RW, correct image)
+- 2. Spine-gate pillar audit (READ ONLY) — confirm which gates exist, run, and reject bad input for failures #1, #8, #11, #13, #14
+- 3. Drafter writes spec from spine-gate audit → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement
+
+## Open / Unverified — Do Not Assume
+
+- Gateway-with-Docker-backend is unproven (only CLI proof passed)
+- Docker group refresh may still be required for gateway non-sudo Docker access
+- /mnt/cache/catalog exists and is the intended writable catalog root; contains proof artifacts
+- docs/DOCKER_CONTAINMENT_PROPOSAL.md committed this session
