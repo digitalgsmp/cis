@@ -480,10 +480,22 @@ hcp_05:
     ## Known Limitations
 
   known_limitations:
-    - "Orchestrator --output preserves only final-round detail (Tier 6 backlog)"
-    - "Hermes Kanban v0.13 has no custom lanes (CIS stages in card metadata)"
-    - "HCP files manually reconciled until Tier 5.4–5.6 complete"
-    - "TERMINAL_CWD required for gateway AGENTS.md discovery (deprecated but functionally required)"
+    - "Docker containment PROVEN on r1 CLI only — not yet extended to gateway path or scrape profile"
+    - "v4impl pre_tool_call hook behavior inside Docker container is unknown"
+    - "Correct scrape container image undecided (bare ubuntu insufficient; needs python-nodejs)"
+    - "Verifier Registry (DEV-PIVOT-16) specified but build/commit status unverified from spine"
+
+  # PRIORITY NEXT ACTIONS — dependency-ordered
+  next_actions:
+    - "1. Extend containment proof from CLI to gateway path and to scrape profile (Docker backend, read-only source mounts, catalog RW, correct image)"
+    - "2. Spine-gate pillar audit (READ ONLY) — confirm which gates exist, run, and reject bad input for failures #1, #8, #11, #13, #14"
+    - "3. Drafter writes spec from spine-gate audit → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement"
+
+  open_unverified:
+    - "Gateway-with-Docker-backend is unproven (only CLI proof passed)"
+    - "Docker group refresh may still be required for gateway non-sudo Docker access"
+    - "/mnt/cache/catalog exists and is the intended writable catalog root; contains proof artifacts"
+    - "docs/DOCKER_CONTAINMENT_PROPOSAL.md committed this session"
 
 ###########################################################################
 # HCP_06 — MODEL ROLES AND PROTOCOL
@@ -701,6 +713,48 @@ hcp_07:
       - Shared `cis-pipeline` board created; Tier 3 smoke test completed
       - `runtime/config/systemd/` — service templates backed up
       - ENV_MANIFEST.md — all env vars documented
+
+    docker_containment_proof: |
+      ## Docker Containment PROVEN on creative-vm (2026-06-19)
+
+      **Stage 1 — Docker install:**
+      - Docker 29.6.0 installed successfully
+      - Qwen/llama.cpp on host port 8002 remained healthy (PID 1611, 4002MiB GPU)
+      - Hermes configs were not changed
+
+      **Stage 2 — Hermes r1 CLI containment proof:**
+      - Kernel-enforced read-only mounts blocked writes to:
+        /mnt/archive, /mnt/projects/cis, /mnt/projects/swa
+      - Writable catalog mount succeeded: /mnt/cache/catalog
+      - Direct docker run proof passed
+      - Hermes-through-Docker r1 CLI proof passed
+      - Host cross-check confirmed no forbidden source-root files were created
+      - r1 config restored to local backend after proof
+      - Qwen/llama.cpp still healthy after proof
+
+      **Framing correction — the 16 failure modes should use four pillars, not a 16-item checklist:**
+      1. Containment — execution boundary (PROVEN on r1 CLI)
+      2. Spine-gates — authority and state transition enforcement
+      3. Cognition — verifier, deliberation, evidence, staleness, cross-model review
+      4. Eric veto — human final authority and residual judgment
+
+      Progress measured by pillars proven, not by claiming all 16 failures are individually "solved."
+      Containment proven on r1 CLI. Not yet extended to gateway path or implementer path.
+      Cognition failures are mitigated by design, not completed forever.
+
+      **Next actions:**
+      1. Extend containment proof from CLI to gateway path and to scrape profile
+      2. Spine-gate pillar audit (READ ONLY) — identify which gates exist, run, and reject bad input
+      3. Drafter writes spec from audit findings → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement
+
+      **Open / unverified (do not assume):**
+      - Gateway-with-Docker-backend is unproven (only CLI proof passed)
+      - v4impl pre_tool_call hook behavior inside container is unknown
+      - Correct scrape container image is undecided (bare ubuntu insufficient)
+      - Verifier Registry (DEV-PIVOT-16) is specified but build/commit status unverified
+      - Docker group refresh may still be required for gateway non-sudo access
+      - /mnt/cache/catalog exists and is the intended writable catalog root
+      - docs/DOCKER_CONTAINMENT_PROPOSAL.md committed this session
 
   untracked_note: |
     - runtime/config/systemd/live_backups/ untracked in git

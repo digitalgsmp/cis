@@ -767,6 +767,24 @@ def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers,
         lines.append(f"- {lim}")
     lines.append("")
 
+    # Priority Next Actions
+    na_list = s.get("next_actions", [])
+    if na_list:
+        lines.append("## Priority Next Actions")
+        lines.append("")
+        for na in na_list:
+            lines.append(f"- {na}")
+        lines.append("")
+
+    # Open / Unverified
+    ou_list = s.get("open_unverified", [])
+    if ou_list:
+        lines.append("## Open / Unverified — Do Not Assume")
+        lines.append("")
+        for ou in ou_list:
+            lines.append(f"- {ou}")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -907,7 +925,7 @@ def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None,
     lines.append("")
 
     # Recent sessions (static, oldest to newest)
-    for key in ["tier_2", "tier_4_4", "tier_5_1", "tier_5_2", "tier_5_2e", "tier_5_3"]:
+    for key in ["tier_2", "tier_4_4", "tier_5_1", "tier_5_2", "tier_5_2e", "tier_5_3", "docker_containment_proof"]:
         txt = s["recent_sessions"].get(key, "")
         if txt:
             for line in txt.strip().splitlines():
