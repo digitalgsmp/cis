@@ -1,10 +1,11 @@
 # CIS — AGENTS.md
-Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da | Latest pipeline: run-c3452fddb26d4
+Generated: 2026-06-20 03:21 UTC | Run: run-cdfccd7c0494 | Latest pipeline: run-c3452fddb26d4
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
 Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
+Direction: ADR-SEED-016 — TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved. Three-layer process isolation specified with 15 acceptance tests A–O. Next: NA-SEED-014 raw-evidence capture (operator-only override-plane test first).
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -47,6 +48,8 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - /home/eric/.hermes/hermes-agent/agent/usage_pricing.py:731 — Added completion_tokens_details.reasoning_tokens fallback
 
 ## 4. Active Decisions
+- [ADR-SEED-016] Enforcement Primitive Approved: TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved via dual-review (Claude + ChatGPT audit) + Eric approval. Three-layer process isolation: CIS control plane → Hermes worker in Docker container with RO /opt/cis-control. 15 acceptance tests (A–O). No implementation until §14 raw-evidence plan executed.
+- [ADR-SEED-015] Enforcement architecture: three-layer process isolation: CIS enforces Hermes via root-owned /opt/cis-control mounted read-only into Docker worker. Worker writes only to /mnt/cache/catalog/<run_id>/. Two enforcement walls: kernel (Docker RO mount) + policy hook (pre_tool_call). Trust root: constrained agent cannot author its own contract. Override plane (.GATE_DISABLED) built/tested before hook is trusted. See DEV-PIVOT-17 for full text.
 - [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit: FALSE CLAIM — RESOLVED (verified 2026-06-16). Investigation found prime was never actively poisoned. The --replace process was the managed systemd service with correct HERMES_HOME (/home/eric/.hermes). BLK-SEED-005 closed as false positive. ROOT CAUSE (documented for audit trail): get_default_hermes_root() in hermes_constants.py (line 71) returns sibling HERMES_HOME paths like ~/.hermes-r1 as the default root — the fallthrough logic treats any HERMES_HOME outside ~/.hermes/ as a Docker/custom home and returns it verbatim. _profile_suffix() then sees home == default, collapses suffix to empty string, derives service name hermes-gateway (the DEFAULT/prime unit), and refresh_systemd_unit_if_needed() can overwrite the prime systemd unit with a non-prime HERMES_HOME. Verified against source and live empirical test. The collapse bug is a LATENT architectural risk, not an active runtime issue on prime. Fix: relocate sibling homes into ~/.hermes/profiles/ layout, or apply Patch#7.
 - [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON block. Freeform model body is stored as documentation and never parsed for routing. Every Drafter and Reviewer response must end with a FINAL_JSON block containing role, status, summary, recommendation, next_action. Role-scoped status values: Drafter emits PROPOSAL_READY or REVISION_READY only. Reviewer emits CONSENSUS_REACHED, OBJECTIONS, or ESCALATE only. If FINAL_JSON is missing or malformed, orchestrator issues one repair prompt then falls back to constrained text-scanning. Markdown heading presence (### Summary, ### Recommendation) must never cause validation failure.
 - [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate, or closeout execution. workflow_runs is the authoritative in-flight work object. deliberation_rounds stores per-round Drafter/Reviewer history. Router creates a workflow_runs row and returns run_id. Orchestrator accepts --run-id and reads topic from workflow_runs. Gates verify from SQLite. Kanban code paths are commented out and preserved as legacy. kanban_card_id is null on all new pipeline runs.
@@ -68,6 +71,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
+- [NA-SEED-014] (Tier enforcement) Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified

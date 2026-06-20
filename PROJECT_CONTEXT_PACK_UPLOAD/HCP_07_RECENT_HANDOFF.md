@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-06-19
+Date: 2026-06-20
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `9d228dd`
+HEAD: `4426a2f`
 
-Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da
+Generated: 2026-06-20 03:21 UTC | Run: run-cdfccd7c0494
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -97,7 +97,7 @@ Cognition failures are mitigated by design, not completed forever.
 ## Exact Next Action
 
 
-(No eligible PENDING node in build plan.)
+**NA-SEED-014**: Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.
 
 ## Eric Gate Approval Status
 
