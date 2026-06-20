@@ -1,12 +1,15 @@
 """
-tools.py — MCP tool definitions and handler functions for the CIS MCP Bridge.
+tools.py - MCP tool definitions and handler functions for the CIS MCP Bridge.
 
-Defines 9 read-only tools per the Tier 8 specification §2.1:
-  cis_get_current_phase, cis_get_build_status, cis_get_next_actions,
+Defines 14 tools (11 read-only + 3 dispatch) per FD.1 specification:
+  Read-only (11): cis_get_current_phase, cis_get_build_status, cis_get_next_actions,
   cis_get_recent_runs, cis_get_run_detail, cis_get_open_decisions,
-  cis_get_open_questions, cis_get_eric_gate_status, cis_search_sessions
+  cis_get_open_questions, cis_get_eric_gate_status, cis_search_sessions,
+  cis_search_semantic, cis_get_similar
+  Dispatch (3): cis_dispatch_drafter, cis_dispatch_reviewer, cis_dispatch_implementer
 """
 from . import spine
+import subprocess
 
 # ── Tool definitions ──────────────────────────────────
 
@@ -214,6 +217,68 @@ TOOLS = [
             "required": ["document_id"],
         },
     },
+    {
+        "name": "cis_dispatch_drafter",
+        "description": (
+            "Start the CIS Drafter pipeline for a crystallized topic. "
+            "Creates a workflow_run and dispatches the Drafter to produce "
+            "a specification. Returns the workflow_run_id for tracking."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "topic": {
+                    "type": "string",
+                    "description": "The topic to draft a specification for",
+                },
+                "intent": {
+                    "type": "string",
+                    "description": "Why this topic needs a specification",
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": "Optional session ID for context linking",
+                },
+            },
+            "required": ["topic", "intent"],
+        },
+    },
+    {
+        "name": "cis_dispatch_reviewer",
+        "description": (
+            "Dispatch the CIS Reviewer (R1 + Qwen dual-review) for a "
+            "Drafter proposal. Requires an existing workflow_run_id from "
+            "cis_dispatch_drafter."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "run_id": {
+                    "type": "string",
+                    "description": "The workflow_run ID to review",
+                },
+            },
+            "required": ["run_id"],
+        },
+    },
+    {
+        "name": "cis_dispatch_implementer",
+        "description": (
+            "Dispatch the CIS Implementer to execute an Eric-approved "
+            "FINAL_DIRECTIVE. Requires a workflow_run_id with an Eric "
+            "Gate APPROVE decision (checked via eric_gate_approvals)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "run_id": {
+                    "type": "string",
+                    "description": "The workflow_run ID to implement",
+                },
+            },
+            "required": ["run_id"],
+        },
+    },
 ]
 
 
@@ -312,6 +377,70 @@ def handle_get_similar(arguments):
     return {"results": result}
 
 
+def handle_dispatch_drafter(arguments):
+    """Handler for cis_dispatch_drafter."""
+    topic = arguments.get("topic", "")
+    intent = arguments.get("intent", "")
+    if not topic:
+        return {"error": "topic is required"}
+    if not intent:
+        return {"error": "intent is required"}
+    try:
+        result = subprocess.run(
+            ["python3", "tools/pipeline/drafter_start.py", topic,
+             "--intent", intent],
+            capture_output=True, text=True, timeout=300,
+            cwd="/mnt/projects/cis",
+        )
+        if result.returncode != 0:
+            return {"error": "drafter_start.py failed", "stderr": result.stderr}
+        return {"workflow_run_id": "dispatched", "status": "DISPATCHED"}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def handle_dispatch_reviewer(arguments):
+    """Handler for cis_dispatch_reviewer."""
+    run_id = arguments.get("run_id", "")
+    if not run_id:
+        return {"error": "run_id is required"}
+    try:
+        result = subprocess.run(
+            ["python3", "tools/pipeline/reviewer_reconcile.py",
+             "--run-id", run_id],
+            capture_output=True, text=True, timeout=300,
+            cwd="/mnt/projects/cis",
+        )
+        if result.returncode != 0:
+            return {"error": "reviewer_reconcile.py failed", "stderr": result.stderr}
+        return {"run_id": run_id, "status": "DISPATCHED"}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def handle_dispatch_implementer(arguments):
+    """Handler for cis_dispatch_implementer."""
+    run_id = arguments.get("run_id", "")
+    if not run_id:
+        return {"error": "run_id is required"}
+    approved = spine.check_eric_gate_approval(run_id)
+    if not approved:
+        return {"error": "Eric Gate approval required",
+                "gate_status": "UNAPPROVED", "run_id": run_id}
+    try:
+        result = subprocess.run(
+            ["bash", "tools/pipeline/pipeline_dispatch.sh", run_id],
+            capture_output=True, text=True, timeout=300,
+            cwd="/mnt/projects/cis",
+        )
+        if result.returncode != 0:
+            return {"error": "dispatch failed", "stderr": result.stderr}
+        return {"run_id": run_id, "status": "DISPATCHED",
+                "gate_status": "APPROVED"}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -326,4 +455,7 @@ HANDLERS = {
     "cis_search_sessions": handle_search_sessions,
     "cis_search_semantic": handle_search_semantic,
     "cis_get_similar": handle_get_similar,
+    "cis_dispatch_drafter": handle_dispatch_drafter,
+    "cis_dispatch_reviewer": handle_dispatch_reviewer,
+    "cis_dispatch_implementer": handle_dispatch_implementer,
 }

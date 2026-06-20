@@ -274,6 +274,28 @@ def query_eric_gate_status(db_path=None):
         conn.close()
 
 
+def check_eric_gate_approval(run_id, db_path=None):
+    """
+    Check whether a workflow_run has a current Eric Gate APPROVE decision.
+
+    Queries eric_gate_approvals for decision='APPROVE', is_current=1.
+    Returns True if a matching row exists, False otherwise (including
+    when run_id does not exist or approval is not current).
+    """
+    conn = _connect_readonly(db_path)
+    try:
+        row = conn.execute(
+            """SELECT 1 FROM eric_gate_approvals
+               WHERE workflow_run_id = ?
+                 AND decision = 'APPROVE'
+                 AND is_current = 1""",
+            (run_id,),
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
 def query_search_sessions(query_text, limit=10, db_path=None):
     """
     FTS5 search across session_closeouts.
