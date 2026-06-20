@@ -3,9 +3,9 @@ Version: 2.8
 Date: 2026-06-20
 Authority: Eric (Architect)
 Status: Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
-Direction: ADR-SEED-016 — TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved. Three-layer process isolation specified with 15 acceptance tests A–O. Next: NA-SEED-014 raw-evidence capture (operator-only override-plane test first).
+Direction: FD.1-FRONT-DOOR — MCP dispatch tools, baseline-verify first. Enforcement Phase 0 complete (mount semantics + override plane proven). §14 items 3-6 deferred to post-active-use.
 
-Generated: 2026-06-20 03:21 UTC | Run: run-cdfccd7c0494
+Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.**
 
-**HEAD:** `4426a2f`.
+**HEAD:** `a6ff161`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -309,7 +309,10 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 39. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
 40. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
 41. Tier enforcement — Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through Claude audit + ChatGPT audit + Eric approval before any /opt/cis-control file lands. ✅ COMPLETE
-42. Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved. ⬜ PENDING
+42. Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved. 🚫 BLOCKED
+43. Tier enforcement — Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Resolve structural contradiction by allowing override-plane evidence test against disposable test root /mnt/cache/catalog/override-plane-test/<run_id>/control/. ✅ COMPLETE
+44. Tier enforcement — Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable test root per Amendment 1 (revised). Requires: (1) root-owned control directory with sentinel created/removed via sudo, (2) separate control and workspace host directories with RO/RW mounts respectively, (3) stat/realpath/docker inspect/mount evidence before the 9-step test. No production /opt/cis-control. No hooks. No Hermes worker. ✅ COMPLETE
+45. Tier front-door — FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only. ✅ COMPLETE
 
 ---
 
@@ -363,7 +366,10 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 **Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE).** ✅ COMPLETE
 **Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section.** ✅ COMPLETE
 **Tier enforcement — Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through Claude audit + ChatGPT audit + Eric approval before any /opt/cis-control file lands.** ✅ COMPLETE
-**Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.** ⬜ PENDING
+**Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.** 🚫 BLOCKED
+**Tier enforcement — Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Resolve structural contradiction by allowing override-plane evidence test against disposable test root /mnt/cache/catalog/override-plane-test/<run_id>/control/.** ✅ COMPLETE
+**Tier enforcement — Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable test root per Amendment 1 (revised). Requires: (1) root-owned control directory with sentinel created/removed via sudo, (2) separate control and workspace host directories with RO/RW mounts respectively, (3) stat/realpath/docker inspect/mount evidence before the 9-step test. No production /opt/cis-control. No hooks. No Hermes worker.** ✅ COMPLETE
+**Tier front-door — FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.** ✅ COMPLETE
 
 ---
 
@@ -396,7 +402,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 | deliberation_rounds | 13 |
 | project_decisions | 16 |
 | open_questions | 14 |
-| next_actions | 15 |
+| next_actions | 18 |
 | active_blockers | 6 |
 
 ---

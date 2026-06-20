@@ -1,11 +1,11 @@
 # CIS — AGENTS.md
-Generated: 2026-06-20 03:21 UTC | Run: run-cdfccd7c0494 | Latest pipeline: run-c3452fddb26d4
+Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d | Latest pipeline: run-c3452fddb26d4
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
 Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
-Direction: ADR-SEED-016 — TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved. Three-layer process isolation specified with 15 acceptance tests A–O. Next: NA-SEED-014 raw-evidence capture (operator-only override-plane test first).
+Direction: FD.1-FRONT-DOOR — MCP dispatch tools, baseline-verify first. Enforcement Phase 0 complete (mount semantics + override plane proven). §14 items 3-6 deferred to post-active-use.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -71,7 +71,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [NA-SEED-014] (Tier enforcement) Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified

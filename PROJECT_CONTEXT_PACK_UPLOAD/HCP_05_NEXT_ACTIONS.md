@@ -1,11 +1,12 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-20 03:21 UTC | Run: run-cdfccd7c0494
+Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**NA-SEED-014**: Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved.
+(No eligible PENDING node in build plan.)
+Deferred: Tier 2 DEFERRED; Tier 7 DEFERRED; Tier 7R.3 DEFERRED.
 
 Do NOT start:
 
@@ -66,7 +67,10 @@ Do NOT start:
 | Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | COMPLETE | |
 | Tier 6 | Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) | COMPLETE | |
 | Tier enforcement | Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through  | COMPLETE | |
-| Tier enforcement | Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V | PENDING | |
+| Tier enforcement | Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V | BLOCKED | |
+| Tier enforcement | Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Re | COMPLETE | |
+| Tier enforcement | Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable t | COMPLETE | |
+| Tier front-door | FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual  | COMPLETE | |
 
 ## Known Limitations
 
