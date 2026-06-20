@@ -5,7 +5,7 @@ Authority: Eric (Architect)
 Status: Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
 Direction: FD.1-FRONT-DOOR — MCP dispatch tools, baseline-verify first. Enforcement Phase 0 complete (mount semantics + override plane proven). §14 items 3-6 deferred to post-active-use.
 
-Generated: 2026-06-20 04:41 UTC | Run: none
+Generated: 2026-06-20 05:29 UTC | Run: run-32439ff89e8c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.**
 
-**HEAD:** `f05868d`.
+**HEAD:** `5764a55`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -398,7 +398,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 | Table | Rows |
 |-------|------|
-| workflow_runs | 12 |
+| workflow_runs | 13 |
 | deliberation_rounds | 13 |
 | project_decisions | 16 |
 | open_questions | 14 |
