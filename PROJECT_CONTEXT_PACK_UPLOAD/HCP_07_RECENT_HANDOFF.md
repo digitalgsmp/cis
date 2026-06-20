@@ -2,9 +2,9 @@
 Date: 2026-06-20
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `a6ff161`
+HEAD: `f05868d`
 
-Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d
+Generated: 2026-06-20 04:41 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -97,7 +97,7 @@ Cognition failures are mitigated by design, not completed forever.
 ## Exact Next Action
 
 
-(No eligible PENDING node in build plan.)
+**NA-SEED-017**: FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
 
 ## Eric Gate Approval Status
 

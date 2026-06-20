@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d
+Generated: 2026-06-20 04:41 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## f05868d Revert "feat(fd.1): add MCP dispatch tools — 3 new tools, spine helper, symlink, 15 tests"
+
+## runtime/mcp 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/mcp_bridge/tools.py 
+
+## tests/test_mcp_dispatch.py 
+
+## 997e313 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## a6ff161 docs: add FD.1 spec v1.2, enforcement amendment 1, override-plane test script
 
@@ -228,43 +266,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## dc935c4 chore: DEV-PIVOT naming convention - 16 docs unified under sequential numbering
-
-## AGENTS.md 
-
-## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
-
-## docs/DEV-PIVOT-02_ENFORCEMENT_ARCHITECTURE_V3.md 
-
-## docs/DEV-PIVOT-03_HERMES_HARDENING_SPEC.md 
-
-## docs/DEV-PIVOT-04_APPLICATION_ENFORCEMENT_SPEC.md 
-
-## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
-
-## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
-
-## docs/DEV-PIVOT-07_NEXT_MAJOR_PROJECT.md 
-
-## docs/DEV-PIVOT-08_FRONT_DOOR_SPEC.md 
-
-## docs/DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md 
-
-## docs/DEV-PIVOT-10_ADR-SEED-014_CONTRACT.md 
-
-## docs/DEV-PIVOT-11_CORPUS_SCRAPING_PROPOSAL.md 
-
-## docs/DEV-PIVOT-12_TWO_PASS_CATALOG_DESIGN.md 
-
-## docs/DEV-PIVOT-13_CATALOG_IMPLEMENTATION_SPEC.md 
-
-## docs/DEV-PIVOT-14_CLOSEOUT_INSTRUCTION.md 
-
-## docs/DEV-PIVOT-15_SESSION_OPEN_ITEMS.md 
-
-## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
-
-## 5521c98 chore: trim ADR-SEED-014 — BLK-SEED-005 was false positive, stop regenerating verbose root-cause analysis
-
-## AGENTS.md 

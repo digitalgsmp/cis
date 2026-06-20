@@ -1,12 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-20 04:37 UTC | Run: run-be1e96654e5d
+Generated: 2026-06-20 04:41 UTC | Run: none
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-(No eligible PENDING node in build plan.)
-Deferred: Tier 2 DEFERRED; Tier 7 DEFERRED; Tier 7R.3 DEFERRED.
+**NA-SEED-017**: FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
 
 Do NOT start:
 
@@ -70,7 +69,7 @@ Do NOT start:
 | Tier enforcement | Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V | BLOCKED | |
 | Tier enforcement | Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Re | COMPLETE | |
 | Tier enforcement | Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable t | COMPLETE | |
-| Tier front-door | FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual  | COMPLETE | |
+| Tier front-door | FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual  | IN_PROGRESS | |
 
 ## Known Limitations
 
