@@ -315,35 +315,3 @@ def query_search_sessions(query_text, limit=10, db_path=None):
         return _rows_to_list(rows)
     finally:
         conn.close()
-
-
-def check_eric_gate_approval(run_id, db_path=None):
-    """Check if a workflow_run has Eric Gate approval.
-
-    Per FD.1 §3.4: returns True if the run has a non-null, non-empty
-    eric_approved_at timestamp. Returns False otherwise (including when
-    the run_id does not exist, eric_approved_at IS NULL, or
-    eric_approved_at is empty-string).
-
-    Args:
-        run_id: workflow_runs.id to check
-        db_path: optional path override
-
-    Returns:
-        bool: True if approved, False otherwise
-    """
-    conn = _connect_readonly(db_path)
-    try:
-        row = conn.execute(
-            """SELECT eric_approved_at IS NOT NULL
-                      AND eric_approved_at != '' AS approved
-               FROM workflow_runs
-               WHERE id = ?""",
-            (run_id,),
-        ).fetchone()
-
-        if row is None:
-            return False
-        return bool(row["approved"])
-    finally:
-        conn.close()

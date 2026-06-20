@@ -214,70 +214,6 @@ TOOLS = [
             "required": ["document_id"],
         },
     },
-    {
-        "name": "cis_dispatch_drafter",
-        "description": (
-            "Start the CIS Drafter pipeline for a crystallized topic. "
-            "Creates a workflow_run and dispatches the Drafter to produce "
-            "a specification. Returns the workflow_run_id for tracking. "
-            "Use this when Eric says 'draft this' or 'spec this out'."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "topic": {
-                    "type": "string",
-                    "description": "What to build — the crystallized work description",
-                },
-                "intent": {
-                    "type": "string",
-                    "description": "Why to build it — the underlying need driving the work",
-                },
-                "session_id": {
-                    "type": "string",
-                    "description": "Optional: session ID for lifecycle tracking",
-                },
-            },
-            "required": ["topic", "intent"],
-        },
-    },
-    {
-        "name": "cis_dispatch_reviewer",
-        "description": (
-            "Dispatch the CIS Reviewer (R1 + Qwen dual-review) for a "
-            "Drafter proposal. Requires an existing workflow_run_id from "
-            "cis_dispatch_drafter. Returns deliberation status and round count."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "run_id": {
-                    "type": "string",
-                    "description": "The workflow_run_id from cis_dispatch_drafter",
-                },
-            },
-            "required": ["run_id"],
-        },
-    },
-    {
-        "name": "cis_dispatch_implementer",
-        "description": (
-            "Dispatch the CIS Implementer to execute an Eric-approved "
-            "FINAL_DIRECTIVE. Requires a workflow_run_id with Eric Gate approval. "
-            "The Implementer builds per the directive and returns evidence. "
-            "Shell hooks enforce pre-execution gates automatically."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "run_id": {
-                    "type": "string",
-                    "description": "The workflow_run_id with Eric Gate approval",
-                },
-            },
-            "required": ["run_id"],
-        },
-    },
 ]
 
 
@@ -376,95 +312,6 @@ def handle_get_similar(arguments):
     return {"results": result}
 
 
-def handle_dispatch_drafter(arguments):
-    """Handler for cis_dispatch_drafter — FD.1 §3.1."""
-    import subprocess
-
-    topic = arguments.get("topic", "")
-    intent = arguments.get("intent", "")
-    if not topic:
-        return {"error": "topic is required"}
-    if not intent:
-        return {"error": "intent is required"}
-
-    session_id = arguments.get("session_id", "")
-    cmd = [
-        "python3", "tools/pipeline/drafter_start.py",
-        topic, "--intent", intent,
-    ]
-    if session_id:
-        cmd.extend(["--session-id", session_id])
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True, text=True, timeout=30,
-            cwd="/mnt/projects/cis",
-        )
-        if result.returncode == 0:
-            return {
-                "workflow_run_id": result.stdout.strip().split()[-1]
-                if result.stdout.strip() else "dispatched",
-                "status": "DISPATCHED",
-            }
-        return {"error": "drafter_start.py failed",
-                "stderr": result.stderr.strip()[:500]}
-    except subprocess.TimeoutExpired:
-        return {"error": "drafter_start.py timed out after 30s"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def handle_dispatch_reviewer(arguments):
-    """Handler for cis_dispatch_reviewer — FD.1 §3.2."""
-    import subprocess
-
-    run_id = arguments.get("run_id", "")
-    if not run_id:
-        return {"error": "run_id is required"}
-
-    try:
-        result = subprocess.run(
-            ["python3", "tools/pipeline/reviewer_reconcile.py",
-             "--run-id", run_id],
-            capture_output=True, text=True, timeout=120,
-            cwd="/mnt/projects/cis",
-        )
-        if result.returncode == 0:
-            return {
-                "run_id": run_id,
-                "status": "CONSENSUS_REACHED",
-                "rounds_completed": 1,
-            }
-        return {"error": "reviewer_reconcile.py failed",
-                "stderr": result.stderr.strip()[:500]}
-    except subprocess.TimeoutExpired:
-        return {"error": "reviewer_reconcile.py timed out after 120s"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def handle_dispatch_implementer(arguments):
-    """Handler for cis_dispatch_implementer — FD.1 §3.3."""
-    run_id = arguments.get("run_id", "")
-    if not run_id:
-        return {"error": "run_id is required"}
-
-    # Check Eric Gate approval via spine helper
-    approved = spine.check_eric_gate_approval(run_id)
-    if not approved:
-        return {
-            "error": "Eric Gate approval required",
-            "gate_status": "UNAPPROVED",
-        }
-
-    return {
-        "run_id": run_id,
-        "status": "DISPATCHED",
-        "gate_status": "APPROVED",
-    }
-
-
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -479,7 +326,4 @@ HANDLERS = {
     "cis_search_sessions": handle_search_sessions,
     "cis_search_semantic": handle_search_semantic,
     "cis_get_similar": handle_get_similar,
-    "cis_dispatch_drafter": handle_dispatch_drafter,
-    "cis_dispatch_reviewer": handle_dispatch_reviewer,
-    "cis_dispatch_implementer": handle_dispatch_implementer,
 }
