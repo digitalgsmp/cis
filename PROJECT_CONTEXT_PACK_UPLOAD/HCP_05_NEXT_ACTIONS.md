@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
+Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -79,6 +79,8 @@ Do NOT start:
 - 1. Extend containment proof from CLI to gateway path and to scrape profile (Docker backend, read-only source mounts, catalog RW, correct image)
 - 2. Spine-gate pillar audit (READ ONLY) — confirm which gates exist, run, and reject bad input for failures #1, #8, #11, #13, #14
 - 3. Drafter writes spec from spine-gate audit → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement
+- 4. ARCHITECTURE — Per-project container as standing workflow: every project (CIS first) develops inside its own container. Source mounted per-authorization, spine + other projects read-only or absent, host unreachable. Full-access local backend removed/gated. DESIGN DIRECTION only — not locked architecture.
+- 5. ARCHITECTURE — Scope-authorization gates (pairs with #4): spine gates enforce per-session authorization beyond path boundaries. Triggering evidence: Hermes modified generate_hcp.py during 2026-06-19 closeout without authorization (failure #7). Container would NOT have blocked — file is CIS's own editable tree. DESIGN DIRECTION only.
 
 ## Open / Unverified — Do Not Assume
 

@@ -24,6 +24,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FAILED=0
+PASSED_COUNT=0
+SKIPPED_COUNT=0
 
 # ── Helper: run a gate and exit on failure ─────────────────────────
 
@@ -34,6 +36,7 @@ run_gate() {
     echo "━━━ GATE: ${name} ━━━"
     if "$@" 2>&1; then
         echo "   RESULT: PASS"
+        PASSED_COUNT=$((PASSED_COUNT + 1))
     else
         local rc=$?
         echo "   RESULT: FAIL (exit ${rc})"
@@ -59,6 +62,7 @@ else
     echo ""
     echo "━━━ GATE: gate_service_health ━━━"
     echo "   SKIP: GATE_SERVICE_HEALTH_PORT or GATE_SERVICE_HEALTH_EXPECTED not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
 fi
 
 # ── Gate 4: Endpoint (configured via env) ───────────────────────────
@@ -75,6 +79,7 @@ else
     echo ""
     echo "━━━ GATE: gate_endpoint ━━━"
     echo "   SKIP: GATE_ENDPOINT_URL or GATE_ENDPOINT_EXPECTED not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
 fi
 
 # ── Gate 5: File exists (configured via env) ────────────────────────
@@ -91,6 +96,7 @@ else
     echo ""
     echo "━━━ GATE: gate_file_exists ━━━"
     echo "   SKIP: GATE_FILE_EXISTS_PATH not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
 fi
 
 # ── Gate 6: Export agreement (always runs) ─────────────────────────
@@ -114,10 +120,11 @@ else
     echo ""
     echo "━━━ GATE: gate_eric_approval ━━━"
     echo "   SKIP: GATE_ERIC_APPROVAL_RUN_ID not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
 fi
 
 # ── All gates passed ────────────────────────────────────────────────
 
 echo ""
-echo "All configured gates PASSED"
+echo "GATE SUMMARY: ${PASSED_COUNT} PASSED, ${SKIPPED_COUNT} SKIPPED, 0 FAILED"
 exit 0

@@ -797,6 +797,13 @@ def render_hcp_06(stamp, hcp_static, agents_static):
         lines.append(st)
     lines.append("")
 
+    # Purpose preamble (governance reset — tells advisors this is vocabulary, not law)
+    preamble = s.get("purpose_preamble", "").strip()
+    if preamble:
+        for line in preamble.splitlines():
+            lines.append(line)
+        lines.append("")
+
     # Role Identity Rule
     lines.append("## Role Identity Rule")
     lines.append("")

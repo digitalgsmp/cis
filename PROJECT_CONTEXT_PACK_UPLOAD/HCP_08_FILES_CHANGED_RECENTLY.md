@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
+Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 9d228dd feat(hcp): add per-project container + scope-gate next actions (DESIGN DIRECTION)
+
+## config/hcp_static.yaml 
+
+## f8864b2 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 20398a0 feat(hcp): add Docker containment milestone + next actions to export sources
 
@@ -212,13 +244,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 2d485ff feat(hardening): cis_pre_tool_gate.sh — shell hook enforcement of pre-execution oversight
 
 ## tools/hooks/cis_pre_tool_gate.sh 
-
-## 4715758 fix: BLK-SEED-005 RESOLVED — false positive, patch #7 applied June 16. P0 removed from build plan.
-
-## docs/CIS_FINAL_BUILD_DIRECTION.md 
-
-## docs/CIS_INTEGRATION_ASSESSMENT.md 
-
-## 946b771 docs: re-frame CIS as standalone application powered by Hermes — not plugin, not add-on, full product identity
-
-## docs/CIS_FINAL_BUILD_DIRECTION.md 

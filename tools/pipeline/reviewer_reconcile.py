@@ -36,7 +36,7 @@ REVIEWERS = {
     "r1": {
         "name": "R1 Reviewer (deepseek-v4-pro)",
         "url": "http://127.0.0.1:8643/v1/chat/completions",
-        "api_key": "f0a78f4dffa94705dd8a714bf60155e5fa8209f8b3828860",
+        "api_key_env": "CIS_R1_API_KEY",  # env var — never hardcode gateway keys
         "model": "hermes-agent",
         "max_input_chars": 15000,  # R1 reasoning chokes on large prompts
     },
@@ -72,6 +72,13 @@ ESCALATION = {
 def call_reviewer(reviewer: dict, system_prompt: str, user_prompt: str,
                   timeout: int = 300) -> dict:
     """POST to a local reviewer's API server and return parsed response."""
+    # Resolve API key: prefer api_key_env, fall back to literal api_key
+    if "api_key_env" in reviewer:
+        api_key = os.environ.get(reviewer["api_key_env"], "").strip()
+        if not api_key:
+            return {"ok": False, "error": f"{reviewer['api_key_env']} not set"}
+    else:
+        api_key = reviewer.get("api_key", "")
     payload = {
         "model": reviewer.get("model", "hermes-agent"),
         "messages": [
@@ -86,7 +93,7 @@ def call_reviewer(reviewer: dict, system_prompt: str, user_prompt: str,
         reviewer["url"], data=data,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {reviewer['api_key']}",
+            "Authorization": f"Bearer {api_key}",
         },
     )
     try:

@@ -2,9 +2,9 @@
 Date: 2026-06-19
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `20398a0`
+HEAD: `9d228dd`
 
-Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
+Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -80,6 +80,8 @@ Cognition failures are mitigated by design, not completed forever.
 1. Extend containment proof from CLI to gateway path and to scrape profile
 2. Spine-gate pillar audit (READ ONLY) — identify which gates exist, run, and reject bad input
 3. Drafter writes spec from audit findings → Reviewer challenges → Claude+ChatGPT reconcile → Eric approves → implement
+4. ARCHITECTURE — Per-project container as standing workflow (DESIGN DIRECTION)
+5. ARCHITECTURE — Scope-authorization gates paired with per-project containers (DESIGN DIRECTION)
 
 **Open / unverified (do not assume):**
 - Gateway-with-Docker-backend is unproven (only CLI proof passed)

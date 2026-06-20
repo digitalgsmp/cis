@@ -1,7 +1,35 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-06-19 06:00 UTC | Run: run-915dd98232d3
+Generated: 2026-06-19 21:58 UTC | Run: run-7193fb9689da
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## PURPOSE OF THIS FILE — READ FIRST
+
+This packet is REFERENCE CONTEXT for external advisors (Claude, ChatGPT). It
+exists so that when the user escalates a question, the advisor understands the
+pipeline's vocabulary — what "Drafter," "Reviewer," "Implementer," and the
+gateway ports refer to.
+
+It is NOT a rulebook for the user, and it is NOT instructions for the advisor to
+enforce.
+
+Per ADR-SEED-008 and the DEV-PIVOT-01 governance reset:
+- These role and protocol descriptions describe INTENDED FINISHED-APP behavior.
+- They are implemented (when implemented at all) as software affordances in the
+  CIS application — database constraints, UI gates, routing — NOT as manual
+  process the user performs by hand, and NOT as conduct an advisor should police.
+- The user routes work however is convenient. They are not bound by the role matrix.
+  Do not tell them which profile to use, do not flag "role confusion," do not
+  warn them about manual steps. That ceremony was explicitly retired for the
+  operator.
+
+The ONLY operator-facing rules that survive the reset are:
+  1. Do not destroy files or data.
+  2. Do not claim completion without evidence (raw output, not summaries).
+  3. Build the smallest working application path.
+
+Advisor instruction: use the role names below ONLY to interpret what the user means
+when they reference them. Treat everything in this file as vocabulary, not law.
 
 ## Role Identity Rule
 

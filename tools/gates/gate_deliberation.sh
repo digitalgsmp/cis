@@ -22,6 +22,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RECONCILE_SCRIPT="$REPO/tools/pipeline/reviewer_reconcile.py"
 
+# Load runtime environment (API keys, paths)
+source "$REPO/runtime/config/runtime.env" 2>/dev/null || true
+
 PROPOSAL_FILE=""
 STALENESS_FILE=""
 MAX_ROUNDS=2
