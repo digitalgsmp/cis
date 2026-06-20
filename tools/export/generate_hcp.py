@@ -238,6 +238,9 @@ def render_hcp_01(stamp, hcp_static, agents_static, decisions, questions,
     # Status line: from canonical build state, fall back to actions
     status_line = build_phase
     lines.append(f"Status: {status_line}")
+    direction = build_state.get("current_direction", "")
+    if direction:
+        lines.append(f"Direction: {direction}")
     lines.append("")
     # Generation stamp
     for st in stamp:
@@ -719,15 +722,20 @@ def render_hcp_05(stamp, hcp_static, agents_static, actions, blockers,
         node = eligible[0]
         lines.append(f"**{node['node_label']}**")
     else:
-        blocked_nodes = [n for n in build_plan_nodes if n["status"] == "BLOCKED"]
-        deferred_nodes = [n for n in build_plan_nodes if n["status"] == "DEFERRED"]
-        lines.append("(No eligible PENDING node in build plan.)")
-        if deferred_nodes:
-            labels = "; ".join(f"Tier {n['tier']} DEFERRED" for n in deferred_nodes)
-            lines.append(f"Deferred: {labels}.")
-        if blocked_nodes:
-            labels = "; ".join(f"Tier {n['tier']} BLOCKED" for n in blocked_nodes)
-            lines.append(f"Blocked: {labels}.")
+        na_pending = [a for a in actions if a["status"] in ("PENDING", "IN_PROGRESS")]
+        if na_pending:
+            na = na_pending[0]
+            lines.append(f"**{na['id']}**: {na['description']}")
+        else:
+            blocked_nodes = [n for n in build_plan_nodes if n["status"] == "BLOCKED"]
+            deferred_nodes = [n for n in build_plan_nodes if n["status"] == "DEFERRED"]
+            lines.append("(No eligible PENDING node in build plan.)")
+            if deferred_nodes:
+                labels = "; ".join(f"Tier {n['tier']} DEFERRED" for n in deferred_nodes)
+                lines.append(f"Deferred: {labels}.")
+            if blocked_nodes:
+                labels = "; ".join(f"Tier {n['tier']} BLOCKED" for n in blocked_nodes)
+                lines.append(f"Blocked: {labels}.")
     lines.append("")
 
     # Do not start
@@ -954,7 +962,12 @@ def render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate=None,
     elif eligible:
         lines.append(f"{eligible[0]['node_label']}.")
     else:
-        lines.append("(No eligible PENDING node in build plan.)")
+        na_pending = [a for a in actions if a["status"] in ("PENDING", "IN_PROGRESS")]
+        if na_pending:
+            na = na_pending[0]
+            lines.append(f"**{na['id']}**: {na['description']}")
+        else:
+            lines.append("(No eligible PENDING node in build plan.)")
     lines.append("")
 
     # Eric Gate approval provenance summary

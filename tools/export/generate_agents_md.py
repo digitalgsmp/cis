@@ -55,6 +55,15 @@ def query_spine(db_path):
            ORDER BY sequence"""
     ).fetchall()
 
+    # Fallback: if no PENDING/IN_PROGRESS build nodes, pull from next_actions
+    if not actions:
+        actions = conn.execute(
+            """SELECT id, tier, description, status
+               FROM next_actions
+               WHERE status IN ('PENDING','IN_PROGRESS')
+               ORDER BY created_at"""
+        ).fetchall()
+
     # Section 7 — Active Blockers: authoritative source is BLOCKED build_plan_nodes,
     # supplemented by ACTIVE infrastructure blockers from active_blockers
     bp_blockers = conn.execute(
@@ -112,6 +121,9 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
     lines.append("## 1. Current Build Phase")
     build_phase = build_state.get("build_phase", "(unknown — project_state table missing)")
     lines.append(build_phase)
+    direction = build_state.get("current_direction", "")
+    if direction:
+        lines.append(f"Direction: {direction}")
     lines.append("Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md")
     lines.append("")
 
