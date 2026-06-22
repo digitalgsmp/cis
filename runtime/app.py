@@ -144,26 +144,551 @@ def serve_archive_file():
     mtype, _ = _mime.guess_type(resolved)
     return _send_file(resolved, mimetype=mtype or "application/octet-stream")
 
+# ── CIS Control Portal ──────────────────────────────────────────────────
+
+@app.route("/portal")
+def cis_portal():
+    """Serve the CIS Control Portal — standalone control plane UI."""
+    portal_path = RUNTIME_DIR / "ui" / "public" / "portal.html"
+    if portal_path.exists():
+        return portal_path.read_text(encoding="utf-8"), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return "Portal not found", 404
+
+
+@app.route("/api/portal/submit-intent", methods=["POST"])
+def portal_submit_intent():
+    """Portal intent submission — bypasses API key auth (internal page)."""
+    import json as _json
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or data.get("intent") or "").strip()
+    if not message:
+        return _json.dumps({"error": "No intent provided"}), 400, {"Content-Type": "application/json"}
+
+    # Build a sub-request to /api/advisor/route with the CIS API key
+    from flask import current_app
+    cis_key = os.environ.get("CIS_API_KEY",
+        "ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd")
+    import urllib.request as _ur
+    import urllib.error as _ue
+
+    payload = _json.dumps({
+        "message": message,
+        "source_actor": "eric",
+        "classify_only": False,
+    }).encode("utf-8")
+
+    # Call the advisor route internally (same process, via http so we get the full response)
+    try:
+        req = _ur.Request(
+            "http://127.0.0.1:5000/api/advisor/route",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "X-CIS-API-Key": cis_key,
+            },
+        )
+        resp = _ur.urlopen(req, timeout=300)
+        body = _json.loads(resp.read().decode("utf-8"))
+        return _json.dumps(body), 200, {"Content-Type": "application/json"}
+    except _ue.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        return _json.dumps({"error": f"Pipeline error: {err[:500]}"}), 500, {"Content-Type": "application/json"}
+    except Exception as e:
+        return _json.dumps({"error": str(e)}), 500, {"Content-Type": "application/json"}
+
+
+@app.route("/api/portal/run-deliberation", methods=["POST"])
+def portal_run_deliberation():
+    """Run the reviewer reconciliation engine and return results."""
+    import json as _json
+    import subprocess, tempfile
+
+    data = request.get_json(silent=True) or {}
+    proposal = (data.get("proposal") or "").strip()
+    run_id = (data.get("run_id") or "").strip()
+
+    if not proposal:
+        return _json.dumps({"error": "No proposal provided"}), 400, {"Content-Type": "application/json"}
+
+    # Write proposal to temp file
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write(proposal)
+        tmp_path = f.name
+
+    try:
+        env = os.environ.copy()
+        env.setdefault("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
+        # Source runtime.env for API keys
+        runtime_env = "/mnt/projects/cis/runtime/config/runtime.env"
+        if os.path.exists(runtime_env):
+            with open(runtime_env) as ef:
+                for line in ef:
+                    line = line.strip()
+                    if line.startswith("export ") and "=" in line:
+                        k, v = line[7:].split("=", 1)
+                        env[k] = v.strip('"').strip("'")
+        result = subprocess.run(
+            ["python3", "tools/pipeline/reviewer_reconcile.py",
+             "--proposal-file", tmp_path, "--max-rounds", "2", "--no-escalate"],
+            capture_output=True, text=True, timeout=300,
+            cwd="/mnt/projects/cis", env=env,
+        )
+        stdout = result.stdout
+        stderr = result.stderr
+
+        # Parse the JSON from the last JSON object in output
+        try:
+            # Find the FINAL RESULT JSON block
+            lines = stdout.split("\n")
+            json_start = None
+            for i, line in enumerate(lines):
+                if "═══ FINAL RESULT ═══" in line:
+                    json_start = i + 1
+                    break
+            if json_start:
+                final_json = _json.loads("\n".join(lines[json_start:]))
+            else:
+                final_json = {"status": "ERROR", "output": stdout[-2000:]}
+        except Exception:
+            final_json = {"status": "ERROR", "output": stdout[-1000:]}
+
+        # Extract reviewer responses from the verbose output
+        reviewers = {}
+        current_reviewer = None
+        for line in stdout.split("\n"):
+            if "verdict:" in line.lower() and ":" in line:
+                parts = line.split("verdict:", 1)
+                reviewer_name = parts[0].strip().lower()
+                verdict = parts[1].strip()
+                if "r1" in reviewer_name:
+                    reviewers["r1_resp"] = {"verdict": {"status": verdict}}
+                elif "qwen" in reviewer_name:
+                    reviewers["qwen_resp"] = {"verdict": {"status": verdict}}
+                elif "glm" in reviewer_name:
+                    reviewers["glm_resp"] = {"verdict": {"status": verdict}}
+                elif "deepseek" in reviewer_name or "reasoner" in reviewer_name:
+                    reviewers["dsr1_resp"] = {"verdict": {"status": verdict}}
+
+        final_json["reviewers"] = reviewers
+        if stderr and "Traceback" not in stderr:
+            final_json["warnings"] = stderr[:500]
+        return _json.dumps(final_json), 200, {"Content-Type": "application/json"}
+
+    except subprocess.TimeoutExpired:
+        return _json.dumps({"status": "TIMEOUT", "error": "Deliberation timed out after 5 minutes"}), 504, {"Content-Type": "application/json"}
+    except Exception as e:
+        return _json.dumps({"status": "ERROR", "error": str(e)}), 500, {"Content-Type": "application/json"}
+    finally:
+        import os as _os
+        try: _os.unlink(tmp_path)
+        except: pass
+
+
+@app.route("/api/portal/chat", methods=["POST"])
+def portal_chat():
+    """Direct chat with a Hermes-gateway model — goes through /api/advisor/chat."""
+    import json as _json, uuid, urllib.request as _ur, urllib.error as _ue
+
+    data = request.get_json(silent=True) or {}
+    agent = (data.get("agent") or "").strip()
+    message = (data.get("message") or "").strip()
+    thread_id = data.get("thread_id") or str(uuid.uuid4())
+
+    if not agent or not message:
+        return _json.dumps({"error": "agent and message required"}), 400, {"Content-Type": "application/json"}
+
+    cis_key = os.environ.get("CIS_API_KEY",
+        "ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd")
+
+    payload = _json.dumps({
+        "agent": agent,
+        "thread_id": thread_id,
+        "content": message,
+    }).encode("utf-8")
+
+    try:
+        req = _ur.Request(
+            "http://127.0.0.1:5000/api/advisor/chat",
+            data=payload,
+            headers={"Content-Type": "application/json", "X-CIS-API-Key": cis_key},
+        )
+        resp = _ur.urlopen(req, timeout=300)
+        body = _json.loads(resp.read().decode("utf-8"))
+        return _json.dumps({"thread_id": thread_id, "response": body.get("content") or body.get("response") or str(body)}), 200, {"Content-Type": "application/json"}
+    except _ue.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        return _json.dumps({"error": f"Chat error: {err[:500]}", "thread_id": thread_id}), 500, {"Content-Type": "application/json"}
+    except Exception as e:
+        return _json.dumps({"error": str(e), "thread_id": thread_id}), 500, {"Content-Type": "application/json"}
+
+
+# ── Direct Chat (no Hermes gateway) ──────────────────────────────────────
+#
+# Models that bypass Hermes entirely:
+#   qwen       → llama-server on port 8002 (OpenAI-compatible API)
+#   glm        → OpenRouter API (model: z-ai/glm-5.2-128k)
+#   ds-reasoner→ DeepSeek API (model: deepseek-reasoner, reasoning enabled)
+
+DIRECT_CHAT_CONFIG = {
+    "qwen": {
+        "url": "http://127.0.0.1:8002/v1/chat/completions",
+        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf",
+        "label": "Qwen (local, no Hermes)",
+        "key_env": None,
+        "max_tokens": 2000,
+        "api_type": "openai",
+    },
+    "glm": {
+        "url": "http://127.0.0.1:8003/v1/chat/completions",
+        "model": "GLM-4.7-Flash-Q4_K_M.gguf",
+        "label": "GLM 4.7 Flash (local)",
+        "key_env": None,
+        "max_tokens": 4000,
+        "api_type": "openai",
+    },
+    "ds-reasoner": {
+        "url": "https://api.deepseek.com/v1/chat/completions",
+        "model": "deepseek-reasoner",
+        "label": "DeepSeek Reasoner (API)",
+        "key_env": "DEEPSEEK_API_KEY",
+        "max_tokens": 4000,
+        "api_type": "deepseek",
+    },
+    "qwen-max": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "qwen/qwen3.6-max-preview",
+        "label": "Qwen3.6 Max (OpenRouter)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 4000,
+        "api_type": "openrouter",
+    },
+    "claude-opus": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "model": "claude-opus-4-8",
+        "label": "Claude Opus 4.8 (Anthropic API)",
+        "key_env": "ANTHROPIC_API_KEY",
+        "max_tokens": 4000,
+        "api_type": "anthropic",
+    },
+    "glm-5.2": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "z-ai/glm-5.2",
+        "label": "GLM 5.2 (OpenRouter)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 4000,
+        "api_type": "openrouter",
+    },
+    "mistral-large": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "mistralai/mistral-large-2512",
+        "label": "Mistral Large 3 (OpenRouter)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 4000,
+        "api_type": "openrouter",
+    },
+}
+
+
+def _call_direct_chat(model_key, messages, max_tokens=None):
+    """Call a model directly — no Hermes gateway interception.
+
+    Handles three API types:
+      - openai/openrouter/deepseek: OpenAI-compatible chat/completions
+      - anthropic: Anthropic Messages API (different request/response format)
+    """
+    import json as _json, urllib.request as _ur, urllib.error as _ue
+
+    cfg = DIRECT_CHAT_CONFIG.get(model_key)
+    if not cfg:
+        raise ValueError(f"Unknown direct model: {model_key}")
+
+    api_type = cfg.get("api_type", "openai")
+    api_key = None
+
+    if cfg["key_env"]:
+        api_key = os.environ.get(cfg["key_env"])
+        if not api_key:
+            runtime_env = "/mnt/projects/cis/runtime/config/runtime.env"
+            if os.path.exists(runtime_env):
+                with open(runtime_env) as ef:
+                    for line in ef:
+                        line = line.strip()
+                        if line.startswith("export ") and "=" in line:
+                            k, v = line[7:].split("=", 1)
+                            if k == cfg["key_env"]:
+                                api_key = v.strip('"').strip("'")
+                                break
+        if not api_key:
+            raise ValueError(f"API key {cfg['key_env']} not found for {model_key}")
+
+    # ── Anthropic Messages API ──────────────────────────────────────
+    if api_type == "anthropic":
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        # Convert OpenAI-format messages to Anthropic format
+        anthropic_messages = []
+        system_content = ""
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            if role == "system":
+                system_content += content + "\n"
+            else:
+                anthropic_messages.append({"role": role, "content": content})
+
+        body = {
+            "model": cfg["model"],
+            "max_tokens": max_tokens or cfg["max_tokens"],
+            "messages": anthropic_messages,
+        }
+        if system_content.strip():
+            body["system"] = system_content.strip()
+
+        req = _ur.Request(cfg["url"], data=_json.dumps(body).encode("utf-8"), headers=headers)
+
+        try:
+            resp = _ur.urlopen(req, timeout=300)
+            raw = _json.loads(resp.read().decode("utf-8"))
+        except _ue.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Claude HTTP {e.code}: {err_body[:500]}")
+
+        # Anthropic response: content is an array of blocks
+        content_blocks = raw.get("content", [])
+        text = ""
+        for block in content_blocks:
+            if block.get("type") == "text":
+                text += block.get("text", "")
+        # Thinking blocks (extended thinking)
+        reasoning = ""
+        for block in content_blocks:
+            if block.get("type") == "thinking":
+                reasoning += block.get("thinking", "")
+
+        return {
+            "content": text,
+            "reasoning": reasoning,
+            "model": raw.get("model", cfg["model"]),
+            "usage": raw.get("usage", {}),
+        }
+
+    # ── OpenAI-compatible APIs (OpenRouter, DeepSeek, local Qwen) ───
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        if api_type == "openrouter":
+            headers["Authorization"] = f"Bearer {api_key}"
+            headers["HTTP-Referer"] = "http://127.0.0.1:5000/portal"
+            headers["X-Title"] = "CIS Portal Direct Chat"
+        else:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": cfg["model"],
+        "messages": messages,
+        "max_tokens": max_tokens or cfg["max_tokens"],
+        "temperature": 0.7,
+    }
+
+    if api_type == "deepseek":
+        body["thinking"] = {"type": "enabled"}
+
+    if api_type == "openai" and api_key is None:
+        # Local llama-server — no auth header needed
+        pass
+
+    req = _ur.Request(cfg["url"], data=_json.dumps(body).encode("utf-8"), headers=headers)
+
+    try:
+        resp = _ur.urlopen(req, timeout=300)
+        raw = _json.loads(resp.read().decode("utf-8"))
+    except _ue.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Direct chat HTTP {e.code}: {err_body[:500]}")
+
+    choices = raw.get("choices", [])
+    if not choices:
+        raise RuntimeError(f"No choices in response: {_json.dumps(raw)[:500]}")
+
+    msg = choices[0].get("message", {})
+    content = msg.get("content", "") or ""
+    reasoning = msg.get("reasoning_content", "") or msg.get("reasoning", "") or ""
+
+    return {
+        "content": content,
+        "reasoning": reasoning,
+        "model": raw.get("model", cfg["model"]),
+        "usage": raw.get("usage", {}),
+    }
+
+
+@app.route("/api/portal/chat-direct", methods=["POST"])
+def portal_chat_direct():
+    """Direct chat with models OUTSIDE Hermes gateways — Qwen, GLM, DeepSeek Reasoner."""
+    import json as _json, uuid
+
+    data = request.get_json(silent=True) or {}
+    model_key = (data.get("model") or "").strip()
+    message = (data.get("message") or "").strip()
+    thread_id = data.get("thread_id") or str(uuid.uuid4())
+    history = data.get("history") or []  # [{role, content}, ...]
+
+    if not model_key or not message:
+        return _json.dumps({"error": "model and message required"}), 400, {"Content-Type": "application/json"}
+
+    if model_key not in DIRECT_CHAT_CONFIG:
+        return _json.dumps({"error": f"Unknown model: {model_key}. Use: qwen, glm, ds-reasoner"}), 400, {"Content-Type": "application/json"}
+
+    # Build messages: history + current user message
+    messages = list(history)
+    messages.append({"role": "user", "content": message})
+
+    try:
+        result = _call_direct_chat(model_key, messages)
+        return _json.dumps({
+            "thread_id": thread_id,
+            "model": model_key,
+            "label": DIRECT_CHAT_CONFIG[model_key]["label"],
+            "response": result["content"],
+            "reasoning": result["reasoning"],
+        }), 200, {"Content-Type": "application/json"}
+    except Exception as e:
+        return _json.dumps({"error": str(e), "thread_id": thread_id}), 500, {"Content-Type": "application/json"}
+
+
+@app.route("/api/portal/chat-group", methods=["POST"])
+def portal_chat_group():
+    """Group chat with adversarial observer pattern.
+
+    Flow:
+    1. Primary model receives user message → responds
+    2. Observer models receive [user message + primary response] → challenge/verify
+    3. All responses returned together
+    """
+    import json as _json, uuid, urllib.request as _ur, urllib.error as _ue
+
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    primary = (data.get("primary") or "").strip()       # model_key or agent
+    observers = data.get("observers") or []              # list of model_keys or agents
+    mode = (data.get("mode") or "observer").strip()      # "observer" or "parallel"
+
+    if not message or not primary:
+        return _json.dumps({"error": "message and primary required"}), 400, {"Content-Type": "application/json"}
+
+    results = {}
+
+    # ── Step 1: Primary responds ──────────────────────────────────────
+    primary_direct = primary in DIRECT_CHAT_CONFIG
+
+    if primary_direct:
+        try:
+            r = _call_direct_chat(primary, [{"role": "user", "content": message}])
+            results["primary"] = {
+                "model": primary,
+                "label": DIRECT_CHAT_CONFIG[primary]["label"],
+                "response": r["content"],
+                "reasoning": r.get("reasoning", ""),
+                "direct": True,
+            }
+        except Exception as e:
+            results["primary"] = {"model": primary, "error": str(e), "direct": True}
+    else:
+        # Hermes gateway model
+        cis_key = os.environ.get("CIS_API_KEY",
+            "ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd")
+        try:
+            payload = _json.dumps({
+                "agent": primary,
+                "thread_id": str(uuid.uuid4()),
+                "content": message,
+            }).encode("utf-8")
+            req = _ur.Request(
+                "http://127.0.0.1:5000/api/advisor/chat",
+                data=payload,
+                headers={"Content-Type": "application/json", "X-CIS-API-Key": cis_key},
+            )
+            resp = _ur.urlopen(req, timeout=300)
+            body = _json.loads(resp.read().decode("utf-8"))
+            results["primary"] = {
+                "model": primary,
+                "label": primary,
+                "response": body.get("content") or body.get("response") or str(body),
+                "direct": False,
+            }
+        except Exception as e:
+            results["primary"] = {"model": primary, "error": str(e), "direct": False}
+
+    primary_response = results["primary"].get("response", "")
+
+    # ── Step 2: If parallel mode, send to observers with ORIGINAL message only ──
+    #    If observer mode, send to observers with original message + primary response
+
+    if mode == "parallel":
+        observer_prompt = message
+    else:
+        observer_prompt = (
+            f"USER MESSAGE:\n{message}\n\n"
+            f"PRIMARY MODEL ({primary}) RESPONDED:\n{primary_response}\n\n"
+            f"You are an ADVERSARIAL OBSERVER. Review the primary model's response critically. "
+            f"Do you see errors, omissions, questionable claims, or violations of CIS conventions? "
+            f"If the response is correct, say so concisely. If you find issues, state them clearly."
+        )
+
+    for obs in (observers or []):
+        obs_direct = obs in DIRECT_CHAT_CONFIG
+
+        if obs_direct:
+            try:
+                r = _call_direct_chat(obs, [{"role": "user", "content": observer_prompt}])
+                results[obs] = {
+                    "model": obs,
+                    "label": DIRECT_CHAT_CONFIG[obs]["label"],
+                    "response": r["content"],
+                    "reasoning": r.get("reasoning", ""),
+                    "direct": True,
+                    "role": "observer",
+                }
+            except Exception as e:
+                results[obs] = {"model": obs, "error": str(e), "direct": True, "role": "observer"}
+        else:
+            cis_key = os.environ.get("CIS_API_KEY",
+                "ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd")
+            try:
+                payload = _json.dumps({
+                    "agent": obs,
+                    "thread_id": str(uuid.uuid4()),
+                    "content": observer_prompt,
+                }).encode("utf-8")
+                req = _ur.Request(
+                    "http://127.0.0.1:5000/api/advisor/chat",
+                    data=payload,
+                    headers={"Content-Type": "application/json", "X-CIS-API-Key": cis_key},
+                )
+                resp = _ur.urlopen(req, timeout=300)
+                body = _json.loads(resp.read().decode("utf-8"))
+                results[obs] = {
+                    "model": obs,
+                    "label": obs,
+                    "response": body.get("content") or body.get("response") or str(body),
+                    "direct": False,
+                    "role": "observer",
+                }
+            except Exception as e:
+                results[obs] = {"model": obs, "error": str(e), "direct": False, "role": "observer"}
+
+    return _json.dumps({"mode": mode, "primary": primary, "results": results}), 200, {"Content-Type": "application/json"}
+
+
 # ── SPA catch-all — must be before more specific frontend routes ──────────
 
 @app.route("/")
-@app.route("/<path:path>")
-def index(path=""):
-    # Always inject basename script for root-level SPA serving
-    ui_dist = RUNTIME_DIR / "ui" / "dist"
-    target = ui_dist / path if path else None
-    if target and target.exists() and target.is_file():
-        return send_from_directory(str(ui_dist), path)
-    # SPA fallback: read index.html and inject basename (empty for root serving)
-    index_html = (ui_dist / "index.html").read_text(encoding="utf-8")
-    index_html = index_html.replace(
-        '<div id="root"></div>',
-        '<script>window.__CIS_BASENAME__="";</script><div id="root"></div>'
-    )
-    from flask import make_response
-    resp = make_response(index_html)
-    resp.headers["Content-Type"] = "text/html; charset=utf-8"
-    return resp
+def root_redirect():
+    """Redirect root to the CIS Control Portal."""
+    from flask import redirect
+    return redirect("/portal")
 
 
 # ── Legacy frontend routes ─────────────────────────────────────────────────

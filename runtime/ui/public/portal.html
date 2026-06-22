@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIS Control Portal</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--green:#3fb950;--yellow:#d29922;--red:#f85149;--blue:#58a6ff;--purple:#a371f7;--accent:#1f6feb;--orange:#f0883e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;line-height:1.5;width:100vw;height:100vh;overflow:hidden}
+.container{width:100%;height:100%;display:flex;flex-direction:column;padding:8px;gap:0}
+h1{font-size:20px;margin-bottom:4px}
+h2{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+h3{font-size:13px;margin:8px 0 4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.card-title{font-weight:600;font-size:13px}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}
+.bg-green{background:#1a3a1f;color:var(--green)}.bg-yellow{background:#3a2f0a;color:var(--yellow)}
+.bg-red{background:#3a1015;color:var(--red)}.bg-blue{background:#0a2d3a;color:var(--blue)}.bg-purple{background:#1a103a;color:var(--purple)}
+input,textarea,select{width:100%;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;margin-bottom:6px;font-family:inherit}
+textarea{resize:vertical;min-height:50px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-primary{background:var(--accent);color:#fff}.btn-green{background:#238636;color:#fff}.btn-red{background:#da3633;color:#fff}.btn-sm{padding:4px 8px;font-size:11px}.btn-xs{padding:2px 6px;font-size:10px}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+.flex-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.muted{color:var(--muted);font-size:11px}
+.mt8{margin-top:8px}.mb8{margin-bottom:8px}.mt4{margin-top:4px}
+
+/* Tabs */
+.tab-bar{display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid var(--border)}
+.tab{padding:6px 14px;cursor:pointer;font-size:12px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex:1;overflow:hidden}
+#tab-control.active,#tab-deliberation.active{overflow-y:auto;padding-right:4px}
+
+/* Chat — 4-Panel Flex with Resizable Dividers */
+.chat-grid{display:flex;flex:1;overflow:hidden;gap:0;min-height:0}
+.chat-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;flex-direction:column;overflow:hidden;flex:1 1 0}
+.chat-panel:not(:last-child){margin-right:4px}
+.chat-panel:first-child{margin-left:0}
+.chat-divider{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative;z-index:10}
+.chat-divider:hover,.chat-divider.dragging{background:var(--accent)}
+.chat-panel.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.chat-panel.primary{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange)}
+.chat-panel-header{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);flex-shrink:0}
+.chat-panel-header select{width:auto;min-width:140px;font-size:11px;padding:3px 6px;margin:0;flex:1}
+.chat-panel-header .panel-label{font-size:10px;color:var(--muted);margin-right:4px;white-space:nowrap}
+.chat-panel-header .no-hermes-badge{font-size:9px;color:var(--orange);background:rgba(240,136,62,.1);padding:1px 5px;border-radius:8px;margin-left:4px;white-space:nowrap}
+.chat-panel-log{flex:1;overflow-y:auto;padding:8px;font-size:12px;line-height:1.5}
+.chat-panel-log .msg{margin-bottom:8px;padding:6px 10px;border-radius:6px;max-width:95%;word-wrap:break-word}
+.chat-panel-log .msg-user{background:var(--accent);color:#fff;margin-left:auto;text-align:right;max-width:80%}
+.chat-panel-log .msg-model{background:var(--bg);border:1px solid var(--border)}
+.chat-panel-log .msg-system{color:var(--muted);font-size:10px;text-align:center;padding:2px;border:none}
+.chat-panel-log .msg-error{background:rgba(248,81,73,.1);border:1px solid var(--red);color:var(--red)}
+.chat-panel-log .msg-observer{border-left:3px solid var(--purple)}
+.chat-panel-log .msg-label{font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
+.chat-panel-log .reasoning-toggle{font-size:10px;color:var(--blue);cursor:pointer;margin-top:4px;user-select:none}
+.chat-panel-log .reasoning-body{display:none;font-size:10px;color:var(--muted);background:rgba(0,0,0,.2);padding:6px;border-radius:4px;margin-top:4px;max-height:120px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+.chat-panel-log .reasoning-body.open{display:block}
+
+/* Chat mode selector */
+.chat-mode-bar{display:flex;gap:4px;margin-bottom:8px;align-items:center}
+.chat-mode-btn{padding:4px 10px;font-size:11px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer}
+.chat-mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(31,111,235,.1)}
+.chat-mode-desc{font-size:10px;color:var(--muted);margin-left:8px}
+
+/* Pipeline & Deliberation */
+.pipeline-bar{display:flex;gap:4px;margin:8px 0;font-size:12px}
+.stage{padding:4px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border);flex:1;text-align:center}
+.stage-active{border-color:var(--blue);background:#0a2d3a;color:var(--blue)}
+.gate-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid var(--border)}
+.gate-row:last-child{border-bottom:none}
+.gate-pass{color:var(--green)}.gate-fail{color:var(--red)}
+
+.verdict-block{border-left:3px solid var(--border);padding:8px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:0 4px 4px 0}
+.verdict-consensus{border-left-color:var(--green)}.verdict-objections{border-left-color:var(--red)}
+.obj-item{font-size:12px;padding:2px 0 2px 16px;position:relative}
+.obj-item::before{content:"•";position:absolute;left:4px;color:var(--red)}
+.reasoning-box{font-size:11px;color:var(--muted);background:rgba(0,0,0,.2);padding:6px 10px;border-radius:4px;margin:4px 0;max-height:120px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+.collapsible-header{cursor:pointer;user-select:none;color:var(--blue);font-size:12px}
+.collapsible-body{display:none}.collapsible-body.open{display:block}
+
+#toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;display:none;z-index:999}
+#toast.success{background:#1a3a1f;color:var(--green);border:1px solid var(--green)}
+#toast.error{background:#3a1015;color:var(--red);border:1px solid var(--red)}
+.spin{display:inline-block;animation:spin .6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>⚙️ CIS Control Portal</h1>
+<div class="muted" id="status-line">Connecting...</div>
+
+<div class="tab-bar">
+  <div class="tab" onclick="switchTab('control')">Control</div>
+  <div class="tab" onclick="switchTab('deliberation')">Deliberation</div>
+  <div class="tab active" onclick="switchTab('chat')">Chat</div>
+</div>
+
+<!-- CONTROL TAB -->
+<div class="tab-content" id="tab-control">
+<h2>Submit Intent</h2>
+<div class="card">
+  <textarea id="intent-input" placeholder="What do you want CIS to work on?"></textarea>
+  <div class="flex-row"><button class="btn btn-primary" onclick="submitIntent()" id="submit-btn">Submit to Pipeline</button><span class="muted" id="submit-status"></span></div>
+</div>
+<h2>Active Tasks</h2><div id="active-tasks">Loading...</div>
+<h2>Awaiting Your Approval</h2><div id="approval-queue">Loading...</div>
+<h2>Recent Activity</h2><div id="recent-activity">Loading...</div>
+<h2>Gate Status</h2><div class="card" id="gates-panel">Loading...</div>
+</div>
+
+<!-- DELIBERATION TAB -->
+<div class="tab-content" id="tab-deliberation">
+<h2>Run Deliberation</h2>
+<div class="card">
+  <div class="flex-row mb8"><button class="btn btn-primary btn-sm" onclick="runDeliberation()" id="delib-btn">Run Deliberation</button></div>
+  <div class="flex-row">
+    <select id="delib-run-select" style="flex:1;padding:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px"><option value="">-- Select a workflow run --</option></select>
+  </div>
+</div>
+<div id="deliberation-results"><div class="card muted">Select a run and click "Run Deliberation". All 4 reviewers fire.</div></div>
+
+<h2>Conversation Director</h2>
+<div class="card">
+  <textarea id="director-input" placeholder="Add context or direction for the deliberation..."></textarea>
+  <div class="flex-row">
+    <button class="btn btn-green btn-sm" onclick="directApprove()">✓ Approve</button>
+    <button class="btn btn-red btn-sm" onclick="directReject()">✗ Reject</button>
+    <button class="btn btn-primary btn-sm" onclick="directContext()">→ Add Context</button>
+  </div>
+</div>
+</div>
+
+<!-- CHAT TAB — 4-Panel Group Chat -->
+<div class="tab-content active" id="tab-chat">
+<h2 style="margin-top:0">Multi-Model Chat</h2>
+
+<!-- Mode toggle -->
+<div class="chat-mode-bar">
+  <button class="chat-mode-btn active" onclick="setChatMode('1v1',this)" id="mode-1v1">1:1 Chat</button>
+  <button class="chat-mode-btn" onclick="setChatMode('all',this)" id="mode-all">All Parallel</button>
+  <button class="chat-mode-btn" onclick="setChatMode('observer',this)" id="mode-observer">Adversarial Observer</button>
+  <span class="chat-mode-desc" id="mode-desc">Click a panel to chat 1:1 with that model</span>
+</div>
+
+<div class="chat-grid" id="chat-grid">
+  <!-- Panel 1 -->
+  <div class="chat-panel selected" id="panel-0">
+    <div class="chat-panel-header">
+      <span class="panel-label">P1</span>
+      <select onchange="onPanelModel(0,this.value)" id="panel-model-0">
+        <optgroup label="─ Hermes Gateway ─">
+          <option value="hermes-v4pro">Drafter (v4pro)</option>
+          <option value="hermes-r1">Reviewer (r1)</option>
+          <option value="hermes-v4impl">Implementer</option>
+          <option value="hermes-prime">Prime (flash)</option>
+        </optgroup>
+        <optgroup label="─ Direct (no Hermes) ─">
+          <option value="qwen">⟂ Qwen (local:8002)</option>
+          <option value="qwen-max">⟂ Qwen3.6 Max (OpenRouter)</option>
+          <option value="glm">⟂ GLM 4.7 Flash (local)</option>
+          <option value="ds-reasoner">⟂ DeepSeek Reasoner</option>
+          <option value="claude-opus">⟂ Claude Opus 4.8 (API)</option>
+          <option value="glm-5.2">⟂ GLM 5.2 (OpenRouter)</option>
+          <option value="mistral-large">⟂ Mistral Large 3 (OpenRouter)</option>
+        </optgroup>
+      </select>
+      <span class="no-hermes-badge" id="badge-0" style="display:none">no Hermes</span>
+    </div>
+    <div class="chat-panel-log" id="log-0"><div class="msg msg-system">Select a model and start chatting</div></div>
+  </div>
+  <div class="chat-divider" id="divider-0"></div>
+  <!-- Panel 2 -->
+  <div class="chat-panel" id="panel-1">
+    <div class="chat-panel-header">
+      <span class="panel-label">P2</span>
+      <select onchange="onPanelModel(1,this.value)" id="panel-model-1">
+        <optgroup label="─ Hermes Gateway ─">
+          <option value="hermes-v4pro">Drafter (v4pro)</option>
+          <option value="hermes-r1" selected>Reviewer (r1)</option>
+          <option value="hermes-v4impl">Implementer</option>
+          <option value="hermes-prime">Prime (flash)</option>
+        </optgroup>
+        <optgroup label="─ Direct (no Hermes) ─">
+          <option value="qwen">⟂ Qwen (local:8002)</option>
+          <option value="qwen-max">⟂ Qwen3.6 Max (OpenRouter)</option>
+          <option value="glm">⟂ GLM 4.7 Flash (local)</option>
+          <option value="ds-reasoner">⟂ DeepSeek Reasoner</option>
+          <option value="claude-opus">⟂ Claude Opus 4.8 (API)</option>
+          <option value="glm-5.2">⟂ GLM 5.2 (OpenRouter)</option>
+          <option value="mistral-large">⟂ Mistral Large 3 (OpenRouter)</option>
+        </optgroup>
+      </select>
+      <span class="no-hermes-badge" id="badge-1" style="display:none">no Hermes</span>
+    </div>
+    <div class="chat-panel-log" id="log-1"><div class="msg msg-system">Select a model and start chatting</div></div>
+  </div>
+  <div class="chat-divider" id="divider-1"></div>
+  <!-- Panel 3 -->
+  <div class="chat-panel" id="panel-2">
+    <div class="chat-panel-header">
+      <span class="panel-label">P3</span>
+      <select onchange="onPanelModel(2,this.value)" id="panel-model-2">
+        <optgroup label="─ Hermes Gateway ─">
+          <option value="hermes-v4pro">Drafter (v4pro)</option>
+          <option value="hermes-r1">Reviewer (r1)</option>
+          <option value="hermes-v4impl">Implementer</option>
+          <option value="hermes-prime">Prime (flash)</option>
+        </optgroup>
+        <optgroup label="─ Direct (no Hermes) ─">
+          <option value="qwen" selected>⟂ Qwen (local:8002)</option>
+          <option value="qwen-max">⟂ Qwen3.6 Max (OpenRouter)</option>
+          <option value="glm">⟂ GLM 4.7 Flash (local)</option>
+          <option value="ds-reasoner">⟂ DeepSeek Reasoner</option>
+          <option value="claude-opus">⟂ Claude Opus 4.8 (API)</option>
+          <option value="glm-5.2">⟂ GLM 5.2 (OpenRouter)</option>
+          <option value="mistral-large">⟂ Mistral Large 3 (OpenRouter)</option>
+        </optgroup>
+      </select>
+      <span class="no-hermes-badge" id="badge-2">no Hermes</span>
+    </div>
+    <div class="chat-panel-log" id="log-2"><div class="msg msg-system">Select a model and start chatting</div></div>
+  </div>
+  <div class="chat-divider" id="divider-2"></div>
+  <!-- Panel 4 -->
+  <div class="chat-panel" id="panel-3">
+    <div class="chat-panel-header">
+      <span class="panel-label">P4</span>
+      <select onchange="onPanelModel(3,this.value)" id="panel-model-3">
+        <optgroup label="─ Hermes Gateway ─">
+          <option value="hermes-v4pro">Drafter (v4pro)</option>
+          <option value="hermes-r1">Reviewer (r1)</option>
+          <option value="hermes-v4impl">Implementer</option>
+          <option value="hermes-prime">Prime (flash)</option>
+        </optgroup>
+        <optgroup label="─ Direct (no Hermes) ─">
+          <option value="qwen">⟂ Qwen (local:8002)</option>
+          <option value="qwen-max">⟂ Qwen3.6 Max (OpenRouter)</option>
+          <option value="glm" selected>⟂ GLM 4.7 Flash (local)</option>
+          <option value="ds-reasoner">⟂ DeepSeek Reasoner</option>
+          <option value="claude-opus">⟂ Claude Opus 4.8 (API)</option>
+          <option value="glm-5.2">⟂ GLM 5.2 (OpenRouter)</option>
+          <option value="mistral-large">⟂ Mistral Large 3 (OpenRouter)</option>
+        </optgroup>
+      </select>
+      <span class="no-hermes-badge" id="badge-3">no Hermes</span>
+    </div>
+    <div class="chat-panel-log" id="log-3"><div class="msg msg-system">Select a model and start chatting</div></div>
+  </div>
+</div>
+
+<div class="flex-row mt8">
+  <textarea id="chat-input" placeholder="Type your message... (Enter to send)" style="min-height:36px;flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+  <button class="btn btn-primary" onclick="sendChat()" id="chat-send-btn">Send</button>
+  <button class="btn btn-sm" onclick="clearAllChats()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted)">Clear All</button>
+</div>
+<div class="muted mt4" id="chat-status"></div>
+</div>
+
+</div><!-- container -->
+<div id="toast"></div>
+
+<script>
+const REFRESH_MS=10000;
+let CHAT_MODE='1v1';
+let SELECTED_PANEL=0;
+const DIRECT_MODELS={'qwen':true,'glm':true,'ds-reasoner':true,'qwen-max':true,'claude-opus':true,'glm-5.2':true,'mistral-large':true};
+const PANEL_HISTORY=[[],[],[],[]];  // per-panel message history for direct models
+
+function toast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
+async function api(path,opts={}){try{const r=await fetch(path,opts);if(!r.ok)throw new Error(`${r.status}`);return await r.json()}catch(e){console.error(path,e);return null}}
+function statusBadge(s){const m={'CONSENSUS_REACHED':'green','REVIEW_PENDING':'yellow','REVISE_REQUESTED':'yellow','REVIEWING':'blue','DRAFTING':'blue','EXECUTING':'purple','COMPLETE':'green','PENDING':'yellow','ERROR':'red','ESCALATE':'red','OBJECTIONS':'red'};return `<span class="badge bg-${m[s]||'blue'}">${s}</span>`}
+function switchTab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('active',e.textContent.toLowerCase().includes(t)));document.querySelectorAll('.tab-content').forEach(e=>e.classList.toggle('active',e.id===`tab-${t}`));if(t==='chat')updateModeDesc()}
+function escapeHtml(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function trunc(s,n){return s&&s.length>n?s.substring(0,n)+'...':s}
+
+// === CHAT MODE ===
+function setChatMode(mode,btn){
+  CHAT_MODE=mode;
+  document.querySelectorAll('.chat-mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Reset panel highlights
+  document.querySelectorAll('.chat-panel').forEach(p=>{p.classList.remove('selected','primary')});
+  if(mode==='1v1'){
+    document.getElementById('panel-'+SELECTED_PANEL).classList.add('selected');
+    updateModeDesc();
+  }else if(mode==='observer'){
+    // In observer mode, first panel is primary by default
+    document.getElementById('panel-0').classList.add('primary');
+    updateModeDesc();
+  }else{
+    updateModeDesc();
+  }
+}
+
+function updateModeDesc(){
+  const d=document.getElementById('mode-desc');
+  if(CHAT_MODE==='1v1')d.textContent='Click a panel to chat 1:1 with that model';
+  else if(CHAT_MODE==='all')d.textContent='Sends to ALL 4 panels simultaneously — compare responses';
+  else d.textContent='P1 is PRIMARY (responds first). P2-P4 observe & challenge the response.';
+}
+
+function onPanelModel(idx,val){
+  const badge=document.getElementById('badge-'+idx);
+  if(DIRECT_MODELS[val]){badge.style.display='inline'}
+  else{badge.style.display='none'}
+  // If panel is selected and we're in 1:1 mode, clear its log
+  if(idx===SELECTED_PANEL && CHAT_MODE==='1v1'){
+    document.getElementById('log-'+idx).innerHTML='<div class="msg msg-system">Switched model. Start a new conversation.</div>';
+    PANEL_HISTORY[idx]=[];
+  }
+  // Update primary panel in observer mode
+  if(idx===0 && CHAT_MODE==='observer'){
+    document.getElementById('panel-0').classList.add('primary');
+  }
+}
+
+// Click on a panel to select it (1:1 mode)
+document.querySelectorAll('.chat-panel').forEach((panel,i)=>{
+  panel.addEventListener('click',function(e){
+    if(e.target.tagName==='SELECT'||e.target.tagName==='BUTTON')return;
+    if(CHAT_MODE==='1v1'){
+      SELECTED_PANEL=i;
+      document.querySelectorAll('.chat-panel').forEach(p=>p.classList.remove('selected'));
+      panel.classList.add('selected');
+    }else if(CHAT_MODE==='observer'){
+      // Click to set primary
+      document.querySelectorAll('.chat-panel').forEach(p=>p.classList.remove('primary'));
+      panel.classList.add('primary');
+    }
+  });
+});
+
+// === SEND CHAT ===
+async function sendChat(){
+  const inp=document.getElementById('chat-input');
+  const msg=inp.value.trim();
+  if(!msg)return;
+
+  const btn=document.getElementById('chat-send-btn');
+  btn.disabled=true;
+  inp.value='';
+
+  if(CHAT_MODE==='1v1'){
+    await send1v1(SELECTED_PANEL, msg);
+  }else if(CHAT_MODE==='all'){
+    await sendAll(msg);
+  }else if(CHAT_MODE==='observer'){
+    await sendObserver(msg);
+  }
+  btn.disabled=false;
+}
+
+async function send1v1(idx, msg){
+  const model=document.getElementById('panel-model-'+idx).value;
+  const log=document.getElementById('log-'+idx);
+  const isHermes=!DIRECT_MODELS[model];
+
+  // Show user message in panel
+  appendMsg(log, 'user', msg);
+
+  if(isHermes){
+    appendMsg(log, 'model-loading', model);
+    const r=await api('/api/portal/chat',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agent:model, message:msg})
+    });
+    removeLastMsg(log);
+    if(r&&r.response){
+      appendMsg(log, 'model', r.response, model);
+    }else{
+      appendMsg(log, 'error', r?.error||'No response', model);
+    }
+  }else{
+    appendMsg(log, 'model-loading', model);
+    const r=await api('/api/portal/chat-direct',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:model, message:msg, history:PANEL_HISTORY[idx]})
+    });
+    removeLastMsg(log);
+    if(r&&r.response){
+      PANEL_HISTORY[idx].push({role:'user',content:msg});
+      PANEL_HISTORY[idx].push({role:'assistant',content:r.response});
+      appendMsg(log, 'model', r.response, model, r.reasoning);
+    }else{
+      appendMsg(log, 'error', r?.error||'No response', model);
+    }
+  }
+}
+
+async function sendAll(msg){
+  const models=[];
+  for(let i=0;i<4;i++)models.push(document.getElementById('panel-model-'+i).value);
+
+  // Show user message in all panels
+  for(let i=0;i<4;i++){
+    appendMsg(document.getElementById('log-'+i), 'user', msg);
+  }
+
+  // Fire all 4 in parallel
+  const promises=models.map((m,i)=>{
+    const isHermes=!DIRECT_MODELS[m];
+    const log=document.getElementById('log-'+i);
+    appendMsg(log, 'model-loading', m);
+    if(isHermes){
+      return api('/api/portal/chat',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({agent:m, message:msg})
+      }).then(r=>{
+        removeLastMsg(log);
+        if(r&&r.response) appendMsg(log, 'model', r.response, m);
+        else appendMsg(log, 'error', r?.error||'No response', m);
+      });
+    }else{
+      return api('/api/portal/chat-direct',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:m, message:msg, history:PANEL_HISTORY[i]})
+      }).then(r=>{
+        removeLastMsg(log);
+        if(r&&r.response){
+          PANEL_HISTORY[i].push({role:'user',content:msg});
+          PANEL_HISTORY[i].push({role:'assistant',content:r.response});
+          appendMsg(log, 'model', r.response, m, r.reasoning);
+        }else appendMsg(log, 'error', r?.error||'No response', m);
+      });
+    }
+  });
+  await Promise.all(promises);
+}
+
+async function sendObserver(msg){
+  // Find primary panel
+  let primaryIdx=0;
+  for(let i=0;i<4;i++){
+    if(document.getElementById('panel-'+i).classList.contains('primary')){primaryIdx=i;break}
+  }
+  const primaryModel=document.getElementById('panel-model-'+primaryIdx).value;
+  const observerModels=[];
+  for(let i=0;i<4;i++){
+    if(i!==primaryIdx)observerModels.push(document.getElementById('panel-model-'+i).value);
+  }
+
+  // Show user message in primary panel only (observers get it via prompt)
+  appendMsg(document.getElementById('log-'+primaryIdx), 'user', msg);
+
+  // Call group endpoint
+  appendMsg(document.getElementById('log-'+primaryIdx), 'model-loading', primaryModel);
+  for(let i=0;i<4;i++){
+    if(i!==primaryIdx)appendMsg(document.getElementById('log-'+i), 'model-loading', document.getElementById('panel-model-'+i).value);
+  }
+
+  const r=await api('/api/portal/chat-group',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:msg, primary:primaryModel, observers:observerModels, mode:'observer'})
+  });
+
+  // Remove loading messages
+  for(let i=0;i<4;i++)removeLastMsg(document.getElementById('log-'+i));
+
+  if(!r){toast('Group chat failed','error');return}
+
+  // Show primary response
+  if(r.results&&r.results.primary){
+    const p=r.results.primary;
+    if(p.response){
+      appendMsg(document.getElementById('log-'+primaryIdx), 'model', p.response, p.label||primaryModel, p.reasoning);
+      // Add to history if direct
+      if(DIRECT_MODELS[primaryModel]){
+        PANEL_HISTORY[primaryIdx].push({role:'user',content:msg});
+        PANEL_HISTORY[primaryIdx].push({role:'assistant',content:p.response});
+      }
+    }else{
+      appendMsg(document.getElementById('log-'+primaryIdx), 'error', p.error||'No response', p.label||primaryModel);
+    }
+  }
+
+  // Show observer responses
+  let obsIdx=0;
+  for(let i=0;i<4;i++){
+    if(i===primaryIdx)continue;
+    const obsModel=observerModels[obsIdx];
+    const obsResult=r.results&&r.results[obsModel];
+    if(obsResult){
+      if(obsResult.response){
+        appendMsg(document.getElementById('log-'+i), 'observer', obsResult.response, obsResult.label||obsModel, obsResult.reasoning);
+      }else{
+        appendMsg(document.getElementById('log-'+i), 'error', obsResult.error||'No response', obsResult.label||obsModel);
+      }
+    }
+    obsIdx++;
+  }
+}
+
+function appendMsg(log, type, text, model, reasoning){
+  const cls='msg msg-'+type;
+  let label='';
+  if(type==='model')label='<div class="msg-label">'+escapeHtml(model||'Model')+'</div>';
+  else if(type==='observer')label='<div class="msg-label">👁 '+escapeHtml(model||'Observer')+'</div>';
+  else if(type==='error')label='<div class="msg-label">⚠ '+escapeHtml(model||'Error')+'</div>';
+  else if(type==='model-loading')label='<div class="msg-label">'+escapeHtml(model||'Model')+' <span class="spin">⟳</span></div>';
+
+  let html=label+escapeHtml(trunc(text,4000));
+  if(reasoning){
+    const rid='reasoning-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+    html+=`<div class="reasoning-toggle" onclick="document.getElementById('${rid}').classList.toggle('open')">▶ Reasoning (${reasoning.length}c)</div>`;
+    html+=`<div class="reasoning-body" id="${rid}">${escapeHtml(trunc(reasoning,2000))}</div>`;
+  }
+  const div=document.createElement('div');
+  div.className=cls;
+  div.innerHTML=html;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+  saveChats();
+}
+
+function removeLastMsg(log){
+  const msgs=log.querySelectorAll('.msg');
+  if(msgs.length>0)msgs[msgs.length-1].remove();
+  saveChats();
+}
+
+function saveChats(){
+  try{
+    for(let i=0;i<4;i++){
+      const log=document.getElementById('log-'+i);
+      if(log)localStorage.setItem('cis-chat-log-'+i, log.innerHTML);
+    }
+    localStorage.setItem('cis-chat-history', JSON.stringify(PANEL_HISTORY));
+  }catch(e){}
+}
+
+function loadChats(){
+  try{
+    for(let i=0;i<4;i++){
+      const saved=localStorage.getItem('cis-chat-log-'+i);
+      if(saved){
+        document.getElementById('log-'+i).innerHTML=saved;
+        document.getElementById('log-'+i).scrollTop=document.getElementById('log-'+i).scrollHeight;
+      }
+    }
+    const hist=localStorage.getItem('cis-chat-history');
+    if(hist){
+      const parsed=JSON.parse(hist);
+      for(let i=0;i<4;i++){if(parsed[i])PANEL_HISTORY[i]=parsed[i];}
+    }
+  }catch(e){}
+}
+
+function clearAllChats(){
+  for(let i=0;i<4;i++){
+    document.getElementById('log-'+i).innerHTML='<div class="msg msg-system">Cleared</div>';
+    PANEL_HISTORY[i]=[];
+    try{localStorage.removeItem('cis-chat-log-'+i)}catch(e){}
+  }
+  try{localStorage.removeItem('cis-chat-history')}catch(e){}
+}
+
+// === CONTROL ===
+async function loadDashboard(){
+  const status=await api('/api/pipeline/status');const runs=await api('/api/pipeline/runs');
+  document.getElementById('status-line').textContent=status?`${status.build_phase?.split('.')[0]||'?'} | Next: ${status.next_tier||'None'}`:'API unreachable';
+  let aHtml='',appHtml='',rHtml='';
+  if(runs&&runs.runs){
+    const active=runs.runs.filter(r=>!['COMPLETE','ERROR'].includes(r.status)||r.status==='REVIEW_PENDING'||r.status==='REVISE_REQUESTED');
+    const done=runs.runs.filter(r=>['COMPLETE','ERROR','ESCALATE'].includes(r.status));
+    if(!active.length)aHtml='<div class="card muted">No active tasks.</div>';
+    active.forEach(r=>{
+      aHtml+=`<div class="card"><div class="card-header"><span class="card-title">${(r.topic||'Untitled').substring(0,80)}</span>${statusBadge(r.status)}</div><div class="muted">${r.id} | Rounds: ${r.rounds_completed} | ${(r.created_at||'').substring(0,16)}</div></div>`;
+      if(r.status==='CONSENSUS_REACHED'||r.status==='REVIEW_PENDING'){
+        appHtml+=`<div class="card" style="border-left:3px solid var(--green)"><div class="card-header"><span class="card-title">${(r.topic||'').substring(0,60)}</span>${statusBadge(r.status)}</div><div class="muted mb8">${r.id}</div><div class="flex-row"><button class="btn btn-green btn-sm" onclick="approve('${r.id}')">✓ APPROVE</button><button class="btn btn-red btn-sm" onclick="reject('${r.id}')">✗ REJECT</button><span class="muted" id="astatus-${r.id}"></span></div></div>`;
+      }
+    });
+    done.slice(0,3).forEach(r=>{rHtml+=`<div class="card"><div class="card-header"><span class="card-title">${(r.topic||'').substring(0,70)}</span>${statusBadge(r.status)}</div><div class="muted">${r.id} | ${(r.created_at||'').substring(0,16)}</div></div>`});
+  }
+  document.getElementById('active-tasks').innerHTML=aHtml||'<div class="card muted">No data</div>';
+  document.getElementById('approval-queue').innerHTML=appHtml||'<div class="card muted">Nothing awaiting approval</div>';
+  document.getElementById('recent-activity').innerHTML=rHtml||'<div class="card muted">No completed tasks</div>';
+  if(runs&&runs.runs){const sel=document.getElementById('delib-run-select');sel.innerHTML='<option value="">-- Select a workflow run --</option>';runs.runs.forEach(r=>{sel.innerHTML+=`<option value="${r.id}">${(r.topic||'Untitled').substring(0,70)} [${r.status}]</option>`})}
+  let gHtml='';[['Migration 0012','PASS','gate-pass'],['Lifecycle trail','PASS','gate-pass'],['State sequence','PASS','gate-pass'],['Dispatch consumed','PASS','gate-pass'],['Verdict routing','PENDING','muted'],['Git clean','PENDING','muted'],['No scope creep','PENDING','muted'],['Evidence present','PENDING','muted']].forEach(([n,s,c])=>{gHtml+=`<div class="gate-row"><span>${s==='PASS'?'✓':s==='FAIL'?'✗':'—'} ${n}</span><span class="${c}">${s}</span></div>`});document.getElementById('gates-panel').innerHTML=gHtml;
+}
+
+async function submitIntent(){
+  const i=document.getElementById('intent-input');const m=i.value.trim();if(!m){toast('Enter an intent','error');return}
+  const b=document.getElementById('submit-btn'),s=document.getElementById('submit-status');b.disabled=true;s.innerHTML='<span class="spin">⟳</span>';
+  const r=await api('/api/portal/submit-intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})});
+  b.disabled=false;
+  if(r&&!r.error){s.textContent='✓ Submitted!';i.value='';toast('Intent routed','success');setTimeout(()=>s.textContent='',3000);loadDashboard()}else{s.textContent='';toast(r?.error||'Failed','error')}
+}
+async function approve(runId){const s=document.getElementById('astatus-'+runId);if(s)s.textContent='Approving...';await api('/api/dashboard/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({run_id:runId,rationale:'Approved via CIS Portal'})});toast('Approved!','success');loadDashboard()}
+async function reject(runId){toast('Use Conversation Director to add rejection reason','error')}
+
+// === DELIBERATION ===
+async function runDeliberation(){const sel=document.getElementById('delib-run-select'),b=document.getElementById('delib-btn'),panel=document.getElementById('deliberation-results');let proposal='';b.disabled=true;b.innerHTML='<span class="spin">⟳</span> Running...';panel.innerHTML='<div class="card muted"><span class="spin">⟳</span> Running deliberation with all 4 reviewers... (up to 30s)</div>';
+if(sel.value){const runs=await api('/api/pipeline/runs');const run=runs?.runs?.find(r=>r.id===sel.value);proposal=run?.topic||''}
+if(!proposal){panel.innerHTML='<div class="card muted">Select a run first.</div>';b.disabled=false;b.textContent='Run Deliberation';return}
+try{const r=await api('/api/portal/run-deliberation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proposal:proposal,run_id:sel.value||null})});renderDeliberation(r)}catch(e){panel.innerHTML='<div class="card muted">Deliberation running — check terminal for output</div>'}
+b.disabled=false;b.textContent='Run Deliberation'}
+function renderDeliberation(data){if(!data)return;const panel=document.getElementById('deliberation-results');let html=`<div class="card"><div class="card-header"><span class="card-title">Result</span>${statusBadge(data.status||'UNKNOWN')}</div><div class="muted">Rounds: ${data.rounds_taken||0} | R1: ${data.r1_verdict||'?'} | Qwen: ${data.qwen_verdict||'?'}</div></div>`;
+const reviewers=[{key:'r1_resp',label:'R1 (DeepSeek V4 Pro)'},{key:'qwen_resp',label:'Qwen (qwen3-vl-30b)'},{key:'glm_resp',label:'GLM 5.2 (Z.ai)'},{key:'dsr1_resp',label:'DeepSeek Reasoner (R1 xhigh)'}];
+reviewers.forEach(rv=>{const rd=data[rv.key]||data.reviewers?.[rv.key];if(!rd)return;const v=rd.verdict||{};const st=v.status||'NO_VERDICT';const cls=st==='CONSENSUS_REACHED'?'consensus':st==='OBJECTIONS'?'objections':'escalate';html+=`<div class="verdict-block verdict-${cls}"><div class="flex-between"><strong>${rv.label}</strong>${statusBadge(st)}</div>`;if(rd.reasoning)html+=`<div class="collapsible-header mt8" onclick="this.nextElementSibling.classList.toggle('open')">▶ Reasoning (${rd.reasoning.length}c)</div><div class="collapsible-body reasoning-box">${escapeHtml(rd.reasoning.substring(0,2000))}</div>`;if(v.objections&&v.objections.length){html+=`<div class="mt8"><strong style="font-size:12px;color:var(--red)">Objections:</strong></div>`;v.objections.forEach(o=>{html+=`<div class="obj-item">${escapeHtml(typeof o==='string'?o:o.text||JSON.stringify(o))}</div>`})}if(v.summary)html+=`<div class="mt8 muted">"${escapeHtml(v.summary.substring(0,300))}"</div>`;html+=`</div>`});panel.innerHTML=html}
+function directApprove(){const s=document.getElementById('delib-run-select');if(!s.value){toast('Select a run first','error');return};approve(s.value)}
+function directReject(){const s=document.getElementById('delib-run-select'),r=document.getElementById('director-input').value.trim();if(!s.value){toast('Select a run','error');return};if(!r)toast('Add reason in director input','error');else toast('Rejection queued','success')}
+function directContext(){const t=document.getElementById('director-input').value.trim();if(!t){toast('Enter context','error');return};toast('Context added','success')}
+
+// === RESIZABLE PANELS ===
+let panelWidths;
+try{
+  const saved=localStorage.getItem('cis-panel-widths');
+  panelWidths=saved?JSON.parse(saved):[25,25,25,25];
+}catch(e){panelWidths=[25,25,25,25]}
+
+function applyPanelWidths(){
+  for(let i=0;i<4;i++){
+    document.getElementById('panel-'+i).style.flex='0 0 '+panelWidths[i]+'%';
+  }
+}
+
+let dragState=null;
+document.querySelectorAll('.chat-divider').forEach((divider,idx)=>{
+  divider.addEventListener('mousedown',function(e){
+    e.preventDefault();
+    dragState={idx:idx,startX:e.clientX,startWidths:[...panelWidths]};
+    divider.classList.add('dragging');
+    document.body.style.cursor='col-resize';
+  });
+});
+
+document.addEventListener('mousemove',function(e){
+  if(!dragState)return;
+  const grid=document.getElementById('chat-grid');
+  const gridRect=grid.getBoundingClientRect();
+  const gridWidth=gridRect.width;
+  if(gridWidth===0)return;
+  const dxPct=((e.clientX-dragState.startX)/gridWidth)*100;
+  const i=dragState.idx;
+  const sw=dragState.startWidths;
+  let w0=sw[i]+dxPct;
+  let w1=sw[i+1]-dxPct;
+  const MIN=15;
+  if(w0<MIN){w0=MIN;w1=sw[i]+sw[i+1]-MIN}
+  if(w1<MIN){w1=MIN;w0=sw[i]+sw[i+1]-MIN}
+  panelWidths[i]=w0;
+  panelWidths[i+1]=w1;
+  applyPanelWidths();
+});
+
+document.addEventListener('mouseup',function(){
+  if(!dragState)return;
+  document.querySelectorAll('.chat-divider').forEach(d=>d.classList.remove('dragging'));
+  document.body.style.cursor='';
+  dragState=null;
+  try{localStorage.setItem('cis-panel-widths',JSON.stringify(panelWidths))}catch(e){}
+});
+
+applyPanelWidths();
+
+document.getElementById('intent-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitIntent()}});
+loadChats();
+loadDashboard();setInterval(loadDashboard,REFRESH_MS);
+updateModeDesc();
+</script>
+</body>
+</html>

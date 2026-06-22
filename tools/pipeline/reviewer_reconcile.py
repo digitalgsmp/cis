@@ -2,17 +2,17 @@
 """
 reconciler.py — Multi-Reviewer Reconciliation Engine with External Escalation
 
-Primary reviewers (R1 + Qwen) deliberate on a proposal.
-If they deadlock, external advisors (ChatGPT + Claude) weigh in with
-independent advisory opinions. Eric always makes the final call.
+Primary reviewers (R1 + Qwen + GLM 5.2) deliberate on a proposal.
+If they deadlock, GLM 5.2 provides an independent tie-breaking opinion.
+Eric always makes the final call.
 
 Reviewers:
-  R1:    http://127.0.0.1:8643  (deepseek-v4-pro, local gateway)
-  Qwen:  http://127.0.0.1:8644  (qwen3-vl-30b, local gateway)
+  R1:      http://127.0.0.1:8643  (deepseek-v4-pro, local gateway)
+  Qwen:    http://127.0.0.1:8002  (qwen3-vl-30b, local llama-server)
+  GLM 5.2: https://openrouter.ai  (z-ai/glm-5.2, $1.20/$4.10 per 1M tokens)
 
-Escalation advisors (called on deadlock only):
-  ChatGPT: api.openai.com       (requires OPENAI_API_KEY env var)
-  Claude:  api.anthropic.com    (requires ANTHROPIC_API_KEY env var)
+Escalation advisor (called on deadlock only):
+  GLM 5.2: openrouter.ai          (requires OPENROUTER_API_KEY env var)
 
 Usage:
   python3 tools/pipeline/reviewer_reconcile.py --proposal-file proposal.txt
@@ -44,25 +44,35 @@ REVIEWERS = {
         "name": "Qwen Reviewer (qwen3-vl-30b)",
         "url": "http://127.0.0.1:8002/v1/chat/completions",  # Direct llama-server — bypasses Hermes agent loop (avoids tool-approval hangs)
         "api_key": "not-needed",  # llama-server doesn't require auth
-        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m",  # Use the actual model name, not "hermes-agent" which triggers the full agent loop
+        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m",
+        "max_input_chars": 20000,
+    },
+    "glm": {
+        "name": "GLM 5.2 (z-ai/glm-5.2 via OpenRouter)",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "model": "z-ai/glm-5.2",
+        "max_input_chars": 30000,  # 1M context, but keep prompt reasonable
+        "max_tokens": 16384,  # GLM reasoning tokens eat into output budget
+    },
+    "deepseek-r1": {
+        "name": "DeepSeek Reasoner (R1, xhigh reasoning, via DeepSeek API)",
+        "url": "https://api.deepseek.com/v1/chat/completions",
+        "api_key_env": "DEEPSEEK_API_KEY",  # Already set in your .env
+        "model": "deepseek-reasoner",
         "max_input_chars": 20000,
     },
 }
 
-# External escalation advisors — only called on deadlock.
-# Set env vars to enable; skipped gracefully if missing.
+# External escalation — only called on deadlock between primary reviewers.
+# GLM 5.2 provides independent tie-breaking. Costs ~$0.01/decision.
+# Set env var OPENROUTER_API_KEY to enable; skipped gracefully if missing.
 ESCALATION = {
-    "chatgpt": {
-        "name": "ChatGPT (GPT-4o)",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "api_key_env": "OPENAI_API_KEY",
-        "model": "gpt-4o",
-    },
-    "claude": {
-        "name": "Claude (Sonnet)",
-        "url": "https://api.anthropic.com/v1/messages",
-        "api_key_env": "ANTHROPIC_API_KEY",
-        "model": "claude-sonnet-4-20250514",
+    "glm": {
+        "name": "GLM 5.2 Tiebreaker (z-ai/glm-5.2 via OpenRouter)",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "model": "z-ai/glm-5.2",
     },
 }
 
@@ -86,8 +96,12 @@ def call_reviewer(reviewer: dict, system_prompt: str, user_prompt: str,
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.3,
-        "max_tokens": 8192,
+        "max_tokens": reviewer.get("max_tokens", 8192),
     }
+    # Merge any extra body params (e.g., reasoning_effort for deepseek-r1)
+    extra = reviewer.get("extra_body", {})
+    if extra:
+        payload.update(extra)
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         reviewer["url"], data=data,
@@ -99,8 +113,14 @@ def call_reviewer(reviewer: dict, system_prompt: str, user_prompt: str,
     try:
         resp = urllib.request.urlopen(req, timeout=timeout)
         body = json.loads(resp.read().decode("utf-8"))
-        content = body["choices"][0]["message"]["content"]
-        return {"ok": True, "content": content, "usage": body.get("usage", {})}
+        msg = body["choices"][0]["message"]
+        content = msg.get("content") or ""
+        # Capture reasoning chain if present (GLM 5.2, DeepSeek Reasoner)
+        reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
+        result = {"ok": True, "content": content, "usage": body.get("usage", {})}
+        if reasoning:
+            result["reasoning"] = reasoning
+        return result
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="replace")
         return {"ok": False, "error": f"HTTP {e.code}", "body": err_body[:500]}
@@ -135,8 +155,14 @@ def call_openai(system_prompt: str, user_prompt: str, timeout: int = 120) -> dic
     try:
         resp = urllib.request.urlopen(req, timeout=timeout)
         body = json.loads(resp.read().decode("utf-8"))
-        content = body["choices"][0]["message"]["content"]
-        return {"ok": True, "content": content, "usage": body.get("usage", {})}
+        msg = body["choices"][0]["message"]
+        content = msg.get("content") or ""
+        # Capture reasoning chain if present (GLM 5.2, DeepSeek Reasoner)
+        reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
+        result = {"ok": True, "content": content, "usage": body.get("usage", {})}
+        if reasoning:
+            result["reasoning"] = reasoning
+        return result
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="replace")
         return {"ok": False, "error": f"HTTP {e.code}", "body": err_body[:500]}
@@ -383,38 +409,45 @@ Provide your independent advisory opinion. Who is right on each point? What shou
 
     results = {}
 
-    # Try ChatGPT
-    print("  → Querying ChatGPT (GPT-4o)...")
+    # GLM 5.2 — independent tiebreaker (Z.ai, different training data)
     t0 = time.time()
-    gpt_resp = call_openai(ESCALATION_SYSTEM, escalation_prompt)
-    t1 = time.time()
-    if gpt_resp.get("ok"):
-        gpt_json = extract_final_json(gpt_resp["content"])
-        print(f"    ChatGPT responded in {t1 - t0:.1f}s: "
-              f"{gpt_json.get('recommendation', '?') if gpt_json else 'no JSON'}")
-        results["chatgpt"] = {
-            "ok": True,
-            "content": gpt_resp["content"][:2000],
-            "verdict": gpt_json,
-        }
+    t1 = t0  # fallback
+    if "OPENROUTER_API_KEY" in os.environ:
+        print("  → Querying GLM 5.2 (OpenRouter)...")
+        glm_resp = call_reviewer(ESCALATION["glm"], ESCALATION_SYSTEM, escalation_prompt)
+        t1 = time.time()
+        if glm_resp.get("ok"):
+            glm_json = extract_final_json(glm_resp["content"])
+            print(f"    GLM 5.2 responded in {t1 - t0:.1f}s: "
+                  f"{glm_json.get('recommendation', '?') if glm_json else 'no JSON'}")
+            results["glm"] = {
+                "ok": True,
+                "content": glm_resp["content"][:2000],
+                "verdict": glm_json,
+            }
+        else:
+            print(f"    GLM 5.2: {glm_resp.get('error')}")
     else:
-        print(f"    ChatGPT: {gpt_resp.get('error')}")
+        print("  → GLM 5.2 SKIPPED (OPENROUTER_API_KEY not set)")
 
-    # Try Claude
-    print("  → Querying Claude (Sonnet)...")
-    claude_resp = call_anthropic(ESCALATION_SYSTEM, escalation_prompt)
-    t2 = time.time()
-    if claude_resp.get("ok"):
-        claude_json = extract_final_json(claude_resp["content"])
-        print(f"    Claude responded in {t2 - t1:.1f}s: "
-              f"{claude_json.get('recommendation', '?') if claude_json else 'no JSON'}")
-        results["claude"] = {
-            "ok": True,
-            "content": claude_resp["content"][:2000],
-            "verdict": claude_json,
-        }
+    # DeepSeek Reasoner — second tiebreaker (xhigh reasoning)
+    if "DEEPSEEK_API_KEY" in os.environ:
+        print("  → Querying DeepSeek Reasoner (R1, xhigh)...")
+        dsr1_resp = call_reviewer(REVIEWERS["deepseek-r1"], ESCALATION_SYSTEM, escalation_prompt)
+        t2 = time.time()
+        if dsr1_resp.get("ok"):
+            dsr1_json = extract_final_json(dsr1_resp["content"])
+            print(f"    DeepSeek Reasoner responded in {t2 - t1:.1f}s: "
+                  f"{dsr1_json.get('recommendation', '?') if dsr1_json else 'no JSON'}")
+            results["deepseek-r1"] = {
+                "ok": True,
+                "content": dsr1_resp["content"][:2000],
+                "verdict": dsr1_json,
+            }
+        else:
+            print(f"    DeepSeek Reasoner: {dsr1_resp.get('error')}")
     else:
-        print(f"    Claude: {claude_resp.get('error')}")
+        print("  → DeepSeek Reasoner SKIPPED (DEEPSEEK_API_KEY not set)")
 
     if not results:
         print("  ⚠ No external advisors available — API keys not configured.")
@@ -433,7 +466,7 @@ def reconcile(run_id: str, proposal: str, max_rounds: int = 3,
     print(f"Escalation: {'enabled' if do_escalate else 'disabled'}")
     print()
 
-    history = {"r1": [], "qwen": [], "rounds": []}
+    history = {"r1": [], "qwen": [], "glm": [], "deepseek-r1": [], "rounds": []}
 
     for round_num in range(1, max_rounds + 1):
         print(f"─── Round {round_num}/{max_rounds} ───")
@@ -480,11 +513,35 @@ def reconcile(run_id: str, proposal: str, max_rounds: int = 3,
         print(f"    R1 responded in {t1 - t0:.1f}s")
         history["r1"].append(r1_resp)
 
-        print("  → Querying Qwen (8644)...")
+        print("  → Querying Qwen (8002)...")
         qwen_resp = call_reviewer(REVIEWERS["qwen"], REVIEW_SYSTEM, qwen_prompt)
         t2 = time.time()
         print(f"    Qwen responded in {t2 - t1:.1f}s")
         history["qwen"].append(qwen_resp)
+
+        # GLM 5.2 — independent third reviewer (Z.ai, different training data)
+        glm_resp = None
+        t3 = t2  # fallback if GLM is skipped
+        if REVIEWERS["glm"]["api_key_env"] in os.environ or REVIEWERS["glm"].get("api_key"):
+            print("  → Querying GLM 5.2 (OpenRouter)...")
+            glm_resp = call_reviewer(REVIEWERS["glm"], REVIEW_SYSTEM, proposal)
+            t3 = time.time()
+            print(f"    GLM 5.2 responded in {t3 - t2:.1f}s")
+            history["glm"].append(glm_resp)
+        else:
+            print("  → GLM 5.2 SKIPPED (OPENROUTER_API_KEY not set)")
+
+        # DeepSeek Reasoner — xhigh reasoning (via DeepSeek API)
+        dsr1_resp = None
+        t4 = t3  # fallback
+        if REVIEWERS["deepseek-r1"]["api_key_env"] in os.environ:
+            print("  → Querying DeepSeek Reasoner (R1, xhigh)...")
+            dsr1_resp = call_reviewer(REVIEWERS["deepseek-r1"], REVIEW_SYSTEM, proposal)
+            t4 = time.time()
+            print(f"    DeepSeek Reasoner responded in {t4 - t3:.1f}s")
+            history["deepseek-r1"].append(dsr1_resp)
+        else:
+            print("  → DeepSeek Reasoner SKIPPED (DEEPSEEK_API_KEY not set)")
 
         r1_json = None
         qwen_json = None
@@ -709,7 +766,7 @@ def main():
     if result.get("external"):
         ext = result["external"]
         output["external_advisors"] = {
-            k: v.get("verdict", {}).get("recommendation", "?")
+            k: (v.get("verdict") or {}).get("recommendation", "?")
             for k, v in ext.items() if v.get("ok")
         } if ext else "none available"
     print(json.dumps(output, indent=2))
