@@ -391,12 +391,17 @@ async function sendChat(){
   btn.disabled=true;
   inp.value='';
 
-  if(CHAT_MODE==='1v1'){
-    await send1v1(SELECTED_PANEL, msg);
-  }else if(CHAT_MODE==='all'){
-    await sendAll(msg);
-  }else if(CHAT_MODE==='observer'){
-    await sendObserver(msg);
+  try{
+    if(CHAT_MODE==='1v1'){
+      await send1v1(SELECTED_PANEL, msg);
+    }else if(CHAT_MODE==='all'){
+      await sendAll(msg);
+    }else if(CHAT_MODE==='observer'){
+      await sendObserver(msg);
+    }
+  }catch(e){
+    console.error('sendChat error:',e);
+    toast('Send failed: '+(e.message||'unknown error'),'error');
   }
   btn.disabled=false;
 }
@@ -580,14 +585,13 @@ function removeLastMsg(log){
 }
 
 function updateCtxBar(idx, ctx){
-  if(!ctx||!ctx.context_pct)return;
-  const pct=ctx.context_pct;
-  const chars=ctx.context_chars||0;
-  const limit=ctx.context_limit||128000;
+  const pct=ctx&&ctx.context_pct||0;
+  const chars=ctx&&ctx.context_chars||0;
+  const limit=ctx&&ctx.context_limit||128000;
   const fill=document.getElementById('ctx-fill-'+idx);
   const label=document.getElementById('ctx-label-'+idx);
   if(fill){
-    fill.style.width=pct+'%';
+    fill.style.width=(pct||1)+'%';
     fill.className='ctx-fill'+(pct>75?' danger':pct>50?' warn':'');
   }
   if(label)label.textContent=Math.round(pct)+'% · '+(chars/1000).toFixed(1)+'k/'+(limit/1000).toFixed(0)+'k';

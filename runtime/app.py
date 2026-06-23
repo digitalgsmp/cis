@@ -345,7 +345,7 @@ def portal_chat():
 
         # Context usage: estimate from augmented message + known history size
         try:
-            import sqlite3 as _sql
+            import sqlite3 as _sql, traceback
             _db = _sql.connect("/mnt/projects/cis/runtime/db/cis_memory.db")
             _rows = _db.execute(
                 "SELECT SUM(LENGTH(content)) FROM advisor_messages WHERE thread_id=?",
@@ -353,13 +353,12 @@ def portal_chat():
             ).fetchone()
             _total = (_rows[0] or 0) + len(augmented_message)
             _db.close()
-            # DeepSeek context limit ~128K, Qwen ~32K, approximate
             _limit = 128000
             result["context_chars"] = _total
             result["context_limit"] = _limit
             result["context_pct"] = round(min(100, _total / _limit * 100), 1)
-        except Exception:
-            pass
+        except Exception as e:
+            result["context_error"] = str(e)[:100]
 
         return _json.dumps(result), 200, {"Content-Type": "application/json"}
     except _ue.HTTPError as e:
