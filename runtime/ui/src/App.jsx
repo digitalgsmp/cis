@@ -18,6 +18,7 @@ import ChatConsole from './pages/ChatConsole'
 import AdvisorChat from './pages/infra/AdvisorChat'
 import PipelinePage from './pages/PipelinePage'
 import EricGatePage from './pages/EricGatePage'
+import RoadmapPage from './pages/RoadmapPage'
 import ArchiveSearchPage from './pages/ArchiveSearchPage'
 import SessionArchivePage from './pages/SessionArchivePage'
 import DecisionsPage from './pages/DecisionsPage'
@@ -33,6 +34,7 @@ const NAV_GROUPS = [
       { path: '/archive/search', label: 'Archive' },
       { path: '/archive/sessions', label: 'Sessions' },
       { path: '/decisions', label: 'Decisions' },
+      { path: '/roadmap', label: 'Roadmap' },
     ]
   },
   {
@@ -107,6 +109,7 @@ export default function App() {
           <Route path="/archive/search" element={<ArchiveSearchPage />} />
           <Route path="/archive/sessions" element={<SessionArchivePage />} />
           <Route path="/decisions" element={<DecisionsPage />} />
+          <Route path="/roadmap" element={<RoadmapPage />} />
         </Routes>
       </div>
 
