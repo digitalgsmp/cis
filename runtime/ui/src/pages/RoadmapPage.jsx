@@ -187,6 +187,11 @@ export default function RoadmapPage() {
         <span style={{ fontWeight: 700, fontSize: 14, color: "#94a3b8" }}>
           Roadmap
         </span>
+        <a href="/portal" style={{
+          color: "#58a6ff", fontSize: 11, textDecoration: "none",
+          padding: "3px 10px", border: "1px solid #30363d", borderRadius: 4,
+          background: "#0f172a",
+        }}>← Portal</a>
         <div style={{ display: "flex", background: "#0f172a", borderRadius: 6, overflow: "hidden", border: "1px solid #1e293b" }}>
           {["roadmap", "timeline", "adrs", "vision"].map(t => (
             <button key={t} onClick={() => setTab(t)}

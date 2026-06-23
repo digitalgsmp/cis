@@ -119,6 +119,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
   <div class="tab" onclick="switchTab('control')">Control</div>
   <div class="tab" onclick="switchTab('deliberation')">Deliberation</div>
   <div class="tab active" onclick="switchTab('chat')">Chat</div>
+  <div class="tab" onclick="switchTab('roadmap')">Roadmap</div>
 </div>
 
 <!-- CONTROL TAB -->
@@ -304,6 +305,13 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 </div>
 
 </div><!-- container -->
+
+<!-- ROADMAP TAB (embedded React SPA) -->
+<div class="tab-content" id="tab-roadmap" style="flex:1;overflow:hidden">
+  <iframe src="/ui/roadmap" style="width:100%;height:100%;border:none;background:#020817"
+    title="CIS Roadmap"></iframe>
+</div>
+
 <div id="toast"></div>
 
 <script>
