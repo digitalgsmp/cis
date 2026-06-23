@@ -86,6 +86,28 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 #toast.success{background:#1a3a1f;color:var(--green);border:1px solid var(--green)}
 #toast.error{background:#3a1015;color:var(--red);border:1px solid var(--red)}
 .spin{display:inline-block;animation:spin .6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Context usage bar */
+.ctx-bar{height:3px;background:var(--border);margin:0 8px 2px;border-radius:1px;overflow:hidden;min-width:20px}
+.ctx-bar .ctx-fill{height:100%;background:var(--green);transition:width .3s;min-width:1px}
+.ctx-bar .ctx-fill.warn{background:var(--yellow)}
+.ctx-bar .ctx-fill.danger{background:var(--red)}
+.ctx-label{font-size:8px;color:var(--muted);text-align:right;padding:0 8px;margin-bottom:2px}
+.ctx-label:empty{display:none}
+
+/* Pipeline panels */
+#pipeline-section{display:none;flex-direction:column;gap:8px;margin-top:10px;padding:10px;background:var(--surface);border:1px solid var(--accent);border-radius:6px;flex-shrink:0}
+#pipeline-section.visible{display:flex}
+#pipeline-section h2{font-size:13px;color:var(--accent);margin:0 0 4px}
+.pipeline-stage{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg);border-radius:4px;font-size:11px}
+.pipeline-stage .stage-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pipeline-stage .stage-dot.pending{background:var(--muted)}
+.pipeline-stage .stage-dot.running{background:var(--blue);animation:pulse 1s infinite}
+.pipeline-stage .stage-dot.pass{background:var(--green)}
+.pipeline-stage .stage-dot.fail{background:var(--red)}
+.pipeline-result{padding:8px;background:var(--bg);border-radius:4px;font-size:11px;max-height:150px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+#pipeline-approve-btn{display:none}
+#pipeline-approve-btn.visible{display:inline-block}
 </style>
 </head>
 <body>
@@ -170,6 +192,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </select>
       <span class="no-hermes-badge" id="badge-0" style="display:none">no Hermes</span>
     </div>
+    <div class="ctx-label" id="ctx-label-0"></div>
+    <div class="ctx-bar" id="ctx-bar-0"><div class="ctx-fill" id="ctx-fill-0" style="width:0%"></div></div>
     <div class="chat-panel-log" id="log-0"><div class="msg msg-system">Select a model and start chatting</div></div>
   </div>
   <div class="chat-divider" id="divider-0"></div>
@@ -177,7 +201,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
   <div class="chat-panel" id="panel-1">
     <div class="chat-panel-header">
       <span class="panel-label">P2</span>
-      <select onchange="onPanelModel(1,this.value)" id="panel-model-1">
+      <select id="panel-model-1" onchange="onPanelModel(1,this.value)">
         <optgroup label="─ Hermes Gateway ─">
           <option value="hermes-v4pro">Drafter (v4pro)</option>
           <option value="hermes-r1" selected>Reviewer (r1)</option>
@@ -196,6 +220,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </select>
       <span class="no-hermes-badge" id="badge-1" style="display:none">no Hermes</span>
     </div>
+    <div class="ctx-label" id="ctx-label-1"></div>
+    <div class="ctx-bar" id="ctx-bar-1"><div class="ctx-fill" id="ctx-fill-1" style="width:0%"></div></div>
     <div class="chat-panel-log" id="log-1"><div class="msg msg-system">Select a model and start chatting</div></div>
   </div>
   <div class="chat-divider" id="divider-1"></div>
@@ -222,6 +248,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </select>
       <span class="no-hermes-badge" id="badge-2">no Hermes</span>
     </div>
+    <div class="ctx-label" id="ctx-label-2"></div>
+    <div class="ctx-bar" id="ctx-bar-2"><div class="ctx-fill" id="ctx-fill-2" style="width:0%"></div></div>
     <div class="chat-panel-log" id="log-2"><div class="msg msg-system">Select a model and start chatting</div></div>
   </div>
   <div class="chat-divider" id="divider-2"></div>
@@ -248,6 +276,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </select>
       <span class="no-hermes-badge" id="badge-3">no Hermes</span>
     </div>
+    <div class="ctx-label" id="ctx-label-3"></div>
+    <div class="ctx-bar" id="ctx-bar-3"><div class="ctx-fill" id="ctx-fill-3" style="width:0%"></div></div>
     <div class="chat-panel-log" id="log-3"><div class="msg msg-system">Select a model and start chatting</div></div>
   </div>
 </div>
@@ -260,6 +290,19 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 <div class="muted mt4" id="chat-status"></div>
 </div>
 
+<!-- Pipeline Section -->
+<div id="pipeline-section">
+  <h2>⚡ Pipeline</h2>
+  <div id="pipeline-status-line" class="muted" style="font-size:11px">Not active</div>
+  <div id="pipeline-stages"></div>
+  <div class="flex-row mt4">
+    <button class="btn btn-green btn-sm" id="pipeline-approve-btn" onclick="pipelineApprove()">✓ Approve &amp; Execute</button>
+    <button class="btn btn-red btn-sm" onclick="pipelineKill()" style="display:none" id="pipeline-kill-btn">✗ Kill</button>
+    <span class="muted" id="pipeline-poll-status"></span>
+  </div>
+  <div id="pipeline-result" class="pipeline-result" style="display:none;margin-top:6px"></div>
+</div>
+
 </div><!-- container -->
 <div id="toast"></div>
 
@@ -269,6 +312,8 @@ let CHAT_MODE='1v1';
 let SELECTED_PANEL=0;
 const DIRECT_MODELS={'qwen':true,'glm':true,'ds-reasoner':true,'qwen-max':true,'claude-opus':true,'glm-5.2':true,'mistral-large':true};
 const PANEL_HISTORY=[[],[],[],[]];  // per-panel message history for direct models
+const PANEL_THREADS=[null,null,null,null];  // per-panel thread_id for Hermes models
+const PANEL_MODELS=['drafter','reviewer','qwen-max','glm-5.2'];  // per-panel last model
 
 function toast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
 async function api(path,opts={}){try{const r=await fetch(path,opts);if(!r.ok)throw new Error(`${r.status}`);return await r.json()}catch(e){console.error(path,e);return null}}
@@ -307,10 +352,12 @@ function onPanelModel(idx,val){
   const badge=document.getElementById('badge-'+idx);
   if(DIRECT_MODELS[val]){badge.style.display='inline'}
   else{badge.style.display='none'}
-  // If panel is selected and we're in 1:1 mode, clear its log
+  PANEL_MODELS[idx]=val;
+  // If panel is selected and we're in 1:1 mode, clear its log + thread
   if(idx===SELECTED_PANEL && CHAT_MODE==='1v1'){
-    document.getElementById('log-'+idx).innerHTML='<div class="msg msg-system">Switched model. Start a new conversation.</div>';
+    document.getElementById('log-'+idx).innerHTML='<div class="msg msg-system">Switched to '+val+'. New conversation.</div>';
     PANEL_HISTORY[idx]=[];
+    PANEL_THREADS[idx]=null;
   }
   // Update primary panel in observer mode
   if(idx===0 && CHAT_MODE==='observer'){
@@ -363,14 +410,21 @@ async function send1v1(idx, msg){
   appendMsg(log, 'user', msg);
 
   if(isHermes){
+    const tid=PANEL_THREADS[idx]||'';
     appendMsg(log, 'model-loading', model);
     const r=await api('/api/portal/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({agent:model, message:msg})
+      body:JSON.stringify({agent:model, message:msg, thread_id:tid})
     });
     removeLastMsg(log);
     if(r&&r.response){
+      if(r.thread_id&&r.thread_id!==tid) PANEL_THREADS[idx]=r.thread_id;
       appendMsg(log, 'model', r.response, model);
+      updateCtxBar(idx, r);
+      // Pipeline engagement detected
+      if(r.pipeline_action==='engage'){
+        showPipelineEngage(idx, model, msg, r.response);
+      }
     }else{
       appendMsg(log, 'error', r?.error||'No response', model);
     }
@@ -389,6 +443,7 @@ async function send1v1(idx, msg){
       appendMsg(log, 'error', r?.error||'No response', model);
     }
   }
+  saveChats();
 }
 
 async function sendAll(msg){
@@ -406,11 +461,13 @@ async function sendAll(msg){
     const log=document.getElementById('log-'+i);
     appendMsg(log, 'model-loading', m);
     if(isHermes){
+      const tid=PANEL_THREADS[i]||'';
       return api('/api/portal/chat',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({agent:m, message:msg})
+        body:JSON.stringify({agent:m, message:msg, thread_id:tid})
       }).then(r=>{
         removeLastMsg(log);
+        if(r&&r.thread_id&&r.thread_id!==tid) PANEL_THREADS[i]=r.thread_id;
         if(r&&r.response) appendMsg(log, 'model', r.response, m);
         else appendMsg(log, 'error', r?.error||'No response', m);
       });
@@ -522,6 +579,20 @@ function removeLastMsg(log){
   saveChats();
 }
 
+function updateCtxBar(idx, ctx){
+  if(!ctx||!ctx.context_pct)return;
+  const pct=ctx.context_pct;
+  const chars=ctx.context_chars||0;
+  const limit=ctx.context_limit||128000;
+  const fill=document.getElementById('ctx-fill-'+idx);
+  const label=document.getElementById('ctx-label-'+idx);
+  if(fill){
+    fill.style.width=pct+'%';
+    fill.className='ctx-fill'+(pct>75?' danger':pct>50?' warn':'');
+  }
+  if(label)label.textContent=Math.round(pct)+'% · '+(chars/1000).toFixed(1)+'k/'+(limit/1000).toFixed(0)+'k';
+}
+
 function saveChats(){
   try{
     for(let i=0;i<4;i++){
@@ -529,6 +600,7 @@ function saveChats(){
       if(log)localStorage.setItem('cis-chat-log-'+i, log.innerHTML);
     }
     localStorage.setItem('cis-chat-history', JSON.stringify(PANEL_HISTORY));
+    localStorage.setItem('cis-chat-threads', JSON.stringify(PANEL_THREADS));
   }catch(e){}
 }
 
@@ -542,10 +614,9 @@ function loadChats(){
       }
     }
     const hist=localStorage.getItem('cis-chat-history');
-    if(hist){
-      const parsed=JSON.parse(hist);
-      for(let i=0;i<4;i++){if(parsed[i])PANEL_HISTORY[i]=parsed[i];}
-    }
+    if(hist){const parsed=JSON.parse(hist);for(let i=0;i<4;i++){if(parsed[i])PANEL_HISTORY[i]=parsed[i];}}
+    const threads=localStorage.getItem('cis-chat-threads');
+    if(threads){const parsed=JSON.parse(threads);for(let i=0;i<4;i++){if(parsed[i])PANEL_THREADS[i]=parsed[i];}}
   }catch(e){}
 }
 
@@ -553,9 +624,11 @@ function clearAllChats(){
   for(let i=0;i<4;i++){
     document.getElementById('log-'+i).innerHTML='<div class="msg msg-system">Cleared</div>';
     PANEL_HISTORY[i]=[];
+    PANEL_THREADS[i]=null;
     try{localStorage.removeItem('cis-chat-log-'+i)}catch(e){}
   }
   try{localStorage.removeItem('cis-chat-history')}catch(e){}
+  try{localStorage.removeItem('cis-chat-threads')}catch(e){}
 }
 
 // === CONTROL ===
@@ -604,6 +677,129 @@ reviewers.forEach(rv=>{const rd=data[rv.key]||data.reviewers?.[rv.key];if(!rd)re
 function directApprove(){const s=document.getElementById('delib-run-select');if(!s.value){toast('Select a run first','error');return};approve(s.value)}
 function directReject(){const s=document.getElementById('delib-run-select'),r=document.getElementById('director-input').value.trim();if(!s.value){toast('Select a run','error');return};if(!r)toast('Add reason in director input','error');else toast('Rejection queued','success')}
 function directContext(){const t=document.getElementById('director-input').value.trim();if(!t){toast('Enter context','error');return};toast('Context added','success')}
+
+// === PIPELINE ===
+let PIPELINE_RUN_ID=null;
+let PIPELINE_POLL_INTERVAL=null;
+
+function showPipelineEngage(idx, model, userMsg, modelResponse){
+  // Show pipeline section
+  const section=document.getElementById('pipeline-section');
+  section.classList.add('visible');
+  document.getElementById('pipeline-status-line').textContent='Engaged — model detected pipeline intent';
+  document.getElementById('pipeline-stages').innerHTML=
+    '<div class="pipeline-stage"><div class="stage-dot running"></div>Staleness check: starting...</div>'+
+    '<div class="pipeline-stage"><div class="stage-dot pending"></div>Deliberation: pending</div>'+
+    '<div class="pipeline-stage"><div class="stage-dot pending"></div>Gates: pending</div>';
+  document.getElementById('pipeline-kill-btn').style.display='inline-block';
+  document.getElementById('pipeline-approve-btn').classList.remove('visible');
+  document.getElementById('pipeline-result').style.display='none';
+
+  // Start pipeline
+  const intent=modelResponse.replace(/Here.s what I understand.*?:\\s*/i,'').substring(0,200)||userMsg;
+  startPipeline(intent);
+}
+
+async function startPipeline(intent){
+  document.getElementById('pipeline-poll-status').textContent='Starting...';
+  try{
+    const r=await api('/api/portal/pipeline/start',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({intent:intent, topic:intent})
+    });
+    if(r&&r.run_id){
+      PIPELINE_RUN_ID=r.run_id;
+      document.getElementById('pipeline-status-line').textContent='Pipeline running: '+r.run_id;
+      pollPipeline();
+    }else{
+      document.getElementById('pipeline-status-line').textContent='Pipeline start failed: '+(r?.error||'unknown');
+    }
+  }catch(e){
+    document.getElementById('pipeline-status-line').textContent='Pipeline start error: '+e.message;
+  }
+}
+
+function pollPipeline(){
+  if(!PIPELINE_RUN_ID)return;
+  if(PIPELINE_POLL_INTERVAL)clearInterval(PIPELINE_POLL_INTERVAL);
+  PIPELINE_POLL_INTERVAL=setInterval(async ()=>{
+    try{
+      const r=await api('/api/portal/pipeline/status?run_id='+PIPELINE_RUN_ID);
+      if(!r)return;
+      document.getElementById('pipeline-poll-status').textContent='Poll: '+r.status;
+
+      // Update stage dots
+      const s=r.stages||{};
+      const stages=document.getElementById('pipeline-stages');
+      stages.innerHTML=
+        '<div class="pipeline-stage"><div class="stage-dot '+dotClass(s.staleness)+'">'+
+        '</div>Staleness: '+(s.staleness||'pending')+'</div>'+
+        '<div class="pipeline-stage"><div class="stage-dot '+dotClass(s.deliberation)+'">'+
+        '</div>Deliberation: '+(s.deliberation||'pending')+'</div>'+
+        '<div class="pipeline-stage"><div class="stage-dot '+dotClass(s.gates)+'">'+
+        '</div>Gates: '+(s.gates||'pending')+'</div>';
+
+      // Check final status
+      if(r.status==='CONSENSUS_REACHED'){
+        clearInterval(PIPELINE_POLL_INTERVAL);
+        document.getElementById('pipeline-status-line').textContent='✅ CONSENSUS REACHED — ready for approval';
+        document.getElementById('pipeline-approve-btn').classList.add('visible');
+        if(r.stdout){
+          const res=document.getElementById('pipeline-result');
+          res.style.display='block';
+          res.textContent=r.stdout.substring(0,2000);
+        }
+      }else if(r.status==='ESCALATE'){
+        clearInterval(PIPELINE_POLL_INTERVAL);
+        document.getElementById('pipeline-status-line').textContent='⚠️ ESCALATED — Eric must decide';
+        if(r.stdout){
+          const res=document.getElementById('pipeline-result');
+          res.style.display='block';
+          res.textContent=r.stdout.substring(0,2000);
+        }
+      }else if(r.status==='BLOCKED'||r.status==='ERROR'||r.status==='TIMEOUT'){
+        clearInterval(PIPELINE_POLL_INTERVAL);
+        document.getElementById('pipeline-status-line').textContent='❌ '+r.status+' — pipeline blocked';
+        if(r.stdout){
+          const res=document.getElementById('pipeline-result');
+          res.style.display='block';
+          res.textContent=(r.error||'')+'\\n'+r.stdout.substring(0,1000);
+        }
+      }
+    }catch(e){}
+  },3000);
+}
+
+function dotClass(status){
+  if(status==='running')return 'running';
+  if(!status||status==='pending')return 'pending';
+  if(status==='FRESH'||status==='done'||status==='CONSENSUS_REACHED')return 'pass';
+  return 'fail';
+}
+
+async function pipelineApprove(){
+  if(!PIPELINE_RUN_ID){toast('No pipeline run','error');return}
+  try{
+    const r=await api('/api/dashboard/approve',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({run_id:PIPELINE_RUN_ID, rationale:'Approved via pipeline panel'})
+    });
+    toast('Approved!','success');
+    document.getElementById('pipeline-status-line').textContent='✅ APPROVED — Implementer can proceed';
+    document.getElementById('pipeline-approve-btn').classList.remove('visible');
+  }catch(e){toast('Approve failed','error')}
+}
+
+function pipelineKill(){
+  if(PIPELINE_RUN_ID&&PIPELINE_POLL_INTERVAL)clearInterval(PIPELINE_POLL_INTERVAL);
+  PIPELINE_RUN_ID=null;
+  document.getElementById('pipeline-section').classList.remove('visible');
+  document.getElementById('pipeline-status-line').textContent='Not active';
+  document.getElementById('pipeline-kill-btn').style.display='none';
+  document.getElementById('pipeline-approve-btn').classList.remove('visible');
+  document.getElementById('pipeline-result').style.display='none';
+  toast('Pipeline killed','success');
+}
 
 // === RESIZABLE PANELS ===
 let panelWidths;

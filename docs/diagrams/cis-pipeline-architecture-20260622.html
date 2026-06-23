@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CIS Pipeline Architecture — Live Trace</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; }
+    .container { max-width: 1300px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container { background: rgba(15, 23, 42, 0.5); border-radius: 1rem; border: 1px solid #1e293b; padding: 1rem; overflow-x: auto; }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; } .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; } .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; } .card-dot.orange { background: #fb923c; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+    .warn { color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>CIS Pipeline Architecture — Live Trace</h1>
+      </div>
+      <p class="subtitle">June 22, 2026 — All Tiers 0–11D COMPLETE. 4 Hermes gateways running. ⚠ Portal Chat tab is DISCONNECTED from the pipeline.</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1200 900">
+        <defs>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee"/></marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/></marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/></marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/></marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/></marker>
+          <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#fb923c"/></marker>
+          <marker id="arrow-slate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/></marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+        </defs>
+
+        <!-- Background -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ============================================================
+             LAYER 1: ENTRY POINTS
+             ============================================================ -->
+
+        <!-- Eric -->
+        <rect x="30" y="60" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="75" y="85" fill="white" font-size="11" font-weight="600" text-anchor="middle">Eric</text>
+        <text x="75" y="100" fill="#94a3b8" font-size="8" text-anchor="middle">(human)</text>
+        <text x="75" y="112" fill="#64748b" font-size="7" text-anchor="middle">orchestrates</text>
+
+        <!-- Portal Chat Tab (disconnected path) -->
+        <rect x="160" y="20" width="140" height="65" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="230" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">Portal Chat Tab</text>
+        <text x="230" y="56" fill="#94a3b8" font-size="8" text-anchor="middle">/api/portal/chat</text>
+        <text x="230" y="68" fill="#64748b" font-size="7" text-anchor="middle">4-panel · 1:1 · localStorage</text>
+        <text x="230" y="80" fill="#f59e0b" font-size="7" text-anchor="middle">⚠ FLAT CHAT — not pipeline</text>
+
+        <!-- Portal Direct Chat -->
+        <rect x="160" y="100" width="140" height="55" rx="6" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="230" y="122" fill="#94a3b8" font-size="9" font-weight="600" text-anchor="middle">Portal Direct</text>
+        <text x="230" y="138" fill="#64748b" font-size="8" text-anchor="middle">/api/portal/chat-direct</text>
+        <text x="230" y="150" fill="#f59e0b" font-size="7" text-anchor="middle">No Hermes · No logging</text>
+
+        <!-- Portal Control Tab (pipeline path) -->
+        <rect x="160" y="170" width="140" height="55" rx="6" fill="rgba(6, 78, 59, 0.3)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="230" y="192" fill="white" font-size="10" font-weight="600" text-anchor="middle">Portal Control</text>
+        <text x="230" y="206" fill="#94a3b8" font-size="8" text-anchor="middle">/api/portal/submit-intent</text>
+        <text x="230" y="218" fill="#34d399" font-size="7" text-anchor="middle">✓ triggers pipeline</text>
+
+        <!-- Telegram -->
+        <rect x="30" y="150" width="90" height="55" rx="6" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="75" y="172" fill="white" font-size="10" font-weight="600" text-anchor="middle">Telegram</text>
+        <text x="75" y="188" fill="#94a3b8" font-size="8" text-anchor="middle">Hermes-prime</text>
+        <text x="75" y="200" fill="#64748b" font-size="7" text-anchor="middle">:8800 NeMo</text>
+
+        <!-- Arrows: Eric → entry points -->
+        <line x1="120" y1="75" x2="158" y2="52" stroke="#64748b" stroke-width="1"/>
+        <line x1="120" y1="90" x2="158" y2="127" stroke="#64748b" stroke-width="1"/>
+        <line x1="120" y1="105" x2="158" y2="197" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="132" y="97" fill="#34d399" font-size="8">pipeline</text>
+
+        <!-- ============================================================
+             LAYER 2: ROUTER / ADVISOR
+             ============================================================ -->
+
+        <!-- Advisor Route endpoint -->
+        <rect x="360" y="170" width="160" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="440" y="192" fill="white" font-size="10" font-weight="600" text-anchor="middle">/api/advisor/route</text>
+        <text x="440" y="208" fill="#94a3b8" font-size="8" text-anchor="middle">classify_route()</text>
+        <text x="440" y="224" fill="#64748b" font-size="7" text-anchor="middle">keyword signals → gateway</text>
+
+        <line x1="300" y1="197" x2="358" y2="197" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+
+        <!-- Flat chat path (the gap) -->
+        <rect x="360" y="30" width="160" height="55" rx="6" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="440" y="52" fill="#94a3b8" font-size="9" text-anchor="middle">/api/advisor/chat</text>
+        <text x="440" y="68" fill="#64748b" font-size="8" text-anchor="middle">flat 1:1 · direct agent</text>
+        <text x="440" y="80" fill="#f59e0b" font-size="7" text-anchor="middle">⚠ bypasses router</text>
+
+        <line x1="300" y1="52" x2="358" y2="52" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,2"/>
+
+        <!-- ============================================================
+             LAYER 3: HERMES GATEWAYS
+             ============================================================ -->
+
+        <!-- Prime gateway -->
+        <rect x="580" y="20" width="130" height="65" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="645" y="42" fill="white" font-size="10" font-weight="600" text-anchor="middle">prime :8800</text>
+        <text x="645" y="56" fill="#94a3b8" font-size="8" text-anchor="middle">v4-flash + NeMo</text>
+        <text x="645" y="68" fill="#64748b" font-size="7" text-anchor="middle">Research/Chat</text>
+        <text x="645" y="80" fill="#3fb950" font-size="7" text-anchor="middle">hooks ✓ · auto-accept ✓</text>
+
+        <!-- V4Pro Drafter -->
+        <rect x="580" y="100" width="130" height="65" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="645" y="122" fill="white" font-size="10" font-weight="600" text-anchor="middle">v4pro :8645</text>
+        <text x="645" y="136" fill="#94a3b8" font-size="8" text-anchor="middle">v4-pro · xhigh</text>
+        <text x="645" y="148" fill="#64748b" font-size="7" text-anchor="middle">Drafter/Propose</text>
+        <text x="645" y="160" fill="#3fb950" font-size="7" text-anchor="middle">hooks ✓ · RO mount ✓</text>
+
+        <!-- R1 Reviewer -->
+        <rect x="580" y="180" width="130" height="65" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="645" y="202" fill="white" font-size="10" font-weight="600" text-anchor="middle">r1 :8643</text>
+        <text x="645" y="216" fill="#94a3b8" font-size="8" text-anchor="middle">v4-pro · xhigh</text>
+        <text x="645" y="228" fill="#64748b" font-size="7" text-anchor="middle">Reviewer/Critique</text>
+        <text x="645" y="240" fill="#3fb950" font-size="7" text-anchor="middle">hooks ✓ · RO mount ✓</text>
+
+        <!-- V4Impl -->
+        <rect x="580" y="260" width="130" height="65" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="645" y="282" fill="white" font-size="10" font-weight="600" text-anchor="middle">v4impl :8646</text>
+        <text x="645" y="296" fill="#94a3b8" font-size="8" text-anchor="middle">v4-pro · xhigh</text>
+        <text x="645" y="308" fill="#64748b" font-size="7" text-anchor="middle">Implementer</text>
+        <text x="645" y="320" fill="#3fb950" font-size="7" text-anchor="middle">hooks ✓</text>
+
+        <!-- Qwen gateway -->
+        <rect x="580" y="340" width="130" height="55" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="645" y="362" fill="white" font-size="10" font-weight="600" text-anchor="middle">qwen :8644</text>
+        <text x="645" y="376" fill="#94a3b8" font-size="8" text-anchor="middle">qwen3-vl-30b</text>
+        <text x="645" y="390" fill="#f85149" font-size="7" text-anchor="middle">⚠ NO hooks</text>
+
+        <!-- Router → gateways -->
+        <line x1="520" y1="190" x2="578" y2="132" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <line x1="520" y1="200" x2="578" y2="212" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrow-rose)"/>
+        <line x1="520" y1="210" x2="578" y2="295" stroke="#fb923c" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+        <line x1="520" y1="218" x2="578" y2="365" stroke="#fbbf24" stroke-width="1" marker-end="url(#arrow-amber)"/>
+        <text x="545" y="160" fill="#34d399" font-size="7">DRAFT</text>
+        <text x="545" y="235" fill="#fb7185" font-size="7">REVIEW</text>
+        <text x="545" y="280" fill="#fb923c" font-size="7">DIRECTIVE</text>
+
+        <!-- ============================================================
+             LAYER 4: PIPELINE SCRIPTS
+             ============================================================ -->
+
+        <rect x="780" y="170" width="150" height="65" rx="6" fill="rgba(6, 78, 59, 0.3)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="855" y="192" fill="white" font-size="10" font-weight="600" text-anchor="middle">drafter_start.py</text>
+        <text x="855" y="208" fill="#94a3b8" font-size="8" text-anchor="middle">workflow_run + lifecycle</text>
+        <text x="855" y="224" fill="#64748b" font-size="7" text-anchor="middle">idempotent by topic hash</text>
+
+        <line x1="710" y1="197" x2="778" y2="197" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+
+        <rect x="780" y="260" width="150" height="55" rx="6" fill="rgba(251, 191, 36, 0.2)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="855" y="282" fill="white" font-size="9" font-weight="600" text-anchor="middle">pipeline_dispatch.sh</text>
+        <text x="855" y="298" fill="#94a3b8" font-size="8" text-anchor="middle">staleness + deliberation</text>
+
+        <line x1="855" y1="235" x2="855" y2="258" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- ============================================================
+             LAYER 5: REVIEWER RECONCILIATION
+             ============================================================ -->
+
+        <rect x="780" y="340" width="160" height="70" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="860" y="362" fill="white" font-size="10" font-weight="600" text-anchor="middle">reviewer_reconcile.py</text>
+        <text x="860" y="378" fill="#94a3b8" font-size="8" text-anchor="middle">R1 :8643 + Qwen :8002</text>
+        <text x="860" y="392" fill="#94a3b8" font-size="8" text-anchor="middle">+ GLM 5.2 OpenRouter</text>
+        <text x="860" y="406" fill="#64748b" font-size="7" text-anchor="middle">2 rounds → CONSENSUS / ESCALATE</text>
+
+        <line x1="855" y1="315" x2="855" y2="338" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+
+        <!-- External reviewers (bypassing Hermes) -->
+        <rect x="970" y="340" width="120" height="35" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="1030" y="358" fill="white" font-size="9" text-anchor="middle">Qwen :8002 (direct)</text>
+        <text x="1030" y="370" fill="#64748b" font-size="7" text-anchor="middle">llama-server</text>
+
+        <rect x="970" y="380" width="120" height="35" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="1030" y="398" fill="white" font-size="9" text-anchor="middle">GLM 5.2 (OpenRouter)</text>
+        <text x="1030" y="410" fill="#64748b" font-size="7" text-anchor="middle">z-ai/glm-5.2</text>
+
+        <line x1="940" y1="358" x2="968" y2="358" stroke="#a78bfa" stroke-width="1"/>
+        <line x1="940" y1="398" x2="968" y2="398" stroke="#a78bfa" stroke-width="1"/>
+
+        <!-- ============================================================
+             LAYER 6: GATES + ENFORCEMENT
+             ============================================================ -->
+
+        <rect x="780" y="440" width="310" height="65" rx="6" fill="rgba(136, 19, 55, 0.3)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="935" y="460" fill="white" font-size="10" font-weight="600" text-anchor="middle">gate_runner.sh — 7 gates</text>
+        <text x="935" y="476" fill="#94a3b8" font-size="8" text-anchor="middle">git_state · no_secrets · service_health · endpoint · file_exists · staleness · deliberation</text>
+        <text x="935" y="492" fill="#64748b" font-size="7" text-anchor="middle">+ hook: cis_pre_tool_gate.sh blocks write/patch/term without gate record</text>
+
+        <line x1="855" y1="410" x2="855" y2="438" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrow-rose)"/>
+
+        <!-- Override plane -->
+        <rect x="980" y="170" width="110" height="35" rx="6" fill="rgba(251, 191, 36, 0.2)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="1035" y="192" fill="#fbbf24" font-size="9" text-anchor="middle">.GATE_DISABLED</text>
+        <text x="1035" y="203" fill="#64748b" font-size="7" text-anchor="middle">override plane</text>
+
+        <!-- ============================================================
+             LAYER 7: STORAGE
+             ============================================================ -->
+
+        <rect x="30" y="440" width="120" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="90" y="462" fill="white" font-size="10" font-weight="600" text-anchor="middle">SQLite Spine</text>
+        <text x="90" y="478" fill="#94a3b8" font-size="8" text-anchor="middle">cis_memory.db</text>
+        <text x="90" y="492" fill="#64748b" font-size="7" text-anchor="middle">25+ tables</text>
+
+        <rect x="180" y="440" width="120" height="60" rx="6" fill="rgba(76, 29, 149, 0.3)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="240" y="462" fill="white" font-size="10" font-weight="600" text-anchor="middle">Session Files</text>
+        <text x="240" y="478" fill="#94a3b8" font-size="8" text-anchor="middle">~/.hermes-v4pro/</text>
+        <text x="240" y="492" fill="#64748b" font-size="7" text-anchor="middle">JSON · per-session</text>
+
+        <rect x="330" y="440" width="140" height="60" rx="6" fill="rgba(76, 29, 149, 0.3)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="400" y="462" fill="white" font-size="10" font-weight="600" text-anchor="middle">CIS Session Exports</text>
+        <text x="400" y="478" fill="#94a3b8" font-size="8" text-anchor="middle">data/sessions/</text>
+        <text x="400" y="492" fill="#64748b" font-size="7" text-anchor="middle">Telegram · Portal JSON</text>
+
+        <!-- ============================================================
+             DIRECT MODEL PATHS (bypassing everything)
+             ============================================================ -->
+
+        <rect x="30" y="550" width="700" height="70" rx="8" fill="transparent" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="40" y="568" fill="#fbbf24" font-size="9" font-weight="600">Direct Models (bypass Hermes gateways — no logging, no hooks, localStorage only)</text>
+
+        <rect x="40" y="580" width="95" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="87" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">Qwen :8002 local</text>
+
+        <rect x="145" y="580" width="95" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="192" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">GLM :8003 local</text>
+
+        <rect x="250" y="580" width="110" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="305" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">Qwen3.6 Max OR</text>
+
+        <rect x="370" y="580" width="95" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="417" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">GLM 5.2 OR</text>
+
+        <rect x="475" y="580" width="110" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="530" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">Claude Opus 4.8</text>
+
+        <rect x="595" y="580" width="110" height="30" rx="4" fill="rgba(120, 53, 15, 0.2)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="650" y="599" fill="#94a3b8" font-size="8" text-anchor="middle">Mistral Large 3</text>
+
+        <!-- Direct chat arrows -->
+        <line x1="230" y1="155" x2="230" y2="178" stroke="#fbbf24" stroke-width="0.5" stroke-dasharray="2,2"/>
+
+        <!-- ============================================================
+             ANNOTATION: THE GAP
+             ============================================================ -->
+
+        <rect x="30" y="670" width="1140" height="65" rx="8" fill="rgba(251, 146, 60, 0.1)" stroke="#fb923c" stroke-width="2" stroke-dasharray="8,4"/>
+        <text x="600" y="695" fill="#fb923c" font-size="12" font-weight="700" text-anchor="middle">⚠ THE GAP: Portal Chat Tab is DISCONNECTED from the CIS Pipeline</text>
+        <text x="600" y="715" fill="#94a3b8" font-size="10" text-anchor="middle">Chat tab → /api/portal/chat → /api/advisor/chat (flat 1:1, no routing, no pipeline)</text>
+        <text x="600" y="730" fill="#94a3b8" font-size="9" text-anchor="middle">Control tab → /api/portal/submit-intent → /api/advisor/route (classify → dispatch → deliberation → gates)</text>
+
+        <!-- Legend -->
+        <text x="30" y="775" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="30" y="785" width="14" height="8" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/><text x="50" y="793" fill="#94a3b8" font-size="8">Frontend/Chat</text>
+        <rect x="140" y="785" width="14" height="8" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/><text x="160" y="793" fill="#94a3b8" font-size="8">Router/Pipeline</text>
+        <rect x="260" y="785" width="14" height="8" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/><text x="280" y="793" fill="#94a3b8" font-size="8">Reviewer/Security</text>
+        <rect x="390" y="785" width="14" height="8" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/><text x="410" y="793" fill="#94a3b8" font-size="8">Implementer</text>
+        <rect x="500" y="785" width="14" height="8" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/><text x="520" y="793" fill="#94a3b8" font-size="8">Storage/DB</text>
+        <rect x="600" y="785" width="14" height="8" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/><text x="620" y="793" fill="#94a3b8" font-size="8">External/Direct</text>
+        <line x1="720" y1="789" x2="750" y2="789" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/><text x="755" y="793" fill="#94a3b8" font-size="8">Enforcement</text>
+        <line x1="830" y1="789" x2="860" y2="789" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,2"/><text x="865" y="793" fill="#94a3b8" font-size="8">Disconnected path</text>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header"><div class="card-dot emerald"></div><h3>Pipeline Flow (working)</h3></div>
+        <ul>
+          <li>• Intent → classify_route() → gateway dispatch</li>
+          <li>• Drafter (v4pro) → Reviewer (r1) → Consensus</li>
+          <li>• pipeline_dispatch.sh: staleness + deliberation</li>
+          <li>• reviewer_reconcile.py: 3-reviewer reconciliation</li>
+          <li>• gate_runner.sh: 7 verification gates</li>
+          <li>• Eric gate: manual approve/reject</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot rose"></div><h3>Enforcement (active)</h3></div>
+        <ul>
+          <li>• v4pro, r1, v4impl: pre_tool_call hooks ✓</li>
+          <li>• cis_pre_tool_gate.sh blocks write/patch/term</li>
+          <li>• .GATE_DISABLED override plane (tested)</li>
+          <li>• Docker containment: designed, not tested</li>
+          <li>• Qwen: ZERO hooks — no enforcement</li>
+          <li>• Auto-accept on v4pro/r1/v4impl</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot orange"></div><h3>Gaps &amp; Deferred</h3></div>
+        <ul>
+          <li>• <span class="warn">Chat tab not connected to pipeline</span></li>
+          <li>• Direct models: no session logging</li>
+          <li>• No cross-model session access</li>
+          <li>• Direct models: no web search</li>
+          <li>• Claude Opus: ANTHROPIC_API_KEY needed</li>
+          <li>• Docker hook proof: incomplete</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      CIS Pipeline — Live trace June 22, 2026 · All Tiers 0–11D COMPLETE · 4 Hermes gateways running · Portal at localhost:5000
+    </p>
+  </div>
+</body>
+</html>

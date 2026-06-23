@@ -286,8 +286,12 @@ def portal_run_deliberation():
 
 @app.route("/api/portal/chat", methods=["POST"])
 def portal_chat():
-    """Direct chat with a Hermes-gateway model — goes through /api/advisor/chat."""
-    import json as _json, uuid, urllib.request as _ur, urllib.error as _ue
+    """Chat with Hermes gateway — pipeline-aware.
+
+    Prepends pipeline-awareness context. Scans response for engagement signal.
+    Returns pipeline_action when the model detects intent requiring the pipeline.
+    """
+    import json as _json, uuid, urllib.request as _ur, urllib.error as _ue, re
 
     data = request.get_json(silent=True) or {}
     agent = (data.get("agent") or "").strip()
@@ -300,10 +304,21 @@ def portal_chat():
     cis_key = os.environ.get("CIS_API_KEY",
         "ff239b9b04b514b8bc57f166f0eebd8a6a67022575f7886c027b27728e53e6fd")
 
+    # Pipeline-awareness context — only on first message of a new conversation
+    pipeline_ctx = ""
+    if not thread_id:
+        pipeline_ctx = (
+            "[CIS Portal: Pipeline is available. When Eric describes a task requiring "
+            "design, planning, building, implementation, review, or research-backed decisions, "
+            "FIRST restate what you understand, then ask if he wants to engage the pipeline. "
+            "If Eric confirms, include EXACTLY '||PIPELINE_ENGAGE||' in your response.]\n\n"
+        )
+    augmented_message = pipeline_ctx + message
+
     payload = _json.dumps({
         "agent": agent,
         "thread_id": thread_id,
-        "content": message,
+        "content": augmented_message,
     }).encode("utf-8")
 
     try:
@@ -314,7 +329,39 @@ def portal_chat():
         )
         resp = _ur.urlopen(req, timeout=300)
         body = _json.loads(resp.read().decode("utf-8"))
-        return _json.dumps({"thread_id": thread_id, "response": body.get("content") or body.get("response") or str(body)}), 200, {"Content-Type": "application/json"}
+
+        # Check for pipeline engagement signal
+        raw_response = body.get("content") or body.get("response") or ""
+        pipeline_action = None
+        if "||PIPELINE_ENGAGE||" in raw_response:
+            pipeline_action = "engage"
+            raw_response = raw_response.replace("||PIPELINE_ENGAGE||", "")
+
+        result = {
+            "thread_id": thread_id,
+            "response": raw_response,
+            "pipeline_action": pipeline_action,
+        }
+
+        # Context usage: estimate from augmented message + known history size
+        try:
+            import sqlite3 as _sql
+            _db = _sql.connect("/mnt/projects/cis/runtime/db/cis_memory.db")
+            _rows = _db.execute(
+                "SELECT SUM(LENGTH(content)) FROM advisor_messages WHERE thread_id=?",
+                (thread_id,)
+            ).fetchone()
+            _total = (_rows[0] or 0) + len(augmented_message)
+            _db.close()
+            # DeepSeek context limit ~128K, Qwen ~32K, approximate
+            _limit = 128000
+            result["context_chars"] = _total
+            result["context_limit"] = _limit
+            result["context_pct"] = round(min(100, _total / _limit * 100), 1)
+        except Exception:
+            pass
+
+        return _json.dumps(result), 200, {"Content-Type": "application/json"}
     except _ue.HTTPError as e:
         err = e.read().decode("utf-8", errors="replace")
         return _json.dumps({"error": f"Chat error: {err[:500]}", "thread_id": thread_id}), 500, {"Content-Type": "application/json"}
@@ -680,6 +727,132 @@ def portal_chat_group():
                 results[obs] = {"model": obs, "error": str(e), "direct": False, "role": "observer"}
 
     return _json.dumps({"mode": mode, "primary": primary, "results": results}), 200, {"Content-Type": "application/json"}
+
+
+# ── Pipeline Trigger Endpoints ──────────────────────────────────────────
+
+PIPELINE_RUNS = {}  # run_id → {status, stages, ...} — in-memory for now
+
+
+@app.route("/api/portal/pipeline/start", methods=["POST"])
+def portal_pipeline_start():
+    """Trigger the CIS pipeline from the portal with the conversation context.
+
+    Creates workflow_run via drafter_start.py, fires pipeline_dispatch.sh,
+    returns run_id for status polling.
+    """
+    import json as _json, subprocess, tempfile, threading
+
+    data = request.get_json(silent=True) or {}
+    intent = (data.get("intent") or "").strip()
+    topic = (data.get("topic") or intent or "").strip()
+
+    if not intent:
+        return _json.dumps({"error": "intent required"}), 400, {"Content-Type": "application/json"}
+
+    # Phase 1: Create workflow_run via drafter_start.py
+    try:
+        result = subprocess.run(
+            ["python3", "tools/pipeline/drafter_start.py", topic, "--intent", intent],
+            capture_output=True, text=True, timeout=30,
+            cwd="/mnt/projects/cis",
+        )
+        stdout = result.stdout
+        # Parse run_id from output
+        run_id = None
+        for line in stdout.split("\n"):
+            if line.startswith("workflow_run_id:"):
+                run_id = line.split(":", 1)[1].strip()
+                break
+
+        if not run_id:
+            return _json.dumps({
+                "error": "Failed to create workflow_run",
+                "detail": stdout[-500:],
+            }), 500, {"Content-Type": "application/json"}
+
+        PIPELINE_RUNS[run_id] = {
+            "status": "CREATED",
+            "stages": {
+                "staleness": "pending",
+                "deliberation": "pending",
+                "gates": "pending",
+            },
+            "proposal": intent[:200],
+        }
+
+    except Exception as e:
+        return _json.dumps({"error": f"drafter_start.py failed: {str(e)}"}), 500, {"Content-Type": "application/json"}
+
+    # Phase 2: Fire pipeline_dispatch.sh in background
+    def _run_pipeline(run_id, topic, intent):
+        import tempfile as _tmp
+        proposal_file = None
+        try:
+            # Write proposal to temp file
+            with _tmp.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+                f.write(f"{topic}\n\nIntent: {intent}")
+                proposal_file = f.name
+
+            PIPELINE_RUNS[run_id]["status"] = "RUNNING"
+            PIPELINE_RUNS[run_id]["stages"]["staleness"] = "running"
+
+            result = subprocess.run(
+                ["bash", "tools/pipeline/pipeline_dispatch.sh", "--proposal", proposal_file],
+                capture_output=True, text=True, timeout=300,
+                cwd="/mnt/projects/cis",
+            )
+
+            # Parse results
+            stdout = result.stdout
+            if "CONSENSUS_REACHED" in stdout and "RESULT: BLOCKED" not in stdout:
+                PIPELINE_RUNS[run_id]["status"] = "CONSENSUS_REACHED"
+            elif "ESCALATE" in stdout:
+                PIPELINE_RUNS[run_id]["status"] = "ESCALATE"
+            else:
+                PIPELINE_RUNS[run_id]["status"] = "BLOCKED"
+
+            PIPELINE_RUNS[run_id]["stages"]["staleness"] = "FRESH" if "FRESH" in stdout else "unknown"
+            PIPELINE_RUNS[run_id]["stages"]["deliberation"] = "done"
+            PIPELINE_RUNS[run_id]["stdout"] = stdout[-3000:]
+            PIPELINE_RUNS[run_id]["stderr"] = result.stderr[-1000:]
+
+        except subprocess.TimeoutExpired:
+            PIPELINE_RUNS[run_id]["status"] = "TIMEOUT"
+        except Exception as e:
+            PIPELINE_RUNS[run_id]["status"] = "ERROR"
+            PIPELINE_RUNS[run_id]["error"] = str(e)
+        finally:
+            try:
+                import os as _os
+                if proposal_file:
+                    _os.unlink(proposal_file)
+            except:
+                pass
+
+    thread = threading.Thread(target=_run_pipeline, args=(run_id, topic, intent), daemon=True)
+    thread.start()
+
+    return _json.dumps({
+        "run_id": run_id,
+        "status": "RUNNING",
+        "message": "Pipeline started. Poll /api/portal/pipeline/status for results.",
+    }), 200, {"Content-Type": "application/json"}
+
+
+@app.route("/api/portal/pipeline/status", methods=["GET"])
+def portal_pipeline_status():
+    """Poll pipeline status for a given run_id."""
+    import json as _json
+
+    run_id = request.args.get("run_id", "").strip()
+    if not run_id:
+        return _json.dumps({"error": "run_id required"}), 400, {"Content-Type": "application/json"}
+
+    if run_id not in PIPELINE_RUNS:
+        return _json.dumps({"error": f"Unknown run_id: {run_id}"}), 404, {"Content-Type": "application/json"}
+
+    return _json.dumps(PIPELINE_RUNS[run_id]), 200, {"Content-Type": "application/json"}
 
 
 # ── SPA catch-all — must be before more specific frontend routes ──────────
