@@ -68,8 +68,9 @@ function R1StructuredMessage({ content }) {
   );
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, currentAgent }) {
   const isUser = msg.role === "user";
+  const isOwnAgent = msg.agent_name === currentAgent;
   return (
     <div style={{
       display: "flex",
@@ -80,17 +81,23 @@ function MessageBubble({ msg }) {
         maxWidth: "80%",
         padding: "8px 12px",
         borderRadius: 8,
-        background: isUser ? "#1e293b" : "#0f172a",
-        border: `1px solid ${isUser ? "#334155" : "#1e293b"}`,
-        color: "#e2e8f0",
+        background: isUser ? "#1e293b" : (isOwnAgent ? "#0f172a" : "#060d15"),
+        border: `1px solid ${isUser ? "#334155" : (isOwnAgent ? "#1e293b" : "#1a2332")}`,
+        color: isOwnAgent || isUser ? "#e2e8f0" : "#94a3b8",
         fontSize: 13,
         lineHeight: 1.5,
         whiteSpace: "pre-wrap",
-        wordBreak: "break-word"
+        wordBreak: "break-word",
+        opacity: isOwnAgent || isUser ? 1 : 0.85,
       }}>
         {!isUser && (
-          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>
-            {msg.agent_name} · {msg.model}
+          <div style={{ fontSize: 10, color: isOwnAgent ? "#64748b" : "#475569", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+            <span>{msg.agent_name} · {msg.model}</span>
+            {!isOwnAgent && (
+              <span style={{ fontSize: 8, fontStyle: "italic", color: "#334155", padding: "1px 5px", border: "1px solid #1e293b", borderRadius: 3 }}>
+                other panel
+              </span>
+            )}
           </div>
         )}
         {msg.role === "assistant" && msg.agent_name === "hermes-r1" && !msg.streaming
@@ -132,9 +139,8 @@ function AgentPanel({ agent, threadId, disabled, mode, refreshKey, onCritiqueV4P
         .then(r => r.json())
         .then(all => {
           if (streamingRef.current) return;
-          const filtered = all.filter(m => m.agent_name === agent.name);
           setMessages(prev => {
-            if (filtered.length !== prev.length) return filtered;
+            if (all.length !== prev.length) return all;
             return prev;
           });
         });
@@ -341,7 +347,7 @@ function AgentPanel({ agent, threadId, disabled, mode, refreshKey, onCritiqueV4P
             No messages yet
           </div>
         )}
-        {messages.map(m => <MessageBubble key={m.id} msg={m} />)}
+        {messages.map(m => <MessageBubble key={m.id} msg={m} currentAgent={agent.name} />)}
         {loading && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
