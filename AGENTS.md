@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-24 12:32 UTC | Run: run-20260624-phase-pd-close | Latest pipeline: run-5d2a0f1ceda54
+Generated: 2026-06-24 23:54 UTC | Run: run-4107fbbfda47 | Latest pipeline: run-1010c3076e084
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-1010c3076e084] Add a dark-mode toggle to the portal settings panel — ESCALATE (3 rounds, 2026-06-24T18:33:44.980801+00:00)
+- [run-efd77a31b50c4] Add a dark-mode toggle to the portal settings panel. — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-5d2a0f1ceda54] test wiring — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-5f1b4fe87b7f4] Chat-to-Pipeline Inference Trigger — connect Chat tab to CIS pipeline via model- — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-f69f096ebadb4] test from portal — ERROR (0 rounds, incomplete)
-- [closeout-20260619-fd1] FD.1 session closeout — unauthorized implementation + fabricated test evidence ( — ERROR (0 rounds, incomplete)
-- [run-c3452fddb26d4] Build CIS as a functioning application with real UI and enforced role constraint — CONSENSUS_REACHED (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)
