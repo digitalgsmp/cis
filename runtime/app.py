@@ -155,6 +155,24 @@ def cis_portal():
     return "Portal not found", 404
 
 
+@app.route("/monitor-test")
+def monitor_test():
+    """Simple standalone monitor test page."""
+    test_path = RUNTIME_DIR / "ui" / "public" / "monitor-test.html"
+    if test_path.exists():
+        return test_path.read_text(encoding="utf-8"), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return "Test page not found", 404
+
+
+@app.route("/roadmap-live")
+def roadmap_live():
+    """Standalone roadmap page with live monitor — bypasses portal CSS issues."""
+    rl_path = RUNTIME_DIR / "ui" / "public" / "roadmap-live.html"
+    if rl_path.exists():
+        return rl_path.read_text(encoding="utf-8"), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return "Roadmap page not found", 404
+
+
 @app.route("/api/portal/submit-intent", methods=["POST"])
 def portal_submit_intent():
     """Portal intent submission — bypasses API key auth (internal page)."""
@@ -858,6 +876,113 @@ def portal_pipeline_status():
         return _json.dumps({"error": f"Unknown run_id: {run_id}"}), 404, {"Content-Type": "application/json"}
 
     return _json.dumps(PIPELINE_RUNS[run_id]), 200, {"Content-Type": "application/json"}
+
+
+# ── Portal Monitor: Live Gateway Health ────────────────────────────────────
+
+GATEWAY_MONITORS = {
+    "prime":     {"port": 8642, "label": "Prime (Flash/Research)",  "profile": "hermes-prime",   "model": "DeepSeek V4 Flash", "context": "1M"},
+    "v4pro":     {"port": 8645, "label": "Drafter (V4 Pro)",         "profile": "hermes-v4pro",   "model": "DeepSeek V4 Pro",   "context": "1M"},
+    "r1":        {"port": 8643, "label": "Reviewer (R1)",           "profile": "hermes-r1",      "model": "DeepSeek R1",       "context": "160K"},
+    "v4impl":    {"port": 8646, "label": "Implementer",             "profile": "hermes-v4impl",  "model": "DeepSeek V4 Pro",   "context": "1M"},
+    "qwen":      {"port": 8644, "label": "Qwen Gateway",            "profile": "hermes-qwen",    "model": "Qwen3-VL-30B",      "context": "32K"},
+}
+EXTRA_SERVICES = {
+    "qwen-local":  {"port": 8002, "label": "Qwen llama-server",     "url": "http://127.0.0.1:8002/health"},
+    "glm-local":   {"port": 8003, "label": "GLM 4.7 Flash (local)", "url": "http://127.0.0.1:8003/health"},
+    "cis-flask":   {"port": 5000, "label": "CIS Flask App",         "url": "http://127.0.0.1:5000/api/system/health"},
+}
+
+
+@app.route("/api/portal/monitor")
+def portal_monitor():
+    """Live gateway and service health — used by portal monitor panel."""
+    import json as _json, urllib.request as _ur, urllib.error as _ue, time as _time
+
+    results = {"gateways": {}, "services": {}, "blockers": [], "next_actions": [], "timestamp": _time.time()}
+
+    # ── Check Hermes gateways ──────────────────────────────────
+    for gw_id, cfg in GATEWAY_MONITORS.items():
+        url = f"http://127.0.0.1:{cfg['port']}/health"
+        try:
+            req = _ur.Request(url)
+            resp = _ur.urlopen(req, timeout=3)
+            body = _json.loads(resp.read().decode("utf-8"))
+            results["gateways"][gw_id] = {
+                "status": "up",
+                "port": cfg["port"],
+                "label": cfg["label"],
+                "profile": cfg["profile"],
+                "model": cfg["model"],
+                "context": cfg["context"],
+                "health": body,
+                "latency_ms": round((_time.time() - results["timestamp"]) * 1000, 1),
+            }
+        except Exception as e:
+            results["gateways"][gw_id] = {
+                "status": "down",
+                "port": cfg["port"],
+                "label": cfg["label"],
+                "profile": cfg["profile"],
+                "model": cfg["model"],
+                "context": cfg["context"],
+                "error": str(e)[:200],
+            }
+
+    # ── Check extra services ────────────────────────────────────
+    for svc_id, cfg in EXTRA_SERVICES.items():
+        try:
+            req = _ur.Request(cfg["url"])
+            resp = _ur.urlopen(req, timeout=3)
+            body = _json.loads(resp.read().decode("utf-8"))
+            results["services"][svc_id] = {
+                "status": "up",
+                "port": cfg["port"],
+                "label": cfg["label"],
+                "health": body,
+            }
+        except Exception as e:
+            results["services"][svc_id] = {
+                "status": "down",
+                "port": cfg["port"],
+                "label": cfg["label"],
+                "error": str(e)[:200],
+            }
+
+    # ── Active blockers ─────────────────────────────────────────
+    try:
+        import sqlite3 as _sql
+        db = _sql.connect("/mnt/projects/cis/data/cis_memory.db")
+        db.row_factory = _sql.Row
+        rows = db.execute(
+            "SELECT id, description FROM active_blockers WHERE status = 'ACTIVE'"
+        ).fetchall()
+        db.close()
+        results["blockers"] = [{"id": r["id"], "description": r["description"]} for r in rows]
+    except Exception:
+        pass
+
+    # ── Next actions ────────────────────────────────────────────
+    try:
+        db = _sql.connect("/mnt/projects/cis/data/cis_memory.db")
+        db.row_factory = _sql.Row
+        rows = db.execute(
+            "SELECT id, description FROM next_actions WHERE status = 'PENDING' ORDER BY id"
+        ).fetchall()
+        db.close()
+        results["next_actions"] = [{"id": r["id"], "description": r["description"]} for r in rows]
+    except Exception:
+        pass
+
+    # ── Build plan phase ────────────────────────────────────────
+    try:
+        from mcp_bridge.tools import handle_get_current_phase
+        phase = handle_get_current_phase({})
+        results["phase"] = phase
+    except Exception:
+        results["phase"] = {"build_phase": "unknown"}
+
+    return _json.dumps(results), 200, {"Content-Type": "application/json"}
 
 
 # ── SPA catch-all — must be before more specific frontend routes ──────────
