@@ -66,6 +66,8 @@ def load_spine_state(db_path: Path) -> dict:
 
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
+
+    # Get the most recent non-superseded row per key
     rows = conn.execute(
         """SELECT key, value FROM project_state
            WHERE superseded_at IS NULL
@@ -74,8 +76,27 @@ def load_spine_state(db_path: Path) -> dict:
                WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
            )"""
     ).fetchall()
+    state = {row["key"]: row["value"] for row in rows}
+
+    # If the current completed_tier is unparseable (e.g. "PD" for Phase PD),
+    # fall back to the most recent parseable completed_tier
+    completed_tier_str = state.get("completed_tier", "")
+    if completed_tier_str and parse_bare_tier(completed_tier_str) is None:
+        # Search history for the most recent parseable completed_tier
+        fallback = conn.execute(
+            """SELECT value FROM project_state
+               WHERE key='completed_tier'
+               ORDER BY id DESC LIMIT 20"""
+        ).fetchall()
+        for row in fallback:
+            val = row["value"]
+            if parse_bare_tier(val) is not None:
+                state["completed_tier"] = val
+                state["_completed_tier_original"] = completed_tier_str
+                break
+
     conn.close()
-    return {row["key"]: row["value"] for row in rows}
+    return state
 
 
 def load_static_config(config_path: Path) -> dict:
