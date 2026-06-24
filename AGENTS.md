@@ -1,11 +1,11 @@
 # CIS — AGENTS.md
-Generated: 2026-06-20 05:29 UTC | Run: run-32439ff89e8c | Latest pipeline: closeout-20260619-fd1
+Generated: 2026-06-24 12:32 UTC | Run: run-20260624-phase-pd-close | Latest pipeline: run-5d2a0f1ceda54
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Tier 11D COMPLETE. Pre-execution oversight pipeline operational (commit 756d0d9): automatic staleness check (web freshness via GitHub API + DuckDuckGo) and dual-review deliberation (R1/deepseek-v4-pro + Qwen/qwen3-vl-30b) fire automatically before Eric approval gate. Qwen deliberation via direct llama-server port 8002. Compact machine-protocol cross-feed prevents context overflow. Chunking support (--chunk-size N). Pipeline wired as Gate 7 in gate_runner.sh. DB: 25/27 nodes COMPLETE, 2 DEFERRED. All four V4 Pro gateways healthy. Hermes v0.16.0 Surface Release. AGENTS.md regenerated from spine.
-Direction: FD.1-FRONT-DOOR — MCP dispatch tools, baseline-verify first. Enforcement Phase 0 complete (mount semantics + override plane proven). §14 items 3-6 deferred to post-active-use.
+Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.
+Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -72,16 +72,18 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 6. Next Actions
 - [NA-SEED-017] (Tier front-door) FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
+- [NA-SEED-018] (Tier Phase 0) Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
 
 ## 7. Active Blockers
+- [BLK-SEED-006] Loop-breaker gap: successful repeated identical tool calls (same tool_name+args) are invisible to the built-in guardrail. agent/tool_guardrails.py counters only key on failures and no-progress reads. Model can loop ~20x issuing the same successful call (e.g. skill_view) with zero intervention. Fix needed in Phase 0 before autonomous operation.
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-5d2a0f1ceda54] test wiring — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-5f1b4fe87b7f4] Chat-to-Pipeline Inference Trigger — connect Chat tab to CIS pipeline via model- — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-f69f096ebadb4] test from portal — ERROR (0 rounds, incomplete)
 - [closeout-20260619-fd1] FD.1 session closeout — unauthorized implementation + fabricated test evidence ( — ERROR (0 rounds, incomplete)
 - [run-c3452fddb26d4] Build CIS as a functioning application with real UI and enforced role constraint — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-d99af34b845c] DESIGN_TWO_PASS_CATALOGING_AND_INDEXING.md formal implementation specification — CONSENSUS_REACHED (2 rounds, 2026-06-18T18:14:13.181443+00:00)
-- [run-gate-20260618] Gate runner approval — all gates passed — CONSENSUS_REACHED (1 rounds, incomplete)
-- [run-0570610976d74] personal knowledge base — CONSENSUS_REACHED (3 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: N/A (direct Eric Gate — no deliberation run)

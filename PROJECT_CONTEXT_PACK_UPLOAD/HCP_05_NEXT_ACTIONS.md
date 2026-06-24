@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-20 05:29 UTC | Run: run-32439ff89e8c
+Generated: 2026-06-24 12:46 UTC | Run: run-20260624-phase-pd-close
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**NA-SEED-017**: FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
+**NA-SEED-018**: Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
 
 Do NOT start:
 
@@ -65,6 +65,7 @@ Do NOT start:
 | Tier 5 | Build Tier 5 context export pipeline | COMPLETE | |
 | Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | COMPLETE | |
 | Tier 6 | Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) | COMPLETE | |
+| Tier Phase 0 | Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails | PENDING | |
 | Tier enforcement | Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through  | COMPLETE | |
 | Tier enforcement | Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V | BLOCKED | |
 | Tier enforcement | Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Re | COMPLETE | |

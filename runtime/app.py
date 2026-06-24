@@ -353,7 +353,13 @@ def portal_chat():
             ).fetchone()
             _total = (_rows[0] or 0) + len(augmented_message)
             _db.close()
-            _limit = 128000
+            _limit = {
+                "hermes-v4pro":  1048576,  # DeepSeek V4 Pro: 1M
+                "hermes-r1":      163840,  # DeepSeek R1: 160K
+                "hermes-v4impl": 1048576,  # DeepSeek V4 Pro: 1M
+                "hermes-prime":  1048576,  # DeepSeek V4 Flash: 1M
+                "hermes-qwen":     32768,  # Qwen local: 32K
+            }.get(agent, 128000)
             result["context_chars"] = _total
             result["context_limit"] = _limit
             result["context_pct"] = round(min(100, _total / _limit * 100), 1)

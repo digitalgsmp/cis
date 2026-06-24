@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-06-20
+Date: 2026-06-24
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `5764a55`
+HEAD: `f2daf33`
 
-Generated: 2026-06-20 05:29 UTC | Run: run-32439ff89e8c
+Generated: 2026-06-24 12:46 UTC | Run: run-20260624-phase-pd-close
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -97,7 +97,7 @@ Cognition failures are mitigated by design, not completed forever.
 ## Exact Next Action
 
 
-**NA-SEED-017**: FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
+**NA-SEED-018**: Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
 
 ## Eric Gate Approval Status
 
