@@ -1,0 +1,30 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644).
+# Hermes treats this as authoritative for the keys it pins and REFUSES
+# worker `hermes config set` on them, naming this file as the source.
+# The worker's own ~/.hermes/config.yaml cannot override these keys.
+#
+# This is the contract the worker reads but cannot author.
+
+model:
+  provider: llamacpp
+  base_url: http://host.docker.internal:8002/v1
+  default: qwen3-vl-30b-a3b-instruct-q4_k_m.gguf
+  context_length: 65536
+
+auxiliary:
+  compression:
+    context_length: 65536
+
+terminal:
+  backend: local
+
+# THE WALL is the mwl-proof PLUGIN (__init__.py pre_tool_call), not a shell hook.
+# The plugin must stay enabled AND the disabled-list pinned empty.
+# Pinning only `enabled` is NOT enough: `hermes plugins disable` writes the
+# name into `plugins.disabled` (in the worker's own ~/.hermes/config.yaml),
+# and `disabled` ALWAYS wins over `enabled` — this is exactly how the worker
+# defeated enforcement in the prior session. Managed scope must own BOTH keys.
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
