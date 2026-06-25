@@ -1,0 +1,274 @@
+Claude Roadmap Audit 20260624
+
+revuew what I attached and  any feedback you think is relevant.
+12:53 PM
+
+Core problem: you have three model outputs synthesizing the same corpus, and all three agree on the diagnosis but none of them flag the structural risk in your own pivot. That gap is the feedback worth giving.
+
+The diagnosis they share is correct. 24–27 build nodes "complete," none wired to your actual workflow. You talk to bots on Telegram; the pipeline never fires. That's the real state. All three converge on it, which raises confidence it's accurate and not one model flattering you.
+
+The risk none of them states plainly: your pivot recovers intent from the same archive that already failed to produce working software. "Recover the spec from Eric's own words" (Phase C / D2 / FD.2) is presented as the unlock, but the archive grew to 518 files while you were not able to work outside the terminal. More extraction doesn't break that pattern — it risks deepening it. Corpus scraping is a research project competing with the one wiring task that actually changes your daily reality.
+
+Sequencing disagreement among the three — resolve it before building:
+
+    hermes_draft and hermes_impl both put the chat-to-pipeline trigger first (A-phase).
+    hermes_r1 puts the Intent Bridge (3 MCP dispatch tools) first, archive extraction second.
+    impl inserts a live portal monitor ahead of everything as "building now."
+
+These are not the same first step. The monitor is the cheapest and addresses your literal stated complaint ("roadmap button shows nothing"). The trigger is the linchpin but depends on classify_route → drafter_start → deliberation actually being wired, which r1 admits "needs wiring." Pick the trigger only if that wiring is real; otherwise you build a marker that fires into a dead path.
+
+One-line risk: every roadmap here is 5 phases deep with C/D/E gated behind architectural decisions (B1 "needs external advisor input") — that's the same governance-ahead-of-software failure the June 18 pivot was supposed to kill.
+
+Tradeoff: monitor-first gives you a visible win in one session but doesn't activate the pipeline; trigger-first activates the system but only if the downstream scripts already connect, else it's wasted.
+
+Next action (toward your active PD.5 goal): Before writing any A-phase code, verify the trigger's downstream path end-to-end by hand — call classify_route() → drafter_start.py → deliberation manually from the CLI with one fake intent. If it completes, build the trigger. If it dies, that broken link is your real first task, not the marker and not the corpus.
+
+Want me to draft that manual end-to-end smoke test as a single command sequence?
+
+let me sharpen your perspective. these are not recommendations from three different models, they are the information from the different hermes installation session logs that I asked hermes draft to reference to give me an status reading. 
+
+your point about using the files generated my efforts that failed to produce the product is off base because the block has been all of the issues that cis is build to avoid, session amnesia, mis-interpreting what I am asking for due to training data bias for the enterprise software development process. the failure to produce the completed app has been the inabilityto work with LLMs on a complex system that is not based on enterprise traditional development tactics.
+
+now supply your feedback under this new framing. the goal is to comeuppance with the steps to wire together what has been specced or built already. all the major components and concept are present and function theoretically figured out if not evidentiary proven.  now I would like to have the control surface have 3 or 4 models working with me through the control surface and enforcement pipeline to bring the project home to operational status if not completed.
+1:05 PM
+
+Understood. Re-framing: these are session logs from different Hermes installs, not competing recommendations. The diagnosis is one continuous status reading, and the block is the exact failure mode CIS exists to eliminate — amnesia and enterprise-dev training bias, not bad source material. The corpus is the asset, not the liability.
+
+Revised feedback under that framing:
+
+The work left is integration, not invention. Every component exists; nothing here requires a new spec. So the roadmap should be ordered by dependency to first working loop, not by phase letter. The logs already contain that order — it's just scattered across the three readings. Consolidated:
+
+The single critical path to a working control surface with 3–4 models:
+
+    MCP dispatch tools (FD.1) — the 3 write tools added to the existing 11 read-only bridge. This is the literal seam between chat and pipeline. Nothing downstream fires without it. r1 names this first for the right reason: it's the lowest node in the dependency tree.
+    Inference trigger wired to those dispatch tools — the marker detection in /api/portal/chat calling the new tools → classify_route() → drafter_start.py. The trigger is useless until step 1 gives it something to call; step 1 is dead weight until the trigger calls it. Build them as one unit, not two phases.
+    Pipeline-visible panels — Drafter/Reviewer/Gate state surfaced in the portal. This is what makes it a control surface and not a chat box that silently triggers jobs. Without it you're back to a black box, which is the thing the pivot rejected.
+    Loop-breaker (BLK-SEED-006) — count all ToolCallSignatures regardless of success/failure. Required before any model runs autonomously through the pipeline, or the first multi-model deliberation can hang. This gates safety of autonomy, so it must land before you let 3–4 models actually work, not after.
+
+What to explicitly defer: corpus scraping (Phase C), abstraction-layer API surface (B1), unified cross-session memory (E1). None of these block the first working loop. They are improvements to a system that runs — and right now nothing runs end-to-end. Pulling them forward is the same governance-ahead-of-software trap, just re-skinned as "knowledge recovery."
+
+The one real risk in this path: steps 1–2 assume classify_route() → drafter_start.py → deliberation actually connect when called in sequence. The logs say these exist individually; none shows them firing as a chain. If that chain is broken, it's the true first task and everything above waits on it.
+
+Tradeoff: building 1+2 as a unit is more work before you see anything move, but building them separately means two debugging sessions where each half blames the other.
+
+Next action toward operational status: Run the chain once by hand before wiring the trigger — invoke classify_route() → drafter_start.py → deliberation manually from the CLI with one synthetic intent. Pass = build dispatch tools + trigger as a unit. Fail = the broken link is node zero, ahead of everything.
+
+Want me to write that manual chain-test as a copy-paste command sequence, or first lay out steps 1–4 as ADRs so the decisions are locked before implementation?
+
+what is the point of the manual chain test?
+1:10 PM
+
+The point is to find out where the chain is broken before you spend a session wiring a trigger to it — because if it's broken, the trigger will fail silently and you won't know which link did it.
+
+The specific failure it prevents: You build the dispatch tools + inference trigger (steps 1–2), send a test message, nothing happens. Now you're debugging four things at once — marker detection, the dispatch tool call, classify_route(), drafter_start.py, the deliberation handoff — with no way to tell which one failed. The trigger sits on top of the chain, so a break anywhere underneath looks identical from the chat: nothing moves.
+
+What the manual test isolates: By calling classify_route() → drafter_start.py → deliberation directly from the CLI, you remove the trigger and the MCP layer from the picture. If the chain completes, every link downstream of the trigger works, and any later failure is in the trigger/dispatch wiring you just built — a small surface. If it fails, you see exactly which script in the sequence dies, and that's your real first task instead of node 1.
+
+Why it matters under your framing specifically: The logs assert these scripts exist (classify_route exists, rest needs wiring). Existing and connecting-in-sequence are different claims. No log shows them firing as a chain — only individually. The manual test converts a theoretical "figured out" into evidentiary "proven," which is the exact gap your status reading keeps flagging across every component.
+
+It's one command sequence, ~5 minutes, run once. If you're confident the chain already fires end-to-end from prior testing, skip it — it earns its place only if that connection is unproven.
+
+Next action: tell me whether you've ever seen those three run in sequence. If yes, we skip straight to building 1+2. If no or unsure, that's the test to run first.
+
+I am chatting with you in the claude app and hermes on telegram. can you deliver a manual chain test that I can pass to hermes so it can run it while I am in the field talking to both of you on my phone?
+1:13 PM
+
+Here's a self-contained brief Hermes can act on without your terminal. It tells Hermes what to run, in what order, and exactly what to report back so you can read the result on your phone.
+
+MANUAL CHAIN TEST — classify_route → drafter_start → deliberation
+Goal: prove the three components fire as a sequence, not just individually.
+Run from CLI on creative-vm. Report back per the OUTPUT CONTRACT at the bottom.
+
+STEP 0 — Locate the scripts. Do not assume paths.
+  Run: find . -name "classify_route*" -o -name "drafter_start*" 2>/dev/null
+  Also grep for the deliberation entrypoint (R1+Qwen cross-review).
+  Report the resolved path of each of the 3 stages. If any is missing, STOP and report which.
+
+STEP 1 — Synthetic intent.
+  Use this fixed test input so the result is reproducible:
+    INTENT = "Add a dark-mode toggle to the portal settings panel."
+  This is a build-type request — it SHOULD classify into the pipeline.
+
+STEP 2 — Stage 1: classify_route()
+  Invoke classify_route on INTENT directly (CLI/python, not via chat/marker).
+  Capture: did it return a route/classification? What value?
+  PASS if it returns a non-null route that sends this to the pipeline.
+
+STEP 3 — Stage 2: drafter_start.py
+  Feed Stage 1's output into drafter_start.py.
+  Capture: did a draft/proposal artifact get created? Where (path or spine record/ID)?
+  PASS if a draft object exists after the call.
+
+STEP 4 — Stage 3: deliberation
+  Trigger deliberation on the draft from Stage 2.
+  Capture: did the reviewers (R1 + Qwen) actually engage and produce review output?
+  PASS if review output exists tied to that draft.
+
+CRITICAL RULES
+  - Do NOT fix, scaffold, or stub anything to make a stage pass. If a stage fails, let it fail and report the error verbatim.
+  - Do NOT claim a stage passed without the evidence named above (a value, a path, or a record ID).
+  - Run the stages in order. If stage N fails, still report N+1 as BLOCKED, not skipped.
+  - This is a read/trace test of existing wiring, not a build task. Create nothing except what the scripts themselves create.
+
+OUTPUT CONTRACT — reply in exactly this format:
+  STAGE 0 (paths):   classify_route=<path|MISSING>  drafter_start=<path|MISSING>  deliberation=<path|MISSING>
+  STAGE 1 (classify): PASS/FAIL — route=<value> — evidence=<what you saw>
+  STAGE 2 (drafter):  PASS/FAIL/BLOCKED — artifact=<path or ID> — evidence=<...>
+  STAGE 3 (deliberate): PASS/FAIL/BLOCKED — review=<path or ID> — evidence=<...>
+  FIRST BROKEN LINK: <stage name, or "none — chain fires end to end">
+  ERROR (if any): <verbatim error text>
+
+How to read the result in the field: the only line that matters first is FIRST BROKEN LINK. If it says "none," the chain is proven and you build dispatch tools + trigger as a unit. If it names a stage, that stage is node zero — ahead of everything in the roadmap.
+
+Why the rules are strict: the "do not fix/stub/claim without evidence" lines exist because the failure mode you're testing for is the same one CIS fights — a model reporting success without proof. Forcing path/ID evidence per stage stops Hermes from telling you it passed when it only theoretically should.
+
+One thing I'm guessing at: the exact invocation method for each script (python module vs. CLI flag vs. spine call). I left that to Hermes since it has the filesystem in front of it. If you know any of the three has a specific entrypoint, tell me and I'll pin it in the brief so Hermes can't pick a wrong one.
+1:56 PM
+
+The chain fires. The break is real and now precisely located. Read the conflict between the two reports carefully — it changes your next move.
+
+What both reports agree on (this is solid):
+
+    Stage 1 classify → PASS, but the dark-mode intent matched zero signals and fell through to the v4_drafter default. The classifier has no vocabulary for UI/feature-build requests. Anything novel routes blind.
+    Stage 2 drafter_start → PASS, creates a DB row in workflow_runs, nothing else.
+    The reviewer fabric works — R1, Qwen, and external tie-breakers (GLM, DeepSeek) all fire and produce real verdicts.
+
+Where the two reports diverge — and which to trust:
+
+hermes_impl says the break is Stage 2 → Stage 3: drafter_start writes a DB record but no proposal file, and gate_deliberation.sh requires --proposal-file. Nobody dispatches the Drafter (v4pro:8645) to actually write the proposal text. Impl only got Stage 3 to run by hand-feeding a proposal file.
+
+hermes_draft says Stage 3 PASSED via orchestrator.py — three full deliberation rounds — and the break was a 401 auth error from missing API-key env vars, fixed by sourcing profile .env files.
+
+These are not the same finding. They ran different Stage 3 entrypoints: impl used gate_deliberation.sh → reviewer_reconcile.py; draft used runtime/orchestrator.py. That's why their breaks differ — they tested different paths.
+
+The reconciliation — your actual state:
+
+There are two real, separate gaps, and each report found one:
+
+    The proposal-dispatch gap (impl's finding). The Drafter profile is never told to write the proposal document. drafter_start.py records intent; it does not produce the artifact deliberation consumes. This is the structural missing link — the thing "nobody built" — and it's the true node zero.
+    The config/auth gap (draft's finding). orchestrator_config.yaml references env var names (V4PRO_API_SERVER_KEY, R1_API_SERVER_KEY) that don't exist; runtime only exports DEEPSEEK_API_KEY and CIS_R1_API_KEY. Without sourcing profile .envs first, the whole chain 401s.
+
+Gap 2 is a one-line config fix. Gap 1 is the build task. They stack: even after you fix auth, you still have no automatic Drafter→proposal→deliberation handoff.
+
+So the single integration task that brings the chain home: build the bridge that takes the workflow_run DB record from Stage 2, dispatches the Drafter profile (v4pro:8645) to write an actual proposal document, persists it as a file, and hands that file path to deliberation. That one piece converts three components-that-exist into a chain-that-fires unattended. Everything else in your roadmap sits downstream of it.
+
+Two smaller findings worth locking now, not later:
+
+    Classifier blindness: zero-signal intents silently default to v4_drafter at low confidence. Before you let 3–4 models run autonomously, low-confidence routes should surface to you, not pass through invisibly — otherwise misrouting is undetectable.
+    Escalation ignores --no-escalate: impl reported external models (GLM, DeepSeek) firing as tie-breakers even with --no-escalate set. That's a flag that doesn't bind. If you ever need deliberation to stay local, it currently won't.
+
+One thing neither report could confirm: whether the classify approval was a real manual click or a 60s-timeout auto-approve. Minor now, but if the enforcement gate auto-approves on timeout, that's the gate not actually gating — worth verifying before autonomy.
+
+Tradeoff on what to build first: fix the auth config (5 min, unblocks orchestrator.py path entirely) before building the proposal-dispatch bridge — because draft's report suggests orchestrator.py may already run the full Drafter→reviewer loop once authed, which would mean impl's "missing bridge" exists in the orchestrator path and impl just tested the wrong entrypoint.
+
+That's the thing to resolve next. Next action: have Hermes diff the two Stage 3 paths — does runtime/orchestrator.py dispatch the Drafter to write a proposal (draft says 3 rounds with v4pro producing proposals each round), or does it also require a hand-fed file like gate_deliberation.sh? If orchestrator self-dispatches the Drafter, that's your operational path and the bridge is already built — you just standardize on it and fix the config. Want me to write that diff instruction for Hermes?
+
+give me the instructions to hermes for whatever further checks you want to do right now
+2:01 PM
+
+Here's the brief for Hermes. One question dominates: does orchestrator.py already do the Drafter→proposal→deliberation handoff that gate_deliberation.sh lacks? If yes, the chain is already whole on that path and you stop building. Everything below serves that question, plus locking the three smaller findings.
+
+CHAIN TEST — FOLLOW-UP CHECKS
+Context: Prior chain test produced two conflicting Stage-3 results because two different
+entrypoints were tested: gate_deliberation.sh (needed a hand-fed proposal file) vs
+runtime/orchestrator.py (ran 3 rounds, broke only on a 401 auth/config issue).
+Resolve which path is the real operational chain. Trace and report — do NOT fix, stub,
+or scaffold anything. Report verbatim evidence per the OUTPUT CONTRACT.
+
+CHECK 1 — Does orchestrator.py self-dispatch the Drafter?  [THE decisive check]
+  Open runtime/orchestrator.py. Trace what happens between the workflow_run record and
+  the deliberation call. Specifically answer:
+    (a) Does it call the Drafter profile (v4pro:8645) to GENERATE proposal text? Quote the
+        line(s) where it does, or state it does not.
+    (b) Does deliberation in this path receive a generated proposal, or does it also require
+        an externally supplied --proposal-file like gate_deliberation.sh?
+    (c) Is the proposal persisted as a FILE, a DB row, or only held in memory for the call?
+  VERDICT line required: "orchestrator self-dispatches Drafter: YES / NO"
+
+CHECK 2 — Auth/config gap, exact scope.
+  orchestrator_config.yaml references env vars V4PRO_API_SERVER_KEY and R1_API_SERVER_KEY,
+  which do not exist; runtime.env exports DEEPSEEK_API_KEY and CIS_R1_API_KEY.
+    (a) Confirm the exact mismatch: list what the config asks for vs what runtime.env provides.
+    (b) Identify the minimal correct fix: rename the config vars, OR add the missing exports,
+        OR source profile .env files. State which one is correct given how the profiles
+        actually read their keys. Do not apply it — just name it precisely.
+
+CHECK 3 — Two classify_route definitions: which is canonical?
+  classify_route exists in BOTH runtime/api/router.py:50 AND runtime/api/advisor.py:86.
+    (a) Are they identical, or do they differ? If they differ, summarize how.
+    (b) Which one does the live /api/portal/chat path actually call? Trace the import.
+  VERDICT line: "canonical classify_route = <path>"
+
+CHECK 4 — Classifier signal vocabulary (blindness scope).
+  The test intent matched ZERO signals and defaulted to v4_drafter at confidence=low.
+    (a) Where is the signal/keyword table defined? Give the path.
+    (b) Roughly what intent categories DO have signals, and is there ANY signal set for
+        UI/feature-build requests? YES/NO.
+  Do not add signals. Just report coverage.
+
+CHECK 5 — Does --no-escalate actually bind?
+  Prior run showed GLM 5.2 and DeepSeek Reasoner firing as external tie-breakers EVEN WITH
+  --no-escalate set.
+    (a) Find where --no-escalate is parsed and where external escalation is triggered.
+    (b) State whether the flag is checked before external models are contacted. If the flag
+        is ignored or checked too late, say so and quote the relevant line.
+  VERDICT line: "--no-escalate binds: YES / NO"
+
+CHECK 6 — Approval gate: real click or timeout auto-approve?
+  Prior classify approvals showed mode:manual, timeout:60. Unclear if a human clicked or the
+  timeout auto-approved.
+    (a) In the approval mechanism, what happens when the 60s timeout expires with no input —
+        deny, or auto-approve?
+  VERDICT line: "timeout default = APPROVE / DENY"
+
+RULES
+  - Trace and read only. Create/modify/fix nothing. If a check can't be answered from the
+    code, say "UNDETERMINED — <why>" rather than guessing.
+  - Quote actual lines/paths as evidence. No conclusions without a path or a quoted line.
+
+OUTPUT CONTRACT — reply in this format:
+  CHECK 1: orchestrator self-dispatches Drafter: YES/NO — evidence=<quoted lines/paths> — proposal persisted as FILE/DB/MEMORY
+  CHECK 2: mismatch=<config asks X, env provides Y> — minimal fix=<one of: rename/add/source>
+  CHECK 3: canonical classify_route=<path> — identical?=YES/NO — live path calls=<path>
+  CHECK 4: signal table=<path> — UI/feature signals exist=YES/NO — categories covered=<short list>
+  CHECK 5: --no-escalate binds: YES/NO — evidence=<quoted line>
+  CHECK 6: timeout default = APPROVE/DENY — evidence=<quoted line>
+  BOTTOM LINE: <one sentence — is the chain already whole on the orchestrator path, or is the proposal-dispatch bridge a real build task?>
+
+How to read it in the field: jump to CHECK 1 and BOTTOM LINE first. If CHECK 1 is YES — orchestrator self-dispatches the Drafter and feeds deliberation a generated proposal — then the chain is already whole on that path, the "missing bridge" was an artifact of testing the wrong entrypoint, and your task collapses to fixing config (CHECK 2) and standardizing on orchestrator.py. If CHECK 1 is NO, the proposal-dispatch bridge is the real build and it's node zero.
+
+Checks 3–6 lock the loose findings while Hermes is already in the code, so you don't pay a second trip: which classifier is real, where the UI-signal blindness lives, whether your local-only flag actually holds, and whether your enforcement gate secretly auto-approves on timeout — that last one matters most before you hand 3–4 models any autonomy.
+2:11 PM
+
+All three traces agree on every check. The chain is whole. Here's what's now proven and what to do.
+
+Confirmed — the chain already fires end to end on the orchestrator path. orchestrator.py self-dispatches the Drafter (v4pro:8645), takes its output in memory, feeds it to the Reviewers, and persists rounds to deliberation_rounds. The "missing proposal-file bridge" was a false alarm — it's a limitation of gate_deliberation.sh/reviewer_reconcile.py (the manual CLI tools), not of the real pipeline. You don't have a build task. You have a config fix and two safety findings.
+
+The one thing blocking out-of-box execution (fix first):
+
+    orchestrator_config.yaml lines 29–30 ask for V4PRO_API_SERVER_KEY / R1_API_SERVER_KEY, which don't exist. Rename them to DEEPSEEK_API_KEY / CIS_R1_API_KEY — the names the gateways actually read. impl notes the code already falls back to DEEPSEEK_API_KEY at line 86, so simply deleting the two explicit overrides from the YAML also fixes it. Two-line change, unblocks the whole chain.
+
+Two findings to lock before you give 3–4 models autonomy:
+
+    --no-escalate does not do what its name implies. It blocks only the tier-2 deadlock escalation (escalate_to_external()). GLM 5.2 and DeepSeek Reasoner are wired as primary reviewers (reviewer_reconcile.py ~522–542) and fire on every round unconditionally — the flag never touches them. Consequence: there is currently no flag that keeps deliberation local. If you ever need an air-gapped or cost-controlled run, you can't get one without editing the REVIEWERS dict. Decide now whether external models as standing co-reviewers is intended or an accident.
+    Classifier is blind to UI/feature requests. Signal table (advisor.py 35–57) covers research, drafting, critique, archive — zero coverage for "add / toggle / feature / UI / panel / settings." Anything in that category silently defaults to v4_drafter at confidence=low. Consequence: a whole class of your likely requests routes blind with no surfaced warning. Low-confidence routes should surface to you before dispatch, not pass through invisibly.
+
+Two findings that came back clean — stop worrying about them:
+
+    Approval gate is fail-closed: 60s timeout returns deny, confirmed in callbacks.py and config. Your enforcement gate actually gates.
+    Canonical classify_route is advisor.py:86 (the complete 8-pass version with archive retrieval + v4_implementer). The live portal calls it. The original chain test imported router.py — the partial duplicate — which is why Stage 1 looked thinner than it is. Your live path was always using the good one.
+
+Where this leaves the roadmap. The integration task you thought you had (build the proposal-dispatch bridge) doesn't exist — it's already built. The real remaining work to bring the control surface to operational status, in dependency order:
+
+    Fix the config env-var names (unblocks orchestrator execution) — minutes.
+    Wire the inference trigger → advisor.py classify_route → orchestrator.py. The chain underneath is proven, so this is now low-risk plumbing, not integration archaeology.
+    Add UI/feature signals to advisor.py 35–57, or add a low-confidence surfacing rule, so feature requests stop routing blind.
+    Decide and enforce external-model policy (the --no-escalate gap) before autonomy.
+    Pipeline-visible panels — surface the deliberation rounds (already persisted to DB) into the portal.
+
+Tradeoff: you can ship a working control surface after just steps 1–2; steps 3–4 are correctness/safety hardening you want before unattended multi-model runs, not before a supervised first run.
+
+Next action: have Hermes apply the config fix (step 1), then run the full chain once through orchestrator.py — not the CLI tools — with the dark-mode intent, authed, end to end, and report whether it completes a deliberation cycle and persists rounds without manual intervention. That's the proof that converts "whole in trace" into "whole in execution." Want me to write that run instruction?
+
+
+
