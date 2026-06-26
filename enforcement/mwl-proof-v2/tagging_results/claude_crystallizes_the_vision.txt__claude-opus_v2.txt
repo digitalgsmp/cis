@@ -1,0 +1,241 @@
+MODEL: Claude Opus 4.8
+DOC: claude crystallizes the vision.txt
+CHARS: 49196
+ELAPSED: 41s
+DIRECTIVE: v2 (formatted, speaker-tagged)
+
+# CIS Intent Recovery — Tagged Document
+
+---
+
+**claude crystallizes the vision**
+
+My goal this session is to create or configure the control plane using the muliti-panel 4 or more columns to have all of the models there for me to observe and communicate with. once that is configured and I can work in the control plane with the models, I want to step through what claude identified today as what is necessary to have the pipeline working end to end.
+7:14 PM
+
+---
+SPEAKER: Eric
+VOICE: eric-verbatim
+SUBJECT: Eric states the session goal — configure a multi-panel control plane and step through the pipeline end-to-end
+CATEGORIES: control-plane, eric-intention, lane-cis-project
+BUILD TARGET: control-plane
+INTENT (if Eric's words): Configure the 4+ panel control plane so he can observe/communicate with all models, then get the pipeline working end to end.
+FAILURE FLAG (if present): none
+---
+
+---
+
+I'll start by reading the uploaded files and the relevant skill before building anything.
+Viewed 2 files
+
+Now the portal file.
+Inspect portal.html structure
+
+The portal already has a 4-panel control surface. Let me see the model options and the JS wiring (chat send, backend endpoints) to understand current state vs. your goal.
+View panel model dropdown options
+
+The 4-panel control surface already exists and is built. Now the JS — how chat sends, what backend endpoints it hits, and whether models actually respond.
+Map JS functions and backend endpoints
+
+---
+SPEAKER: Model name
+VOICE: model-interpretation
+SUBJECT: Claude inspects existing portal.html, discovers the 4-panel control surface already exists
+CATEGORIES: control-plane, lane-cis-project
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): none — model correctly reading state before building (avoids rebuild)
+---
+
+---
+
+I have the full picture. Here is the direct answer.
+Control plane state: already built — do not rebuild
+
+The 4-panel multi-model control surface already exists in portal.html. It has:
+
+    4 resizable panels (P1–P4), each with a model dropdown (Hermes gateway + 11 direct models)
+    3 chat modes: 1:1, All Parallel, Adversarial Observer
+    Backend endpoints already wired: /api/portal/chat, /api/portal/chat-direct, /api/portal/chat-group
+
+Building a new one is wasted work and violates sequential-build. The task is verify it functions, not create it.
+
+---
+SPEAKER: Model name
+VOICE: model-interpretation
+SUBJECT: Claude concludes the control plane is already built; reframes the task as verification, not construction
+CATEGORIES: control-plane, decision, lane-cis-project
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): prevents redundant-rebuild failure (sequential-build violation)
+---
+
+---
+
+What "configure the control plane" actually means this session
+
+Two-step gate:
+
+1. Confirm the panels return live model output. The HTML is wired; whether the backend endpoints actually respond is unproven. One test per endpoint family.
+
+2. Then run the pipeline end-to-end per today's audit. Your audit already collapsed the roadmap to its real critical path. The build task you feared (proposal-dispatch bridge) does not exist — the trace proved orchestrator.py self-dispatches the Drafter. What remains:
+
+---
+SPEAKER: Model name
+VOICE: model-interpretation
+SUBJECT: Claude reframes "configure control plane" as a two-step gate — verify panel output, then run pipeline
+CATEGORIES: control-plane, pipeline, lane-cis-project
+BUILD TARGET: cross-cutting
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): none
+---
+
+---
+
+#	Task	Type	Blocks
+1	Fix orchestrator_config.yaml env-var names (V4PRO_API_SERVER_KEY/R1_API_SERVER_KEY → delete; falls back to DEEPSEEK_API_KEY/CIS_R1_API_KEY)	config, minutes	orchestrator execution
+2	Run full chain once through orchestrator.py (not CLI tools), authed, dark-mode intent — prove it persists rounds unattended	proof	converts trace→execution
+3	Wire inference trigger → advisor.py:86 classify_route → orchestrator.py	plumbing	chat→pipeline
+4	Add UI/feature signals to advisor.py:35-57 OR surface low-confidence routes	correctness	blind routing
+5	Decide external-model policy (--no-escalate doesn't bind reviewers)	safety	autonomy
+
+Steps 1–2 give a working supervised control surface. 3–5 are hardening before unattended multi-model runs.
+
+---
+SPEAKER: Model name
+VOICE: technical-spec
+SUBJECT: Audit-derived 5-step critical path (config fix, chain proof, trigger wiring, signal correctness, external-model policy)
+CATEGORIES: pipeline, intent-inference, agent-roles, lane-cis-project
+BUILD TARGET: pipeline
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): blind-routing (step 4), unenforced-autonomy (step 5)
+---
+
+---
+
+Risk (one line): Step 2 is the only thing that converts "whole in trace" to "whole in execution" — until it runs through orchestrator.py authed, the chain is proven on paper only.
+
+Next action: Confirm one fact before any code — has the existing portal ever returned a live response in a panel? That determines whether this session is "verify control surface + run step 1–2" or "debug the panel endpoints first."
+
+Q: Has the existing 4-panel portal ever returned a live model response in any panel?
+A: [No preference]
+
+Q: Where do you want to start this session?
+A: [No preference]
+7:14 PM
+
+---
+SPEAKER: Model name
+VOICE: model-interpretation
+SUBJECT: Claude flags proof-on-paper risk and asks Eric two gating questions (both answered "No preference")
+CATEGORIES: pipeline, control-plane, open-question
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): false-proof risk (trace ≠ execution)
+---
+
+---
+
+You skipped both — I'll set the order myself based on dependency.
+Session order
+
+Verification gates everything. You can't run the pipeline through a control surface whose panels you haven't confirmed return output. So:
+
+Stage A — prove the panels return live output (gate before anything else)
+Stage B — config fix (Step 1, minutes, unblocks orchestrator)
+Stage C — orchestrator chain run (Step 2, the proof that matters)
+
+Stages B and C come straight from today's audit. A is the missing precondition the audit assumed but never verified.
+
+---
+SPEAKER: Model name
+VOICE: model-interpretation
+SUBJECT: Claude self-orders the session by dependency (Stage A verify → B config → C chain run)
+CATEGORIES: control-plane, pipeline, decision, lane-cis-project
+BUILD TARGET: cross-cutting
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): none — model takes initiative after Eric declines to direct
+---
+
+---
+
+Stage A — single verification brief for Hermes
+
+This proves the existing portal endpoints actually respond, with raw evidence per your discipline. Pass it to Hermes:
+
+PORTAL PANEL VERIFICATION — does the control surface return live model output?
+Trace/run only. Fix nothing. Report verbatim evidence.
+
+STEP 1 — Confirm the portal server is serving portal.html and is up.
+  Report: the process/port serving the portal, and HTTP 200 on the portal route.
+
+STEP 2 — Test the Hermes-gateway chat path (one panel).
+  POST to /api/portal/chat with a minimal payload (model=hermes-r1, one short message).
+  Capture: HTTP status + raw response body verbatim.
+  PASS if a non-empty model reply returns. FAIL = quote the error.
+
+---
+SPEAKER: Model name
+VOICE: technical-spec
+SUBJECT: Stage A verification brief for Hermes — test portal server + Hermes-gateway chat path with verbatim evidence
+CATEGORIES: control-plane, enforcement, lane-cis-project
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): guards against "should work" false-proof via verbatim-only evidence rule
+---
+
+---
+
+STEP 3 — Test the direct-model path (one panel).
+  POST to /api/portal/chat-direct with model=qwen (local, port 8002), one short message.
+  Capture: HTTP status + raw response body verbatim.
+  PASS if a non-empty reply returns. FAIL = quote the error.
+
+STEP 4 — Test the group path (Adversarial Observer).
+  POST to /api/portal/chat-group with one short message.
+  Capture: HTTP status + raw body verbatim.
+  PASS if it returns structured multi-model output. FAIL = quote error.
+
+RULES
+  - Do not stub, scaffold, or fix to make a step pass. Let failures fail; quote them.
+  - No "should work" — only raw status codes and response bodies as evidence.
+
+---
+SPEAKER: Model name
+VOICE: technical-spec
+SUBJECT: Stage A brief continued — direct-model path, group path, and no-stub/verbatim-only rules
+CATEGORIES: control-plane, enforcement, failure-pattern
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): explicit guard against stub-to-pass false-proof
+---
+
+---
+
+OUTPUT CONTRACT — reply exactly:
+  STEP 1 (server): UP/DOWN — port=<n> — route status=<code>
+  STEP 2 (chat):        PASS/FAIL — status=<code> — body=<verbatim, first 300 chars>
+  STEP 3 (chat-direct): PASS/FAIL — status=<code> — body=<verbatim, first 300 chars>
+  STEP 4 (chat-group):  PASS/FAIL — status=<code> — body=<verbatim, first 300 chars>
+  BOTTOM LINE: <which panel paths return live output, which are dead>
+
+Read in the field: Any STEP that PASSes means that panel type is operational now. The result decides whether Stage B/C run today or whether a dead endpoint becomes node zero ahead of the config fix.
+
+Risk: if all three paths FAIL, the control surface is a shell and panel wiring precedes the pipeline work — but you'll know precisely which path from the verbatim bodies.
+
+Next action: Send the brief above to Hermes. Paste back its OUTPUT CONTRACT reply and I'll route to Stage B or to debugging whichever path died.
+
+---
+SPEAKER: Model name
+VOICE: technical-spec
+SUBJECT: Stage A output contract + risk that the control surface may be a shell
+CATEGORIES: control-plane, agent-roles, lane-cis-project
+BUILD TARGET: control-plane
+INTENT (if Eric's words): n/a
+FAILURE FLAG (if present): shell-surface risk (UI wired but endpoints dead)
+---
+
+---
+
+I forgot to give you this file. first I need to ask you this. Chatgtp has a 25 file limit for project files. from the project files since the gonvernance obligations have been removed, give me a lilst of the 25 most useful file to deliver to cgtp to be up to date and ready to work.
+7
