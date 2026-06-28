@@ -45,6 +45,8 @@ from api.advisor import advisor_bp
 from api.reconciliation import reconciliation_bp
 from api.idea_drafts import idea_drafts_bp
 from api.advisor_external import advisor_external_bp
+from api.intent import intent_bp
+from api.adapter import adapter_bp
 from api.dam import dam_bp
 from api.pipeline_views import pipeline_views_bp
 from api.dashboard_api import dashboard_bp
@@ -111,6 +113,8 @@ app.register_blueprint(advisor_bp)
 app.register_blueprint(reconciliation_bp)
 app.register_blueprint(idea_drafts_bp)
 app.register_blueprint(advisor_external_bp)
+app.register_blueprint(intent_bp)
+app.register_blueprint(adapter_bp)
 app.register_blueprint(dam_bp)
 app.register_blueprint(pipeline_views_bp)          # Tier 10 — CIS UI
 app.register_blueprint(dashboard_bp)              # Tier 11A — Dashboard
@@ -446,6 +450,39 @@ DIRECT_CHAT_CONFIG = {
         "label": "GLM 5.2 (OpenRouter)",
         "key_env": "OPENROUTER_API_KEY",
         "max_tokens": 4000,
+        "api_type": "openrouter",
+    },
+    # ── Free models via OpenRouter (for bulk tagging/inference) ──────────
+    "qwen3-next-80b": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "label": "Qwen3 Next 80B (OpenRouter, free)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 8000,
+        "api_type": "openrouter",
+    },
+    "hermes-405b": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "nousresearch/hermes-3-llama-3.1-405b:free",
+        "label": "Hermes 3 405B (OpenRouter, free)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 8000,
+        "api_type": "openrouter",
+    },
+    "llama-70b": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+        "label": "Llama 3.3 70B (OpenRouter, free)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 8000,
+        "api_type": "openrouter",
+    },
+    "gemma-31b": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "model": "google/gemma-4-31b-it:free",
+        "label": "Gemma 4 31B (OpenRouter, free)",
+        "key_env": "OPENROUTER_API_KEY",
+        "max_tokens": 8000,
         "api_type": "openrouter",
     },
     "mistral-large": {
@@ -983,6 +1020,76 @@ def portal_monitor():
         results["phase"] = {"build_phase": "unknown"}
 
     return _json.dumps(results), 200, {"Content-Type": "application/json"}
+
+
+@app.route("/api/portal/build-status")
+def portal_build_status():
+    """Live build plan progress + gate status — used by portal Roadmap tab."""
+    import json as _json, sqlite3 as _sql, os as _os
+
+    results = {
+        "build_plan": [],
+        "phase": {},
+        "gate_runs": [],
+        "runs": [],
+        "timestamp": __import__("time").time(),
+    }
+
+    db_path = "/mnt/projects/cis/data/cis_memory.db"
+
+    # ── Build plan nodes ────────────────────────────────────────
+    try:
+        db = _sql.connect(db_path)
+        db.row_factory = _sql.Row
+        rows = db.execute(
+            "SELECT node_label, tier, status, sequence, blocked_reason, "
+            "completed_at, approved_at "
+            "FROM build_plan_nodes "
+            "WHERE project_id = 'CIS' "
+            "ORDER BY sequence"
+        ).fetchall()
+        db.close()
+        results["build_plan"] = [dict(r) for r in rows]
+    except Exception:
+        pass
+
+    # ── Pipeline phase ──────────────────────────────────────────
+    try:
+        from mcp_bridge.tools import handle_get_current_phase
+        results["phase"] = handle_get_current_phase({})
+    except Exception:
+        results["phase"] = {"build_phase": "unknown", "next_tier": "?"}
+
+    # ── Eric gate approvals ─────────────────────────────────────
+    try:
+        db = _sql.connect(db_path)
+        db.row_factory = _sql.Row
+        rows = db.execute(
+            "SELECT workflow_run_id, decision, rationale, decided_at "
+            "FROM eric_gate_approvals "
+            "ORDER BY decided_at DESC LIMIT 5"
+        ).fetchall()
+        db.close()
+        results["gate_runs"] = [dict(r) for r in rows]
+    except Exception:
+        pass
+
+    # ── Active workflow runs ────────────────────────────────────
+    try:
+        db = _sql.connect(db_path)
+        db.row_factory = _sql.Row
+        rows = db.execute(
+            "SELECT id, topic, status, rounds_completed, created_at "
+            "FROM workflow_runs "
+            "WHERE status NOT IN ('COMPLETE', 'ERROR', 'ESCALATE') "
+            "ORDER BY created_at DESC LIMIT 10"
+        ).fetchall()
+        db.close()
+        results["runs"] = [dict(r) for r in rows]
+    except Exception:
+        pass
+
+    return _json.dumps(results, default=str), 200, {"Content-Type": "application/json"}
 
 
 # ── SPA catch-all — must be before more specific frontend routes ──────────

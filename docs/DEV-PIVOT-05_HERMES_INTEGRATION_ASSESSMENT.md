@@ -299,7 +299,7 @@ in the Hermes-integrated system.
 | **P0** | Resolve BLK-SEED-005 (hermes-gateway-r1 service loop) | None | **RESOLVED** — false positive; patch #7 applied June 16; prime not poisoned |
 | **P1** | Collapse 5 installs → 1 install with 5 Hermes profiles | None (BLK-SEED-005 resolved — false positive, patch #7 applied June 16) | **CONFIRMED by Eric** |
 | **P2** | Define per-profile SOUL.md and skill bundles | P1 | PENDING |
-| **P3** | Build CIS ↔ Hermes adapter layer (MCP-based) | P1 | PENDING |
+| **P3** | Build CIS ↔ Hermes adapter layer (MCP-based) | P1 | **COMPLETE** (2026-06-27) — `runtime/abstraction/dispatch.py` + `runtime/api/adapter.py` built. 4 endpoints live on port 5000: health, profiles, dispatch, chat. MCP bridge extended with `cis_adapter_status` and `cis_adapter_dispatch`. Profiles not yet collapsed (P1 pending). Adapter routes to existing 5-install gateways. |
 | **P4** | Build oversight skill with tool-call hooks | P2, P3 | PENDING |
 | **P5** | Migrate gates from bash to skills where sensible | P4 | PENDING |
 | **P6** | UI overhaul — Hermes dashboard views for deliberation, build plan, Eric Gate | P3 | PENDING |

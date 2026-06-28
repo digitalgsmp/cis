@@ -134,16 +134,17 @@ feature-complete and Eric is actively using the pipeline.
 
 ## 7. What Stays CIS, What Moves to Hermes (Eventually)
 
-| Stays CIS (Methodology) | Moves to Hermes (Implementation) |
-|------------------------|----------------------------------|
-| Adversarial verification (ADR-SEED-002) | 5 installs → profiles |
-| FINAL_JSON protocol | orchestrator HTTP → MCP coordination |
-| Eric Gate (human approval) | gate scripts → skills |
-| Evidence-Backed Response Rule | closeout scripts → cron jobs |
-| Build plan spine (DB) | custom Flask UI → dashboard views |
-| Dual-model deliberation | staleness script → web_search skill |
-| Role enforcement (ADR-SEED-003/004) | Eric Gate delivery → messaging |
-| The archive (Eric's knowledge base) | VDB access layer (Chroma, Tier 9) |
+| Stays CIS (Methodology) | Moves to Hermes (Implementation) | Status |
+|------------------------|----------------------------------|--------|
+| Adversarial verification (ADR-SEED-002) | 5 installs → profiles | PENDING |
+| FINAL_JSON protocol | orchestrator HTTP → MCP coordination | PENDING |
+| Eric Gate (human approval) | gate scripts → skills | PENDING |
+| Evidence-Backed Response Rule | closeout scripts → cron jobs | PENDING |
+| Build plan spine (DB) | custom Flask UI → dashboard views | PENDING |
+| Dual-model deliberation | staleness script → web_search skill | PENDING |
+| Role enforcement (ADR-SEED-003/004) | Eric Gate delivery → messaging | PENDING |
+| The archive (Eric's knowledge base) | VDB access layer (Chroma, Tier 9) | **COMPLETE** — 287,589 messages, FTS5 + ChromaDB |
+| CIS ↔ Hermes adapter layer | Dispatch via abstraction layer API | **COMPLETE** (2026-06-27) — 4 endpoints on port 5000 |
 
 ## 8. What Does NOT Change
 
@@ -156,16 +157,11 @@ feature-complete and Eric is actively using the pipeline.
 
 ## 9. Next Actions (Immediate)
 
-1. **Wire the CIS front door** — Eric needs one entry point that routes intents
-   through the full pipeline. The router, deliberation engine, and gates exist.
-   They need to fire when Eric sends a message, not sit idle.
+1. **CIS front door wired** (2026-06-27) — Abstraction layer built. `POST /api/adapter/dispatch` classifies intents and routes to correct profile. Gateway health checks operational.
 
-2. **Archive integration specification** — Define how the archive drives
-   connect to the shared knowledge base, how the VDB indexes them, and how
-   MCP provides access to all profiles.
+2. **Archive integration COMPLETE** (2026-06-27) — 287,589 messages from 12 sources ingested into knowledge_messages. FTS5 + ChromaDB dual search operational. `cis_search_knowledge` MCP tool available to all profiles. Session format approach replaced complex tagging pipeline.
 
-3. **Let the hardening settle** — Use CIS for a few days. Verify shell hooks
-   fire correctly in real use. Find edge cases before building more on top.
+3. **Let the hardening settle** — Use CIS for real work. Verify shell hooks and pre_tool_call enforcement fire correctly. Find edge cases before building more.
 
 ## 10. Approval
 

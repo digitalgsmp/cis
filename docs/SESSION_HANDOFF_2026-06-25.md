@@ -1,4 +1,4 @@
-# CIS Session Handoff — 2026-06-25
+# CIS Session Handoff — 2026-06-25 (updated 2026-06-26)
 
 ## What was accomplished
 
@@ -19,9 +19,14 @@
    - GLM emphasized structural elements the others skimmed
    - The blind-spot hypothesis holds: no single model catches everything
 
-4. **Tagging directive refined to v3.** Two primary sort criteria (Eric-verbatim vs model-produced),
-   formatted output with SPEAKER/VOICE/BUILD TARGET/FAILURE FLAG metadata blocks,
-   and traceability to the four target deliverables.
+4. **Tagging directive refined to v3.1.** Two primary sort criteria (Eric-verbatim vs model-produced),
+   formatted output with SPEAKER/VOICE/BUILD TARGET/FUNCTIONALITY/FAILURE FLAG metadata blocks,
+   and traceability to five target deliverables including the new Reviewer Measurement Brief.
+   v3.1 adds: WHAT REVIEWERS MEASURE AGAINST section, FUNCTIONALITY field (specific component
+   mapping per block), 4 new categories (profile-character, reviewer-duties, measurement-criteria,
+   reviewer-brief), reviewer-measurement BUILD TARGET, and hermes-backend replaces enforced-container
+   in BUILD TARGET. Companion reference at enforcement/CATEGORY_TO_LAYER_MAP.md maps every
+   category to the three application parts: control-plane, abstraction-layer, hermes-backend.
 
 ## Current state of the pipeline
 
@@ -40,12 +45,13 @@ Tagged output from first 3 documents at:
 Full tagging directive v3 at:
 `/mnt/projects/cis/enforcement/TAGGING_DIRECTIVE_v3.md`
 
-## The four target deliverables
+## The five target deliverables
 
 1. **Intent-to-Function Map** — Eric's verbatim ask → CIS layer → component → build state → source doc
 2. **Functional Specification by Layer** — what each component does, grouped by control-plane / abstraction-layer / enforced-container
 3. **Anti-Pattern Register** — Eric asked X, model delivered Y, friction Z, guardrail W. Built from FAILURE FLAG entries.
 4. **WIASW Domain Model** — what CIS inherits from the analog Word→Image→Action→Sound→Web framework
+5. **Reviewer Measurement Brief** — Eric's core intentions, profile character/duties, two-lane model, confirmation gate, 7-stage sequence, wall+reference architecture, Eric's role. Built from reviewer-measurement tagged content. Must exist before Review Stage A.
 
 ## What the reviewers need to measure against
 
@@ -61,7 +67,8 @@ From the vision document (claude crystallizes the vision.txt), Eric's core inten
 ## Key documents for the next agent to read
 
 - `docs/claude crystallizes the vision.txt` — Eric's intentions + pipeline architecture
-- `enforcement/TAGGING_DIRECTIVE_v3.md` — the tagging prompt
+- `enforcement/TAGGING_DIRECTIVE_v3.md` — the v3.1 tagging prompt
+- `enforcement/CATEGORY_TO_LAYER_MAP.md` — maps every category to the three application parts
 - `enforcement/mwl-proof-v2/` — Dockerfile, managed-config.yaml, verify_seal.sh
 - `docs/MWL_PROOF_REPRODUCTION.md` — proven enforcement setup
 - `docs/CIS_16_FAILURE_MODES.md` — what the guardrails prevent

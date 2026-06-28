@@ -1,8 +1,16 @@
-# CIS Intent Recovery — Tagging Directive v3
+# CIS Intent Recovery — Tagging Directive v3.1
 # Multi-pass pipeline: Tag → Review A → Drafter → Review B → Eric Gate → Implement
 #
 # This directive is for PASS 1 only: three models tag independently.
 # Subsequent passes reconcile, draft, audit, and build from tagged output.
+#
+# v3.1 UPDATE: Added 5th deliverable — Reviewer Measurement Brief.
+# Taggers must now capture content that tells reviewers what they measure against:
+# Eric's core intentions, profile character/duties, two-lane model, confirmation gate,
+# the 7-stage sequence, and the wall+reference architecture.
+# This information must be tagged so the Drafter can synthesize it into a Reviewer
+# Measurement Brief BEFORE Review Stage A runs — reviewers need to know what to measure
+# against when they audit the raw tags.
 
 ## FORMAT RULES
 
@@ -16,7 +24,11 @@ For each block:
   VOICE: [eric-verbatim | model-interpretation | technical-spec | governance]
   SUBJECT: [one-line summary of what this block is about]
   CATEGORIES: [from list below; create new ones freely when you recognize a pattern not covered]
-  BUILD TARGET: [control-plane | abstraction-layer | enforced-container | cross-cutting | pipeline]
+  BUILD TARGET: [control-plane | abstraction-layer | hermes-backend | cross-cutting | pipeline | reviewer-measurement]
+  FUNCTIONALITY: [what specific component/function/feature could this inform in the CIS application?
+                 Name the part: e.g. 'panel model dropdown', 'dispatch router', 'pre_tool_call hook',
+                 'orchestrator self-dispatch', 'Flask /api/portal/chat endpoint', 'managed-scope pinning'.
+                 If it spans multiple, list them. If unclear, note 'needs Drafter assignment'.]
   INTENT: [if Eric's words: what is he asking for? 1 sentence. If model content: n/a]
   FAILURE FLAG: [if present: which CIS failure mode, enterprise-friction, or false-proof risk]
   ---
@@ -51,7 +63,6 @@ not covered — your training data may surface distinctions these miss.
   intent-inference — trigger mechanism, confirmation gate, intent recognition
   shared-memory — persistent memory, amnesia, agent knowledge, cross-session state
   agent-roles — model profiles, Drafter/Reviewer/Implementer functions, role enforcement
-  profile-character — specific profile traits, duties, SOUL.md content, tool assignments
   lane-cis-product — how CIS works for any future user, general mechanism
   lane-cis-project — building CIS with CIS, this first project's specific build
   eric-intention — Eric's stated goals, what he wants, his purpose, his pain points
@@ -63,16 +74,25 @@ not covered — your training data may surface distinctions these miss.
   wiasw-origin — traces back to WIASW analog framework (Word→Image→Action→Sound→Web)
   guardrail-mechanism — a specific check, gate, or wall that prevents a failure mode
   verification-method — how something is proven, evidence standards, test design
+  profile-character — what a specific agent profile looks like: duties, SOUL.md, tools, hooks
+  reviewer-duties — what a reviewer is supposed to check, audit, or challenge
+  measurement-criteria — what the reviewers should measure against (Eric's intentions, goals)
+  reviewer-brief — content that belongs in the Reviewer Measurement Brief (deliverable 5)
 
 ## BUILD TARGET
 
-Which CIS layer does this block inform?
+Which part of the CIS application does this block inform? The three application parts are:
 
-  control-plane — the portal, chat panels, Eric's interaction surface
-  abstraction-layer — the dispatch boundary between portal and enforced container
-  enforced-container — Docker, RO mounts, hooks, managed scope, the wall
-  pipeline — the multi-stage deliberation chain (intent→clarify→deliberate→conciliate→implement→verify)
-  cross-cutting — applies to multiple layers or the whole system
+  control-plane — the portal, chat panels, model dropdowns, Flask endpoints, Eric's interaction surface
+  abstraction-layer — the dispatch boundary between portal and enforced container (routing, trigger, permission gate)
+  hermes-backend — the enforced container: Docker, RO mounts, pre_tool_call hook, managed scope,
+                   the 7-stage pipeline (intent→clarify→deliberate→conciliate→implement→verify→complete),
+                   orchestrator, Drafter/Reviewer/Implementer agents
+  pipeline — the multi-stage deliberation chain (use when specifically about pipeline mechanics, not backend generally)
+  cross-cutting — applies to multiple application parts or the whole system
+  reviewer-measurement — defines what reviewers measure against, profile duties, Eric's intentions
+
+For a full mapping of categories to application parts, see enforcement/CATEGORY_TO_LAYER_MAP.md.
 
 ## FAILURE FLAGS
 
@@ -91,7 +111,7 @@ flag it. Common patterns:
 These are NOT things to discard. They are evidence that the enforcement + intent-memory
 architecture solves a real problem. The Anti-Pattern Register is built from these.
 
-## THE FOUR DELIVERABLES THIS FEEDS
+## THE FIVE DELIVERABLES THIS FEEDS
 
 Tagged output becomes raw material for:
 
@@ -99,6 +119,33 @@ Tagged output becomes raw material for:
   2. Functional Specification by Layer — what each component must do, WIASW origin
   3. Anti-Pattern Register — Eric asked X, model produced Y, friction Z, guardrail W
   4. WIASW Domain Model — what CIS inherits from the analog Word→Image→Action→Sound→Web framework
+  5. Reviewer Measurement Brief — what reviewers measure against: Eric's core intentions, 
+     profile character/duties, two-lane model, confirmation gate, 7-stage sequence,
+     wall+reference architecture, Eric's role (approve/disapprove/refine). This document
+     must exist before Review Stage A so reviewers know what they're auditing against.
+
+## WHAT REVIEWERS MEASURE AGAINST
+
+When tagging, pay special attention to content that defines:
+
+  1. Eric's role — "approve, disapprove, or refine intention." NOT coder/architect.
+     The models have the expert information; Eric steers by intention.
+  2. Two lanes — Lane 1: CIS-as-product (general mechanism for any user).
+     Lane 2: CIS-as-project (building CIS with CIS, this first project).
+  3. The 7-stage enforced sequence — intent inference → clarification → deliberation →
+     conciliation → implementation → verification → completion. All seven must run
+     inside the enforced container.
+  4. Wall + reference architecture — the container is the wall (stops models from
+     running off). The intent memory/corpus is the reference (tells models where to
+     run toward). Neither alone overcomes the 16 failures.
+  5. Confirmation gate — model reflects intent back to user, user confirms before
+     pipeline triggers. Intent inference alone is not permission.
+  6. Profile character — what each agent profile looks like: its duties, its
+     SOUL.md content, its tools, its hooks. The container constrains the profile;
+     the profile constrains the behavior.
+  7. Intent memory — the scraped corpus of Eric's intentions becomes the reference
+     every stage validates against. Without it, enforcement enforces against
+     enterprise defaults.
 
 ## WIASW CONTEXT
 

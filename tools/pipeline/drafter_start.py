@@ -198,6 +198,31 @@ def main():
            VALUES (?, 'intent_hash', ?, ?)""",
         (workflow_run_id, intent_hash, now)
     )
+
+    # ── Phase E: Intent Alignment Measurement ──
+    intent_context = ""
+    try:
+        import subprocess as sp
+        measure_script = os.path.join(
+            os.path.dirname(__file__), "measure_intent.py"
+        )
+        result = sp.run(
+            [sys.executable, measure_script, "--topic", topic, "--intent", intent,
+             "--top-k", "5", "--summary-only"],
+            capture_output=True, text=True, timeout=30,
+            cwd=REPO_ROOT,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            intent_context = result.stdout.strip()
+            db.execute(
+                """INSERT INTO workflow_run_artifacts
+                   (run_id, artifact_type, content, created_at)
+                   VALUES (?, 'intent_alignment', ?, ?)""",
+                (workflow_run_id, intent_context, now)
+            )
+    except Exception:
+        pass  # Intent measurement is advisory — don't block dispatch
+
     db.commit()
 
     # --- Git-state warning ---

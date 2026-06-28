@@ -218,6 +218,34 @@ TOOLS = [
         },
     },
     {
+        "name": "cis_search_knowledge",
+        "description": (
+            "Search the shared CIS knowledge base (Claude conversations, "
+            "CIS docs, archive files) using combined FTS5 keyword search "
+            "and ChromaDB semantic search. Returns Eric's verbatim words, "
+            "project documents, and conversation history. "
+            "Use to find what Eric said about a topic, verify intentions, "
+            "or discover prior work on a problem."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query to search the knowledge base",
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "Maximum results (default: 10, max: 50)",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 50,
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "cis_dispatch_drafter",
         "description": (
             "Start the CIS Drafter pipeline for a crystallized topic. "
@@ -277,6 +305,44 @@ TOOLS = [
                 },
             },
             "required": ["run_id"],
+        },
+    },
+    {
+        "name": "cis_adapter_status",
+        "description": (
+            "Check the health and availability of all CIS Hermes profiles "
+            "through the abstraction layer adapter. Returns per-profile: "
+            "healthy, port, model, response_time. Use this to discover "
+            "which profiles are online before dispatching work."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "cis_adapter_dispatch",
+        "description": (
+            "Classify an intent and get the dispatch decision from the "
+            "abstraction layer. Returns the recommended route (drafter, "
+            "reviewer, implementer), profile name, port, gateway URL, "
+            "confidence, reason, and matched signals. Use before sending "
+            "work to a profile to confirm correct routing."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "The intent or message to classify and route",
+                },
+                "override": {
+                    "type": "string",
+                    "description": "Optional: force a specific route (drafter, reviewer, etc.)",
+                },
+            },
+            "required": ["message"],
         },
     },
 ]
@@ -441,6 +507,81 @@ def handle_dispatch_implementer(arguments):
         return {"error": str(exc)}
 
 
+def handle_search_knowledge(arguments):
+    """Handler for cis_search_knowledge — search shared knowledge base."""
+    query = arguments.get("query", "")
+    top_k = arguments.get("top_k", 10)
+    if not query:
+        return {"error": "query is required"}
+
+    results = []
+    # FTS5 full-text search
+    try:
+        fts_results = spine.search_knowledge_fts(query, limit=top_k)
+        for row in fts_results:
+            results.append({
+                "id": row["id"],
+                "content": (row.get("content", "") or "")[:500],
+                "source": row.get("source", ""),
+                "role": row.get("role", ""),
+                "search_type": "fts5",
+            })
+    except Exception as e:
+        results.append({"error": f"FTS5 search failed: {e}"})
+
+    # Semantic search via ChromaDB
+    try:
+        semantic_results = spine.search_knowledge_semantic(query, top_k=top_k)
+        for hit in semantic_results:
+            results.append({
+                "id": hit.get("id", ""),
+                "content": (hit.get("content", "") or "")[:500],
+                "source": hit.get("source", ""),
+                "role": hit.get("role", ""),
+                "score": hit.get("score", 0),
+                "search_type": "semantic",
+            })
+    except Exception as e:
+        results.append({"error": f"Semantic search failed: {e}"})
+
+    return {"query": query, "results": results, "total": len(results)}
+
+
+def handle_adapter_status(arguments):
+    """Handler for cis_adapter_status — query adapter health via Flask API."""
+    import urllib.request as _ur, json as _json
+    try:
+        req = _ur.Request("http://127.0.0.1:5000/api/adapter/health")
+        resp = _ur.urlopen(req, timeout=10)
+        return _json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"error": f"Adapter unreachable: {e}"}
+
+
+def handle_adapter_dispatch(arguments):
+    """Handler for cis_adapter_dispatch — classify intent via adapter API."""
+    import urllib.request as _ur, json as _json
+    message = arguments.get("message", "")
+    override = arguments.get("override")
+    if not message:
+        return {"error": "message is required"}
+    payload = _json.dumps({
+        "message": message,
+        "override": override,
+        "classify_only": True,
+    }).encode("utf-8")
+    try:
+        req = _ur.Request(
+            "http://127.0.0.1:5000/api/adapter/dispatch",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        resp = _ur.urlopen(req, timeout=30)
+        return _json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"error": f"Adapter dispatch failed: {e}"}
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -458,4 +599,7 @@ HANDLERS = {
     "cis_dispatch_drafter": handle_dispatch_drafter,
     "cis_dispatch_reviewer": handle_dispatch_reviewer,
     "cis_dispatch_implementer": handle_dispatch_implementer,
+    "cis_search_knowledge": handle_search_knowledge,
+    "cis_adapter_status": handle_adapter_status,
+    "cis_adapter_dispatch": handle_adapter_dispatch,
 }

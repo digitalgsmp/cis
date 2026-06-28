@@ -337,3 +337,73 @@ def query_search_sessions(query_text, limit=10, db_path=None):
         return _rows_to_list(rows)
     finally:
         conn.close()
+
+
+def search_knowledge_fts(query_text, limit=10, db_path=None):
+    """FTS5 search across knowledge_messages."""
+    conn = _connect_readonly(db_path)
+    try:
+        safe_query = query_text.replace('"', '').replace("'", "")
+        rows = conn.execute(
+            """SELECT km.id, km.content, km.source, km.role, km.source_key
+               FROM knowledge_messages km
+               JOIN knowledge_messages_fts fts ON km.id = fts.rowid
+               WHERE knowledge_messages_fts MATCH ?
+               ORDER BY rank
+               LIMIT ?""",
+            (safe_query, int(limit)),
+        ).fetchall()
+
+        if not rows:
+            like = f"%{safe_query}%"
+            rows = conn.execute(
+                """SELECT id, content, source, role, source_key
+                   FROM knowledge_messages
+                   WHERE content LIKE ?
+                   ORDER BY id DESC
+                   LIMIT ?""",
+                (like, int(limit)),
+            ).fetchall()
+
+        return _rows_to_list(rows)
+    finally:
+        conn.close()
+
+
+def search_knowledge_semantic(query_text, top_k=10, db_path=None):
+    """Semantic search across knowledge_messages via ChromaDB."""
+    try:
+        import chromadb
+    except ImportError:
+        return []
+
+    client = chromadb.PersistentClient(
+        path="/mnt/projects/cis/data/chroma_data"
+    )
+    try:
+        collection = client.get_collection("knowledge_messages")
+    except Exception:
+        return []
+
+    results = collection.query(
+        query_texts=[query_text],
+        n_results=min(top_k, 50),
+        include=["documents", "metadatas", "distances"],
+    )
+
+    hits = []
+    if results.get("ids") and results["ids"][0]:
+        for i, doc_id in enumerate(results["ids"][0]):
+            hits.append({
+                "id": doc_id,
+                "content": (results["documents"][0][i] or "")[:500]
+                if results.get("documents") else "",
+                "source": results["metadatas"][0][i].get("source", "")
+                if results.get("metadatas") else "",
+                "role": results["metadatas"][0][i].get("role", "")
+                if results.get("metadatas") else "",
+                "score": 1.0 - float(results["distances"][0][i])
+                if results.get("distances") else 0,
+            })
+
+    return hits

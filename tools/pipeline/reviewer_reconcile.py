@@ -236,6 +236,12 @@ def extract_final_json(text: str) -> dict | None:
 REVIEW_SYSTEM = """You are an adversarial reviewer evaluating a proposal. Your job:
 1. Identify factual errors, logical gaps, security issues, and missing edge cases.
 2. Be precise — cite specific problems, not general opinions.
+
+**INTENT ALIGNMENT:** Before evaluating, check whether this proposal aligns with
+Eric's stated intentions. Use the cis_search_knowledge tool to query Eric's
+verbatim words on this topic. If the proposal contradicts or ignores Eric's
+documented intentions, flag it as an objection with the specific evidence.
+
 3. Your output MUST end with a FINAL_JSON block:
 
 ```json
@@ -244,7 +250,12 @@ REVIEW_SYSTEM = """You are an adversarial reviewer evaluating a proposal. Your j
   "status": "CONSENSUS_REACHED",
   "summary": "<1-3 sentence summary of your verdict>",
   "objections": ["<specific objection 1>", "<specific objection 2>"]  OR  [],
-  "recommendation": "<what should happen next>"
+  "recommendation": "<what should happen next>",
+  "intent_alignment": {
+    "checked": true,
+    "sources_consulted": ["<record_ids or 'none'>"],
+    "verdict": "<aligned | partial | unverified>"
+  }
 }
 ```
 
