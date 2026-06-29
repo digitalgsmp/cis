@@ -309,3 +309,107 @@ in the Hermes-integrated system.
 ---
 
 ## 9. Summary (Revised)
+
+CIS registers on Hermes, not inside it. The adapter layer (P3, COMPLETE 2026-06-27)
+exposes CIS functionality — adversarial deliberation, evidence-backed verification,
+Eric Gate — on top of Hermes primitives (profiles, skills, MCP, cron, messaging).
+
+**What's different after the 2026-06-27 session:**
+
+1. **Knowledge base is massive and searchable.** 287,589 messages from 12 sources
+   ingested into knowledge_messages. FTS5 (SQLite full-text) + ChromaDB (semantic
+   vectors) provide dual search. `cis_search_knowledge` MCP tool available to all
+   profiles. Session format approach replaced complex tagging pipeline — semantic
+   search over Eric's own words is superior.
+
+2. **Intent alignment pipeline is live.** `POST /api/intent/alignment` checks new
+   proposals against all 287K messages for consistency. Drafter dispatcher runs
+   `measure_intent.py` automatically. Reviewer prompt requires intent verification.
+   Pipeline won't produce work that contradicts Eric's established intent.
+
+3. **Human-readable adapter status.** `GET /api/adapter/status` spells out each
+   gateway's state in plain English — what was tested, what the response means,
+   and what to do if something's wrong. No JSON decoding. No dots. No checkboxes.
+   Claude-ready summary included: "4 of 5 gateways running. 1 down."
+
+4. **Tier 12 and 13 COMPLETE.** Knowledge base ingestion (12 sources, 36,846 new
+   messages appended to existing 250K) and abstraction layer (Flask blueprint,
+   5 endpoints, 17 MCP tools). Build plan: 29 nodes, 24 COMPLETE.
+
+5. **Roadmap exists.** `docs/CIS_ROADMAP_PHASES_1_6.md` — 6 phases, 28 items,
+   dependency-ordered. Phase 1 (Root + Config) is immediate next work.
+
+**What's pending:** Prime gateway (8642) down. Gateway restarts needed to activate
+MCP tools. Qwen bind needs changing from 127.0.0.1:8002 to 0.0.0.0:8002 for
+container access. Per-profile SOUL.md not written.
+
+---
+
+## 10. Session Handoff for Claude — June 27, 2026
+
+### What We Built This Session
+
+Eric and I completed a major integration push. Here's what Claude needs to know
+to pick up the conversation:
+
+**Core deliverables:**
+- `runtime/abstraction/dispatch.py` — 181-line profile map, health checks, gateway URLs
+- `runtime/api/adapter.py` — Flask blueprint, 5 endpoints including human-readable status
+- `runtime/api/intent.py` — intent alignment endpoint (`GET /api/intent/alignment`)
+- `tools/pipeline/measure_intent.py` — CLI tool called by Drafter on dispatch
+- `tools/pipeline/drafter_start.py` — +25 lines, calls measure_intent automatically
+- `tools/pipeline/reviewer_reconcile.py` — +12 lines, REVIEW_SYSTEM mandates intent check
+- `docs/CIS_ROADMAP_PHASES_1_6.md` — 6-phase roadmap from 287K knowledge base
+- `docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md` — 5 root/sudo tasks with exact commands
+
+**Knowledge base stats:**
+- 287,589 messages from 12 sources
+- FTS5 (SQLite) + ChromaDB (9.3GB) dual search
+- `cis_search_knowledge` MCP tool configured on all profiles (needs gateway restart)
+- Sources: archive (165K), cis_docs (76K), swa (23K), claude_export (9.5K), cis_kernel (4K), chatgpt_export (3.8K), pve_architecture (2.8K), wiasw (883), claude_transcripts (757), cis_legacy_archive (604), cis_v1_vault (353), others (226)
+
+**Adapter endpoints (port 5000):**
+- `GET /api/adapter/health` — JSON health checks
+- `GET /api/adapter/status` — HUMAN-READABLE status (Eric's preference)
+- `GET /api/adapter/profiles` — profile listing
+- `POST /api/adapter/dispatch` — intent routing
+- `POST /api/adapter/chat` — chat passthrough
+
+**Gateway status:**
+- v4pro (Drafter, 8645): UP
+- r1 (Reviewer, 8643): UP
+- v4impl (Implementer, 8646): UP
+- qwen (8644): UP
+- prime (8642): DOWN — needs `systemctl --user start hermes-gateway.service`
+
+**Eric's key feedback this session:**
+- "I don't want JSON. I want words." → Built human-readable status endpoint
+- "Every result is spelled out" → New status explains what healthy means, what was tested, what to do
+- "Commit and push this new work" → Committed 3478da1, pushed to master
+- "Excellent work" → Session concluded with approval
+
+**What Eric wants next (per roadmap Phase 1):**
+1. Qwen bind fix (127.0.0.1:8002 → 0.0.0.0:8002) for container access
+2. Complete MWL proof in container
+3. Start prime gateway (8642)
+4. Restart v4pro/r1/v4impl gateways to activate MCP tools
+5. Write per-profile SOUL.md (Drafter, Reviewer, Implementer)
+
+**Working context for Claude:**
+- Working directory: `/mnt/projects/cis/`
+- Branch: main (commit 3478da1)
+- Flask server: running on 127.0.0.1:5000
+- ChromaDB: `/mnt/projects/cis/data/chroma_data/`
+- Spine DB: `/mnt/projects/cis/data/cis_memory.db`
+- MCP bridge: `/mnt/projects/cis/runtime/mcp_bridge/tools.py` (17 tools)
+- Eric's Hermes config: `~/.hermes-v4pro/config.yaml` (MCP server config written, needs restart)
+- Eric's words (verbatim intent): AGENTS.md §12, plus 287K messages in ChromaDB
+
+**Eric's communication preferences:**
+- Speaks in thoughts/intentions, not formal specs
+- Needs bullet points, cannot read text walls
+- Changes topics every 5-15 lines
+- Everything spelled out in text — no dots, no icons, no JSON
+- Budget ~$10-20; DeepSeek for bulk, Claude for coding
+- Approve/disapprove/refine intention — not a builder
+- Evidence-backed responses required — raw terminal output pasted, not summarized

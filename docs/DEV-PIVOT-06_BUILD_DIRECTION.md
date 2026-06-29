@@ -163,7 +163,63 @@ feature-complete and Eric is actively using the pipeline.
 
 3. **Let the hardening settle** — Use CIS for real work. Verify shell hooks and pre_tool_call enforcement fire correctly. Find edge cases before building more.
 
-## 10. Approval
+## 10. Session Update — June 27, 2026
+
+Since this document was ratified, a major build session completed. Key updates
+for Claude to understand the current state:
+
+### What changed since ratification
+
+| Item | Before | After |
+|------|--------|-------|
+| Knowledge base | Stale: no recent ingestion | 287,589 messages FTS5 + ChromaDB (9.3GB), 12 sources |
+| MCP search | FTS5-only | Dual: FTS5 + ChromaDB semantic search, `cis_search_knowledge` |
+| Adapter layer | P3 pending | P3 COMPLETE — 5 endpoints including human-readable status |
+| Intent alignment | Not built | Live: `/api/intent/alignment` + Drafter/Reviewer hooks |
+| Roadmap | None | `CIS_ROADMAP_PHASES_1_6.md` — 6 phases, 28 items |
+| Claude directive | None | `PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md` — 5 root tasks |
+| Build plan | 27 nodes | 29 nodes (Tier 12, 13 added), 24 COMPLETE |
+| Human-readable status | None | `GET /api/adapter/status` — plain English, Claude-ready summary |
+| Gateway status | 5 up | 4 up, prime (8642) DOWN |
+| MCP tools active | No | Configured but gateways need restart to load |
+
+### What Eric approved and pushed this session
+
+- Commit 3478da1: "feat(abstraction): human-readable status + roadmap + Claude directive"
+- 20 files changed, 550 insertions, 117 deletions
+- Eric's words: "Excellent work" — session concluded with approval
+
+### New critical docs for Claude
+
+1. **`docs/CIS_ROADMAP_PHASES_1_6.md`** — Complete roadmap with Phase 1 as immediate priority
+2. **`docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md`** — Exact commands and verification for root work
+3. **This file (§10)** — Session handoff with current state
+4. **`docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md` §10** — Detailed Claude briefing
+
+### What Eric wants from the human-readable status endpoint
+
+He asked for "every result spelled out." The new `/api/adapter/status` endpoint
+returns plain English explanations like:
+
+> "V4 Drafter — authors proposals, designs, plans (port 8645) is responding. It returned an authentication error which is expected — the gateway is alive and ready, it just requires an API key to serve chat requests. Response time: 0.002s."
+
+Plus a Claude-ready summary: "4 of 5 Hermes gateways are running. 1 gateway(s) are down and need attention."
+
+No dots. No checkboxes. No JSON decoding. Everything explained.
+
+### Eric's communication rules (for Claude)
+
+These were reinforced this session:
+
+- **Everything spelled out in text.** No dots, no icons, no checkboxes, no JSON.
+- **Evidence-backed responses.** Raw terminal output pasted, not summarized. Eric sends packets to Claude/ChatGPT for adversarial audit — he needs verbatim evidence, not model self-report.
+- **Bullet points.** Eric cannot read text walls. Changes topics every 5-15 lines.
+- **Don't build without checking.** Discuss before building. Eric approves intention, not execution.
+- **Hermes profiles load AGENTS.md and DEV-PIVOT files automatically** — these docs ARE the handoff.
+
+---
+
+## 11. Approval
 
 ```
 Decision: APPROVE
