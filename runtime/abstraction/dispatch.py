@@ -179,3 +179,101 @@ def dispatch_summary() -> Dict:
         }
         for role, p in PROFILES.items()
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  HUMAN-READABLE HEALTH EXPLANATIONS
+# ═══════════════════════════════════════════════════════════════════════
+
+HEALTH_CRITERIA = (
+    "Each gateway is tested by sending a ping to its chat completions endpoint. "
+    "The test checks: (1) the port accepts connections, (2) the Hermes gateway process "
+    "responds, (3) the response arrives within 5 seconds. Any response — even an "
+    "authentication error — means the gateway is alive and capable of serving requests. "
+    "A gateway is only marked unhealthy if the port refuses connections (process is down) "
+    "or the connection times out (process is hung)."
+)
+
+
+def explain_health(role_key: str, result: dict) -> str:
+    """Return a plain-English explanation of one profile's health result."""
+    profile = PROFILES.get(role_key, {})
+    name = profile.get("description", role_key)
+    port = result["port"]
+    healthy = result["healthy"]
+    rt = result.get("response_time", 0)
+    error = result.get("error", "")
+
+    if healthy and error and "401" in str(error):
+        return (
+            f"{name} (port {port}) is responding. It returned an authentication "
+            f"error which is expected — the gateway is alive and ready, it just "
+            f"requires an API key to serve chat requests. Response time: {rt}s."
+        )
+    elif healthy and error:
+        return (
+            f"{name} (port {port}) is responding but returned an unexpected error: "
+            f"{error}. The gateway process is alive but may be misconfigured. "
+            f"Response time: {rt}s."
+        )
+    elif healthy:
+        return (
+            f"{name} (port {port}) is responding normally. "
+            f"Response time: {rt}s."
+        )
+    elif "Connection refused" in str(error) or "refused" in str(error).lower():
+        return (
+            f"{name} (port {port}) is NOT responding. The port refused the connection. "
+            f"This means the Hermes gateway process is not running. "
+            f"Start it with: systemctl --user start <service-name>"
+        )
+    elif "timeout" in str(error).lower():
+        return (
+            f"{name} (port {port}) is NOT responding. The connection timed out. "
+            f"The Hermes gateway process may be hung or overloaded. "
+            f"Check: systemctl --user status <service-name>"
+        )
+    else:
+        return (
+            f"{name} (port {port}) is NOT responding. Error: {error}. "
+            f"The gateway process may be down or unreachable."
+        )
+
+
+def health_human() -> Dict:
+    """Return health check results with plain-English explanations."""
+    raw = health_all()
+    all_healthy = all(r["healthy"] for r in raw.values())
+    explanations = {
+        role: explain_health(role, result)
+        for role, result in raw.items()
+    }
+
+    up_count = sum(1 for r in raw.values() if r["healthy"])
+    down_count = len(raw) - up_count
+
+    if all_healthy:
+        summary = (
+            f"All {len(raw)} Hermes gateways are running and responding. "
+            f"The system is ready for pipeline work."
+        )
+    elif up_count == 0:
+        summary = (
+            f"All {len(raw)} Hermes gateways are down. "
+            f"The system cannot process any pipeline work. "
+            f"Check gateway services with: systemctl --user list-units 'hermes-gateway*'"
+        )
+    else:
+        summary = (
+            f"{up_count} of {len(raw)} Hermes gateways are running. "
+            f"{down_count} gateway(s) are down and need attention."
+        )
+
+    return {
+        "summary": summary,
+        "criteria": HEALTH_CRITERIA,
+        "gateways_up": up_count,
+        "gateways_down": down_count,
+        "all_healthy": all_healthy,
+        "details": explanations,
+    }

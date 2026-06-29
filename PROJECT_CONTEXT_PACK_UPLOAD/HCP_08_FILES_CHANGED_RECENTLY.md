@@ -1,7 +1,141 @@
 # Files Changed Recently
-Generated: 2026-06-25 07:53 UTC | Run: run-ad01ac27474d
+Generated: 2026-06-28 06:03 UTC | Run: run-ecf3e2ccf63c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 4c3d396 feat(pipeline): CIS front door + intent-alignment + knowledge search
+
+## .gitignore 
+
+## cis_kernel/source/SESSION_LOG.md 
+
+## docs/CIS_INTENTION_ALIGNMENT_PIPELINE_SPEC.md 
+
+## docs/CIS_INTENT_ALIGNMENT_WORKFLOW_SPEC.md 
+
+## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
+
+## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
+
+## docs/SESSION_HANDOFF_2026-06-25.md 
+
+## docs/SPEC_POST_SCRAPE_INTENTION_ALIGNMENT_PIPELINE.md 
+
+## docs/SPEC_POST_SCRAPE_INTENTION_ALIGNMENT_PIPELINE_REV2.md 
+
+## enforcement/CATEGORY_TO_LAYER_MAP.md 
+
+## enforcement/TAGGING_DIRECTIVE_v3.md 
+
+## runtime/abstraction/__init__.py 
+
+## runtime/abstraction/dispatch.py 
+
+## runtime/api/adapter.py 
+
+## runtime/api/intent.py 
+
+## runtime/app.py 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/mcp_bridge/tools.py 
+
+## runtime/ui/public/portal.html 
+
+## tools/catalog/append_embeddings.py 
+
+## tools/catalog/apply_review.py 
+
+## tools/catalog/batch_tag_claude.py 
+
+## tools/catalog/build_embeddings.py 
+
+## tools/catalog/convert_to_knowledge.py 
+
+## tools/catalog/ingest_chatgpt_only.py 
+
+## tools/catalog/ingest_intentions.py 
+
+## tools/catalog/ingest_legacy.py 
+
+## tools/catalog/search_catalog.py 
+
+## tools/pipeline/drafter_start.py 
+
+## tools/pipeline/measure_intent.py 
+
+## tools/pipeline/reviewer_reconcile.py 
+
+## 661c3b8 session handoff: intent recovery pipeline + 3-model tagging proof
+
+## docs/SESSION_HANDOFF_2026-06-25.md 
+
+## enforcement/TAGGING_DIRECTIVE_v3.md 
+
+## enforcement/mwl-proof-v2/tagging_results/CIS_16_FAILURE_MODES__claude-opus.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/CIS_16_FAILURE_MODES__ds-reasoner.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/CIS_16_FAILURE_MODES__glm-5.2.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/MWL_PROOF_REPRODUCTION__claude-opus.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/MWL_PROOF_REPRODUCTION__ds-reasoner.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/MWL_PROOF_REPRODUCTION__glm-5.2.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision.txt__claude-opus_v2.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision__claude-opus.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision__ds-reasoner.txt 
+
+## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision__glm-5.2.txt 
+
+## b1d4cfe enforcement: MWL sealed container — managed-scope pinning closes self-disable bypass
+
+## enforcement/mwl-proof-v2/Dockerfile 
+
+## enforcement/mwl-proof-v2/cis_shell_hook.sh 
+
+## enforcement/mwl-proof-v2/managed-config.yaml 
+
+## enforcement/mwl-proof-v2/verify.sh 
+
+## enforcement/mwl-proof-v2/verify_seal.sh 
+
+## c632b7f docs: add MWL proof reproduction reference document
+
+## docs/MWL_PROOF_REPRODUCTION.md 
+
+## d811f04 Regenerate context after session closeout
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 8c543f1 docs: add Claude audit and vision crystallization from caged-worker session
 
@@ -110,53 +244,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## a88cb19 feat(portal): cross-panel message visibility in Advisor Chat — all panels show messages from all agents with 'other panel' badge for visual distinction
 
 ## runtime/ui/src/pages/infra/AdvisorChat.jsx 
-
-## 5aa5d84 fix(portal): send button error handling, context bar always visible, pipeline context first-message-only
-
-## runtime/app.py 
-
-## runtime/ui/public/portal.html 
-
-## 12c5d5e feat(portal): thread tracking, context bars, pipeline trigger endpoints
-
-## docs/CIS_CHAT_PIPELINE_INFERENCE_TRIGGER_SPEC.md 
-
-## docs/CIS_PIPELINE_VISIBLE_PORTAL_SPEC.md 
-
-## docs/diagrams/cis-pipeline-architecture-20260622.html 
-
-## runtime/app.py 
-
-## runtime/ui/public/portal.html 
-
-## 285144e feat(portal): CIS Control Portal v0.1 — multi-model chat with Claude Opus 4.8, GLM 5.2, Mistral Large 3, GLM 4.7 Flash local
-
-## check_openrouter_models.py 
-
-## runtime/app.py 
-
-## runtime/ui/public/portal.html 
-
-## test_anthropic.py 
-
-## test_free_apis.py 
-
-## tools/pipeline/reviewer_reconcile.py 
-
-## 11dd367 docs: add 16 failure modes catalog, Hermes docs, and MWL proof v2
-
-## docs/CIS_16_FAILURE_MODES.md 
-
-## docs/Hermes Agent Full Documentation.md
-
-## docs/MINIMAL_WORKER_LAUNCH_PROOF_v2.md 
-
-## 1dcde93 feat(fd.1): add MCP dispatch tools — 3 new tools, spine helper, symlink, 15 tests
-
-## runtime/mcp 
-
-## runtime/mcp_bridge/spine.py 
-
-## runtime/mcp_bridge/tools.py 
-
-## tests/test_mcp_dispatch.py 

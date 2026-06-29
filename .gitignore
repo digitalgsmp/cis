@@ -140,6 +140,6 @@ runtime/eric_gate/briefings/*.json
 20260617_session_files/
 
 # Knowledge-base corpus and exports — data, not code. Lives on disk + ChromaDB.
-docs/Anthropic_Data_Export_260625/
+# Anthropic export moved to /mnt/archive/anthropic_exports/ (2026-06-27)
 enforcement/mwl-proof-v2/tagging_input/
 enforcement/mwl-proof-v2/tagging_results/

@@ -1,6 +1,6 @@
 # CIS Final Build Direction — Standalone Application, Hermes-Powered
 
-**Date:** 2026-06-17 (revised same day) | **Author:** R1 Reviewer | **Status:** PENDING ERIC APPROVAL
+**Date:** 2026-06-17 (revised same day) | **Author:** R1 Reviewer | **Status:** APPROVED 2026-06-27
 
 ## 1. Target End State
 
@@ -166,7 +166,9 @@ feature-complete and Eric is actively using the pipeline.
 ## 10. Approval
 
 ```
-Decision: APPROVE / REVISE / BLOCK
+Decision: APPROVE
+Ratified by: Eric, 2026-06-27
+Rationale: Abstraction layer built (P3 COMPLETE), archive integration complete (287K messages, FTS5 + ChromaDB), CIS front door operational. Build direction is in force.
 ```
 
 Eric must explicitly approve this revised direction.

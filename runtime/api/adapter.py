@@ -24,6 +24,7 @@ from abstraction.dispatch import (
     get_profile,
     get_gateway_url,
     health_all,
+    health_human,
     dispatch_summary,
 )
 
@@ -50,6 +51,18 @@ def adapter_health():
         "profiles": results,
         "profile_count": len(results),
     })
+
+
+@adapter_bp.route("/api/adapter/status", methods=["GET"])
+def adapter_status():
+    """Return a human-readable system status summary.
+
+    Plain English. No checkboxes. No JSON that requires interpretation.
+    Explains what was tested, what the results mean, and what to do if
+    something is wrong.
+    """
+    result = health_human()
+    return jsonify(result)
 
 
 # ═══════════════════════════════════════════════════════════════════════

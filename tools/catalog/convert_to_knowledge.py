@@ -140,7 +140,7 @@ def main():
     total = 0
 
     # Claude export
-    claude_path = "/mnt/projects/cis/docs/Anthropic_Data_Export_260625/conversations.json"
+    claude_path = "/mnt/archive/anthropic_exports/Anthropic_Data_Export_260625/conversations.json"
     if os.path.exists(claude_path):
         n = convert_claude_export(conn, claude_path)
         total += n
