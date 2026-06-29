@@ -401,3 +401,14 @@ Risk assessment: **LOW** after revisions. Architecture is sound. All structural
 decisions are resolved. Implementation risks are limited to `transition_state()`
 terminal callability (verification gated before Tier 11C build) and the advisor
 boundary (governance convention, not technical enforcement).
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (ADR-SEED-014 contract) was not directly advanced this session.
+The major work completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB),
+abstraction layer (5 endpoints including human-readable status), intent alignment
+pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
+full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

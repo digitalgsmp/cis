@@ -294,3 +294,14 @@ If a governance rule matters, build it into CIS.
 If it only exists as repeated advisor language, remove it from the development context.
 
 That is the reset.
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (governance reset) was not directly advanced this session.
+The major work completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB),
+abstraction layer (5 endpoints including human-readable status), intent alignment
+pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
+full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

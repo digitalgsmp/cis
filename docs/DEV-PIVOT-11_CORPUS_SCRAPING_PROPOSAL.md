@@ -245,4 +245,25 @@ Before building the two projects (CIS and SWA), assess:
 
 **Duration estimate:** 30-60 minutes of agent work (automated grep + extraction).
 
-**Output:** A structured corpus of Eric's actual words, categorized by project domain, with source provenance. This becomes the foundation for three build plans — not enterprise dev strategy, not training-data assumptions. Eric's words.
+**Output:** A structured corpus of Eric's actual words, categorized by project domain, with source provenance. The catalog enables intent-aligned development — building what Eric actually wants, not what enterprise training data assumes.
+
+---
+
+## Session Update — 2026-06-27: CORPUS COMPLETE
+
+The corpus scraping proposed in this document has been executed:
+
+**Results:**
+- 287,589 messages ingested from 12 sources into `knowledge_messages`
+- Sources: archive (165K), cis_docs (76K), swa (23K), claude_export (9.5K), cis_kernel (4K), chatgpt_export (3.8K), pve_architecture (2.8K), wiasw (883), claude_transcripts (757), cis_legacy_archive (604), cis_v1_vault (353), others (226)
+- FTS5 (SQLite full-text) + ChromaDB (9.3GB) dual search
+- `cis_search_knowledge` MCP tool available to all profiles
+
+**Approach change:** Session format replaced the two-pass catalog design.
+Semantic search over raw conversation history is superior to automated tagging.
+The intent alignment pipeline (`POST /api/intent/alignment`) checks new proposals
+against all 287K messages for consistency. Drafter and Reviewer pipeline hooks
+enforce this automatically.
+
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for full session handoff.
+Commit: 70e73bd.

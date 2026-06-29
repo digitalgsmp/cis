@@ -680,4 +680,25 @@ Converts approved DESIGN_TWO_PASS_CATALOGING_AND_INDEXING.md into 12 standalone 
 
 ### Recommendation
 
-APPROVE for implementation. The design has dual-reviewer consensus (R1 + Qwen) and Eric's explicit approval. The spec is self-contained (no spine changes, no existing file modifications, no new dependencies), testable with fixtures before touching real data, and gated behind Eric review at each stage. Pass 1 delivers immediate value (Eric can search his own words); Pass 2 builds on that foundation. Risk is low — all files are new, failure mode is a tool returning exit code 1, and the catalog database is derived data that can be regenerated. The storage location (`/mnt/cache/catalog/`) is a recommendation; Eric should confirm or redirect before implementation begins.
+APPROVE for implementation. The design has dual-reviewer consensus (R1 + Qwen) and Eric's explicit approval. The implementation follows the two-pass design exactly: flat extraction first, structural graph second, with clear pass boundaries and reusable outputs.
+
+---
+
+## Session Update — 2026-06-27: IMPLEMENTED (WITH APPROACH CHANGE)
+
+The core goals of this implementation spec have been achieved, though the method changed:
+
+**What was built instead of two-pass:**
+- Session format: raw conversations ingested directly into `knowledge_messages`
+- 287,589 messages from 12 sources — FTS5 + ChromaDB (9.3GB)
+- `cis_search_knowledge` MCP tool: dual search (keyword + semantic) in one call
+- Intent alignment pipeline compares new proposals against all 287K messages
+
+**Why the change:** Eric's sessions ARE the catalog. Raw words → ChromaDB semantic
+search is superior to extracting→categorizing→tagging→querying. The two-pass design
+would have required a 25-hour tagging pass that Eric explicitly rejected. The session
+format approach achieves the same outcome (Eric's words are searchable by meaning)
+with zero manual categorization.
+
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for full session handoff.
+Commit: 70e73bd.

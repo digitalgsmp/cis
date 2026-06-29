@@ -522,3 +522,14 @@ master
 *End of Hermes Hardening Specification v2.0 — REVISED DRAFT*
 *Status: REVISED DRAFT — awaiting Eric Gate review*
 *Next step: Qwen review → Eric reads → approves → build_plan_nodes created → IMPLEMENT*
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (Hermes hardening) was not directly advanced this session.
+The major work completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB),
+abstraction layer (5 endpoints including human-readable status), intent alignment
+pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
+full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

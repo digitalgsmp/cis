@@ -513,3 +513,25 @@ modify, and manage designs through 76+ MCP tools.
 *End of CIS Front Door Specification v1.0*
 *Status: DRAFT — awaiting Eric Gate review*
 *Next: Qwen independent review → Eric reads → approves → IMPLEMENT*
+
+---
+
+## Session Update — 2026-06-27: FRONT DOOR IMPLEMENTED
+
+The Front Door specification has been implemented. What was proposed as a spec
+is now live code:
+
+**What was built (matching this spec):**
+- Intent routing: `POST /api/adapter/dispatch` — classifies and routes to profiles
+- Gateway health: `GET /api/adapter/health` and `GET /api/adapter/status` (human-readable)
+- Profile discovery: `GET /api/adapter/profiles` — lists all 5 profiles with status
+- Chat passthrough: `POST /api/adapter/chat` — routes messages to correct gateway
+- Knowledge base: 287,589 messages from 12 sources, FTS5 + ChromaDB dual search
+- Intent alignment: Drafter+Reviewer pipeline hooks verify proposals against KB
+- MCP tools: `cis_adapter_status` and `cis_adapter_dispatch` added to bridge (17 total)
+
+**Files:** `runtime/abstraction/dispatch.py`, `runtime/api/adapter.py`, `runtime/mcp_bridge/tools.py`
+
+**What's not yet done:** Gateway restarts to activate MCP tools. Prime (8642) is down.
+Per-profile SOUL.md not written. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10**.
+Commit: 70e73bd.

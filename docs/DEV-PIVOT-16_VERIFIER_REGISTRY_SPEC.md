@@ -235,3 +235,14 @@ to trust the entry or re-validate.
 
 *End of Verifier Registry Specification v1.0*
 *Status: DRAFT — awaiting Reviewer review*
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (verifier registry) was not directly advanced this session.
+The major work completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB),
+abstraction layer (5 endpoints including human-readable status), intent alignment
+pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
+full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

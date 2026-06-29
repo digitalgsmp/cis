@@ -79,3 +79,11 @@ Do not:
 - Self-report "COMPLETE" in a commit message without evidence
 - Leave untracked files in the working tree
 - Skip gate runs — every gate listed must run and report
+
+---
+
+## Session Update — 2026-06-27
+
+This closeout procedure remains current. Applied during the 2026-06-27 session
+(commit 70e73bd — 17 DEV-PIVOT files updated with session context).
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the full session handoff.

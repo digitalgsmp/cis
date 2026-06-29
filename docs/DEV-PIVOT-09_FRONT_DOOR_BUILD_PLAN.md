@@ -2381,3 +2381,23 @@ COMMAND: cd /mnt/projects/cis && bash tools/gates/gate_runner.sh 2>&1 | tail -20
 *Author: V4 Drafter (deepseek-v4-pro)*
 *Date: 2026-06-17*
 *Status: PROPOSAL_READY — awaiting Eric Gate review*
+
+---
+
+## Session Update — 2026-06-27: BUILD PLAN STATUS
+
+Major progress against this build plan as of the June 27 session:
+
+**Completed items:**
+- MCP dispatch tools: 17 total (up from 11) — `cis_search_knowledge`, `cis_adapter_status`, `cis_adapter_dispatch` added
+- Archive indexing: 287,589 messages from 12 sources ingested, FTS5 + ChromaDB (9.3GB)
+- End-to-end validation: knowledge search works across all sources
+- Abstraction layer: 5 endpoints on port 5000, human-readable status
+
+**Approach change:** Session format (raw conversations → ChromaDB) replaced the
+two-pass cataloging design. Semantic search over Eric's own words is superior to
+automated tagging. No 25-hour tagging pass needed.
+
+**Pending:** Gateway restarts to activate MCP tools. Prime (8642) down.
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for full context.
+Commit: 70e73bd.

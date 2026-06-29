@@ -291,4 +291,25 @@ Before either pass executes, assess:
 2. **Database location** — `cis_memory.db` already at 364MB. New catalog adds ~50-100MB. Separate DB or new tables in existing spine?
 3. **Backup strategy** — Pass 1 outputs are derived (can regenerate). Back up the source files, not the catalog.
 
-Assessment deferred to separate proposal per Eric's instruction: "the VM and storage will be assessed and prioritized for the build of the two projects (CIS and SWA)."
+Assessment deferred to separate proposal per Eric's instruction: "the VM and storage will be assessed and prioritized."
+
+---
+
+## Session Update — 2026-06-27: APPROACH CHANGED
+
+The two-pass catalog design (flat extraction → structural graph) has been replaced
+by the **session format approach**:
+
+**What changed:**
+- Instead of extract→categorize→tag→query, we use: ingest raw conversations → ChromaDB → semantic search
+- 287,589 messages from 12 sources are now searchable via FTS5 + ChromaDB
+- Semantic search over Eric's own words is superior to automated tagging
+- No 25-hour tagging pass needed
+- `cis_search_knowledge` MCP tool provides dual search in one call
+
+**The core goal is achieved:** Eric can search for ideas he can't remember the
+exact phrasing for. The vector DB (ChromaDB) provides fuzzy semantic matching.
+The FTS5 index provides exact keyword matching. Both are live.
+
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for full context.
+Commit: 70e73bd.

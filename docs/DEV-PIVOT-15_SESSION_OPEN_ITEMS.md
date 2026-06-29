@@ -92,3 +92,14 @@ Tier 11B:    COMPLETE (409 guard active — usable after goal formation)
 Tier 11C:    UNBLOCKED (lifecycle tables exist)
 Goal Form:   Not spec'd
 ```
+
+---
+
+## Session Update — 2026-06-27
+
+This document captured the June 14 session state. As of June 27, the major work
+completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB), abstraction
+layer (5 endpoints including human-readable status), intent alignment pipeline,
+and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the full
+session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

@@ -55,3 +55,27 @@ edge cases before building more on top.
 - Qwen (8644): inference-only, no hooks
 - CIS pipeline: complete but bypassed in normal use
 - Eric Gate: functional but only fires during deliberate pipeline tests
+
+---
+
+## Session Update — 2026-06-27: FRONT DOOR IS BUILT
+
+The core gap identified in this document — "pipeline sits idle because Eric interacts
+with Hermes bots directly" — has been addressed. The CIS abstraction layer is now live:
+
+**What changed:**
+- Front door: `POST /api/adapter/dispatch` classifies intents and routes to profiles
+- Adapter layer: 5 endpoints on port 5000 (health, status, profiles, dispatch, chat)
+- Human-readable status: `GET /api/adapter/status` — plain English, no JSON
+- Knowledge base: 287,589 messages FTS5 + ChromaDB, `cis_search_knowledge` MCP tool
+- Intent alignment: `POST /api/intent/alignment` checks proposals against Eric's words
+- MCP bridge: 17 tools (up from 11), configured on all profiles
+
+**What's still pending (Phase 1):**
+- Prime gateway (8642) is DOWN — needs restart
+- Gateway restarts needed to activate MCP tools
+- Per-profile SOUL.md not written
+- Qwen bind needs 0.0.0.0:8002 for container access
+
+See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for full handoff.
+Commit: 70e73bd.

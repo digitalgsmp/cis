@@ -103,3 +103,14 @@ settings, DB schema, or live enforcement files. Draft routes through review
 - Hardcoded key swapped to env var (CIS_R1_API_KEY in gitignored runtime.env) —
   fixed, verified.
 - Dead spine.db (0 bytes) confirmed a decoy, not a live fault — no action needed.
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (enforcement architecture — process isolation) was not directly
+advanced this session. The major work completed: knowledge base ingestion (287K messages,
+FTS5 + ChromaDB), abstraction layer (5 endpoints including human-readable status),
+intent alignment pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10**
+for the full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.

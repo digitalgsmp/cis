@@ -454,3 +454,14 @@ this serve these stated goals, or is it the model filling a vacuum?
 *Generated from: Claude/ChatGPT reconciliation (June 17 browser session),
 live system inspection (2026-06-17 23:30 UTC), AGENTS.md §12,
 ADR-SEED-002/003/004/014, CIS_HERMES_HARDENING_SPECIFICATION.md v2.0 (retired).*
+
+---
+
+## Session Update — 2026-06-27
+
+This document's topic (enforcement architecture) was not directly advanced this session.
+The major work completed: knowledge base ingestion (287K messages, FTS5 + ChromaDB),
+abstraction layer (5 endpoints including human-readable status), intent alignment
+pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
+full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
+Commit: 70e73bd.
