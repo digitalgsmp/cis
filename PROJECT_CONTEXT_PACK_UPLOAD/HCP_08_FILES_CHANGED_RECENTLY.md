@@ -1,7 +1,87 @@
 # Files Changed Recently
-Generated: 2026-06-28 06:03 UTC | Run: run-ecf3e2ccf63c
+Generated: 2026-06-29 13:09 UTC | Run: run-fc574bbb51e9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 182bcd8 docs: session context footers on all 17 DEV-PIVOT files
+
+## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
+
+## docs/DEV-PIVOT-02_ENFORCEMENT_ARCHITECTURE_V3.md 
+
+## docs/DEV-PIVOT-03_HERMES_HARDENING_SPEC.md 
+
+## docs/DEV-PIVOT-04_APPLICATION_ENFORCEMENT_SPEC.md 
+
+## docs/DEV-PIVOT-07_NEXT_MAJOR_PROJECT.md 
+
+## docs/DEV-PIVOT-08_FRONT_DOOR_SPEC.md 
+
+## docs/DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md 
+
+## docs/DEV-PIVOT-10_ADR-SEED-014_CONTRACT.md 
+
+## docs/DEV-PIVOT-11_CORPUS_SCRAPING_PROPOSAL.md 
+
+## docs/DEV-PIVOT-12_TWO_PASS_CATALOG_DESIGN.md 
+
+## docs/DEV-PIVOT-13_CATALOG_IMPLEMENTATION_SPEC.md 
+
+## docs/DEV-PIVOT-14_CLOSEOUT_INSTRUCTION.md 
+
+## docs/DEV-PIVOT-15_SESSION_OPEN_ITEMS.md 
+
+## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
+
+## docs/DEV-PIVOT-17_ENFORCEMENT_ARCHITECTURE.md 
+
+## 70e73bd docs: session handoff for Claude — DEV-PIVOT-05 §9-10 + DEV-PIVOT-06 §10
+
+## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
+
+## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
+
+## 3478da1 feat(abstraction): human-readable status + roadmap + Claude directive
+
+## .gitignore 
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/CIS_ROADMAP_PHASES_1_6.md 
+
+## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
+
+## docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md 
+
+## runtime/abstraction/dispatch.py 
+
+## runtime/api/adapter.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/catalog/convert_to_knowledge.py 
 
 ## 4c3d396 feat(pipeline): CIS front door + intent-alignment + knowledge search
 
@@ -228,19 +308,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## ddf8667 docs: session handoff — MWL proof state, trust root fix (openai→llamacpp), remaining blocker (Qwen bind)
 
 ## docs/SESSION_HANDOFF_2026-06-23_MWL.md 
-
-## 41154e5 feat(portal): bridge new portal and React SPA — Roadmap tab in portal via iframe, ← Portal back-link
-
-## runtime/ui/public/portal.html 
-
-## runtime/ui/src/pages/RoadmapPage.jsx 
-
-## 45848d0 feat(portal): Roadmap tab — status grid (Built/Specified/Theorized) + timeline + ADRs + Eric's vision
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/pages/RoadmapPage.jsx 
-
-## a88cb19 feat(portal): cross-panel message visibility in Advisor Chat — all panels show messages from all agents with 'other panel' badge for visual distinction
-
-## runtime/ui/src/pages/infra/AdvisorChat.jsx 
