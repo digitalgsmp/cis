@@ -387,6 +387,8 @@ to pick up the conversation:
 - "Every result is spelled out" → New status explains what healthy means, what was tested, what to do
 - "Commit and push this new work" → Committed 3478da1, pushed to master
 - "Excellent work" → Session concluded with approval
+- "Update the dev-pivot files" → All 17 DEV-PIVOT files now carry session context footers (182bcd8)
+- HCP regenerated at HEAD 9c921e2 — captures all 4 session commits
 
 **What Eric wants next (per roadmap Phase 1):**
 1. Qwen bind fix (127.0.0.1:8002 → 0.0.0.0:8002) for container access
@@ -397,13 +399,15 @@ to pick up the conversation:
 
 **Working context for Claude:**
 - Working directory: `/mnt/projects/cis/`
-- Branch: main (commit 3478da1)
+- Branch: main (commit 9c921e2)
 - Flask server: running on 127.0.0.1:5000
 - ChromaDB: `/mnt/projects/cis/data/chroma_data/`
 - Spine DB: `/mnt/projects/cis/data/cis_memory.db`
 - MCP bridge: `/mnt/projects/cis/runtime/mcp_bridge/tools.py` (17 tools)
 - Eric's Hermes config: `~/.hermes-v4pro/config.yaml` (MCP server config written, needs restart)
 - Eric's words (verbatim intent): AGENTS.md §12, plus 287K messages in ChromaDB
+- DEV-PIVOT files: all 17 carry session footers pointing to this handoff
+- HCP: regenerated at HEAD, 12 artifacts in PROJECT_CONTEXT_PACK_UPLOAD/
 
 **Eric's communication preferences:**
 - Speaks in thoughts/intentions, not formal specs

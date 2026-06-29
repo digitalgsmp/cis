@@ -532,4 +532,4 @@ The major work completed: knowledge base ingestion (287K messages, FTS5 + Chroma
 abstraction layer (5 endpoints including human-readable status), intent alignment
 pipeline, and roadmap. See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the
 full session handoff (gateway status, Eric's feedback, Phase 1 next steps).
-Commit: 70e73bd.
+Commit: 9c921e2. All 17 DEV-PIVOT files carry session footers. HCP regenerated at HEAD.

@@ -85,5 +85,5 @@ Do not:
 ## Session Update — 2026-06-27
 
 This closeout procedure remains current. Applied during the 2026-06-27 session
-(commit 70e73bd — 17 DEV-PIVOT files updated with session context).
+(commits 3478da1 through 9c921e2 — all 17 DEV-PIVOT files updated, HCP regenerated).
 See **DEV-PIVOT-05 §10** and **DEV-PIVOT-06 §10** for the full session handoff.
