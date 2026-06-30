@@ -21,7 +21,7 @@ gateways:
     model: "deepseek-v4-flash"
     reasoning: "none"
     nemo: true
-    status: "Running"
+    status: "DOWN — verified 2026-06-29 via ss -tlnp"
   - label: "V4 Drafter"
     profile: "hermes-v4pro"
     port: "8645"

@@ -1,11 +1,11 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-29
+Date: 2026-06-30
 Authority: Eric (Architect)
 Status: Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 
-Generated: 2026-06-29 13:09 UTC | Run: run-fc574bbb51e9
+Generated: 2026-06-30 05:05 UTC | Run: run-891ca4f74ee6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.**
 
-**HEAD:** `182bcd8`.
+**HEAD:** `86db1f0`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -183,7 +183,7 @@ does not satisfy Eric. No direct execution authority.
 
 | Gateway | Port | HERMES_HOME | Model | Reasoning | NeMo? | Status |
 |---------|------|-------------|-------|-----------|-------|--------|
-| Flash/Research (hermes-prime) | 8642 → NeMo 8800 | /home/eric/.hermes | deepseek-v4-flash | none | Yes | Running |
+| Flash/Research (hermes-prime) | 8642 → NeMo 8800 | /home/eric/.hermes | deepseek-v4-flash | none | Yes | DOWN — verified 2026-06-29 via ss -tlnp |
 | V4 Drafter (hermes-v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | No | Running |
 | V4 Reviewer (hermes-r1) | 8643 | /home/eric/.hermes-r1 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Implementer (hermes-v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | No | Running |

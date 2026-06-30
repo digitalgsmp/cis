@@ -1,0 +1,119 @@
+#!/bin/bash
+# CIS pre-commit hook — auto-regenerates HCP + AGENTS.md from spine
+# Blocks commits with stale exports. Auto-stages regenerated files.
+#
+# Tier 5.x — Export freshness enforcement
+# Installed at: .git/hooks/pre-commit
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+GENERATE_ALL="$REPO_ROOT/tools/export/generate_all.py"
+GATE_EXPORT="$REPO_ROOT/tools/gates/gate_export_agreement.sh"
+DB_PATH="$REPO_ROOT/data/cis_memory.db"
+
+# Tracked export paths (only auto-stage files git already knows about)
+EXPORT_PATHS=(
+    "AGENTS.md"
+    "runtime/manifests/EXPORT_MANIFEST.json"
+    "PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/00_README_START_HERE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/01_CURRENT_STATE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/02_ACTIVE_ARCHITECTURE.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/03_DECISIONS_LOG.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/04_OPEN_QUESTIONS.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/05_NEXT_ACTIONS.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/06_MODEL_ROLES_AND_PROTOCOL.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/07_RECENT_HANDOFF.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/08_FILES_CHANGED_RECENTLY.md"
+    "PROJECT_CONTEXT_PACK_UPLOAD/09_TERMS_AND_NAMING.md"
+)
+
+# ── Check: can we run the generator? ────────────────────────────────────
+
+if [ ! -f "$GENERATE_ALL" ]; then
+    echo "WARN: generate_all.py not found — skipping export regeneration"
+    echo "  Expected at: $GENERATE_ALL"
+    exit 0
+fi
+
+if [ ! -f "$DB_PATH" ]; then
+    echo "WARN: Spine DB not found — skipping export regeneration"
+    echo "  Expected at: $DB_PATH"
+    exit 0
+fi
+
+echo "▸ Regenerating exports from spine..."
+
+# ── Run generate_all.py ─────────────────────────────────────────────────
+
+GENERATE_OUTPUT=$(python3 "$GENERATE_ALL" --db "$DB_PATH" 2>&1)
+GENERATE_EXIT=$?
+
+if [ $GENERATE_EXIT -ne 0 ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  COMMIT BLOCKED: Export generation FAILED"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "$GENERATE_OUTPUT"
+    echo ""
+    echo "The generators could not produce current AGENTS.md / HCP files."
+    echo "This usually means the spine DB is corrupted or config is broken."
+    echo "Fix the error above and try again."
+    echo ""
+    exit 1
+fi
+
+echo "$GENERATE_OUTPUT" | tail -3
+
+# ── Run export agreement gate (if present) ──────────────────────────────
+
+if [ -x "$GATE_EXPORT" ]; then
+    echo "▸ Running export agreement gate..."
+    if ! bash "$GATE_EXPORT" 2>&1; then
+        echo ""
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  COMMIT BLOCKED: Export agreement gate FAILED"
+        echo "═══════════════════════════════════════════════════════════"
+        echo ""
+        echo "Generated exports did not pass the agreement gate."
+        echo "See output above for specific failures."
+        echo ""
+        exit 1
+    fi
+fi
+
+# ── Auto-stage regenerated files ────────────────────────────────────────
+
+STAGED_COUNT=0
+for path in "${EXPORT_PATHS[@]}"; do
+    full_path="$REPO_ROOT/$path"
+    if [ -f "$full_path" ]; then
+        # Only auto-stage files git already tracks
+        if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+            if ! git diff --quiet "$path" 2>/dev/null; then
+                git add "$path"
+                STAGED_COUNT=$((STAGED_COUNT + 1))
+            fi
+        fi
+    fi
+done
+
+if [ $STAGED_COUNT -gt 0 ]; then
+    echo "▸ Auto-staged ${STAGED_COUNT} regenerated export file(s)"
+fi
+
+echo "▸ Exports current ✓"
+
+exit 0

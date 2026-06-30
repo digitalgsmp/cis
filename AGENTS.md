@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-29 13:09 UTC | Run: run-fc574bbb51e9 | Latest pipeline: run-1010c3076e084
+Generated: 2026-06-30 05:05 UTC | Run: run-891ca4f74ee6 | Latest pipeline: run-1010c3076e084
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -35,7 +35,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ### Gateways
 | Label | Profile | Port | Model | Reasoning | NeMo | Status |
 |-------|---------|------|-------|-----------|------|--------|
-| Flash/Research | hermes-prime | 8642 → NeMo 8800 | deepseek-v4-flash | none | Yes | Running |
+| Flash/Research | hermes-prime | 8642 → NeMo 8800 | deepseek-v4-flash | none | Yes | DOWN — verified 2026-06-29 via ss -tlnp |
 | V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Reviewer | hermes-r1 | 8643 | deepseek-v4-pro | xhigh | No | Running |
 | V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running |
