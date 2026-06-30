@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-30 06:15 UTC | Run: run-ec8bf3dcfa2f
+Generated: 2026-06-30 06:19 UTC | Run: run-b4f6d4c35d29
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
