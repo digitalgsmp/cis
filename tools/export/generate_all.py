@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 generate_all.py — Tier 5.5
-Orchestrates AGENTS.md and HCP generation with a shared run ID.
+Orchestrates AGENTS.md, HCP, and DEV-PIVOT manifest generation with a shared run ID.
 Produces a hash manifest at runtime/manifests/EXPORT_MANIFEST.json.
 
 Usage: python3 tools/export/generate_all.py [--db PATH] [--skip-agents] [--skip-hcp]
@@ -23,11 +23,13 @@ MANIFEST_PATH = REPO_ROOT / "runtime" / "manifests" / "EXPORT_MANIFEST.json"
 
 GENERATE_AGENTS = REPO_ROOT / "tools" / "export" / "generate_agents_md.py"
 GENERATE_HCP = REPO_ROOT / "tools" / "export" / "generate_hcp.py"
+GENERATE_DEV_PIVOT = REPO_ROOT / "tools" / "export" / "generate_dev_pivot_manifest.py"
 AGENTS_CONFIG = REPO_ROOT / "config" / "agents_static.yaml"
 HCP_CONFIG = REPO_ROOT / "config" / "hcp_static.yaml"
 
 AGENTS_OUT = REPO_ROOT / "AGENTS.md"
 HCP_OUT_DIR = REPO_ROOT / "PROJECT_CONTEXT_PACK_UPLOAD"
+DEV_PIVOT_OUT = REPO_ROOT / "docs" / "DEV-PIVOT_STATUS.md"
 
 HCP_FILES = [
     "READ_FIRST_HERMES_CONTEXT.md",
@@ -116,13 +118,14 @@ def build_manifest(run_id, artifacts, git_head, db_path):
         "commands": [
             f"python3 tools/export/generate_agents_md.py --run-id {run_id}",
             f"python3 tools/export/generate_hcp.py --run-id {run_id}",
+            f"python3 tools/export/generate_dev_pivot_manifest.py --run-id {run_id}",
         ],
         "artifacts": artifacts,
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate AGENTS.md + HCP files with manifest")
+    parser = argparse.ArgumentParser(description="Generate AGENTS.md + HCP + DEV-PIVOT files with manifest")
     parser.add_argument("--db", default=str(DEFAULT_DB))
     parser.add_argument("--skip-agents", action="store_true", help="Skip AGENTS.md generation")
     parser.add_argument("--skip-hcp", action="store_true", help="Skip HCP generation")
@@ -174,7 +177,18 @@ def main():
     else:
         print("[generate_all] Skipping HCP generation (--skip-hcp)")
 
-    # ── Step 3: Build manifest ──
+    # ── Step 3: Generate DEV-PIVOT manifest ──
+    cmd = [
+        "python3", str(GENERATE_DEV_PIVOT),
+        "--db", db_path,
+        "--out", str(DEV_PIVOT_OUT),
+        "--run-id", run_id,
+    ]
+    dev_pivot_ok, _ = run_generator(cmd, "generate_dev_pivot_manifest.py")
+    if not dev_pivot_ok:
+        print("[generate_all] WARNING: generate_dev_pivot_manifest.py failed. Continuing.")
+
+    # ── Step 4: Build manifest ──
     artifacts = []
 
     # AGENTS.md
@@ -210,9 +224,23 @@ def main():
                 "line_count": lines,
             })
 
+    # DEV-PIVOT manifest
+    if DEV_PIVOT_OUT.exists():
+        size, chars, lines = file_stats(DEV_PIVOT_OUT)
+        sha = sha256_file(DEV_PIVOT_OUT)
+        artifacts.append({
+            "path": "docs/DEV-PIVOT_STATUS.md",
+            "type": "dev_pivot_manifest",
+            "generator": "tools/export/generate_dev_pivot_manifest.py",
+            "sha256": sha,
+            "size_bytes": size,
+            "char_count": chars,
+            "line_count": lines,
+        })
+
     manifest = build_manifest(run_id, artifacts, git_head, db_path)
 
-    # ── Step 4: Write manifest ──
+    # ── Step 5: Write manifest ──
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"[generate_all] Manifest written: {MANIFEST_PATH}")

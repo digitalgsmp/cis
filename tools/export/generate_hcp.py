@@ -34,6 +34,7 @@ HCP_FILES = [
     "HCP_07_RECENT_HANDOFF.md",
     "HCP_08_FILES_CHANGED_RECENTLY.md",
     "HCP_09_TERMS_AND_NAMING.md",
+    "HCP_10_DEV_PIVOT_STATUS.md",
 ]
 
 
@@ -182,8 +183,14 @@ def query_spine(db_path):
            ORDER BY bpn.sequence"""
     ).fetchall()]
 
+    # Query dev_pivot_status
+    dev_pivot_rows = conn.execute(
+        "SELECT * FROM dev_pivot_status ORDER BY doc_id"
+    ).fetchall()
+    dev_pivot = [_row_to_dict(r) for r in dev_pivot_rows]
+
     conn.close()
-    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate_dict, build_plan_nodes
+    return decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate_dict, build_plan_nodes, dev_pivot
 
 
 # ── per-file renderers ─────────────────────────────────────────────────────
@@ -1098,6 +1105,114 @@ def render_read_first(stamp):
     return "\n".join(lines) + "\n"
 
 
+def render_hcp_10(stamp, hcp_static, dev_pivot):
+    """Render HCP_10 — DEV-PIVOT status manifest from spine."""
+    s = hcp_static.get("hcp_10", {})
+
+    lines = ["# DEV-PIVOT Document Status"]
+    for st in stamp:
+        lines.append(st)
+    lines.append("")
+    lines.append(s.get("intro", "Each DEV-PIVOT document represents a problem important enough to spec. INVALIDATED = progress solved it. LIVE = problem still unsolved."))
+    lines.append("")
+
+    if not dev_pivot:
+        lines.append("_(No dev_pivot_status rows in spine — table may not be seeded yet.)_")
+        lines.append("")
+        return "\n".join(lines)
+
+    # Group by status
+    invalidated = [d for d in dev_pivot if d["status"] == "INVALIDATED"]
+    partial = [d for d in dev_pivot if d["status"] == "PARTIALLY_INVALIDATED"]
+    live = [d for d in dev_pivot if d["status"] == "LIVE"]
+    superseded = [d for d in dev_pivot if d["status"] == "SUPERSEDED"]
+
+    # ── INVALIDATED ──
+    if invalidated:
+        lines.append("## INVALIDATED — Capability progress made these obsolete")
+        lines.append("")
+        for d in invalidated:
+            lines.append(f"### {d['doc_id']}: {d['title']}")
+            if d.get("invalidated_by"):
+                lines.append(f"- **Invalidated by:** `{d['invalidated_by']}`")
+            if d.get("invalidation_reason"):
+                lines.append(f"- **Reason:** {d['invalidation_reason']}")
+            if d.get("affected_sections"):
+                lines.append(f"- **Affected sections:** {d['affected_sections']}")
+            lines.append("")
+
+    # ── PARTIALLY INVALIDATED ──
+    if partial:
+        lines.append("## PARTIALLY INVALIDATED — Assumptions changed under them")
+        lines.append("")
+        for d in partial:
+            lines.append(f"### {d['doc_id']}: {d['title']}")
+            if d.get("invalidated_by"):
+                lines.append(f"- **Changed by:** `{d['invalidated_by']}`")
+            if d.get("invalidation_reason"):
+                lines.append(f"- **What changed:** {d['invalidation_reason']}")
+            if d.get("capability_gap"):
+                lines.append(f"- **Remaining gap:** {d['capability_gap']}")
+            if d.get("affected_sections"):
+                lines.append(f"- **Affected sections:** {d['affected_sections']}")
+            lines.append("")
+
+    # ── LIVE ──
+    if live:
+        lines.append(f"## STILL LIVE — Unsolved problems ({len(live)} docs)")
+        lines.append("")
+
+        # Group by category
+        by_cat = {}
+        for d in live:
+            cat = d.get("category", "other")
+            if cat not in by_cat:
+                by_cat[cat] = []
+            by_cat[cat].append(d)
+
+        cat_labels = {
+            "governance": "Governance",
+            "enforcement": "Enforcement",
+            "architecture": "Architecture & Direction",
+            "pipeline": "Pipeline",
+            "data": "Data & Cataloging",
+            "operations": "Operations",
+        }
+
+        for cat_key in ["governance", "enforcement", "architecture", "pipeline", "data", "operations"]:
+            items = by_cat.get(cat_key, [])
+            if not items:
+                continue
+            lines.append(f"### {cat_labels.get(cat_key, cat_key)}")
+            lines.append("")
+            for d in items:
+                dep = d.get("depends_on")
+                gap = d.get("capability_gap")
+                lines.append(f"- **{d['doc_id']}**: {d['title']}")
+                if dep:
+                    lines.append(f"  - Depends on capability: `{dep}`")
+                if gap:
+                    lines.append(f"  - Gap: {gap}")
+            lines.append("")
+
+    if superseded:
+        lines.append("## SUPERSEDED")
+        lines.append("")
+        for d in superseded:
+            lines.append(f"- **{d['doc_id']}**: {d['title']}")
+        lines.append("")
+
+    # ── Summary ──
+    total = len(dev_pivot)
+    lines.append("---")
+    lines.append("")
+    lines.append(f"**Summary:** {len(invalidated)} invalidated, {len(partial)} partially invalidated, "
+                 f"{len(live)} live, {len(superseded)} superseded — {total} total")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 # ── main ──────────────────────────────────────────────────────────────────
 
 def main():
@@ -1127,7 +1242,7 @@ def main():
     agents_static = load_yaml(args.agents_config)
 
     # Query spine
-    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate, build_plan_nodes = query_spine(args.db)
+    decisions, questions, actions, blockers, runs, latest_run, row_counts, build_state, eric_gate, build_plan_nodes, dev_pivot = query_spine(args.db)
 
     # Build stamp
     stamp = generation_stamp(args.run_id)
@@ -1145,6 +1260,7 @@ def main():
         "HCP_07_RECENT_HANDOFF.md": lambda: render_hcp_07(stamp, hcp_static, latest_run, actions, eric_gate, build_plan_nodes),
         "HCP_08_FILES_CHANGED_RECENTLY.md": lambda: render_hcp_08(stamp),
         "HCP_09_TERMS_AND_NAMING.md": lambda: render_hcp_09(stamp, hcp_static, agents_static),
+        "HCP_10_DEV_PIVOT_STATUS.md": lambda: render_hcp_10(stamp, hcp_static, dev_pivot),
     }
 
     out_dir = Path(args.out_dir)

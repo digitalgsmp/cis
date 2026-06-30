@@ -407,3 +407,30 @@ def search_knowledge_semantic(query_text, top_k=10, db_path=None):
             })
 
     return hits
+
+
+def query_dev_pivot_status(status_filter=None, category_filter=None, db_path=None):
+    """Query dev_pivot_status table with optional filters."""
+    db = db_path or _get_db_path()
+    conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
+
+    query = "SELECT * FROM dev_pivot_status WHERE 1=1"
+    params = []
+
+    if status_filter:
+        query += " AND status = ?"
+        params.append(status_filter)
+    if category_filter:
+        query += " AND category = ?"
+        params.append(category_filter)
+
+    query += " ORDER BY doc_id"
+
+    try:
+        rows = conn.execute(query, params).fetchall()
+        return _rows_to_list(rows)
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()

@@ -29,6 +29,7 @@ def create_mcp_server():
     """
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
+    from mcp.types import Tool
 
     server = Server("cis-mcp-bridge")
 
@@ -36,11 +37,14 @@ def create_mcp_server():
     @server.list_tools()
     async def handle_list_tools():
         """Return all registered CIS tools."""
-        return [type("Tool", (), {
-            "name": t["name"],
-            "description": t["description"],
-            "inputSchema": t["inputSchema"],
-        })() for t in tools.TOOLS]
+        return [
+            Tool(
+                name=t["name"],
+                description=t["description"],
+                inputSchema=t["inputSchema"],
+            )
+            for t in tools.TOOLS
+        ]
 
     # ── Handle tool calls ─────────────────────────────
     @server.call_tool()

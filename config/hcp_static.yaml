@@ -836,3 +836,26 @@ hcp_09:
     "Generated HCP export": "HCP_ files from deterministic script. Not manually edited."
     "External advisor packet": "HCP_ files for ChatGPT and Claude. Read-only."
     "Pipeline contingency": "Kanban retired (ADR-013). Spine-native workflow_runs is authoritative. Fall back to direct SQLite spine access if Flask API unavailable."
+
+hcp_10:
+  intro: |
+    Each DEV-PIVOT document represents an architectural problem important enough
+    to write a formal specification about. This manifest tracks which ones have
+    been invalidated by capability progress, which have had assumptions change
+    under them, and which represent unsolved problems still needing attention.
+
+    INVALIDATED = progress solved the problem. These documents are evidence of
+    completion, not stale docs — they prove the problem was taken seriously and
+    resolved.
+
+    PARTIALLY INVALIDATED = capability changed, assumptions shifted. These
+    documents need review — the remaining gaps may represent new work items.
+
+    LIVE = the problem that caused this document to exist is still unsolved.
+    These are the actual backlog — problems important enough to spec but not
+    yet resolved.
+
+    This file is auto-generated from the SQLite spine (dev_pivot_status table).
+    When a capability change invalidates or partially invalidates a DEV-PIVOT
+    document, update the spine row and regenerate. The pre-commit hook ensures
+    this file stays current.

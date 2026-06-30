@@ -345,6 +345,32 @@ TOOLS = [
             "required": ["message"],
         },
     },
+    {
+        "name": "cis_get_dev_pivot_status",
+        "description": (
+            "Get the status of all DEV-PIVOT architecture documents. "
+            "Returns per-document: doc_id, title, category, status "
+            "(LIVE/INVALIDATED/PARTIALLY_INVALIDATED/SUPERSEDED), "
+            "invalidation_reason, depends_on, capability_gap. "
+            "Use to discover which architectural problems are solved, "
+            "which assumptions have changed, and which are still unsolved. "
+            "Filter by status or category."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "status_filter": {
+                    "type": "string",
+                    "description": "Optional: filter by status (LIVE, INVALIDATED, PARTIALLY_INVALIDATED, SUPERSEDED)",
+                },
+                "category_filter": {
+                    "type": "string",
+                    "description": "Optional: filter by category (governance, enforcement, architecture, pipeline, data, operations)",
+                },
+            },
+            "required": [],
+        },
+    },
 ]
 
 
@@ -582,6 +608,16 @@ def handle_adapter_dispatch(arguments):
         return {"error": f"Adapter dispatch failed: {e}"}
 
 
+def handle_get_dev_pivot_status(arguments):
+    """Handler for cis_get_dev_pivot_status."""
+    status_filter = arguments.get("status_filter")
+    category_filter = arguments.get("category_filter")
+    return spine.query_dev_pivot_status(
+        status_filter=status_filter,
+        category_filter=category_filter,
+    )
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -602,4 +638,5 @@ HANDLERS = {
     "cis_search_knowledge": handle_search_knowledge,
     "cis_adapter_status": handle_adapter_status,
     "cis_adapter_dispatch": handle_adapter_dispatch,
+    "cis_get_dev_pivot_status": handle_get_dev_pivot_status,
 }
