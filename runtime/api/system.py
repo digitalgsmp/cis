@@ -64,7 +64,6 @@ def api_extraction_stats():
 
 @system_bp.route("/api/system/scratchpad")
 def api_scratchpad():
-    import re
     scratch_path = "/mnt/projects/cis/cis_kernel/build/CIS_SCRATCHPAD.md"
     ideas = []
     decisions = []

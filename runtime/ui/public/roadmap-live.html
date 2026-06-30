@@ -29,15 +29,35 @@ a:hover{text-decoration:underline}
 .monitor .phase-label{font-size:10px;color:#3fb950;font-weight:600;margin-bottom:4px}
 .monitor .phase-next{font-size:9px;color:#8b949e}
 
-/* Roadmap iframe */
-.roadmap-frame{border:1px solid #30363d;border-radius:6px;overflow:hidden;background:#020817}
-.roadmap-frame iframe{width:100%;height:600px;border:none;display:block}
+/* Build plan */
+.bp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:12px}
+.bp-tiers{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px 12px}
+.bp-tiers h3{font-size:11px;color:#8b949e;margin:0 0 6px;font-weight:600}
+.bp-node{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10px;border-bottom:1px solid rgba(255,255,255,.02)}
+.bp-node:last-child{border-bottom:none}
+.bp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.bp-dot.COMPLETE{background:#3fb950}.bp-dot.IN_PROGRESS{background:#58a6ff}
+.bp-dot.PENDING{background:#8b949e}.bp-dot.DEFERRED{background:#d29922}
+.bp-dot.BLOCKED{background:#f85149}
+.bp-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bp-status{font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.bp-summary{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;padding:10px 12px;background:#161b22;border:1px solid #30363d;border-radius:6px;margin-bottom:6px}
 
-/* Status bar */
+/* Runs & Gates */
+.run-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px 12px;margin-bottom:6px}
+.run-card .title{font-weight:600;font-size:12px;margin-bottom:4px}
+.run-card .meta{font-size:10px;color:#8b949e}
+.gate-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#161b22;border:1px solid #30363d;border-radius:4px;margin-bottom:4px;font-size:11px}
+.gate-pass{color:#3fb950;font-weight:600}.gate-fail{color:#f85149;font-weight:600}
+
+.badge{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;white-space:nowrap}
+.bg-green{background:#1a3a1f;color:#3fb950}.bg-yellow{background:#3a2f0a;color:#d29922}
+.bg-red{background:#3a1015;color:#f85149}.bg-blue{background:#0a2d3a;color:#58a6ff}
+.bg-purple{background:#1a103a;color:#a371f7}
+
+/* Layout */
 .statusbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .refresh{font-size:9px;color:#8b949e}
-
-/* Top nav */
 .nav{display:flex;gap:8px;margin-bottom:12px}
 .nav a{font-size:12px;padding:4px 12px;border:1px solid #30363d;border-radius:4px;background:#161b22}
 .nav a:hover{background:#1f6feb22;border-color:#1f6feb}
@@ -53,7 +73,7 @@ a:hover{text-decoration:underline}
 <div class="nav">
   <a href="/portal">Chat</a>
   <a href="/monitor-test">Monitor Only</a>
-  <a href="/ui/roadmap" target="_blank">Full SPA ↗</a>
+  <a href="/ui/roadmap" target="_blank">Legacy SPA ↗</a>
 </div>
 
 <!-- Live Monitor -->
@@ -61,24 +81,37 @@ a:hover{text-decoration:underline}
 <div class="monitor" id="monitor">Loading...</div>
 <div class="refresh" id="refresh"></div>
 
-<!-- Full Roadmap -->
-<h2>📋 Build Roadmap</h2>
-<div class="roadmap-frame">
-  <iframe src="/ui/roadmap" title="CIS Roadmap"></iframe>
-</div>
+<!-- Build Plan Progress — from spine -->
+<h2>📋 Build Plan Progress</h2>
+<div class="bp-summary" id="bp-summary">Loading...</div>
+<div class="bp-grid" id="bp-grid">Loading build plan...</div>
+
+<!-- Active Pipeline Runs -->
+<h2>⚡ Active Pipeline Runs</h2>
+<div id="roadmap-runs" style="margin-bottom:12px">Loading runs...</div>
+
+<!-- Eric Gate Status -->
+<h2>🔒 Eric Gate Status</h2>
+<div id="roadmap-gates" style="margin-bottom:12px">Loading gate status...</div>
 
 <script>
-async function load(){
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function trunc(s,n){return s&&s.length>n?s.substring(0,n)+'...':s}
+function badge(s){
+  const m={CONSENSUS_REACHED:'green',PENDING:'yellow',REVIEW_PENDING:'yellow',REVISE_REQUESTED:'yellow',REVIEWING:'blue',DRAFTING:'blue',EXECUTING:'purple',COMPLETE:'green',ERROR:'red',ESCALATE:'red',OBJECTIONS:'red'};
+  return '<span class="badge bg-'+(m[s]||'blue')+'">'+s+'</span>'
+}
+
+// ── Live Monitor ──────────────────────────────────────────────────────
+async function loadMonitor(){
   const grid=document.getElementById('monitor');
   const ref=document.getElementById('refresh');
   try{
     const r=await fetch('/api/portal/monitor');
     const d=await r.json();
     ref.textContent='Updated: '+new Date().toLocaleTimeString();
-
     let h='';
 
-    // Gateways
     h+='<div class="card"><div class="card-title">Hermes Gateways</div>';
     for(const[id,gw] of Object.entries(d.gateways||{})){
       const up=gw.status==='up';
@@ -86,7 +119,6 @@ async function load(){
     }
     h+='</div>';
 
-    // Services
     h+='<div class="card"><div class="card-title">Services</div>';
     for(const[id,svc] of Object.entries(d.services||{})){
       const up=svc.status==='up';
@@ -94,7 +126,6 @@ async function load(){
     }
     h+='</div>';
 
-    // Phase
     if(d.phase){
       h+='<div class="card"><div class="card-title">Build Phase</div>';
       h+='<div class="phase-label">'+esc(d.phase.build_phase||'unknown')+'</div>';
@@ -102,17 +133,15 @@ async function load(){
       h+='</div>';
     }
 
-    // Blockers
     if(d.blockers&&d.blockers.length){
       h+='<div class="card"><div class="card-title" style="color:#f85149">Active Blockers</div>';
-      d.blockers.forEach(b=>h+='<div class="blocker"><b>'+esc(b.id)+'</b> '+esc(b.description).substring(0,150)+'</div>');
+      d.blockers.forEach(b=>h+='<div class="blocker"><b>'+esc(b.id)+'</b> '+esc(trunc(b.description,150))+'</div>');
       h+='</div>';
     }
 
-    // Next Actions
     if(d.next_actions&&d.next_actions.length){
       h+='<div class="card"><div class="card-title" style="color:#d29922">Next Actions</div>';
-      d.next_actions.forEach(a=>h+='<div class="action"><b>'+esc(a.id)+'</b> '+esc(a.description).substring(0,150)+'</div>');
+      d.next_actions.forEach(a=>h+='<div class="action"><b>'+esc(a.id)+'</b> '+esc(trunc(a.description,150))+'</div>');
       h+='</div>';
     }
 
@@ -121,9 +150,79 @@ async function load(){
     grid.innerHTML='<div class="card" style="color:#f85149">Monitor unavailable: '+esc(e.message)+'</div>';
   }
 }
-function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-load();
-setInterval(load,30000);
+
+// ── Build Plan + Runs + Gates (from spine) ─────────────────────────────
+async function loadBuildStatus(){
+  try{
+    const r=await fetch('/api/portal/build-status');
+    const d=await r.json();
+    if(!d)return;
+
+    const bp=d.build_plan||[];
+    const tierGroups={};
+    bp.forEach(n=>{
+      const t=n.tier||'?';
+      if(!tierGroups[t])tierGroups[t]=[];
+      tierGroups[t].push(n);
+    });
+
+    // Summary stats
+    const counts={COMPLETE:0,DEFERRED:0,PENDING:0,IN_PROGRESS:0,BLOCKED:0};
+    bp.forEach(n=>{counts[n.status]=(counts[n.status]||0)+1});
+    document.getElementById('bp-summary').innerHTML=
+      '<span>✅ '+(counts.COMPLETE||0)+' Complete</span>'+
+      '<span>⏸ '+(counts.DEFERRED||0)+' Deferred</span>'+
+      '<span>⏳ '+(counts.PENDING||0)+' Pending</span>'+
+      (counts.IN_PROGRESS?'<span style="color:#58a6ff">🔄 '+counts.IN_PROGRESS+' In Progress</span>':'')+
+      (counts.BLOCKED?'<span style="color:#f85149">🚫 '+counts.BLOCKED+' Blocked</span>':'');
+
+    // Build plan grid by tier
+    const sortedTiers=Object.keys(tierGroups).sort((a,b)=>{
+      const na=parseFloat(a),nb=parseFloat(b);
+      if(!isNaN(na)&&!isNaN(nb))return na-nb;
+      return a.localeCompare(b);
+    });
+    let bpHtml='';
+    for(const tier of sortedTiers){
+      const nodes=tierGroups[tier];
+      bpHtml+='<div class="bp-tiers"><h3>Tier '+tier+'</h3>';
+      nodes.forEach(n=>{
+        bpHtml+='<div class="bp-node"><span class="bp-dot '+n.status+'"></span><span class="bp-label" title="'+esc(n.node_label||'')+'">'+esc(trunc(n.node_label||'',50))+'</span><span class="bp-status">'+esc(n.status)+'</span></div>';
+      });
+      bpHtml+='</div>';
+    }
+    document.getElementById('bp-grid').innerHTML=bpHtml;
+
+    // Pipeline runs
+    const runs=d.runs||[];
+    const runsDiv=document.getElementById('roadmap-runs');
+    let rHtml='';
+    if(!runs.length)rHtml='<div class="run-card muted">No active pipeline runs</div>';
+    runs.forEach(r=>{
+      rHtml+='<div class="run-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><span class="title">'+esc(trunc(r.topic||'Untitled',70))+'</span>'+badge(r.status)+'</div><div class="meta">'+r.id+' | Rounds: '+r.rounds_completed+' | '+(r.created_at||'').substring(0,16)+'</div></div>';
+    });
+    runsDiv.innerHTML=rHtml;
+
+    // Eric gate status
+    const gatesDiv=document.getElementById('roadmap-gates');
+    const gates=d.gate_runs||[];
+    let gHtml='';
+    if(!gates.length)gHtml='<div class="gate-row"><span>No Eric Gate decisions recorded</span><span class="muted">—</span></div>';
+    gates.forEach(g=>{
+      const cls=g.decision==='APPROVED'?'gate-pass':'gate-fail';
+      gHtml+='<div class="gate-row"><span>🔒 '+esc(g.workflow_run_id||'?')+'</span><span class="'+cls+'">'+esc(g.decision||'PENDING')+'</span><span class="muted">'+esc(trunc(g.rationale||'',60))+'</span></div>';
+    });
+    gatesDiv.innerHTML=gHtml;
+
+  }catch(e){
+    document.getElementById('bp-grid').innerHTML='<div style="color:#f85149">Failed: '+esc(e.message)+'</div>';
+  }
+}
+
+loadMonitor();
+loadBuildStatus();
+setInterval(loadMonitor,30000);
+setInterval(loadBuildStatus,15000);
 </script>
 </body>
 </html>

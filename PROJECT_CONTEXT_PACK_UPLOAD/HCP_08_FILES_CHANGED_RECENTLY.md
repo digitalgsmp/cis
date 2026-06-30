@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-06-30 05:35 UTC | Run: run-07c130576462
+Generated: 2026-06-30 06:01 UTC | Run: run-51bc771dd9d5
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## f174518 feat: session handoff spine table + auto-generated AGENTS.md §13
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
+
+## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/schema/migrations/0014_session_handoffs.sql 
+
+## runtime/ui/src/pages/RoadmapPage.jsx 
+
+## tools/export/generate_agents_md.py 
 
 ## 9523663 fix: reconcile exports, handoff, and gateway state (June 29)
 
@@ -342,15 +380,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## 8a48416 fix(gate): handle non-numeric completed_tier (e.g. PD) in coherence gate
 
 ## tools/gates/gate_build_state_coherence.py 
-
-## 4928108 feat(portal): live gateway monitor API + external advisor briefing
-
-## docs/CIS_EXTERNAL_ADVISOR_BRIEFING_2026-06-25.md 
-
-## runtime/app.py 
-
-## runtime/ui/public/monitor-test.html 
-
-## runtime/ui/public/portal.html 
-
-## runtime/ui/public/roadmap-live.html 
