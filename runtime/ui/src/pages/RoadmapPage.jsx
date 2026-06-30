@@ -22,13 +22,18 @@ const ROADMAP = {
     { title: "CIS Control Portal v0.1", desc: "Multi-model chat — Claude Opus 4.8, GLM 5.2, Mistral Large 3, GLM 4.7 Flash local. 4-panel Advisor Chat.", date: "Jun 22", phase: "Enforcement & Portal" },
     { title: "Thread Tracking + Context Bars", desc: "Portal thread_id tracking, context bars on all panels, pipeline trigger endpoints.", date: "Jun 23", phase: "Enforcement & Portal" },
     { title: "Cross-Panel Message Visibility", desc: "Advisor Chat panels show all agents' messages. 'other panel' badge for visual distinction. No more copy/paste between panels.", date: "Jun 23", phase: "Enforcement & Portal" },
+    { title: "CIS Front Door + Abstraction", desc: "Adapter API on port 5000. 5 endpoints: health, status, profiles, dispatch, chat. Intent alignment live. Knowledge base: 287K messages FTS5+ChromaDB.", date: "Jun 27", phase: "Pipeline Ops" },
+    { title: "Human-Readable Status", desc: "Plain-English gateway status. Eric: 'I don't want JSON. I want words.' Every result spelled out. Claude-ready summary.", date: "Jun 27", phase: "Pipeline Ops" },
+    { title: "Claude Audit Session", desc: "Claude audited June 27 work — PASS. Caught near-miss (therapy notes staged). Committed front door + intent-alignment.", date: "Jun 28", phase: "Pipeline Ops" },
+    { title: "Pre-Commit Export Hook", desc: "Git hook auto-regenerates AGENTS.md + HCP on every commit. Blocks stale commits. Spine → export pipeline fully automated.", date: "Jun 29", phase: "Pipeline Ops" },
+    { title: "Session Handoff Spine", desc: "session_handoffs table in SQLite spine. AGENTS.md §13 auto-generated from spine. DEV-PIVOT files no longer manually maintained.", date: "Jun 29", phase: "Pipeline Ops" },
   ],
   specified: [
     { title: "Pipeline-Visible Portal", desc: "Portal panels become windows into pipeline stages. Clarification→Trigger→Deliberation→Gates→Implementation all visible in real time. Eric never leaves the conversation.", date: "Jun 22", spec: "docs/CIS_PIPELINE_VISIBLE_PORTAL_SPEC.md" },
-    { title: "Chat-to-Pipeline Trigger", desc: "Model infers intent from conversation. When Eric describes a task needing the pipeline, model signals [PIPELINE:intent]. Backend routes through classify_route(), pipeline runs in background.", date: "Jun 22", spec: "docs/CIS_CHAT_PIPELINE_INFERENCE_TRIGGER_SPEC.md" },
-    { title: "Enforcement Primitive", desc: "TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1. 3-layer process isolation: CIS control plane → Hermes worker in Docker with RO /opt/cis-control. 15 acceptance tests. Awaiting §14 raw-evidence plan.", date: "Jun 19", spec: "docs/TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md" },
-    { title: "FD.1 Front Door (in progress)", desc: "14 MCP tools total (11 existing + 3 dispatch). ChromaDB 1.5.9, 8 router routes. NA-SEED-017 IN_PROGRESS.", date: "Jun 20", spec: "docs/CIS_TIER_FD1_MCP_DISPATCH_TOOLS_SPECIFICATION.md" },
-    { title: "Enforcement Override Plane", desc: ".GATE_DISABLED built/tested before hook is trusted. Two enforcement walls: kernel (Docker RO mount) + policy hook (pre_tool_call).", date: "Jun 19", spec: "ADR-SEED-015" },
+    { title: "Chat-to-Pipeline Trigger", desc: "Model infers intent from conversation. When Eric describes a task needing the pipeline, model signals [PIPELINE:intent]. Backend routes through classify_route().", date: "Jun 22", spec: "docs/CIS_CHAT_PIPELINE_INFERENCE_TRIGGER_SPEC.md" },
+    { title: "Enforcement Primitive", desc: "TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1. 3-layer process isolation. 15 acceptance tests. Approved via dual-review. Phase PD CLOSED.", date: "Jun 24", spec: "docs/TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md" },
+    { title: "FD.1 Front Door (in progress)", desc: "14 MCP tools total (11 existing + 3 dispatch). 8 router routes. NA-SEED-017 IN_PROGRESS.", date: "Jun 20", spec: "docs/CIS_TIER_FD1_MCP_DISPATCH_TOOLS_SPECIFICATION.md" },
+    { title: "Phase 0: Loop-Breaker (in progress)", desc: "Fix guardrail gap: successful repeated identical tool calls bypass counters. Build target: extend ToolCallSignature to count regardless of success/failure.", date: "Jun 26", spec: "docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md" },
   ],
   theorized: [
     { title: "Unified Memory Build", desc: "Cross-session persistent memory that survives context windows. Not yet architected.", date: "Future", phase: "Do Not Start" },
@@ -73,6 +78,7 @@ const PHASES = [
   { name: "MCP, VDB & UI", range: "Jun 13", color: "#8b5cf6", items: ["MCP Bridge — read-only stdio server, 11 tools.", "Chroma VDB — local vector search for spine.", "Tier 10 CIS UI — 6 React views, 57 tests."] },
   { name: "Pipeline Oversight", range: "Jun 14 – 17", color: "#10b981", items: ["Tiers 11A–D: Dashboard, Eric Gate, Drafter/Reviewer handoff.", "Pre-execution oversight pipeline (Gate 7).", "Dual-review deliberation (R1 + Qwen).", "CIS standalone product identity."] },
   { name: "Enforcement & Portal", range: "Jun 18 – 23", color: "#f59e0b", items: ["Enforcement architecture — 3-layer Docker isolation.", "Claude Code 16-failure-mode audit.", "CIS Control Portal v0.1 — multi-model chat.", "Pipeline-Visible Portal + Chat Trigger specs.", "Cross-panel message visibility."] },
+  { name: "Pipeline Operations", range: "Jun 27 – 29", color: "#06b6d4", items: ["CIS Front Door + Abstraction layer on port 5000.", "Knowledge base: 287K messages, FTS5 + ChromaDB.", "Human-readable status — no JSON, every result spelled out.", "Claude audit session — caught near-miss, verified state.", "Pre-commit export hook — auto-regenerates AGENTS.md + HCP.", "Session handoff spine table — DEV-PIVOT drift eliminated."] },
 ];
 
 // ── Components ─────────────────────────────────────────────────────────────

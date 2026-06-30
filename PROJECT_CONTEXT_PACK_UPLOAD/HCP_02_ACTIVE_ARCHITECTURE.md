@@ -1,5 +1,5 @@
 # Active Architecture — Hermes Harness / CIS
-Generated: 2026-06-30 05:05 UTC | Run: run-891ca4f74ee6
+Generated: 2026-06-30 05:35 UTC | Run: run-07c130576462
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 

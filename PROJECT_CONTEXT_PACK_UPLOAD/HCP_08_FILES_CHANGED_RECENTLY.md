@@ -1,9 +1,9 @@
 # Files Changed Recently
-Generated: 2026-06-30 05:05 UTC | Run: run-891ca4f74ee6
+Generated: 2026-06-30 05:35 UTC | Run: run-07c130576462
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
-## 86db1f0 fix: reconcile exports, handoff, and gateway state (June 29)
+## 9523663 fix: reconcile exports, handoff, and gateway state (June 29)
 
 ## AGENTS.md 
 

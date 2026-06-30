@@ -101,12 +101,22 @@ def query_spine(db_path):
            LIMIT 1"""
     ).fetchone()
 
+    # Session handoff — latest active handoff from spine
+    handoff = conn.execute(
+        """SELECT date, title, summary, decisions, next_actions,
+                  claude_context, eric_feedback, gateway_status, git_head
+           FROM session_handoffs
+           WHERE is_current = 1
+           ORDER BY created_at DESC
+           LIMIT 1"""
+    ).fetchone()
+
     conn.close()
-    return runs, decisions, questions, actions, blockers, build_state, eric_gate
+    return runs, decisions, questions, actions, blockers, build_state, eric_gate, handoff
 
 
 def render(static, runs, decisions, questions, actions, blockers, build_state,
-           eric_gate=None, run_id=None):
+           eric_gate=None, handoff=None, run_id=None):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     latest_run_id = runs[0]["id"] if runs else "none"
     rid = run_id or "none"
@@ -240,7 +250,27 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
             lines.append(f"> {line}")
         lines.append("")
 
-    lines.append("## 13. Evidence-Backed Response Rule")
+    lines.append("## 13. Session Handoff (from spine)")
+    if handoff:
+        lines.append(f"**{handoff['title']}** — {handoff['date']}")
+        lines.append(f"Git HEAD: `{handoff['git_head']}`")
+        lines.append("")
+        lines.append(f"**Built:** {handoff['summary']}")
+        if handoff['decisions']:
+            lines.append(f"**Decisions:** {handoff['decisions']}")
+        if handoff['eric_feedback']:
+            lines.append(f"**Eric:** {handoff['eric_feedback']}")
+        if handoff['gateway_status']:
+            lines.append(f"**Gateway:** {handoff['gateway_status']}")
+        if handoff['next_actions']:
+            lines.append(f"**Next:** {handoff['next_actions']}")
+        if handoff['claude_context']:
+            lines.append(f"**Claude context:** {handoff['claude_context']}")
+    else:
+        lines.append("- No session handoff recorded (session_handoffs table empty)")
+    lines.append("")
+
+    lines.append("## 14. Evidence-Backed Response Rule")
     lines.append(static.get("evidence_rule", "").strip())
     lines.append("")
 
@@ -265,10 +295,11 @@ def main():
         sys.exit(2)
 
     static = load_static(args.config)
-    runs, decisions, questions, actions, blockers, build_state, eric_gate = \
+    runs, decisions, questions, actions, blockers, build_state, eric_gate, handoff = \
         query_spine(args.db)
     output = render(static, runs, decisions, questions, actions, blockers,
-                    build_state, eric_gate=eric_gate, run_id=args.run_id)
+                    build_state, eric_gate=eric_gate, handoff=handoff,
+                    run_id=args.run_id)
 
     char_count = len(output)
     if char_count > CHAR_LIMIT:

@@ -345,86 +345,15 @@ container access. Per-profile SOUL.md not written.
 
 ---
 
-## 10. Session Handoff for Claude — June 29, 2026 (updated)
+## 10. Session Handoff → See AGENTS.md §13
 
-### What We Built This Session
+The session handoff narrative is now stored in the SQLite spine (`session_handoffs` table)
+and auto-generated into AGENTS.md §13 on every commit. This eliminates manual DEV-PIVOT
+section drift — the handoff stays current with every regeneration.
 
-Eric and I completed a major integration push on June 27, followed by a Claude audit session on June 28, and a reconciliation session on June 29.
+**For the latest handoff:** read AGENTS.md §13 (Session Handoff from spine).
 
-**Core deliverables (June 27 — Hermes):**
-- `runtime/abstraction/dispatch.py` — 181-line profile map, health checks, gateway URLs
-- `runtime/api/adapter.py` — Flask blueprint, 5 endpoints including human-readable status
-- `runtime/api/intent.py` — intent alignment endpoint (`GET /api/intent/alignment`)
-- `tools/pipeline/measure_intent.py` — CLI tool called by Drafter on dispatch
-- `tools/pipeline/drafter_start.py` — +25 lines, calls measure_intent automatically
-- `tools/pipeline/reviewer_reconcile.py` — +12 lines, REVIEW_SYSTEM mandates intent check
-- `docs/CIS_ROADMAP_PHASES_1_6.md` — 6-phase roadmap from 287K knowledge base
-- `docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md` — 5 root tasks with exact commands (THE handoff for Claude)
-
-**June 28 — Claude audit session:**
-- Claude audited all June 27 work against raw evidence: PASS
-- Verified front door works — `POST /api/adapter/dispatch` routed test intent to r1 reviewer
-- Verified knowledge base — 287,589 messages in FTS5 + ChromaDB, counts matched
-- Caught a near-miss: Anthropic export with therapy notes staged for commit — unstaged, .gitignored
-- Committed: `4c3d396` — 31 files, 5091 insertions. Front door + intent-alignment + knowledge search.
-- Claude's handoff note: `session_handoffs/SESSION_HANDOFF_2026-06-28.md`
-
-**June 29 — reconciliation session:**
-- **Port check (verified live):** 8642 (Prime) is DOWN — confirmed via `ss -tlnp`. Four Hermes gateways UP (8643-8646). NeMo 8800 UP. Qwen llama-server on 8002 is LAN-exposed (0.0.0.0).
-- **Config fixed:** `config/agents_static.yaml` updated — Prime status changed from "Running" to "DOWN — verified 2026-06-29 via ss -tlnp"
-- **Model decision:** Portal stays as-is. Local Qwen (8644) + local GLM remain. Claude API too expensive for regular rotation — manual copy-paste only for occasional checks.
-- **Pre-commit hook built:** Git hook auto-regenerates HCP + AGENTS.md on every commit, blocks if stale.
-- **DEV-PIVOT handoff updated:** This section (§10) now reflects current state through June 29.
-
-**Knowledge base stats:**
-- 287,589 messages from 12 sources
-- FTS5 (SQLite) + ChromaDB (9.3GB) dual search
-- `cis_search_knowledge` MCP tool configured on all profiles (needs gateway restart)
-- Sources: archive (165K), cis_docs (76K), swa (23K), claude_export (9.5K), cis_kernel (4K), chatgpt_export (3.8K), pve_architecture (2.8K), wiasw (883), claude_transcripts (757), cis_legacy_archive (604), cis_v1_vault (353), others (226)
-
-**Adapter endpoints (port 5000):**
-- `GET /api/adapter/health` — JSON health checks
-- `GET /api/adapter/status` — HUMAN-READABLE status (Eric's preference)
-- `GET /api/adapter/profiles` — profile listing
-- `POST /api/adapter/dispatch` — intent routing
-- `POST /api/adapter/chat` — chat passthrough
-
-**Gateway status (verified live June 29):**
-- v4pro (Drafter, 8645): UP
-- r1 (Reviewer, 8643): UP
-- v4impl (Implementer, 8646): UP
-- qwen (8644): UP
-- prime (8642): **DOWN** — needs `systemctl --user start hermes-gateway.service`
-
-**Eric's key feedback:**
-- "I don't want JSON. I want words." → Built human-readable status endpoint
-- "Every result is spelled out" → New status explains what healthy means
-- "Update the dev-pivot files" → This handoff now current through June 29
-- "Leave it as is" — Portal stays local Qwen + local GLM, Claude manual only
-
-**What Eric wants next (per Claude handoff + June 29 session):**
-1. Qwen bind fix (127.0.0.1:8002 → Docker-bridge-only — currently LAN-exposed on 0.0.0.0)
-2. Start prime gateway (8642)
-3. Restart v4pro/r1/v4impl gateways to activate MCP tools
-4. MWL proof deferred per DEV-PIVOT-06 §6 (enforcement primitive proven separately)
-5. SOUL.md/profile config deferred per DEV-PIVOT-06 §6
-
-**For the external advisor (Claude):**
-- **Primary handoff:** `docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md` — 5 root tasks, exact commands, verification steps
-- **Governing docs:** DEV-PIVOT-06 §6 defers container/root work. Tasks 1, 3, 4 are operational fixes (not deferred). Tasks 2 and 5 are deferred.
-- **Note:** The PHASE1_ROOT_DIRECTIVE was written before the DEV-PIVOT-06 deferral was fully reconciled. Claude's hesitation (June 28) was correct — the directive conflicts with the governing doc. Eric's instruction: Tasks 1, 3, 4 only. Skip 2 and 5.
-- **Update path:** HCP + AGENTS.md are auto-regenerated by pre-commit hook. Claude sessions should read HCP first, treat spine as authoritative over memory.
-
-**Working context for Claude:**
-- Working directory: `/mnt/projects/cis/`
-- Branch: main (HEAD varies — check `git log --oneline -1`)
-- Flask server: running on 127.0.0.1:5000
-- ChromaDB: `/mnt/projects/cis/data/chroma_data/`
-- Spine DB: `/mnt/projects/cis/data/cis_memory.db`
-- MCP bridge: `/mnt/projects/cis/runtime/mcp_bridge/tools.py`
-- Eric's Hermes config: `~/.hermes-v4pro/config.yaml`
-- Eric's words (verbatim intent): AGENTS.md §12, plus 287K messages in ChromaDB
-- HCP: regenerated by pre-commit hook, 12 artifacts in PROJECT_CONTEXT_PACK_UPLOAD/
+**For Claude instructions:** see `docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md` — Tasks 1, 3, 4 active; Tasks 2 and 5 deferred per DEV-PIVOT-06 §6.
 
 **Eric's communication preferences:**
 - Speaks in thoughts/intentions, not formal specs
