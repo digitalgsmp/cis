@@ -146,8 +146,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 <div class="tab-bar">
   <div class="tab" onclick="switchTab('control')">Control</div>
   <div class="tab" onclick="switchTab('deliberation')">Deliberation</div>
-  <div class="tab active" onclick="switchTab('chat')">Chat</div>
-  <div class="tab" onclick="switchTab('roadmap')">Roadmap</div>
+  <div class="tab" onclick="switchTab('chat')">Chat</div>
+  <div class="tab active" onclick="switchTab('roadmap')">Roadmap</div>
 </div>
 
 <!-- CONTROL TAB -->
@@ -186,7 +186,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 </div>
 
 <!-- CHAT TAB — 4-Panel Group Chat -->
-<div class="tab-content active" id="tab-chat">
+<div class="tab-content" id="tab-chat">
 <h2 style="margin-top:0">Multi-Model Chat</h2>
 
 <!-- Mode toggle -->
@@ -335,7 +335,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 </div><!-- container -->
 
 <!-- ROADMAP TAB (live monitor + build plan progress — no iframe) -->
-<div class="tab-content" id="tab-roadmap" style="flex:1;overflow:auto;padding:10px 8px">
+<div class="tab-content active" id="tab-roadmap" style="flex:1;overflow:auto;padding:10px 8px">
   <!-- Live Monitor Panel -->
   <div class="monitor-grid" id="monitor-grid">
     <div class="monitor-card muted">Loading monitor...</div>

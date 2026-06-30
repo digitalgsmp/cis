@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-06-30 06:01 UTC | Run: run-51bc771dd9d5
+Generated: 2026-06-30 06:15 UTC | Run: run-ec8bf3dcfa2f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 549a6d6 fix(portal): remove stale iframe, wire roadmap to live spine data
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/api/pipeline.py 
+
+## runtime/api/system.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/ui/public/roadmap-live.html 
+
+## runtime/ui/src/pages/RoadmapPage.jsx 
 
 ## f174518 feat: session handoff spine table + auto-generated AGENTS.md §13
 
@@ -376,7 +412,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 8a48416 fix(gate): handle non-numeric completed_tier (e.g. PD) in coherence gate
-
-## tools/gates/gate_build_state_coherence.py 
