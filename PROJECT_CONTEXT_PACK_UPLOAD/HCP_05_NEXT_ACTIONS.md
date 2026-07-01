@@ -1,11 +1,11 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-06-30 09:16 UTC | Run: run-16262b4d3c2f
+Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 ## Current Next Action
 
-**NA-SEED-018**: Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
+**Enforcement — Container Isolation (ADR-015/016)**
 
 Do NOT start:
 
@@ -54,6 +54,7 @@ Do NOT start:
 | 11D | Tier 11D — Reviewer-Side Handoff | ✅ COMPLETE | |
 | 12 | Tier 12 — Knowledge Base Ingestion | ✅ COMPLETE | |
 | 13 | Tier 13 — Abstraction Layer | ✅ COMPLETE | |
+| ENFORCEMENT | Enforcement — Container Isolation (ADR-015/016) | ⬜ PENDING | |
 | Tier 3.5 | Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Se | COMPLETE | |
 | Tier 5 | Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGEN | COMPLETE | |
 | Tier 5 | Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastruct | COMPLETE | |

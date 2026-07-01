@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-06-30 09:16 UTC | Run: run-16262b4d3c2f | Latest pipeline: run-1010c3076e084
+Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a | Latest pipeline: run-1010c3076e084
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -71,8 +71,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [NA-SEED-017] (Tier front-door) FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only.
-- [NA-SEED-018] (Tier Phase 0) Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
+- [Enforcement — Container Isolation (ADR-015/016)] (Tier ENFORCEMENT) Enforcement — Container Isolation (ADR-015/016)
 
 ## 7. Active Blockers
 - [BLK-SEED-006] Loop-breaker gap: successful repeated identical tool calls (same tool_name+args) are invisible to the built-in guardrail. agent/tool_guardrails.py counters only key on failures and no-progress reads. Model can loop ~20x issuing the same successful call (e.g. skill_view) with zero intervention. Fix needed in Phase 0 before autonomous operation.

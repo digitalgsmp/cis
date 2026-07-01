@@ -1,7 +1,57 @@
 # Files Changed Recently
-Generated: 2026-06-30 09:16 UTC | Run: run-16262b4d3c2f
+Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## fd8169a Tier 5.6: DEV-PIVOT status tracking — spine-driven, auto-generated, advisor-ready
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/hcp_static.yaml 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/mcp 
+
+## runtime/mcp_bridge/server.py 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/mcp_bridge/tools.py 
+
+## tools/export/generate_all.py 
+
+## tools/export/generate_dev_pivot_manifest.py 
+
+## tools/export/generate_hcp.py 
+
+## tools/hooks/pre-commit 
 
 ## 5a80437 fix: move roadmap tab inside .container so it renders (was off-screen due to body overflow:hidden)
 
@@ -410,31 +460,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## c632b7f docs: add MWL proof reproduction reference document
 
 ## docs/MWL_PROOF_REPRODUCTION.md 
-
-## d811f04 Regenerate context after session closeout
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 

@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-06-30
+Date: 2026-07-01
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `5a80437`
+HEAD: `fd8169a`
 
-Generated: 2026-06-30 09:16 UTC | Run: run-16262b4d3c2f
+Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -97,7 +97,7 @@ Cognition failures are mitigated by design, not completed forever.
 ## Exact Next Action
 
 
-**NA-SEED-018**: Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N.
+Enforcement — Container Isolation (ADR-015/016).
 
 ## Eric Gate Approval Status
 

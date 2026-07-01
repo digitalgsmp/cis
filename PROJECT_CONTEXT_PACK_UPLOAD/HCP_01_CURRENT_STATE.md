@@ -1,11 +1,11 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-06-30
+Date: 2026-07-01
 Authority: Eric (Architect)
 Status: Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 
-Generated: 2026-06-30 09:16 UTC | Run: run-16262b4d3c2f
+Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.**
 
-**HEAD:** `5a80437`.
+**HEAD:** `fd8169a`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -266,7 +266,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 
 ## Next Safe Action
 
-(No eligible PENDING node in build plan.)
+**Enforcement — Container Isolation (ADR-015/016) (Tier ENFORCEMENT)**
 
 **Approved build order:**
 1. Tier 0 — Deliberation Engine ✅ COMPLETE
@@ -298,25 +298,26 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 27. Tier 11D — Reviewer-Side Handoff ✅ COMPLETE
 28. Tier 12 — Knowledge Base Ingestion ✅ COMPLETE
 29. Tier 13 — Abstraction Layer ✅ COMPLETE
-30. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
-31. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
-32. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
-33. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
-34. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
-35. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
-36. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
-37. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
-38. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
-39. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
-40. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
-41. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
-42. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
-43. Tier Phase 0 — Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N. ⬜ PENDING
-44. Tier enforcement — Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through Claude audit + ChatGPT audit + Eric approval before any /opt/cis-control file lands. ✅ COMPLETE
-45. Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved. 🚫 BLOCKED
-46. Tier enforcement — Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Resolve structural contradiction by allowing override-plane evidence test against disposable test root /mnt/cache/catalog/override-plane-test/<run_id>/control/. ✅ COMPLETE
-47. Tier enforcement — Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable test root per Amendment 1 (revised). Requires: (1) root-owned control directory with sentinel created/removed via sudo, (2) separate control and workspace host directories with RO/RW mounts respectively, (3) stat/realpath/docker inspect/mount evidence before the 9-step test. No production /opt/cis-control. No hooks. No Hermes worker. ✅ COMPLETE
-48. Tier front-door — FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only. 🔄 IN PROGRESS
+30. Enforcement — Container Isolation (ADR-015/016) ⬜ PENDING
+31. Tier 3.5 — Complete Build-Plan Spine Authority: finish generator switchover so AGENTS.md Sections 6-7 read from build_plan_nodes, sync stale blockers/actions, regenerate context, pass export gates. ✅ COMPLETE
+32. Tier 5 — Build Tier 5.1: generate_agents_md.py — reads spine + static config, writes AGENTS.md under 20000 chars ✅ COMPLETE
+33. Tier 5 — Build Tier 5.1a: config/agents_static.yaml — static Layer B content: infrastructure, gateway table, source patches, seed intent, verification rule ✅ COMPLETE
+34. Tier 5 — Run Tier 5.2: AGENTS.md canary test across all 4 active profiles ✅ COMPLETE
+35. Tier 5 — Tier 5.3: Retire HERMES_CIS_BRIEFING_PATH from all 5 .env files after canary passes ✅ COMPLETE
+36. Tier 5 — Build Tier 5.4: generate_hcp.py — reads spine, writes HCP_00 through HCP_09 ✅ COMPLETE
+37. Tier 5 — Build Tier 5.5: generate_all.py — runs both generators, writes export manifest with SHA256 ✅ COMPLETE
+38. Tier 5 — Build Tier 5.6: gate_export_agreement.sh — verifies AGENTS.md and HCP hashes match manifest ✅ COMPLETE
+39. Tier 5 — Tier 5.7: archive stale context packs (PROJECT_CONTEXT_PACK, _GENERATED, _UPLOAD_GENERATED), keep PROJECT_CONTEXT_PACK_UPLOAD active ✅ COMPLETE
+40. Tier 5 — Decide project isolation model for future CIS-managed projects before onboarding a second project or generating non-CIS HCP packets. Options: --project-root per-project structure, or --project-id shared spine structure. ✅ COMPLETE
+41. Tier 5 — Build Tier 5 context export pipeline ✅ COMPLETE
+42. Tier 6 — Closeout trigger design: define how CIS automatically triggers closeout when a dependency-graph/build-plan node changes to COMPLETE, PASS, or PASS_WITH_LIMITATIONS. Closeout validated by deterministic gates before next tier can start. Cron is passive watchdog only (stale exports, dirty git, failed gates, missing closeout) — not primary trigger. Implementation area: Tier 6 Pipeline Integration (STATE_WRITE → EXPORT → CLOSEOUT → DONE). ✅ COMPLETE
+43. Tier 6 — Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) receive the exact-format instruction in durable HCP context. Advisors must request only COMMAND + OUTPUT + Proceed/Blocked without asking for interpretation, summary, result, or evidence reference. Current placement is in hcp_static.yaml under hcp_06 — verify it survives HCP regeneration and is visible in the advisor protocol section. ✅ COMPLETE
+44. Tier Phase 0 — Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails.py only counts failures/no-progress reads. Successful identical calls (same tool_name+args) are invisible. FIRST test config-only: hard_stop_enabled:true + same_tool threshold. BUILD TARGET: extend ToolCallSignature counter to count regardless of success/failure, halt after N. ⬜ PENDING
+45. Tier enforcement — Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through Claude audit + ChatGPT audit + Eric approval before any /opt/cis-control file lands. ✅ COMPLETE
+46. Tier enforcement — Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Start with operator-only override-plane test (bare-shell, 9 steps per §7 Parts A+B). No implementation until evidence captured and Eric-approved. 🚫 BLOCKED
+47. Tier enforcement — Draft §7/§14 Test-Rig Amendment to TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md. Resolve structural contradiction by allowing override-plane evidence test against disposable test root /mnt/cache/catalog/override-plane-test/<run_id>/control/. ✅ COMPLETE
+48. Tier enforcement — Execute §7 Parts A+B override-plane evidence test (9 steps) against disposable test root per Amendment 1 (revised). Requires: (1) root-owned control directory with sentinel created/removed via sudo, (2) separate control and workspace host directories with RO/RW mounts respectively, (3) stat/realpath/docker inspect/mount evidence before the 9-step test. No production /opt/cis-control. No hooks. No Hermes worker. ✅ COMPLETE
+49. Tier front-door — FD.1 BASELINE VERIFIED: 11 existing MCP tools (docstring stale — says 9, actual 11). chromadb 1.5.9, s-transformers 5.5.0, 8 router routes, runtime/mcp/ clear. 3 dispatch tool names (cis_dispatch_drafter, _reviewer, _implementer) confirmed no collision. ADR-SEED-014 caveat RETIRED for FD.1 — drafter_start.py hardcodes /mnt/projects/cis, no home resolution. Durability note: hardcoded path breaks if repo relocates. FD.1 target: 14 tools total after adding 3 dispatch tools. Scope unchanged: add 3 dispatch tools + symlink only. 🔄 IN PROGRESS
 
 ---
 
