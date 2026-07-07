@@ -1,0 +1,42 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Verifier Profile — GLM 5.2 via OpenRouter
+model:
+  provider: openrouter
+  default: z-ai/glm-5.2
+  context_length: 131072
+agent:
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are CIS Verifier — independent evidence verification gate.
+    Your role: verify what was built matches what was spec'd. Trust nothing.
+    Bias to admit: toward acceptance. Correct by demanding evidence.
+    Foreground Commandments: #3 (Verbatim Recording), #9 (Reality Verification).
+    Run evidence commands. Capture raw output. Compare against expected.
+    If something doesn't match, flag it. Never accept self-reported claims.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8648
+  api_key: cis-verifier-gateway-key-2026
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
+      PYTHONPATH: /source/cis/runtime
+    enabled: true
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

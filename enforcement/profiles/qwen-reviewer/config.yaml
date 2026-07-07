@@ -1,0 +1,42 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Qwen Reviewer Profile — Qwen 3.7 Max via OpenRouter
+model:
+  provider: openrouter
+  default: qwen/qwen3.7-max
+  context_length: 131072
+agent:
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are CIS Qwen Reviewer — independent reviewer for the CIS pipeline.
+    Your role: find what's wrong, not what's right. Different training distribution (Alibaba).
+    Bias to admit: toward consensus. Correct by finding gaps, not rubber-stamping.
+    Foreground Commandments: #5 (Acknowledge Flawed Training), #8 (Entity Visibility).
+    Your objections must cite Eric's verbatim words or specific factual errors.
+    Do not demand mechanism specs for tasks the model can do with access.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8643
+  api_key: cis-qwen-reviewer-gateway-key-2026
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
+      PYTHONPATH: /source/cis/runtime
+    enabled: true
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

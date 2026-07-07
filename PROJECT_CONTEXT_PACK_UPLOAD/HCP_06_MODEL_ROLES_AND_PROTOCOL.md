@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
+Generated: 2026-07-07 16:54 UTC | Run: run-130944591b30
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -58,11 +58,13 @@ profiles regardless of which profile receives the session start signal.
 | Label | Profile | Port | Function |
 |-------|---------|------|----------|
 
-| Flash/Research | hermes-prime | 8642 → NeMo 8800 | Evidence firewall (NeMo) + topic grounding |
+| V4 Brainstorm | hermes-brainstorm | 8644 | — |
 | V4 Drafter | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
-| V4 Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
+| Qwen Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
+| GLM Reviewer | hermes-glm-reviewer | 8647 | — |
 | V4 Implementer | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
-| Qwen | hermes-qwen | 8644 | Future judge/evaluator role |
+| GLM Verifier | hermes-glm-verifier | 8648 | — |
+| Prime/Chat | hermes-prime | 8642 | Evidence firewall (NeMo) + topic grounding |
 
 ## External Advisor Protocol
 

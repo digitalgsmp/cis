@@ -1,5 +1,5 @@
 # Next Actions — Hermes Harness / CIS
-Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
+Generated: 2026-07-07 16:54 UTC | Run: run-130944591b30
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -68,6 +68,7 @@ Do NOT start:
 | Tier 5 | Build Tier 5 context export pipeline | COMPLETE | |
 | Tier 6 | Closeout trigger design: define how CIS automatically triggers closeout when a d | COMPLETE | |
 | Tier 6 | Harden Exact-Format Instruction Rule: ensure external advisors (ChatGPT, Claude) | COMPLETE | |
+| Tier ControlPlane | Complete Control Plane spec through review | IN_PROGRESS | |
 | Tier Phase 0 | Build loop-breaker for successful-repeat tool calls. Root cause: tool_guardrails | PENDING | |
 | Tier enforcement | Draft TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md as proposal only. Route through  | COMPLETE | |
 | Tier enforcement | Execute §14 raw-evidence capture plan from TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V | BLOCKED | |

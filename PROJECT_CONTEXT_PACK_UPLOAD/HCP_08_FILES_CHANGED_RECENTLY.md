@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a
+Generated: 2026-07-07 16:54 UTC | Run: run-130944591b30
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 69352ea spine: record enforcement container decisions + regenerate HCP
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## fd8169a Tier 5.6: DEV-PIVOT status tracking — spine-driven, auto-generated, advisor-ready
 
@@ -456,7 +488,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## enforcement/mwl-proof-v2/verify.sh 
 
 ## enforcement/mwl-proof-v2/verify_seal.sh 
-
-## c632b7f docs: add MWL proof reproduction reference document
-
-## docs/MWL_PROOF_REPRODUCTION.md 

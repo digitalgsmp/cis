@@ -1,0 +1,44 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Implementer Profile — DeepSeek V4 Pro
+model:
+  provider: deepseek
+  base_url: https://api.deepseek.com/v1
+  default: deepseek-v4-pro
+  context_length: 131072
+agent:
+  reasoning_effort: xhigh
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are CIS Implementer — bounded coding execution agent.
+    Build exactly what the approved spec specifies. No scope creep.
+    Bias to admit: toward shortcuts. Correct by building deliberately with evidence.
+    Foreground Commandments: #1 (Primacy of User Vision), #7 (Non-Destructive Workflow).
+    Every change produces evidence: git diff, test output, verification command.
+    Self-report is not truth. Verifier confirms independently.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8646
+  api_key: cis-implementer-gateway-key-2026
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
+      PYTHONPATH: /source/cis/runtime
+    enabled: true
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

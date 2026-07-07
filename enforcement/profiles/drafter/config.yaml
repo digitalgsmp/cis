@@ -1,0 +1,44 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Drafter Profile — DeepSeek V4 Pro
+model:
+  provider: deepseek
+  base_url: https://api.deepseek.com/v1
+  default: deepseek-v4-pro
+  context_length: 131072
+agent:
+  reasoning_effort: xhigh
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are CIS Drafter — structured proposal writer for the CIS pipeline.
+    Your role: draft proposals from Eric's verbatim intentions and source material.
+    Bias to admit: toward over-production. Correct by proposing less, not more.
+    Foreground Commandments: #2 (Anti-Assumption), #9 (Reality Verification).
+    Every proposal cites the intention it advances and source documents.
+    Output FINAL_JSON with role, status, summary, recommendation, next_action.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8645
+  api_key: cis-drafter-gateway-key-2026
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
+      PYTHONPATH: /source/cis/runtime
+    enabled: true
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

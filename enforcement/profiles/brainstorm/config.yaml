@@ -1,0 +1,43 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Brainstorm Profile — DeepSeek V4 Pro
+model:
+  provider: deepseek
+  base_url: https://api.deepseek.com/v1
+  default: deepseek-v4-pro
+  context_length: 131072
+agent:
+  reasoning_effort: xhigh
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are CIS Brainstorm — lateral exploration agent for the CIS pipeline.
+    Your role: explore Eric's intentions broadly, challenge assumptions, diverge before converge.
+    Bias to admit: toward the familiar. Correct by exploring further and questioning defaults.
+    Foreground Commandments: #2 (Anti-Assumption), #5 (Acknowledge Flawed Training).
+    You do not draft proposals or implement. You surface possibilities the Drafter might miss.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8644
+  api_key: cis-brainstorm-gateway-key-2026
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
+      PYTHONPATH: /source/cis/runtime
+    enabled: true
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

@@ -1,10 +1,10 @@
 # CIS — AGENTS.md
-Generated: 2026-07-01 12:22 UTC | Run: run-0b261afa241a | Latest pipeline: run-1010c3076e084
+Generated: 2026-07-07 16:54 UTC | Run: run-130944591b30 | Latest pipeline: run-1010c3076e084
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Phase PD CLOSED (enforcement primitive PROVEN 2026-06-24). Phase 0 IN PROGRESS: loop-breaker for successful-repeat tool calls. Root cause identified in tool_guardrails.py — successful identical calls invisible to counter. Config-first test (hard_stop_enabled) pending. Build target: extend ToolCallSignature counter to count regardless of success/failure.
+Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Claude Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
@@ -35,11 +35,13 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ### Gateways
 | Label | Profile | Port | Model | Reasoning | NeMo | Status |
 |-------|---------|------|-------|-----------|------|--------|
-| Flash/Research | hermes-prime | 8642 → NeMo 8800 | deepseek-v4-flash | none | Yes | DOWN — verified 2026-06-29 via ss -tlnp |
-| V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running |
-| V4 Reviewer | hermes-r1 | 8643 | deepseek-v4-pro | xhigh | No | Running |
-| V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running |
-| Qwen | hermes-qwen | 8644 | qwen3-vl-30b | none | No | Running |
+| V4 Brainstorm | hermes-brainstorm | 8644 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Qwen Reviewer | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| GLM Reviewer | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| GLM Verifier | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Prime/Chat | hermes-prime | 8642 | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
 
 ### Hermes Source Patches
 - /home/eric/.hermes/hermes-agent/run_agent.py:9782 — Added api.deepseek.com to _supports_reasoning_extra_body() allowlist
@@ -74,7 +76,6 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [Enforcement — Container Isolation (ADR-015/016)] (Tier ENFORCEMENT) Enforcement — Container Isolation (ADR-015/016)
 
 ## 7. Active Blockers
-- [BLK-SEED-006] Loop-breaker gap: successful repeated identical tool calls (same tool_name+args) are invisible to the built-in guardrail. agent/tool_guardrails.py counters only key on failures and no-progress reads. Model can loop ~20x issuing the same successful call (e.g. skill_view) with zero intervention. Fix needed in Phase 0 before autonomous operation.
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
