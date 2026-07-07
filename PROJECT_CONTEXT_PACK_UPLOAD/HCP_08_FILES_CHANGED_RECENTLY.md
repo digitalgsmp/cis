@@ -1,7 +1,53 @@
 # Files Changed Recently
-Generated: 2026-07-07 16:54 UTC | Run: run-130944591b30
+Generated: 2026-07-07 17:12 UTC | Run: run-e637f9fd290a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## d24a448 fix: reconcile gateway configs, add Brainstorm on 8644, document Docker group escalation
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/agents_static.yaml 
+
+## docs/SECURITY_DOCKER_GROUP_ESCALATION.md 
+
+## enforcement/profile-harness.sh 
+
+## enforcement/profiles/brainstorm/config.yaml 
+
+## enforcement/profiles/drafter/config.yaml 
+
+## enforcement/profiles/glm-reviewer/config.yaml 
+
+## enforcement/profiles/implementer/config.yaml 
+
+## enforcement/profiles/qwen-reviewer/config.yaml 
+
+## enforcement/profiles/verifier/config.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 69352ea spine: record enforcement container decisions + regenerate HCP
 
@@ -476,15 +522,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision__ds-reasoner.txt 
 
 ## enforcement/mwl-proof-v2/tagging_results/claude_crystallizes_the_vision__glm-5.2.txt 
-
-## b1d4cfe enforcement: MWL sealed container — managed-scope pinning closes self-disable bypass
-
-## enforcement/mwl-proof-v2/Dockerfile 
-
-## enforcement/mwl-proof-v2/cis_shell_hook.sh 
-
-## enforcement/mwl-proof-v2/managed-config.yaml 
-
-## enforcement/mwl-proof-v2/verify.sh 
-
-## enforcement/mwl-proof-v2/verify_seal.sh 
