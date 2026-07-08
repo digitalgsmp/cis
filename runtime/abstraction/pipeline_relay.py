@@ -250,15 +250,28 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
         results.append(f"## Knowledge Base\n(Search error: {e})")
 
     # 2. Prior agent trajectories (MATM)
+    # Verify phase: exclude only same-run Menter trajectories (per spec §3.4)
+    # Other phases: exclude all same-run trajectories
     try:
-        cur = conn.execute(
-            "SELECT output_text, run_id, outcome, role, phase "
-            "FROM agent_trajectories "
-            "WHERE phase = ? AND role = ? AND run_id != ? "
-            "  AND outcome = 'success' "
-            "ORDER BY created_at DESC LIMIT 3",
-            (phase, role, run_id)
-        )
+        if phase == "verification":
+            cur = conn.execute(
+                "SELECT output_text, run_id, outcome, role, phase "
+                "FROM agent_trajectories "
+                "WHERE phase = ? AND role = ? "
+                "  AND (run_id != ? OR role != 'menter') "
+                "  AND outcome = 'success' "
+                "ORDER BY created_at DESC LIMIT 3",
+                (phase, role, run_id)
+            )
+        else:
+            cur = conn.execute(
+                "SELECT output_text, run_id, outcome, role, phase "
+                "FROM agent_trajectories "
+                "WHERE phase = ? AND role = ? AND run_id != ? "
+                "  AND outcome = 'success' "
+                "ORDER BY created_at DESC LIMIT 3",
+                (phase, role, run_id)
+            )
         trajectories = cur.fetchall()
         if trajectories:
             results.append("\n## Prior Agent Trajectories")
@@ -354,14 +367,51 @@ def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
                        round_number: Optional[int] = None,
                        outcome: str = "pending",
                        consensus_reached: int = 0) -> None:
-    """Record an agent trajectory to the shared memory (MATM)."""
+    """Record an agent trajectory to the shared memory (MATM).
+
+    config_version captures the git HEAD at recording time, so future
+    retrieval can filter by code state (trajectory from different code
+    version = different reliability).
+    """
+    # Capture config_version (git HEAD short hash)
+    config_version = ""
+    try:
+        import subprocess
+        config_version = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=DB_PATH.rsplit("/", 1)[0],
+        ).stdout.strip()
+    except Exception:
+        pass
+
     conn.execute(
         """INSERT INTO agent_trajectories
            (run_id, role, phase, input_text, output_text,
-            round_number, outcome, consensus_reached)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            round_number, outcome, consensus_reached, config_version)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (run_id, role, phase, input_text, output_text,
-         round_number, outcome, consensus_reached)
+         round_number, outcome, consensus_reached, config_version)
+    )
+    conn.commit()
+
+
+def _update_trajectory_outcome(conn: sqlite3.Connection, run_id: str,
+                                role: str, phase: str,
+                                outcome: str) -> None:
+    """Update the outcome of the most recent trajectory for a run/role/phase.
+
+    Called after a round completes — marks trajectory as 'success' or 'failed'
+    so future retrieval can filter by outcome (per spec §4.3).
+    """
+    conn.execute(
+        """UPDATE agent_trajectories SET outcome = ?
+           WHERE id = (
+               SELECT id FROM agent_trajectories
+               WHERE run_id = ? AND role = ? AND phase = ?
+               ORDER BY id DESC LIMIT 1
+           )""",
+        (outcome, run_id, role, phase)
     )
     conn.commit()
 
@@ -763,6 +813,7 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "brain", "brain",
                           prompt, output, round_num)
+        _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"brain_output": output})
 
@@ -818,6 +869,8 @@ class PipelineRelay:
                           prompt, r1_out, round_num)
         _record_trajectory(self.conn, run_id, "review2", "intent_review",
                           prompt, r2_out, round_num)
+        _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review", "success")
+        _update_trajectory_outcome(self.conn, run_id, "review2", "intent_review", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED", {
             "reviewer1_output": r1_out,
             "reviewer2_output": r2_out,
@@ -880,6 +933,7 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "draft", "draft",
                           prompt, output, round_num)
+        _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"drafter_output": output})
 
@@ -920,6 +974,8 @@ class PipelineRelay:
                           prompt, r1_out, round_num)
         _record_trajectory(self.conn, run_id, "review2", "proposal_review",
                           prompt, r2_out, round_num)
+        _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review", "success")
+        _update_trajectory_outcome(self.conn, run_id, "review2", "proposal_review", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED", {
             "reviewer1_output": r1_out,
             "reviewer2_output": r2_out,
@@ -999,6 +1055,7 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "menter", "execution",
                           prompt, output, 1)
+        _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                         {"drafter_output": output})
 
@@ -1056,6 +1113,7 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "verify", "verification",
                           prompt, output, 1)
+        _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"verify_output": output})
 

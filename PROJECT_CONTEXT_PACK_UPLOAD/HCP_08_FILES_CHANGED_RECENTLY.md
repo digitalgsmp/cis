@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-07-08 19:05 UTC | Run: run-752742f3c0d7
+Generated: 2026-07-08 19:09 UTC | Run: run-0a32cd6d3e61
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a2170b0 feat: verify isolation — clean-checkout L1 checks (step 12)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## d004d01 feat: L1 deterministic checks in verify phase + saga compensation
 
@@ -710,27 +740,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## tools/hooks/pre-commit 
-
-## 2392f7f docs: refresh handoff commit references to 9c921e2
-
-## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
-
-## docs/DEV-PIVOT-02_ENFORCEMENT_ARCHITECTURE_V3.md 
-
-## docs/DEV-PIVOT-03_HERMES_HARDENING_SPEC.md 
-
-## docs/DEV-PIVOT-04_APPLICATION_ENFORCEMENT_SPEC.md 
-
-## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
-
-## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
-
-## docs/DEV-PIVOT-10_ADR-SEED-014_CONTRACT.md 
-
-## docs/DEV-PIVOT-14_CLOSEOUT_INSTRUCTION.md 
-
-## docs/DEV-PIVOT-15_SESSION_OPEN_ITEMS.md 
-
-## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
-
-## docs/DEV-PIVOT-17_ENFORCEMENT_ARCHITECTURE.md 
