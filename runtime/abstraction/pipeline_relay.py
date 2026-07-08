@@ -597,6 +597,73 @@ def _run_l1_checks(cwd: str) -> str:
     return "\n\n".join(parts)
 
 
+def _run_isolated_l1(cwd: str, pre_exec_head: str) -> str:
+    """Run L1 checks with clean-checkout isolation.
+
+    Stashes Menter's changes, runs baseline checks from clean state,
+    then restores changes and runs L1 on the working state.
+
+    This prevents Menter from fabricating evidence — the verify agent
+    sees both the clean baseline and the with-changes state.
+    """
+    import subprocess
+
+    def _run(cmd, timeout=15):
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd
+        )
+
+    parts = []
+
+    # Capture Menter's diff before stashing
+    try:
+        menter_diff = _run(["git", "diff"]).stdout.strip()
+    except Exception:
+        menter_diff = ""
+
+    # Stash Menter's changes
+    stash_result = _run(["git", "stash", "push", "-m", "CIS-verify-isolation"], timeout=30)
+    stashed = stash_result.returncode == 0 and "Saved" in stash_result.stdout
+
+    if stashed:
+        # Run baseline checks from clean state
+        parts.append("## L1-ISOLATED: Baseline (Clean State)")
+        try:
+            status = _run(["git", "status", "--short"]).stdout.strip()
+            parts.append(f"Git status (clean): {status or '(clean)'}")
+        except Exception as e:
+            parts.append(f"Git status error: {e}")
+
+        # Try basic import test from clean state
+        try:
+            import_result = _run(
+                ["python3.12", "-c", "import sys; sys.path.insert(0,'runtime'); from app import app; print(f'Flask app imports OK, {len(app.url_map._rules)} routes')"],
+                timeout=20,
+            )
+            if import_result.returncode == 0:
+                parts.append(f"Baseline import: {import_result.stdout.strip()}")
+            else:
+                parts.append(f"Baseline import FAILED: {import_result.stderr.strip()[:200]}")
+        except Exception as e:
+            parts.append(f"Baseline import error: {e}")
+
+        # Restore Menter's changes
+        pop_result = _run(["git", "stash", "pop"], timeout=30)
+        if pop_result.returncode == 0:
+            parts.append("Stash restored: OK")
+        else:
+            parts.append(f"Stash pop FAILED: {pop_result.stderr.strip()[:200]}")
+    else:
+        parts.append("## L1-ISOLATED: Baseline (stash failed — using in-place)")
+        parts.append(f"Stash output: {stash_result.stdout.strip()[:200]}")
+
+    # Now run L1 checks on the working state (with Menter's changes)
+    parts.append("\n## L1-ISOLATED: Working State (with Menter's changes)")
+    parts.append(_run_l1_checks(cwd))
+
+    return "\n\n".join(parts)
+
+
 # ── Pipeline Relay (main state machine) ───────────────────────────────
 
 class PipelineRelay:
@@ -954,10 +1021,11 @@ class PipelineRelay:
         )
         directive = row[0] if (row := cur.fetchone()) else ""
 
-        # Run L1 deterministic checks
+        # Run L1 deterministic checks with clean-checkout isolation
         project_dir = DB_PATH.rsplit("/", 1)[0]
-        l1_evidence = _run_l1_checks(project_dir)
-        print(f"[pipeline] L1 checks complete ({len(l1_evidence)} chars)")
+        pre_head = getattr(self, "_pre_exec_head", "")
+        l1_evidence = _run_isolated_l1(project_dir, pre_head)
+        print(f"[pipeline] L1 isolated checks complete ({len(l1_evidence)} chars)")
 
         round_id = _start_round(self.conn, run_id, "verification", 1)
         discovery = _pre_discovery(
