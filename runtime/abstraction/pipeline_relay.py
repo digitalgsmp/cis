@@ -528,6 +528,75 @@ def _check_consensus(r1_output: str, r2_output: str) -> Tuple[bool, bool, Option
     return consensus, has_obj, obj_text
 
 
+# ── L1 Deterministic Checks ────────────────────────────────────────────
+
+def _run_l1_checks(cwd: str) -> str:
+    """Run deterministic L1 checks against the working directory.
+
+    Captures git diff, checks file existence/size, and returns
+    a structured evidence report for the verify agent.
+    """
+    import subprocess
+
+    parts = []
+
+    # 1. Git diff stat
+    try:
+        diff_stat = subprocess.run(
+            ["git", "diff", "--stat"],
+            capture_output=True, text=True, timeout=15, cwd=cwd,
+        ).stdout.strip()
+        parts.append(f"## L1: Git Diff Stat\n```\n{diff_stat or '(no changes)'}\n```")
+    except Exception as e:
+        parts.append(f"## L1: Git Diff Stat\nERROR: {e}")
+
+    # 2. Git diff (full, capped at 2000 chars)
+    try:
+        diff_full = subprocess.run(
+            ["git", "diff"],
+            capture_output=True, text=True, timeout=15, cwd=cwd,
+        ).stdout.strip()
+        if len(diff_full) > 2000:
+            diff_full = diff_full[:2000] + "\n... (truncated)"
+        parts.append(f"## L1: Git Diff (Full)\n```diff\n{diff_full or '(no changes)'}\n```")
+    except Exception as e:
+        parts.append(f"## L1: Git Diff (Full)\nERROR: {e}")
+
+    # 3. Changed file existence + size check
+    try:
+        diff_names = subprocess.run(
+            ["git", "diff", "--name-only"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if diff_names:
+            file_lines = []
+            for fpath in diff_names.split("\n"):
+                full = os.path.join(cwd, fpath)
+                if os.path.exists(full):
+                    size = os.path.getsize(full)
+                    file_lines.append(f"  ✓ {fpath} ({size} bytes)")
+                else:
+                    file_lines.append(f"  ✗ {fpath} MISSING")
+            parts.append("## L1: Changed Files\n" + "\n".join(file_lines))
+        else:
+            parts.append("## L1: Changed Files\n(no changed files)")
+    except Exception as e:
+        parts.append(f"## L1: Changed Files\nERROR: {e}")
+
+    # 4. Untracked files
+    try:
+        untracked = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if untracked:
+            parts.append("## L1: Untracked Files\n" + untracked)
+    except Exception:
+        pass
+
+    return "\n\n".join(parts)
+
+
 # ── Pipeline Relay (main state machine) ───────────────────────────────
 
 class PipelineRelay:
@@ -812,6 +881,18 @@ class PipelineRelay:
         """Execution phase: Menter builds per approved FINAL_DIRECTIVE."""
         print(f"[pipeline] EXECUTION phase for {run_id}")
 
+        # Capture pre-execution git state for L1 diff
+        import subprocess
+        try:
+            pre_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+                cwd=DB_PATH.rsplit("/", 1)[0],
+            ).stdout.strip()
+        except Exception:
+            pre_head = ""
+        self._pre_exec_head = pre_head
+
         cur = self.conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
             "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
@@ -858,7 +939,12 @@ class PipelineRelay:
         await self._verification(run_id, intent)
 
     async def _verification(self, run_id: str, intent: str) -> None:
-        """Verification phase: Verify checks Menter's work independently."""
+        """Verification phase: Verify checks Menter's work independently.
+
+        L1 deterministic checks run first (git diff, file existence/size).
+        Results are fed to the verify agent as evidence. The agent does
+        L2 semantic verification on top of the L1 evidence.
+        """
         print(f"[pipeline] VERIFICATION phase for {run_id}")
 
         cur = self.conn.execute(
@@ -868,6 +954,11 @@ class PipelineRelay:
         )
         directive = row[0] if (row := cur.fetchone()) else ""
 
+        # Run L1 deterministic checks
+        project_dir = DB_PATH.rsplit("/", 1)[0]
+        l1_evidence = _run_l1_checks(project_dir)
+        print(f"[pipeline] L1 checks complete ({len(l1_evidence)} chars)")
+
         round_id = _start_round(self.conn, run_id, "verification", 1)
         discovery = _pre_discovery(
             self.conn, intent, "verification", "verify", run_id
@@ -875,9 +966,13 @@ class PipelineRelay:
 
         prompt = (
             f"{discovery}\n\n"
-            f"FINAL_DIRECTIVE:\n{directive}\n\n"
-            f"You are Verify. Run evidence commands. Check git diff, tests, "
-            f"file state. Trust nothing. End with FINAL_JSON:\n"
+            f"## L1 DETERMINISTIC EVIDENCE (auto-collected)\n"
+            f"{l1_evidence}\n\n"
+            f"## FINAL_DIRECTIVE (Menter's task)\n{directive}\n\n"
+            f"You are Verify. Cross-check the L1 evidence against the directive. "
+            f"Run additional evidence commands if needed (git diff, tests, "
+            f"file state). Trust nothing Menter claimed — verify independently. "
+            f"End with FINAL_JSON:\n"
             f'```json\n{{"role":"verify","status":"PASS","summary":"..."}}\n```\n'
             f'or\n```json\n{{"role":"verify","status":"FAIL","summary":"..."}}\n```'
         )
@@ -902,6 +997,19 @@ class PipelineRelay:
         if status == "FAIL":
             # Saga compensation: git stash Menter's changes
             print(f"[pipeline] VERIFY FAIL — compensating (git stash)")
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["git", "stash", "push", "-m", f"CIS compensation: {run_id} verify FAIL"],
+                    capture_output=True, text=True, timeout=30,
+                    cwd=DB_PATH.rsplit("/", 1)[0],
+                )
+                if result.returncode == 0:
+                    print(f"[pipeline] Compensation: changes stashed ({result.stdout.strip()})")
+                else:
+                    print(f"[pipeline] Compensation: git stash failed: {result.stderr.strip()}")
+            except Exception as e:
+                print(f"[pipeline] Compensation error: {e}")
             _set_run_status(self.conn, run_id, "VERIFY_FAILED")
         else:
             print(f"[pipeline] VERIFY PASS — run complete")

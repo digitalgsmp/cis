@@ -1,7 +1,47 @@
 # Files Changed Recently
-Generated: 2026-07-08 18:57 UTC | Run: run-2029dcbc41ed
+Generated: 2026-07-08 19:03 UTC | Run: run-889021f9e4df
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## b888d5f fix: pipeline relay end-to-end — menter output storage, per-role timeouts, gate hash
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## cis_kernel/source/SESSION_LOG.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/api/relay.py 
+
+## runtime/app.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## a6f88a1 feat: relay API + pipeline bug fixes (auth, round numbers, empty directive, FTS5)
 
@@ -692,35 +732,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 182bcd8 docs: session context footers on all 17 DEV-PIVOT files
-
-## docs/DEV-PIVOT-01_GOVERNANCE_RESET_PROPOSAL.md 
-
-## docs/DEV-PIVOT-02_ENFORCEMENT_ARCHITECTURE_V3.md 
-
-## docs/DEV-PIVOT-03_HERMES_HARDENING_SPEC.md 
-
-## docs/DEV-PIVOT-04_APPLICATION_ENFORCEMENT_SPEC.md 
-
-## docs/DEV-PIVOT-07_NEXT_MAJOR_PROJECT.md 
-
-## docs/DEV-PIVOT-08_FRONT_DOOR_SPEC.md 
-
-## docs/DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md 
-
-## docs/DEV-PIVOT-10_ADR-SEED-014_CONTRACT.md 
-
-## docs/DEV-PIVOT-11_CORPUS_SCRAPING_PROPOSAL.md 
-
-## docs/DEV-PIVOT-12_TWO_PASS_CATALOG_DESIGN.md 
-
-## docs/DEV-PIVOT-13_CATALOG_IMPLEMENTATION_SPEC.md 
-
-## docs/DEV-PIVOT-14_CLOSEOUT_INSTRUCTION.md 
-
-## docs/DEV-PIVOT-15_SESSION_OPEN_ITEMS.md 
-
-## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
-
-## docs/DEV-PIVOT-17_ENFORCEMENT_ARCHITECTURE.md 
