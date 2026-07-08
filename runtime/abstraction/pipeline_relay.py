@@ -648,68 +648,107 @@ def _run_l1_checks(cwd: str) -> str:
 
 
 def _run_isolated_l1(cwd: str, pre_exec_head: str) -> str:
-    """Run L1 checks with clean-checkout isolation.
+    """Run L1 checks from a clean git worktree at the pre-Menter state.
 
-    Stashes Menter's changes, runs baseline checks from clean state,
-    then restores changes and runs L1 on the working state.
+    Creates a temporary git worktree at the pre-execution HEAD, applies
+    Menter's diff, runs L1 checks there, then cleans up. This is true
+    isolation — Menter never touched this directory, so cannot fabricate
+    evidence there.
 
-    This prevents Menter from fabricating evidence — the verify agent
-    sees both the clean baseline and the with-changes state.
+    If pre_exec_head is empty or worktree creation fails, falls back to
+    in-place L1 checks with an explicit warning in the report.
     """
     import subprocess
+    import tempfile
 
-    def _run(cmd, timeout=15):
+    def _run(cmd, timeout=15, workdir=None):
         return subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd
+            cmd, capture_output=True, text=True, timeout=timeout,
+            cwd=workdir or cwd
         )
 
     parts = []
+    worktree_path = None
 
-    # Capture Menter's diff before stashing
+    # Capture Menter's diff to apply in the clean worktree
     try:
-        menter_diff = _run(["git", "diff"]).stdout.strip()
+        menter_diff = _run(["git", "diff"]).stdout
     except Exception:
         menter_diff = ""
 
-    # Stash Menter's changes
-    stash_result = _run(["git", "stash", "push", "-m", "CIS-verify-isolation"], timeout=30)
-    stashed = stash_result.returncode == 0 and "Saved" in stash_result.stdout
-
-    if stashed:
-        # Run baseline checks from clean state
-        parts.append("## L1-ISOLATED: Baseline (Clean State)")
+    # Try to create a clean worktree at the pre-execution HEAD
+    if pre_exec_head:
+        worktree_path = tempfile.mkdtemp(prefix=f"cis-verify-")
         try:
-            status = _run(["git", "status", "--short"]).stdout.strip()
-            parts.append(f"Git status (clean): {status or '(clean)'}")
-        except Exception as e:
-            parts.append(f"Git status error: {e}")
-
-        # Try basic import test from clean state
-        try:
-            import_result = _run(
-                ["python3.12", "-c", "import sys; sys.path.insert(0,'runtime'); from app import app; print(f'Flask app imports OK, {len(app.url_map._rules)} routes')"],
-                timeout=20,
+            wt_result = _run(
+                ["git", "worktree", "add", "--detach", worktree_path, pre_exec_head],
+                timeout=30,
             )
-            if import_result.returncode == 0:
-                parts.append(f"Baseline import: {import_result.stdout.strip()}")
+            if wt_result.returncode != 0:
+                parts.append(f"## L1-ISOLATED: Worktree creation FAILED\n{wt_result.stderr.strip()[:300]}")
+                parts.append("FALLING BACK to in-place checks — isolation NOT guaranteed.")
+                worktree_path = None
             else:
-                parts.append(f"Baseline import FAILED: {import_result.stderr.strip()[:200]}")
+                parts.append(f"## L1-ISOLATED: Clean Worktree\nChecked out {pre_exec_head[:12]} at {worktree_path}")
+
+                # Apply Menter's diff to the clean worktree
+                if menter_diff.strip():
+                    patch_result = subprocess.run(
+                        ["git", "apply", "--allow-empty"],
+                        input=menter_diff, capture_output=True, text=True,
+                        timeout=15, cwd=worktree_path,
+                    )
+                    if patch_result.returncode == 0:
+                        parts.append("Menter's diff applied to clean worktree: OK")
+                    else:
+                        parts.append(f"Menter's diff FAILED to apply: {patch_result.stderr.strip()[:300]}")
+                        parts.append("This may indicate Menter's changes are corrupt or conflict.")
+
+                # Run baseline checks in the clean worktree
+                parts.append("\n### Baseline Checks (Clean Worktree)")
+                try:
+                    status = _run(["git", "status", "--short"], workdir=worktree_path).stdout.strip()
+                    parts.append(f"Git status: {status or '(clean)'}")
+                except Exception as e:
+                    parts.append(f"Git status error: {e}")
+
+                # Run L1 checks in the clean worktree
+                parts.append("\n### L1 Checks (Clean Worktree + Menter's Diff)")
+                parts.append(_run_l1_checks(worktree_path))
+
+                # Try import test in clean worktree
+                try:
+                    import_result = _run(
+                        ["python3.12", "-c",
+                         "import sys; sys.path.insert(0,'runtime'); from app import app; "
+                         f"print(f'Flask app imports OK, {{len(app.url_map._rules)}} routes')"],
+                        timeout=20, workdir=worktree_path,
+                    )
+                    if import_result.returncode == 0:
+                        parts.append(f"Import test: {import_result.stdout.strip()}")
+                    else:
+                        parts.append(f"Import test FAILED: {import_result.stderr.strip()[:300]}")
+                except Exception as e:
+                    parts.append(f"Import test error: {e}")
+
         except Exception as e:
-            parts.append(f"Baseline import error: {e}")
+            parts.append(f"## L1-ISOLATED: Worktree error\n{e}")
+            parts.append("FALLING BACK to in-place checks — isolation NOT guaranteed.")
+        finally:
+            # Clean up the worktree
+            if worktree_path:
+                try:
+                    _run(["git", "worktree", "remove", "--force", worktree_path], timeout=15)
+                    parts.append(f"\nWorktree cleaned up: {worktree_path}")
+                except Exception as e:
+                    parts.append(f"\nWorktree cleanup error: {e} (manual cleanup needed)")
 
-        # Restore Menter's changes
-        pop_result = _run(["git", "stash", "pop"], timeout=30)
-        if pop_result.returncode == 0:
-            parts.append("Stash restored: OK")
-        else:
-            parts.append(f"Stash pop FAILED: {pop_result.stderr.strip()[:200]}")
-    else:
-        parts.append("## L1-ISOLATED: Baseline (stash failed — using in-place)")
-        parts.append(f"Stash output: {stash_result.stdout.strip()[:200]}")
-
-    # Now run L1 checks on the working state (with Menter's changes)
-    parts.append("\n## L1-ISOLATED: Working State (with Menter's changes)")
-    parts.append(_run_l1_checks(cwd))
+    if not pre_exec_head or worktree_path is None:
+        # Fallback: in-place checks (no isolation)
+        parts.append("## L1: In-Place Checks (NO ISOLATION — warning)")
+        parts.append("pre_exec_head was not captured or worktree failed.")
+        parts.append("These checks run in Menter's workspace — evidence may be fabricated.")
+        parts.append(_run_l1_checks(cwd))
 
     return "\n\n".join(parts)
 
