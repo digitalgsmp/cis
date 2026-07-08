@@ -31,7 +31,14 @@ import httpx
 
 DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
 BASE_URL = "http://127.0.0.1"
-AGENT_TIMEOUT = 180  # seconds per agent call
+AGENT_TIMEOUT = 180  # seconds per agent call (default)
+# Per-role timeout overrides (verify/menter use tools and need more time)
+AGENT_TIMEOUTS = {
+    "verify": 600,   # 10 min — runs evidence commands
+    "menter": 600,   # 10 min — builds code
+    "brain": 300,    # 5 min — xhigh reasoning
+    "draft": 300,    # 5 min — xhigh reasoning
+}
 REVIEWER_RETRY_TIMEOUT = 180
 CIRCUIT_BREAKER_THRESHOLD = 3
 CIRCUIT_BREAKER_COOLDOWN = 300  # 5 minutes
@@ -447,7 +454,8 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    async with httpx.AsyncClient(timeout=AGENT_TIMEOUT) as client:
+    timeout = AGENT_TIMEOUTS.get(role, AGENT_TIMEOUT)
+    async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(gateway_url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
@@ -843,7 +851,8 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "menter", "execution",
                           prompt, output, 1)
-        _complete_round(self.conn, round_id, "CONSENSUS_REACHED")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                        {"drafter_output": output})
 
         _set_run_status(self.conn, run_id, "VERIFICATION")
         await self._verification(run_id, intent)

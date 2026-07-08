@@ -367,6 +367,7 @@ def relay_gate(run_id: str):
         latest_round = conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
             "WHERE run_id = ? AND drafter_output IS NOT NULL "
+            "AND drafter_output != '' "
             "ORDER BY id DESC LIMIT 1",
             (run_id,),
         ).fetchone()

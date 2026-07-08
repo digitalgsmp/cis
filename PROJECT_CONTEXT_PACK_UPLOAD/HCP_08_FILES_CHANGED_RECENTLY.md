@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-07-08 17:47 UTC | Run: run-8b06e6720eb3
+Generated: 2026-07-08 18:57 UTC | Run: run-2029dcbc41ed
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a6f88a1 feat: relay API + pipeline bug fixes (auth, round numbers, empty directive, FTS5)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/api/relay.py 
+
+## runtime/app.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## fd36489 feat: production pipeline relay + container multi-profile + schema migration 0015
 
@@ -690,9 +724,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/DEV-PIVOT-16_VERIFIER_REGISTRY_SPEC.md 
 
 ## docs/DEV-PIVOT-17_ENFORCEMENT_ARCHITECTURE.md 
-
-## 70e73bd docs: session handoff for Claude — DEV-PIVOT-05 §9-10 + DEV-PIVOT-06 §10
-
-## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
-
-## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 

@@ -10,6 +10,11 @@ Access:
     http://localhost:5000
 """
 
+# TODO: Legacy inline pipeline relay code at lines 794-917 (PIPELINE_RUNS dict,
+# portal_pipeline_start, portal_pipeline_status) should be consolidated into
+# api/relay.py or removed — the production relay blueprint at api/relay.py
+# already handles intent submission, status polling, gates, and verification.
+
 from flask import Flask, jsonify, send_from_directory, request
 import os
 import sys
