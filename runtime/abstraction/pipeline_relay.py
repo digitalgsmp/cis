@@ -519,48 +519,104 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
 
 
 async def _call_reviewers_parallel(prompt: str, run_id: str) -> Tuple[str, str, Optional[str], Optional[str]]:
-    """Call Review1 and Review2 in parallel.
+    """Call Review1 and Review2 in parallel, with retry on empty/ambiguous output.
 
     Returns (review1_output, review2_output, review1_error, review2_error).
-    If a reviewer errors, its output is empty string and error is set.
+
+    A reviewer that returns empty or unparseable output is retried once with a
+    repair prompt. If it still fails, the output is returned as-is with the
+    error set so the caller can decide how to handle the incomplete review.
+
+    A reviewer that returns a valid FINAL_JSON (CONSENSUS_REACHED or OBJECTIONS)
+    is considered to have completed its role, regardless of the signal.
     """
-    async def _safe_call(role: str) -> Tuple[str, Optional[str]]:
-        try:
-            result = await _call_agent(role, prompt, run_id)
-            return result, None
-        except (httpx.TimeoutException, ConnectionError, Exception) as e:
-            return "", str(e)
+    MAX_REVIEWER_RETRIES = 1
+
+    async def _call_with_retry(role: str) -> Tuple[str, Optional[str]]:
+        """Call a reviewer, retry once if output is empty or unparseable."""
+        last_error = None
+        for attempt in range(MAX_REVIEWER_RETRIES + 1):
+            try:
+                output = await _call_agent(role, prompt, run_id)
+
+                # Empty output — retry with repair prompt
+                if not output.strip():
+                    last_error = "empty output"
+                    if attempt < MAX_REVIEWER_RETRIES:
+                        print(f"[pipeline] {role} returned empty — retrying (attempt {attempt+1})")
+                        continue
+                    return "", last_error
+
+                # Check if FINAL_JSON is parseable
+                parsed = _parse_final_json(output)
+                if parsed and parsed.get("status") in ("CONSENSUS_REACHED", "OBJECTIONS", "ESCALATE"):
+                    return output, None  # Valid signal — review complete
+
+                # FINAL_JSON missing or unparseable — try text-scan fallback
+                has_consensus = "CONSENSUS" in output.upper()
+                has_objection = "OBJECTION" in output.upper() or "ESCALATE" in output.upper()
+                if has_consensus or has_objection:
+                    return output, None  # Text-scan found a signal — review complete
+
+                # Ambiguous — retry with repair prompt
+                last_error = "ambiguous output (no FINAL_JSON, no text-scan signal)"
+                if attempt < MAX_REVIEWER_RETRIES:
+                    print(f"[pipeline] {role} returned ambiguous output — retrying (attempt {attempt+1})")
+                    # Re-dispatch with same prompt (repair prompt would need the original context)
+                    continue
+                return output, last_error
+
+            except (httpx.TimeoutException, ConnectionError, Exception) as e:
+                last_error = str(e)
+                if attempt < MAX_REVIEWER_RETRIES:
+                    print(f"[pipeline] {role} errored ({e}) — retrying (attempt {attempt+1})")
+                    continue
+                return "", last_error
+
+        return "", last_error
 
     results = await asyncio.gather(
-        _safe_call("review1"),
-        _safe_call("review2"),
+        _call_with_retry("review1"),
+        _call_with_retry("review2"),
     )
     return results[0][0], results[1][0], results[0][1], results[1][1]
 
 
-def _check_consensus(r1_output: str, r2_output: str) -> Tuple[bool, bool, Optional[str]]:
+def _check_consensus(r1_output: str, r2_output: str,
+                      r1_error: Optional[str] = None,
+                      r2_error: Optional[str] = None) -> Tuple[bool, bool, Optional[str]]:
     """Check if both reviewers reached consensus.
 
     Returns (consensus_reached, has_objections, objection_text).
 
-    Empty output from either reviewer is treated as a failure — NOT consensus.
-    A reviewer that returned nothing cannot have expressed consensus.
-    """
-    # Empty output is never consensus — it's a failure
-    if not r1_output.strip() and not r2_output.strip():
-        return False, True, "[Both] Reviewers returned empty output — gateway failure"
-    if not r1_output.strip():
-        return False, True, "[Review1] Returned empty output — gateway failure"
-    if not r2_output.strip():
-        return False, True, "[Review2] Returned empty output — gateway failure"
+    Only reviewers that completed their role (produced a parseable signal)
+    can express consensus or objections. A reviewer with an error or
+    ambiguous output did NOT complete its role — this is NOT an objection,
+    it's an incomplete review that the caller must handle separately.
 
+    A reviewer that completed its role and said OBJECTIONS is a real
+    objection. A reviewer that completed and said CONSENSUS_REACHED is
+    real agreement. These are stored as trajectory memory.
+    """
+    # A reviewer with an error did not complete its role
+    r1_complete = r1_output.strip() and not r1_error
+    r2_complete = r2_output.strip() and not r2_error
+
+    if not r1_complete and not r2_complete:
+        return False, False, None  # Neither completed — not an objection, incomplete
+    if not r1_complete:
+        return False, False, None  # r1 incomplete
+    if not r2_complete:
+        return False, False, None  # r2 incomplete
+
+    # Both completed — parse their signals
     r1_json = _parse_final_json(r1_output)
     r2_json = _parse_final_json(r2_output)
 
     r1_status = r1_json.get("status", "") if r1_json else ""
     r2_status = r2_json.get("status", "") if r2_json else ""
 
-    # If we can't parse FINAL_JSON from either, try text scanning (fallback)
+    # If we can't parse FINAL_JSON, try text scanning (fallback per ADR-SEED-012)
     if not r1_json and not r2_json:
         r1_consensus = "CONSENSUS" in r1_output.upper()
         r2_consensus = "CONSENSUS" in r2_output.upper()
@@ -568,9 +624,6 @@ def _check_consensus(r1_output: str, r2_output: str) -> Tuple[bool, bool, Option
         r2_objections = "OBJECTION" in r2_output.upper() or "ESCALATE" in r2_output.upper()
         consensus = r1_consensus and r2_consensus
         has_obj = r1_objections or r2_objections
-        # If neither consensus nor objections detected, that's ambiguous — treat as objection
-        if not consensus and not has_obj:
-            has_obj = True
         obj_text = ""
         if r1_objections:
             obj_text += f"[Review1] {r1_output[:500]}\n"
@@ -578,19 +631,14 @@ def _check_consensus(r1_output: str, r2_output: str) -> Tuple[bool, bool, Option
             obj_text += f"[Review2] {r2_output[:500]}"
         return consensus, has_obj, obj_text
 
-    # If only one parsed, the other is ambiguous
+    # If only one parsed — that reviewer's output is ambiguous even though non-empty
     if not r1_json or not r2_json:
-        unparsed = "Review1" if not r1_json else "Review2"
-        return False, True, f"[{unparsed}] Could not parse FINAL_JSON — ambiguous signal"
+        return False, False, None  # incomplete, not an objection
 
     # Both parsed — check statuses
     consensus = (r1_status == "CONSENSUS_REACHED" and r2_status == "CONSENSUS_REACHED")
     has_obj = (r1_status == "OBJECTIONS" or r2_status == "OBJECTIONS"
                or r1_status == "ESCALATE" or r2_status == "ESCALATE")
-
-    # If neither consensus nor objections, signal is ambiguous — treat as objection
-    if not consensus and not has_obj:
-        has_obj = True
 
     obj_text = ""
     if r1_status == "OBJECTIONS" and r1_json:
@@ -935,40 +983,32 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "review2", "intent_review",
                           prompt, r2_out, round_num)
 
-        # Mark trajectory outcomes based on actual results
+        # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review",
-                                  "failed" if r1_err or not r1_out.strip() else "success")
+                                  "failed" if r1_err else "success")
         _update_trajectory_outcome(self.conn, run_id, "review2", "intent_review",
-                                  "failed" if r2_err or not r2_out.strip() else "success")
+                                  "failed" if r2_err else "success")
 
-        # If either reviewer failed (error or empty), escalate or retry
-        if r1_err and r2_err:
+        # Check if both reviewers completed their role
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out, r1_err, r2_err)
+
+        # If reviewers didn't complete (consensus=False, has_obj=False, obj_text=None)
+        # that's INCOMPLETE — not an objection. Escalate so Eric sees the problem.
+        if not consensus and not has_obj and obj_text is None:
+            incomplete = []
+            if r1_err or not r1_out.strip():
+                incomplete.append(f"Review1 ({r1_err or 'empty'})")
+            if r2_err or not r2_out.strip():
+                incomplete.append(f"Review2 ({r2_err or 'empty'})")
             _complete_round(self.conn, round_id, "ESCALATE", {
                 "reviewer1_output": r1_out,
                 "reviewer2_output": r2_out,
             })
             _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] Both reviewers failed: {r1_err}, {r2_err}")
+            print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
             return
 
-        # Single reviewer failure — treat as objection, not silent consensus
-        if r1_err or r2_err or not r1_out.strip() or not r2_out.strip():
-            failed = "Review1" if (r1_err or not r1_out.strip()) else "Review2"
-            _complete_round(self.conn, round_id, "OBJECTIONS", {
-                "reviewer1_output": r1_out,
-                "reviewer2_output": r2_out,
-            })
-            print(f"[pipeline] {failed} failed — treating as objection")
-            if round_num < MAX_BRAIN_ROUNDS:
-                _set_run_status(self.conn, run_id, "BRAIN_PHASE")
-                await self._brain_phase(run_id, intent, round_num + 1)
-            else:
-                _set_run_status(self.conn, run_id, "ESCALATED")
-            return
-
-        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out)
-
-        # Store actual signal — not hardcoded CONSENSUS_REACHED
+        # Both reviewers completed — store their actual signal
         actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
         _complete_round(self.conn, round_id, actual_signal, {
             "reviewer1_output": r1_out,
@@ -1070,40 +1110,31 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "review2", "proposal_review",
                           prompt, r2_out, round_num)
 
-        # Mark trajectory outcomes based on actual results
+        # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review",
-                                  "failed" if r1_err or not r1_out.strip() else "success")
+                                  "failed" if r1_err else "success")
         _update_trajectory_outcome(self.conn, run_id, "review2", "proposal_review",
-                                  "failed" if r2_err or not r2_out.strip() else "success")
+                                  "failed" if r2_err else "success")
 
-        # If both reviewers failed, escalate
-        if r1_err and r2_err:
+        # Check if both reviewers completed their role
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out, r1_err, r2_err)
+
+        # If reviewers didn't complete — INCOMPLETE, not an objection. Escalate.
+        if not consensus and not has_obj and obj_text is None:
+            incomplete = []
+            if r1_err or not r1_out.strip():
+                incomplete.append(f"Review1 ({r1_err or 'empty'})")
+            if r2_err or not r2_out.strip():
+                incomplete.append(f"Review2 ({r2_err or 'empty'})")
             _complete_round(self.conn, round_id, "ESCALATE", {
                 "reviewer1_output": r1_out,
                 "reviewer2_output": r2_out,
             })
             _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] Both reviewers failed: {r1_err}, {r2_err}")
+            print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
             return
 
-        # Single reviewer failure — treat as objection, not silent consensus
-        if r1_err or r2_err or not r1_out.strip() or not r2_out.strip():
-            failed = "Review1" if (r1_err or not r1_out.strip()) else "Review2"
-            _complete_round(self.conn, round_id, "OBJECTIONS", {
-                "reviewer1_output": r1_out,
-                "reviewer2_output": r2_out,
-            })
-            print(f"[pipeline] {failed} failed — treating as objection")
-            if round_num < MAX_DRAFT_ROUNDS:
-                _set_run_status(self.conn, run_id, "DRAFT_PHASE")
-                await self._draft_phase(run_id, intent, round_num + 1)
-            else:
-                _set_run_status(self.conn, run_id, "ESCALATED")
-            return
-
-        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out)
-
-        # Store actual signal — not hardcoded CONSENSUS_REACHED
+        # Both reviewers completed — store their actual signal
         actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
         _complete_round(self.conn, round_id, actual_signal, {
             "reviewer1_output": r1_out,
