@@ -122,6 +122,13 @@ def check_gateway(port: int) -> Tuple[bool, Optional[str], float]:
     """Check if a Hermes gateway is healthy on the given port.
 
     Returns (healthy, error_message, response_time_seconds).
+
+    A gateway is healthy only if:
+    1. The port accepts connections (process is running)
+    2. The response contains valid JSON with a choices array (model backend works)
+
+    A stale/zombie process that accepts connections but returns empty
+    or malformed responses is NOT healthy — it can't serve model calls.
     """
     url = f"{BASE_URL}:{port}/v1/chat/completions"
     payload = json.dumps({
@@ -138,12 +145,33 @@ def check_gateway(port: int) -> Tuple[bool, Optional[str], float]:
         )
         resp = urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT)
         elapsed = time.time() - start
-        # Any response (even error) means the gateway is alive
+        body = resp.read().decode("utf-8", errors="replace")
+
+        # Validate the response has actual content — not just a 200 with empty body
+        try:
+            data = json.loads(body)
+            choices = data.get("choices", [])
+            if not choices:
+                return False, "Response has no choices array — gateway may be a zombie", round(elapsed, 3)
+            content = choices[0].get("message", {}).get("content", "")
+            if not content and not data.get("error"):
+                # Empty content with no error means the model backend isn't working
+                # (Some gateways return reasoning_content but empty content — that's OK)
+                reasoning = choices[0].get("message", {}).get("reasoning_content", "")
+                if not reasoning:
+                    return False, "Response has empty content and no reasoning — model backend not working", round(elapsed, 3)
+        except (json.JSONDecodeError, KeyError):
+            return False, f"Response is not valid JSON: {body[:200]}", round(elapsed, 3)
+
         return True, None, round(elapsed, 3)
     except urllib.error.HTTPError as e:
         elapsed = time.time() - start
         body = e.read().decode("utf-8", errors="replace")[:200]
-        return True, f"HTTP {e.code}: {body}", round(elapsed, 3)
+        # 401 means the gateway is alive but requires auth — that's healthy
+        if e.code == 401:
+            return True, f"HTTP 401 (auth required — gateway alive)", round(elapsed, 3)
+        # Other HTTP errors mean the gateway is misconfigured or broken
+        return False, f"HTTP {e.code}: {body}", round(elapsed, 3)
     except urllib.error.URLError as e:
         elapsed = time.time() - start
         return False, str(e.reason), round(elapsed, 3)

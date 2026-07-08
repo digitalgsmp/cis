@@ -510,12 +510,30 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
         resp.raise_for_status()
         data = resp.json()
 
-    _breaker_record_success(role)
-
     choices = data.get("choices", [])
-    if choices:
-        return choices[0].get("message", {}).get("content", "")
-    return ""
+    if not choices:
+        _breaker_record_failure(role)
+        raise ConnectionError(
+            f"Gateway {role} (port {port}) returned no choices — "
+            f"likely a stale/zombie process. Response: {str(data)[:200]}"
+        )
+
+    content = choices[0].get("message", {}).get("content", "")
+    if not content.strip():
+        # Check for reasoning_content (some models put output there)
+        reasoning = choices[0].get("message", {}).get("reasoning_content", "")
+        if reasoning and reasoning.strip():
+            content = reasoning  # Use reasoning as content fallback
+
+    if not content.strip():
+        _breaker_record_failure(role)
+        raise ConnectionError(
+            f"Gateway {role} (port {port}) returned empty content — "
+            f"model backend not working. Response: {str(data)[:200]}"
+        )
+
+    _breaker_record_success(role)
+    return content
 
 
 async def _call_reviewers_parallel(prompt: str, run_id: str) -> Tuple[str, str, Optional[str], Optional[str]]:
