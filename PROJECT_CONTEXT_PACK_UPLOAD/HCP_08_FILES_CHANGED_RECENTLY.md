@@ -1,7 +1,95 @@
 # Files Changed Recently
-Generated: 2026-07-08 15:27 UTC | Run: run-b51ceac49c86
+Generated: 2026-07-08 17:47 UTC | Run: run-8b06e6720eb3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## fd36489 feat: production pipeline relay + container multi-profile + schema migration 0015
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## cis_kernel/source/SESSION_LOG.md 
+
+## docs/CONTAINER_HERMES_BUILD_SPEC.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/FOR_CLAUDE_SPINE_STALE_AND_RESTRUCTURE.md 
+
+## docs/SPEC_CONTROL_PLANE_OBSERVATION.md 
+
+## docs/SPEC_INTENTION_DRIVEN_CIS.md 
+
+## docs/SPEC_INTENTION_DRIVEN_CIS_KNOWLEDGE_SURFACE.md 
+
+## docs/SPEC_INTENTION_DRIVEN_DIRECTIVES.md 
+
+## docs/SPEC_KNOWLEDGE_SURFACE_AGENT.md 
+
+## docs/SPEC_LXC_WORKSHOP_BUILD.md 
+
+## docs/SPEC_PRODUCTION_PIPELINE_RELAY.md 
+
+## enforcement/mwl-proof-v2/Dockerfile 
+
+## enforcement/mwl-proof-v2/launch_profiles.sh 
+
+## enforcement/mwl-proof-v2/profiles/brain.yaml 
+
+## enforcement/mwl-proof-v2/profiles/draft.yaml 
+
+## enforcement/mwl-proof-v2/profiles/menter.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review1.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review2.yaml 
+
+## enforcement/mwl-proof-v2/profiles/verify.yaml 
+
+## enforcement/profiles/brainstorm/config.yaml 
+
+## enforcement/profiles/drafter/config.yaml 
+
+## enforcement/profiles/glm-reviewer/config.yaml 
+
+## enforcement/profiles/implementer/config.yaml 
+
+## enforcement/profiles/qwen-reviewer/config.yaml 
+
+## enforcement/profiles/verifier/config.yaml 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/memory/soul_prefill.json 
+
+## runtime/schema/migrations/0015_production_pipeline.sql 
+
+## tools/bulk_download_drive.py 
 
 ## 2b7d458 wire container gates + ingest sessions + model-agnostic role rename
 
@@ -608,45 +696,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
 
 ## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
-
-## 3478da1 feat(abstraction): human-readable status + roadmap + Claude directive
-
-## .gitignore 
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/CIS_ROADMAP_PHASES_1_6.md 
-
-## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
-
-## docs/PHASE1_ROOT_DIRECTIVE_FOR_CLAUDE.md 
-
-## runtime/abstraction/dispatch.py 
-
-## runtime/api/adapter.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/catalog/convert_to_knowledge.py 

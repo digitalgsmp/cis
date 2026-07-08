@@ -49,6 +49,7 @@ from api.intent import intent_bp
 from api.adapter import adapter_bp
 from api.dam import dam_bp
 from api.pipeline_views import pipeline_views_bp
+from api.relay import relay_bp
 from api.dashboard_api import dashboard_bp
 from cis_ingest import create_api_blueprint
 
@@ -117,6 +118,7 @@ app.register_blueprint(intent_bp)
 app.register_blueprint(adapter_bp)
 app.register_blueprint(dam_bp)
 app.register_blueprint(pipeline_views_bp)          # Tier 10 — CIS UI
+app.register_blueprint(relay_bp)                # Pipeline relay API (production)
 app.register_blueprint(dashboard_bp)              # Tier 11A — Dashboard
 
 # ── Worker status route ────────────────────────────────────────────────────────

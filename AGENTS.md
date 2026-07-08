@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-08 15:27 UTC | Run: run-b51ceac49c86 | Latest pipeline: run-55284ed6c50581c2-1783524260
+Generated: 2026-07-08 17:47 UTC | Run: run-8b06e6720eb3 | Latest pipeline: run-1de17cbeb554b252-1783529623
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,21 +79,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-1de17cbeb554b252-1783529623] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-1de17cbeb554b252-1783529450] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-1de17cbeb554b252-1783529222] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
+- [run-1de17cbeb554b252-1783527430] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-55284ed6c50581c2-1783524260] test pipeline relay run — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-55284ed6c50581c2-1783524202] test pipeline relay run — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-1010c3076e084] Add a dark-mode toggle to the portal settings panel — ESCALATE (3 rounds, 2026-06-24T18:33:44.980801+00:00)
-- [run-efd77a31b50c4] Add a dark-mode toggle to the portal settings panel. — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-5d2a0f1ceda54] test wiring — CONSENSUS_REACHED (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: N/A (direct Eric Gate — no deliberation run)
-- Status: IMPLEMENTED
-- Decided at: 2026-06-13 07:41 UTC
-- Goal: Tier 10 CIS UI / Custom Display Views specification approved and implemented
-- Scope: Tier 10 implemented per approved specification (docs/CIS_TIER_10_CIS_UI_CUSTOM_DISPLAY_VIEWS_SPECIFICATION.md, commit c2a3f20).
-6 React display views, 1 Flask blueprint (8 GET endpoints), 57 passing tests, 5 gate scripts.
-No write endpoints, no pipeline bypass, no secrets in frontend.
-Commit: IMPLEMENTED at <latest>.
+- Workflow run: run-1de17cbeb554b252-1783529623
+- Status: APPROVE
+- Decided at: 2026-07-08T17:14:20.696802+00:00
+- Goal: No goal label
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

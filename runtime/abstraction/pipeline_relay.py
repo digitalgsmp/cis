@@ -50,6 +50,7 @@ STATES = {
     "PENDING", "INTAKE", "BRAIN_PHASE", "ESCALATE",
     "INTENT_REVIEW", "DRAFT_PHASE", "PROPOSAL_REVIEW",
     "ERIC_GATE", "EXECUTION", "VERIFICATION",
+    "WAITING_FOR_HUMAN",
     "CONSENSUS_REACHED",
     # Error states
     "ESCALATED", "VERIFY_FAILED", "STALE", "ERROR",
@@ -164,17 +165,24 @@ def _start_round(conn: sqlite3.Connection, run_id: str, phase: str,
                  round_num: int) -> int:
     """Create a deliberation_rounds row. Returns round ID.
 
-    The spine schema requires non-null drafter_role, drafter_output,
-    reviewer_role, reviewer_signal, revision_number, requires_eric_review.
-    We set sensible defaults for the phase being started.
+    The spine schema has UNIQUE(run_id, round_number), so we auto-increment
+    the round number from the DB rather than trusting the caller's value.
+    The caller's round_num is used only as a revision_number hint.
     """
+    # Get next available round_number for this run
+    cur = conn.execute(
+        "SELECT COALESCE(MAX(round_number), 0) + 1 FROM deliberation_rounds WHERE run_id = ?",
+        (run_id,)
+    )
+    actual_round_num = cur.fetchone()[0]
+
     cur = conn.execute(
         """INSERT INTO deliberation_rounds
            (run_id, round_number, drafter_role, drafter_output,
             reviewer_role, reviewer_signal, revision_number,
             requires_eric_review, created_at)
            VALUES (?, ?, ?, '', '', 'CONSENSUS_REACHED', ?, 0, ?)""",
-        (run_id, round_num, phase, round_num,
+        (run_id, actual_round_num, phase, round_num,
          datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
@@ -219,14 +227,14 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
     # 1. Spine FTS5 search
     try:
         cur = conn.execute(
-            "SELECT content, source, source_key FROM knowledge_messages_fts "
+            "SELECT content, source FROM knowledge_messages_fts "
             "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 5",
             (keywords,)
         )
         kb_hits = cur.fetchall()
         if kb_hits:
             results.append("## Knowledge Base")
-            for content, source, skey in kb_hits:
+            for content, source in kb_hits:
                 preview = (content[:200] + "...") if len(content) > 200 else content
                 results.append(f"- [{source}] {preview}")
         else:
@@ -353,6 +361,53 @@ def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
 
 # ── Async Agent Dispatch ────────────────────────────────────────────────
 
+# ── API Key Resolution ─────────────────────────────────────────────────
+
+def _resolve_api_key(role: str) -> str:
+    """Resolve the API key for a gateway role.
+
+    Priority:
+    1. CIS_{ROLE}_API_KEY env var (explicit override)
+    2. API_SERVER_KEY from the gateway's .env file
+    3. api_key from the gateway's config.yaml api_server section
+    4. Empty string (auth disabled)
+    """
+    # 1. Explicit env var
+    env_key = os.environ.get(f"CIS_{role.upper()}_API_KEY", "")
+    if env_key:
+        return env_key
+
+    # 2. Read from gateway .env file
+    profile = PROFILES.get(role, {})
+    hermes_profile = profile.get("hermes_profile", "")
+    if hermes_profile:
+        env_path = os.path.expanduser(f"~/.{hermes_profile}/.env")
+        if os.path.exists(env_path):
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("API_SERVER_KEY="):
+                            return line.split("=", 1)[1].strip()
+            except Exception:
+                pass
+
+        # 3. Read from config.yaml
+        cfg_path = os.path.expanduser(f"~/.{hermes_profile}/config.yaml")
+        if os.path.exists(cfg_path):
+            try:
+                import yaml
+                with open(cfg_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                key = cfg.get("api_server", {}).get("api_key", "")
+                if key:
+                    return key
+            except Exception:
+                pass
+
+    return ""
+
+
 async def _call_agent(role: str, prompt: str, run_id: str) -> str:
     """Dispatch a call to a Hermes gateway agent.
 
@@ -379,7 +434,7 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
         _breaker_record_failure(role)
         raise ConnectionError(f"Gateway {role} (port {port}) is down: {error}")
 
-    api_key = os.environ.get(f"CIS_{role.upper()}_API_KEY", "")
+    api_key = _resolve_api_key(role)
 
     payload = {
         "model": "agent",
@@ -489,6 +544,17 @@ class PipelineRelay:
         await self._brain_phase(run_id, intent_text)
         return run_id
 
+    def start_sync(self, intent_text: str) -> str:
+        """Create a new pipeline run (sync, non-async). Does NOT start processing.
+
+        The API layer calls this to create the run, then launches
+        resume() in a background thread.
+        """
+        run_id = _create_run(self.conn, intent_text)
+        _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+        print(f"[pipeline] Run created (sync): {run_id}")
+        return run_id
+
     async def resume(self, run_id: str) -> None:
         """Resume a non-terminal run from its last known state."""
         run = _get_run(self.conn, run_id)
@@ -507,6 +573,8 @@ class PipelineRelay:
             await self._brain_phase(run_id, intent)
         elif status == "BRAIN_PHASE":
             await self._brain_phase(run_id, intent)
+        elif status == "WAITING_FOR_HUMAN":
+            print(f"[pipeline] Run {run_id} waiting for human answer")
         elif status == "INTENT_REVIEW":
             await self._intent_review(run_id, intent)
         elif status == "DRAFT_PHASE":
@@ -558,10 +626,11 @@ class PipelineRelay:
         parsed = _parse_final_json(output)
         if parsed and parsed.get("status") == "NEEDS_CLARIFICATION":
             question = parsed.get("question", output[:500])
-            _set_run_status(self.conn, run_id, "ESCALATE")
-            _complete_round(self.conn, round_id, "ESCALATE",
+            _set_run_status(self.conn, run_id, "WAITING_FOR_HUMAN")
+            _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                            {"human_question": question})
             print(f"[pipeline] BRAIN needs clarification: {question}")
+            print(f"[pipeline] Run {run_id} waiting for human answer")
             return
 
         # Proceed to intent review
@@ -576,7 +645,7 @@ class PipelineRelay:
         # Get brain output from last deliberation round
         cur = self.conn.execute(
             "SELECT brain_output FROM deliberation_rounds "
-            "WHERE workflow_run_id = ? AND brain_output IS NOT NULL "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         row = cur.fetchone()
@@ -636,7 +705,7 @@ class PipelineRelay:
 
         cur = self.conn.execute(
             "SELECT brain_output FROM deliberation_rounds "
-            "WHERE workflow_run_id = ? AND brain_output IS NOT NULL "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         brain_output = row[0] if (row := cur.fetchone()) else ""
@@ -680,7 +749,7 @@ class PipelineRelay:
 
         cur = self.conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
-            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         draft_output = row[0] if (row := cur.fetchone()) else ""
@@ -737,7 +806,7 @@ class PipelineRelay:
 
         cur = self.conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
-            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         directive = row[0] if (row := cur.fetchone()) else ""
@@ -785,7 +854,7 @@ class PipelineRelay:
 
         cur = self.conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
-            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         directive = row[0] if (row := cur.fetchone()) else ""
