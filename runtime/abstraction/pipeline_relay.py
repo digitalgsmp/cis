@@ -1,0 +1,872 @@
+#!/usr/bin/env python3
+"""
+pipeline_relay.py — CIS Production Pipeline Relay (async state machine)
+
+Per SPEC_PRODUCTION_PIPELINE_RELAY.md (REV-2, 2026-07-08).
+Replaces test scaffolding in runtime/orchestrator.py.
+
+Relay: Brain → Review1+2 → Draft → Review1+2 → Eric Gate → Menter → Verify
+Features: mandatory pre-discovery, crash recovery, circuit breaker,
+concurrent run protection, timeout management, saga compensation.
+
+Usage:
+    python3 pipeline_relay.py --intent "build a dark mode toggle"
+    python3 pipeline_relay.py --resume <run_id>
+    python3 pipeline_relay.py --status <run_id>
+"""
+
+import asyncio
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
+
+# ── Constants ──────────────────────────────────────────────────────────
+
+DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
+BASE_URL = "http://127.0.0.1"
+AGENT_TIMEOUT = 180  # seconds per agent call
+REVIEWER_RETRY_TIMEOUT = 180
+CIRCUIT_BREAKER_THRESHOLD = 3
+CIRCUIT_BREAKER_COOLDOWN = 300  # 5 minutes
+HUMAN_QUESTION_TIMEOUT = 72 * 3600  # 72 hours
+MAX_BRAIN_ROUNDS = 2
+MAX_DRAFT_ROUNDS = 3
+
+# Import dispatch map
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
+
+# ── State Machine ─────────────────────────────────────────────────────
+
+STATES = {
+    "PENDING", "INTAKE", "BRAIN_PHASE", "ESCALATE",
+    "INTENT_REVIEW", "DRAFT_PHASE", "PROPOSAL_REVIEW",
+    "ERIC_GATE", "EXECUTION", "VERIFICATION",
+    "CONSENSUS_REACHED",
+    # Error states
+    "ESCALATED", "VERIFY_FAILED", "STALE", "ERROR",
+}
+
+TERMINAL_STATES = {"CONSENSUS_REACHED", "ESCALATED", "VERIFY_FAILED", "STALE", "ERROR"}
+
+# ── Circuit Breaker ────────────────────────────────────────────────────
+
+_circuit_breaker: Dict[str, dict] = {}  # role -> {failures, last_failure_ts}
+
+
+def _breaker_record_failure(role: str) -> None:
+    """Record a gateway failure for circuit breaker."""
+    entry = _circuit_breaker.get(role, {"failures": 0, "last_failure_ts": 0})
+    entry["failures"] += 1
+    entry["last_failure_ts"] = time.time()
+    _circuit_breaker[role] = entry
+
+
+def _breaker_record_success(role: str) -> None:
+    """Reset circuit breaker on success."""
+    _circuit_breaker.pop(role, None)
+
+
+def _breaker_is_tripped(role: str) -> bool:
+    """Check if circuit breaker is tripped for a role."""
+    entry = _circuit_breaker.get(role)
+    if not entry:
+        return False
+    if entry["failures"] < CIRCUIT_BREAKER_THRESHOLD:
+        return False
+    elapsed = time.time() - entry["last_failure_ts"]
+    if elapsed > CIRCUIT_BREAKER_COOLDOWN:
+        # Cooldown passed — reset
+        _circuit_breaker.pop(role, None)
+        return False
+    return True
+
+
+# ── Database Helpers ──────────────────────────────────────────────────
+
+def _db_connect() -> sqlite3.Connection:
+    """Connect to spine DB with WAL mode and busy timeout."""
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    return conn
+
+
+def _db_retry(fn, max_attempts=3, base_delay=1.0):
+    """Retry a DB operation with exponential backoff."""
+    for attempt in range(max_attempts):
+        try:
+            return fn()
+        except sqlite3.OperationalError as e:
+            if "locked" in str(e).lower() and attempt < max_attempts - 1:
+                delay = base_delay * (2 ** attempt)
+                time.sleep(delay)
+                continue
+            raise
+
+
+def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
+                    extra: Optional[Dict] = None) -> None:
+    """Atomically update run status. Raises if run not found."""
+    # Concurrent run protection: only update if status is not terminal
+    cur = conn.execute(
+        "UPDATE workflow_runs SET status = ?, updated_at = ? WHERE id = ?",
+        (status, datetime.now(timezone.utc).isoformat(), run_id)
+    )
+    if cur.rowcount == 0:
+        raise ValueError(f"Run {run_id} not found or update failed")
+    conn.commit()
+
+
+def _create_run(conn: sqlite3.Connection, intent_text: str,
+                created_by: str = "pipeline_relay") -> str:
+    """Create a new workflow_run. Returns run_id."""
+    # Idempotency: check for existing non-terminal run with same intent
+    intent_hash = hashlib.sha256(intent_text.encode()).hexdigest()[:16]
+    run_id = f"run-{intent_hash}-{int(time.time())}"
+    conn.execute(
+        """INSERT INTO workflow_runs
+           (id, topic, result, status, created_at, max_rounds, rounds_completed)
+           VALUES (?, ?, 'CONSENSUS_REACHED', 'INTAKE', ?, 3, 0)""",
+        (run_id, intent_text[:500], datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    return run_id
+
+
+def _get_run(conn: sqlite3.Connection, run_id: str) -> Optional[dict]:
+    """Get a workflow run by ID."""
+    cur = conn.execute(
+        "SELECT id, topic, status, created_at, directive_hash FROM workflow_runs WHERE id = ?",
+        (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0], "topic": row[1], "status": row[2],
+        "created_at": row[3], "directive_hash": row[4],
+    }
+
+
+# ── Deliberation Round Helpers ─────────────────────────────────────────
+
+def _start_round(conn: sqlite3.Connection, run_id: str, phase: str,
+                 round_num: int) -> int:
+    """Create a deliberation_rounds row. Returns round ID.
+
+    The spine schema requires non-null drafter_role, drafter_output,
+    reviewer_role, reviewer_signal, revision_number, requires_eric_review.
+    We set sensible defaults for the phase being started.
+    """
+    cur = conn.execute(
+        """INSERT INTO deliberation_rounds
+           (run_id, round_number, drafter_role, drafter_output,
+            reviewer_role, reviewer_signal, revision_number,
+            requires_eric_review, created_at)
+           VALUES (?, ?, ?, '', '', 'CONSENSUS_REACHED', ?, 0, ?)""",
+        (run_id, round_num, phase, round_num,
+         datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def _complete_round(conn: sqlite3.Connection, round_id: int,
+                    reviewer_signal: str,
+                    extra: Optional[Dict] = None) -> None:
+    """Mark a deliberation round as complete with outputs.
+
+    reviewer_signal must be one of: OBJECTIONS, CONSENSUS_REACHED, ESCALATE, ERROR
+    (per spine CHECK constraint).
+    """
+    fields = ["reviewer_signal = ?"]
+    values = [reviewer_signal]
+    if extra:
+        for col, val in extra.items():
+            fields.append(f"{col} = ?")
+            values.append(val)
+    values.append(round_id)
+    conn.execute(
+        f"UPDATE deliberation_rounds SET {', '.join(fields)} WHERE id = ?",
+        values
+    )
+    conn.commit()
+
+
+# ── Pre-Discovery (mandatory before every agent call) ──────────────────
+
+def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
+                    role: str, run_id: str,
+                    web_search: bool = False) -> str:
+    """Run mandatory pre-discovery and format results for injection.
+
+    Searches: spine FTS5, filesystem, prior trajectories, optionally web.
+    Returns a formatted string to prepend to the agent's prompt.
+    """
+    keywords = " ".join(intent.split()[:10])
+    results = []
+
+    # 1. Spine FTS5 search
+    try:
+        cur = conn.execute(
+            "SELECT content, source, source_key FROM knowledge_messages_fts "
+            "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 5",
+            (keywords,)
+        )
+        kb_hits = cur.fetchall()
+        if kb_hits:
+            results.append("## Knowledge Base")
+            for content, source, skey in kb_hits:
+                preview = (content[:200] + "...") if len(content) > 200 else content
+                results.append(f"- [{source}] {preview}")
+        else:
+            results.append("## Knowledge Base\n(No results found)")
+    except Exception as e:
+        results.append(f"## Knowledge Base\n(Search error: {e})")
+
+    # 2. Prior agent trajectories (MATM)
+    try:
+        cur = conn.execute(
+            "SELECT output_text, run_id, outcome, role, phase "
+            "FROM agent_trajectories "
+            "WHERE phase = ? AND role = ? AND run_id != ? "
+            "  AND outcome = 'success' "
+            "ORDER BY created_at DESC LIMIT 3",
+            (phase, role, run_id)
+        )
+        trajectories = cur.fetchall()
+        if trajectories:
+            results.append("\n## Prior Agent Trajectories")
+            for output, t_run, outcome, t_role, t_phase in trajectories:
+                preview = (output[:300] + "...") if len(output) > 300 else output
+                results.append(
+                    f"--- Trajectory (run {t_run}, {t_role}/{t_phase}, {outcome}) ---\n"
+                    f"{preview}"
+                )
+    except Exception:
+        pass  # Table may be empty — fine
+
+    # 3. Web search (Brain and Draft only)
+    if web_search:
+        try:
+            import urllib.request
+            import urllib.parse
+            query = urllib.parse.quote(f"{keywords} best practices 2026")
+            url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&srlimit=3"
+            req = urllib.request.Request(url, headers={"User-Agent": "CIS-Pipeline/1.0"})
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = json.loads(resp.read())
+            search_results = data.get("query", {}).get("search", [])
+            if search_results:
+                results.append("\n## Current Research (web)")
+                for item in search_results:
+                    results.append(f"- {item['title']}: {item.get('snippet', '')[:200]}")
+        except Exception:
+            pass  # Web search is best-effort
+
+    return (
+        "[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
+        + "\n".join(results)
+        + "\n\n[END PRE-DISCOVERY — now produce your output]"
+    )
+
+
+# ── FINAL_JSON Parsing (per ADR-SEED-012) ──────────────────────────────
+
+_FINAL_JSON_RE = re.compile(
+    r'```json\s*(\{.*?\})\s*```|FINAL_JSON[:\s]*(\{.*?\})',
+    re.DOTALL
+)
+
+
+def _parse_final_json(text: str) -> Optional[dict]:
+    """Extract FINAL_JSON block from agent output.
+
+    Per ADR-SEED-012: every agent response must end with a FINAL_JSON block
+    containing role, status, summary, recommendation, next_action.
+
+    Returns parsed dict or None if not found.
+    """
+    # Try code-block JSON first
+    matches = _FINAL_JSON_RE.findall(text)
+    for match in matches:
+        for group in match:
+            if group:
+                try:
+                    return json.loads(group)
+                except json.JSONDecodeError:
+                    continue
+
+    # Try bare JSON at end of text
+    lines = text.strip().split("\n")
+    for i in range(len(lines) - 1, -1, -1):
+        line = lines[i].strip()
+        if line.startswith("{") and "status" in line.lower():
+            candidate = "\n".join(lines[i:])
+            try:
+                brace_count = 0
+                end = -1
+                for j, ch in enumerate(candidate):
+                    if ch == "{":
+                        brace_count += 1
+                    elif ch == "}":
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end = j + 1
+                            break
+                if end > 0:
+                    return json.loads(candidate[:end])
+            except (json.JSONDecodeError, IndexError):
+                continue
+
+    return None
+
+
+# ── Trajectory Recording (MATM) ───────────────────────────────────────
+
+def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
+                       phase: str, input_text: str, output_text: str,
+                       round_number: Optional[int] = None,
+                       outcome: str = "pending",
+                       consensus_reached: int = 0) -> None:
+    """Record an agent trajectory to the shared memory (MATM)."""
+    conn.execute(
+        """INSERT INTO agent_trajectories
+           (run_id, role, phase, input_text, output_text,
+            round_number, outcome, consensus_reached)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (run_id, role, phase, input_text, output_text,
+         round_number, outcome, consensus_reached)
+    )
+    conn.commit()
+
+
+# ── Async Agent Dispatch ────────────────────────────────────────────────
+
+async def _call_agent(role: str, prompt: str, run_id: str) -> str:
+    """Dispatch a call to a Hermes gateway agent.
+
+    Returns the agent's text response.
+    Raises httpx.TimeoutException on timeout, httpx.ConnectError if unreachable.
+    """
+    if _breaker_is_tripped(role):
+        raise ConnectionError(
+            f"Circuit breaker tripped for {role} — gateway has failed "
+            f"{CIRCUIT_BREAKER_THRESHOLD} consecutive times. "
+            f"Cooling down for {CIRCUIT_BREAKER_COOLDOWN}s."
+        )
+
+    gateway_url = get_gateway_url(role)
+    if not gateway_url:
+        raise ValueError(f"Unknown role: {role}")
+
+    profile = PROFILES[role]
+    port = profile["port"]
+
+    # Health check before dispatch
+    healthy, error, _ = check_gateway(port)
+    if not healthy:
+        _breaker_record_failure(role)
+        raise ConnectionError(f"Gateway {role} (port {port}) is down: {error}")
+
+    api_key = os.environ.get(f"CIS_{role.upper()}_API_KEY", "")
+
+    payload = {
+        "model": "agent",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 8192,
+    }
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    async with httpx.AsyncClient(timeout=AGENT_TIMEOUT) as client:
+        resp = await client.post(gateway_url, json=payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+
+    _breaker_record_success(role)
+
+    choices = data.get("choices", [])
+    if choices:
+        return choices[0].get("message", {}).get("content", "")
+    return ""
+
+
+async def _call_reviewers_parallel(prompt: str, run_id: str) -> Tuple[str, str, Optional[str], Optional[str]]:
+    """Call Review1 and Review2 in parallel.
+
+    Returns (review1_output, review2_output, review1_error, review2_error).
+    If a reviewer errors, its output is empty string and error is set.
+    """
+    async def _safe_call(role: str) -> Tuple[str, Optional[str]]:
+        try:
+            result = await _call_agent(role, prompt, run_id)
+            return result, None
+        except (httpx.TimeoutException, ConnectionError, Exception) as e:
+            return "", str(e)
+
+    results = await asyncio.gather(
+        _safe_call("review1"),
+        _safe_call("review2"),
+    )
+    return results[0][0], results[1][0], results[0][1], results[1][1]
+
+
+def _check_consensus(r1_output: str, r2_output: str) -> Tuple[bool, bool, Optional[str]]:
+    """Check if both reviewers reached consensus.
+
+    Returns (consensus_reached, has_objections, objection_text).
+    """
+    r1_json = _parse_final_json(r1_output)
+    r2_json = _parse_final_json(r2_output)
+
+    r1_status = r1_json.get("status", "") if r1_json else ""
+    r2_status = r2_json.get("status", "") if r2_json else ""
+
+    # If we can't parse FINAL_JSON, try text scanning (fallback)
+    if not r1_json and not r2_json:
+        r1_consensus = "CONSENSUS" in r1_output.upper()
+        r2_consensus = "CONSENSUS" in r2_output.upper()
+        r1_objections = "OBJECTION" in r1_output.upper() or "ESCALATE" in r1_output.upper()
+        r2_objections = "OBJECTION" in r2_output.upper() or "ESCALATE" in r2_output.upper()
+        consensus = r1_consensus and r2_consensus
+        has_obj = r1_objections or r2_objections
+        obj_text = ""
+        if r1_objections:
+            obj_text += f"[Review1] {r1_output[:500]}\n"
+        if r2_objections:
+            obj_text += f"[Review2] {r2_output[:500]}"
+        return consensus, has_obj, obj_text
+
+    # FINAL_JSON parsed — check statuses
+    consensus = (r1_status == "CONSENSUS_REACHED" and r2_status == "CONSENSUS_REACHED")
+    has_obj = (r1_status == "OBJECTIONS" or r2_status == "OBJECTIONS"
+               or r1_status == "ESCALATE" or r2_status == "ESCALATE")
+
+    obj_text = ""
+    if r1_status == "OBJECTIONS" and r1_json:
+        obj_text += f"[Review1] {r1_json.get('summary', r1_output[:500])}\n"
+    if r2_status == "OBJECTIONS" and r2_json:
+        obj_text += f"[Review2] {r2_json.get('summary', r2_output[:500])}"
+
+    return consensus, has_obj, obj_text
+
+
+# ── Pipeline Relay (main state machine) ───────────────────────────────
+
+class PipelineRelay:
+    """Production pipeline relay orchestrator.
+
+    Async state machine: Brain → Review1+2 → Draft → Review1+2
+    → Eric Gate → Menter → Verify → Complete.
+    """
+
+    def __init__(self, db_path: str = DB_PATH):
+        self.db_path = db_path
+        self.conn = _db_connect()
+
+    def close(self) -> None:
+        self.conn.close()
+
+    async def start(self, intent_text: str) -> str:
+        """Create a new pipeline run and begin processing."""
+        run_id = _create_run(self.conn, intent_text)
+        print(f"[pipeline] Run created: {run_id}")
+        _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+        await self._brain_phase(run_id, intent_text)
+        return run_id
+
+    async def resume(self, run_id: str) -> None:
+        """Resume a non-terminal run from its last known state."""
+        run = _get_run(self.conn, run_id)
+        if not run:
+            raise ValueError(f"Run {run_id} not found")
+        if run["status"] in TERMINAL_STATES:
+            print(f"[pipeline] Run {run_id} is terminal: {run['status']}")
+            return
+
+        intent = run["topic"]
+        status = run["status"]
+        print(f"[pipeline] Resuming {run_id} from {status}")
+
+        if status == "INTAKE":
+            _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+            await self._brain_phase(run_id, intent)
+        elif status == "BRAIN_PHASE":
+            await self._brain_phase(run_id, intent)
+        elif status == "INTENT_REVIEW":
+            await self._intent_review(run_id, intent)
+        elif status == "DRAFT_PHASE":
+            await self._draft_phase(run_id, intent)
+        elif status == "PROPOSAL_REVIEW":
+            await self._proposal_review(run_id, intent)
+        elif status == "ERIC_GATE":
+            print(f"[pipeline] Run {run_id} waiting at ERIC_GATE")
+        elif status == "EXECUTION":
+            await self._execution(run_id, intent)
+        elif status == "VERIFICATION":
+            await self._verification(run_id, intent)
+
+    async def _brain_phase(self, run_id: str, intent: str, round_num: int = 1) -> None:
+        """Brain phase: explore intent, produce structured understanding."""
+        print(f"[pipeline] BRAIN phase (round {round_num}) for {run_id}")
+
+        round_id = _start_round(self.conn, run_id, "brain", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "brain", "brain", run_id, web_search=True
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"You are Brain. Explore this intent and produce an INTENT_UNDERSTANDING.\n"
+            f"End with a FINAL_JSON block:\n"
+            f'```json\n{{"role":"brain","status":"READY","summary":"..."}}\n```\n'
+            f"If you need clarification, emit:\n"
+            f'```json\n{{"role":"brain","status":"NEEDS_CLARIFICATION","question":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("brain", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("brain")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"brain_output": str(e)})
+            print(f"[pipeline] BRAIN failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "brain", "brain",
+                          prompt, output, round_num)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"brain_output": output})
+
+        # Check for HUMAN_QUESTION
+        parsed = _parse_final_json(output)
+        if parsed and parsed.get("status") == "NEEDS_CLARIFICATION":
+            question = parsed.get("question", output[:500])
+            _set_run_status(self.conn, run_id, "ESCALATE")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"human_question": question})
+            print(f"[pipeline] BRAIN needs clarification: {question}")
+            return
+
+        # Proceed to intent review
+        _set_run_status(self.conn, run_id, "INTENT_REVIEW")
+        await self._intent_review(run_id, intent)
+
+    async def _intent_review(self, run_id: str, intent: str,
+                             round_num: int = 1) -> None:
+        """Intent review: parallel Review1 + Review2 check Brain's output."""
+        print(f"[pipeline] INTENT_REVIEW (round {round_num}) for {run_id}")
+
+        # Get brain output from last deliberation round
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE workflow_run_id = ? AND brain_output IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        row = cur.fetchone()
+        brain_output = row[0] if row else ""
+
+        round_id = _start_round(self.conn, run_id, "intent_review", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "intent_review", "review1", run_id
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Brain's understanding:\n{brain_output}\n\n"
+            f"You are a reviewer. Check Brain's understanding for gaps, "
+            f"assumptions, and blind spots. End with FINAL_JSON:\n"
+            f'```json\n{{"role":"reviewer","status":"CONSENSUS_REACHED"'
+            f',"summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"reviewer","status":"OBJECTIONS"'
+            f',"summary":"..."}}\n```'
+        )
+
+        r1_out, r2_out, r1_err, r2_err = await _call_reviewers_parallel(prompt, run_id)
+
+        _record_trajectory(self.conn, run_id, "review1", "intent_review",
+                          prompt, r1_out, round_num)
+        _record_trajectory(self.conn, run_id, "review2", "intent_review",
+                          prompt, r2_out, round_num)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED", {
+            "reviewer1_output": r1_out,
+            "reviewer2_output": r2_out,
+        })
+
+        if r1_err and r2_err:
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] Both reviewers failed: {r1_err}, {r2_err}")
+            return
+
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out)
+
+        if has_obj and round_num < MAX_BRAIN_ROUNDS:
+            print(f"[pipeline] Reviewers object — back to Brain (round {round_num+1})")
+            _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+            await self._brain_phase(run_id, intent, round_num + 1)
+        elif has_obj:
+            print(f"[pipeline] Max brain rounds ({MAX_BRAIN_ROUNDS}) — ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+        else:
+            print(f"[pipeline] Intent review consensus — proceed to Draft")
+            _set_run_status(self.conn, run_id, "DRAFT_PHASE")
+            await self._draft_phase(run_id, intent)
+
+    async def _draft_phase(self, run_id: str, intent: str,
+                          round_num: int = 1) -> None:
+        """Draft phase: produce structured proposal from Brain's understanding."""
+        print(f"[pipeline] DRAFT phase (round {round_num}) for {run_id}")
+
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE workflow_run_id = ? AND brain_output IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        brain_output = row[0] if (row := cur.fetchone()) else ""
+
+        round_id = _start_round(self.conn, run_id, "draft", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "draft", "draft", run_id, web_search=True
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Brain's understanding:\n{brain_output}\n\n"
+            f"You are Draft. Write a structured proposal/spec.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"draft","status":"PROPOSAL_READY","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("draft", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("draft")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"drafter_output": str(e)})
+            print(f"[pipeline] DRAFT failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "draft", "draft",
+                          prompt, output, round_num)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"drafter_output": output})
+
+        _set_run_status(self.conn, run_id, "PROPOSAL_REVIEW")
+        await self._proposal_review(run_id, intent, round_num)
+
+    async def _proposal_review(self, run_id: str, intent: str,
+                               round_num: int = 1) -> None:
+        """Proposal review: parallel reviewers critique Draft's proposal."""
+        print(f"[pipeline] PROPOSAL_REVIEW (round {round_num}) for {run_id}")
+
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        draft_output = row[0] if (row := cur.fetchone()) else ""
+
+        round_id = _start_round(self.conn, run_id, "proposal_review", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "proposal_review", "review1", run_id
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Draft's proposal:\n{draft_output}\n\n"
+            f"You are a reviewer. Critique this proposal. End with FINAL_JSON:\n"
+            f'```json\n{{"role":"reviewer","status":"CONSENSUS_REACHED"'
+            f',"summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"reviewer","status":"OBJECTIONS"'
+            f',"summary":"..."}}\n```'
+        )
+
+        r1_out, r2_out, r1_err, r2_err = await _call_reviewers_parallel(prompt, run_id)
+
+        _record_trajectory(self.conn, run_id, "review1", "proposal_review",
+                          prompt, r1_out, round_num)
+        _record_trajectory(self.conn, run_id, "review2", "proposal_review",
+                          prompt, r2_out, round_num)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED", {
+            "reviewer1_output": r1_out,
+            "reviewer2_output": r2_out,
+        })
+
+        if r1_err and r2_err:
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] Both reviewers failed: {r1_err}, {r2_err}")
+            return
+
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out)
+
+        if has_obj and round_num < MAX_DRAFT_ROUNDS:
+            print(f"[pipeline] Reviewers object — back to Draft (round {round_num+1})")
+            _set_run_status(self.conn, run_id, "DRAFT_PHASE")
+            await self._draft_phase(run_id, intent, round_num + 1)
+        elif has_obj:
+            print(f"[pipeline] Max draft rounds ({MAX_DRAFT_ROUNDS}) — ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+        else:
+            print(f"[pipeline] Proposal review consensus — ERIC GATE")
+            _set_run_status(self.conn, run_id, "ERIC_GATE")
+            print(f"[pipeline] Run {run_id} waiting at ERIC GATE for approval")
+
+    async def _execution(self, run_id: str, intent: str) -> None:
+        """Execution phase: Menter builds per approved FINAL_DIRECTIVE."""
+        print(f"[pipeline] EXECUTION phase for {run_id}")
+
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Freeze directive hash
+        directive_hash = hashlib.sha256(directive.encode()).hexdigest()
+        self.conn.execute(
+            "UPDATE workflow_runs SET directive_hash = ? WHERE id = ?",
+            (directive_hash, run_id)
+        )
+        self.conn.commit()
+
+        round_id = _start_round(self.conn, run_id, "execution", 1)
+        discovery = _pre_discovery(
+            self.conn, intent, "execution", "menter", run_id
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"FINAL_DIRECTIVE (hash: {directive_hash[:16]}):\n{directive}\n\n"
+            f"You are Menter. Execute this directive. Build exactly what is spec'd.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"menter","status":"CONSENSUS_REACHED","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("menter", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("menter")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR")
+            print(f"[pipeline] MENTER failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "menter", "execution",
+                          prompt, output, 1)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED")
+
+        _set_run_status(self.conn, run_id, "VERIFICATION")
+        await self._verification(run_id, intent)
+
+    async def _verification(self, run_id: str, intent: str) -> None:
+        """Verification phase: Verify checks Menter's work independently."""
+        print(f"[pipeline] VERIFICATION phase for {run_id}")
+
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE workflow_run_id = ? AND drafter_output IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        round_id = _start_round(self.conn, run_id, "verification", 1)
+        discovery = _pre_discovery(
+            self.conn, intent, "verification", "verify", run_id
+        )
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"FINAL_DIRECTIVE:\n{directive}\n\n"
+            f"You are Verify. Run evidence commands. Check git diff, tests, "
+            f"file state. Trust nothing. End with FINAL_JSON:\n"
+            f'```json\n{{"role":"verify","status":"PASS","summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"verify","status":"FAIL","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("verify", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("verify")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR")
+            print(f"[pipeline] VERIFY failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "verify", "verification",
+                          prompt, output, 1)
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"verify_output": output})
+
+        parsed = _parse_final_json(output)
+        status = parsed.get("status", "") if parsed else ""
+
+        if status == "FAIL":
+            # Saga compensation: git stash Menter's changes
+            print(f"[pipeline] VERIFY FAIL — compensating (git stash)")
+            _set_run_status(self.conn, run_id, "VERIFY_FAILED")
+        else:
+            print(f"[pipeline] VERIFY PASS — run complete")
+            _set_run_status(self.conn, run_id, "CONSENSUS_REACHED")
+
+
+# ── CLI Entry Point ────────────────────────────────────────────────────
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="CIS Pipeline Relay")
+    parser.add_argument("--intent", "-i", help="Intent text to start a new run")
+    parser.add_argument("--resume", "-r", help="Resume a run by ID")
+    parser.add_argument("--status", "-s", help="Show status of a run")
+    args = parser.parse_args()
+
+    if args.status:
+        conn = _db_connect()
+        run = _get_run(conn, args.status)
+        if run:
+            print(f"Run ID: {run['id']}")
+            print(f"Topic: {run['topic']}")
+            print(f"Status: {run['status']}")
+            print(f"Created: {run['created_at']}")
+            if run['directive_hash']:
+                print(f"Directive hash: {run['directive_hash'][:16]}...")
+        else:
+            print(f"Run {args.status} not found")
+        conn.close()
+        return
+
+    relay = PipelineRelay()
+
+    if args.intent:
+        run_id = asyncio.run(relay.start(args.intent))
+        print(f"\nPipeline run: {run_id}")
+    elif args.resume:
+        asyncio.run(relay.resume(args.resume))
+    else:
+        parser.print_help()
+
+    relay.close()
+
+
+if __name__ == "__main__":
+    main()

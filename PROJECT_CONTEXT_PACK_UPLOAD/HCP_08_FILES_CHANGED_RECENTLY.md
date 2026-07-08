@@ -1,7 +1,195 @@
 # Files Changed Recently
-Generated: 2026-07-08 05:57 UTC | Run: run-17578399d7a9
+Generated: 2026-07-08 15:27 UTC | Run: run-b51ceac49c86
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 2b7d458 wire container gates + ingest sessions + model-agnostic role rename
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/agents_static.yaml 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## enforcement/mwl-proof-v2/Dockerfile 
+
+## enforcement/mwl-proof-v2/RESULTS/build_proof_20260703.txt 
+
+## enforcement/mwl-proof-v2/RESULTS/run_v6.txt 
+
+## enforcement/mwl-proof-v2/RESULTS/run_v7.txt 
+
+## enforcement/mwl-proof-v2/RESULTS/standing_container_block_proof.txt 
+
+## enforcement/mwl-proof-v2/container_gate_runner.py 
+
+## enforcement/mwl-proof-v2/gates/_gate_common.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_layout_no_overlap.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_nav_groups.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_no_writes.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_regression_pages.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_removed_nav.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11a_system_overview.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_approve_schema.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_concurrency.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_idempotency.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_no_goal_reference_create.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_no_orchestrator_import.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_no_veto.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_11b_one_post_only.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_build_state_coherence.py 
+
+## enforcement/mwl-proof-v2/gates/gate_build_state_coherence.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_chroma_no_secrets_in_results.py 
+
+## enforcement/mwl-proof-v2/gates/gate_chroma_secret_filter.py 
+
+## enforcement/mwl-proof-v2/gates/gate_closeout_artifact.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_closeout_complete.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_consensus_signal_valid.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_db_state.py 
+
+## enforcement/mwl-proof-v2/gates/gate_deliberation.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_drafter_closeout.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_endpoint.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_eric_approval.py 
+
+## enforcement/mwl-proof-v2/gates/gate_eric_approval_present.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_escalation_packet.py 
+
+## enforcement/mwl-proof-v2/gates/gate_export_agreement.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_file_exists.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_final_directive_allowed.py 
+
+## enforcement/mwl-proof-v2/gates/gate_git_state.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_implementation_artifact_present.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_mcp_no_filesystem_write.py 
+
+## enforcement/mwl-proof-v2/gates/gate_mcp_no_network.py 
+
+## enforcement/mwl-proof-v2/gates/gate_mcp_readonly.py 
+
+## enforcement/mwl-proof-v2/gates/gate_no_secrets.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_pre_execution_oversight.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_proposal_schema_valid.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_research_artifact_present.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_review_round_valid.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_reviewer_closeout.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_runner.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_service_health.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_staleness.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_ui_acceptance.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_ui_method_allowlist.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_ui_no_pipeline_bypass.py 
+
+## enforcement/mwl-proof-v2/gates/gate_ui_no_secrets_in_jsx.sh 
+
+## enforcement/mwl-proof-v2/gates/gate_ui_no_write_endpoints.sh 
+
+## enforcement/mwl-proof-v2/gates/test_tier_6_4_gates.sh 
+
+## enforcement/mwl-proof-v2/harness.sh 
+
+## enforcement/mwl-proof-v2/managed-config.yaml 
+
+## enforcement/mwl-proof-v2/plugin/__init__.py 
+
+## enforcement/mwl-proof-v2/plugin/plugin.yaml 
+
+## enforcement/mwl-proof-v2/run_v6.txt 
+
+## enforcement/mwl-proof-v2/run_v7.txt 
+
+## enforcement/mwl-proof-v2/standing_container_block_proof.txt 
+
+## enforcement/mwl-proof-v2/tool_guardrails.py 
+
+## enforcement/profiles/brainstorm/config.yaml 
+
+## enforcement/profiles/drafter/config.yaml 
+
+## enforcement/profiles/glm-reviewer/config.yaml 
+
+## enforcement/profiles/implementer/config.yaml 
+
+## enforcement/profiles/qwen-reviewer/config.yaml 
+
+## enforcement/profiles/verifier/config.yaml 
+
+## runtime/abstraction/dispatch.py 
+
+## runtime/api/adapter.py 
+
+## runtime/api/advisor.py 
+
+## runtime/api/collab_rounds.py 
+
+## runtime/api/router.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/catalog/ingest_sessions.py 
 
 ## 4c5109b docs: master goal inventory — 107 items across CIS, SWA, WIASW from deep knowledge base search
 
@@ -462,67 +650,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## tools/catalog/convert_to_knowledge.py 
-
-## 4c3d396 feat(pipeline): CIS front door + intent-alignment + knowledge search
-
-## .gitignore 
-
-## cis_kernel/source/SESSION_LOG.md 
-
-## docs/CIS_INTENTION_ALIGNMENT_PIPELINE_SPEC.md 
-
-## docs/CIS_INTENT_ALIGNMENT_WORKFLOW_SPEC.md 
-
-## docs/DEV-PIVOT-05_HERMES_INTEGRATION_ASSESSMENT.md 
-
-## docs/DEV-PIVOT-06_BUILD_DIRECTION.md 
-
-## docs/SESSION_HANDOFF_2026-06-25.md 
-
-## docs/SPEC_POST_SCRAPE_INTENTION_ALIGNMENT_PIPELINE.md 
-
-## docs/SPEC_POST_SCRAPE_INTENTION_ALIGNMENT_PIPELINE_REV2.md 
-
-## enforcement/CATEGORY_TO_LAYER_MAP.md 
-
-## enforcement/TAGGING_DIRECTIVE_v3.md 
-
-## runtime/abstraction/__init__.py 
-
-## runtime/abstraction/dispatch.py 
-
-## runtime/api/adapter.py 
-
-## runtime/api/intent.py 
-
-## runtime/app.py 
-
-## runtime/mcp_bridge/spine.py 
-
-## runtime/mcp_bridge/tools.py 
-
-## runtime/ui/public/portal.html 
-
-## tools/catalog/append_embeddings.py 
-
-## tools/catalog/apply_review.py 
-
-## tools/catalog/batch_tag_claude.py 
-
-## tools/catalog/build_embeddings.py 
-
-## tools/catalog/convert_to_knowledge.py 
-
-## tools/catalog/ingest_chatgpt_only.py 
-
-## tools/catalog/ingest_intentions.py 
-
-## tools/catalog/ingest_legacy.py 
-
-## tools/catalog/search_catalog.py 
-
-## tools/pipeline/drafter_start.py 
-
-## tools/pipeline/measure_intent.py 
-
-## tools/pipeline/reviewer_reconcile.py 

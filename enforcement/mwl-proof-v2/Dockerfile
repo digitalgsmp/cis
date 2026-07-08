@@ -59,6 +59,17 @@ RUN chown -R root:root /etc/hermes \
     && chmod 0755 /etc/hermes \
     && chmod 0644 /etc/hermes/config.yaml
 
+# --- bake all 6 PROFILE CONFIGS (managed scope, root-owned) ---
+COPY profiles/ /etc/hermes/profiles/
+RUN chown -R root:root /etc/hermes/profiles \
+    && find /etc/hermes/profiles -type d -exec chmod 0755 {} \; \
+    && find /etc/hermes/profiles -type f -exec chmod 0644 {} \;
+
+# --- bake the multi-profile launch script ---
+COPY launch_profiles.sh /opt/cis-control/launch_profiles.sh
+RUN chown root:root /opt/cis-control/launch_profiles.sh \
+    && chmod 0555 /opt/cis-control/launch_profiles.sh
+
 # --- create the unprivileged worker user (NO sudo, NO root) ---
 RUN useradd -m -s /bin/bash worker
 
@@ -88,5 +99,5 @@ RUN echo "---MANAGED-SCOPE-RESOLVED---" \
     echo "---PLUGIN-OWNERSHIP---" \
     && ls -l /home/worker/.hermes/plugins/mwl-proof
 
-# Default command: gateway server (override with docker run args to shell in)
-CMD ["hermes", "gateway", "run"]
+# Default command: launch all 6 profiles
+CMD ["/opt/cis-control/launch_profiles.sh"]
