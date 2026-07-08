@@ -1,0 +1,86 @@
+CIS Sealed Hermes Container — Build Proof
+Date: 2026-07-03
+Container: cis-hermes (image cis-hermes:pinned, rebuilt this session)
+
+=== 1. Managed config (context_length fix verified) ===
+model.context_length: 65536
+auxiliary.compression.context_length: 65536
+plugins.enabled: [mwl-proof]
+plugins.disabled: []
+tool_loop_guardrails.hard_stop_enabled: true
+
+=== 2. Mounts (docker inspect) ===
+/source/cis      <- /mnt/projects/cis      ro
+/source/archive  <- /mnt/archive           ro
+/source/swa      <- /mnt/projects/swa      ro
+/cis-control     <- /opt/cis-control       ro
+/workspace       <- /mnt/cache/catalog/cis-hermes  rw
+
+=== 3. RO mount write refusal (kernel wall) ===
+Command: echo breach > /source/cis/breach.txt
+Result: bash: line 1: /source/cis/breach.txt: Read-only file system
+PASS
+
+=== 4. Plugin-disable resistance (permissions wall) ===
+Command: mv ~/.hermes/plugins/mwl-proof ~/.hermes/plugins/mwl-proof.disabled
+Result: mv: cannot remove '.../plugin.yaml': Permission denied
+         mv: cannot remove '.../__init__.py': Permission denied
+PASS
+
+=== 5. Qwen reachability ===
+Command: curl http://host.docker.internal:8002/v1/models
+Result: model qwen3-vl-30b-a3b-instruct-q4_k_m.gguf, n_ctx 32768
+PASS
+
+=== 6. Loop-breaker (tool_guardrails.py, _success_repeat_counts present at line 235) ===
+Task: read same file 10x in a row
+Result: warned at attempt 3, hard-stopped at attempt 8 via
+        guardrail "repeated_exact_failure_block" (5 repeated non-progressing attempts)
+PASS (halted; exact trigger mechanism differs from _success_repeat_counts design intent — see note)
+
+Note: warn-at-3 on successful repeats confirmed. Block-at-9 on successful
+repeats not directly triggered — a separate failure-counter guardrail
+caught the loop first. No infinite loop occurred either way.
+
+=== 7. Control plane directories ===
+/opt/cis-control/contracts   created
+/opt/cis-control/templates   created
+/opt/cis-control/policy      created
+/opt/cis-control/proofs      pre-existing
+
+=== 8. harness.sh ===
+Location: /mnt/projects/cis/enforcement/mwl-proof-v2/harness.sh
+One-command rebuild + relaunch confirmed working this session.
+
+=== Open items ===
+- State persistence across docker rm/run: not tested this session
+- Item 6 (config edit blocked): not re-tested this session, architecturally enforced by managed scope
+
+=== UPDATE (post loop-breaker patch, same session) ===
+
+=== 6. Config-edit resistance (managed scope wall) — RE-TESTED, CONFIRMED ===
+Command: hermes config set model.context_length 99999
+Result: Cannot set 'model.context_length': it is managed by your administrator
+        (/etc/hermes/config.yaml) and cannot be changed.
+PASS
+
+=== 8. Loop-breaker — CORRECTED RESULT ===
+Patch: tool_guardrails.py (with _success_repeat_counts) baked into Dockerfile
+        via COPY step, verified present post-rebuild (lines 235/264/372/373).
+Task: search_files repeated with no new results (pure successful repeats)
+Result: Blocked after 8 repeated non-progressing successful attempts via
+        guardrail "repeated_success_block"
+PASS — supersedes prior caveat. _success_repeat_counts mechanism directly
+confirmed firing, independent of repeated_exact_failure_block.
+
+=== 9. State persistence (named volume) — CONFIRMED ===
+Volume: cis-hermes-state -> /home/worker/.hermes
+Test: wrote persist_check.txt, ran harness.sh twice (destroy+rebuild x2)
+Result: file survived both cycles
+PASS
+
+=== 9. State persistence (named volume) — CONFIRMED ===
+Volume: cis-hermes-state -> /home/worker/.hermes
+Test: wrote persist_check.txt, ran harness.sh twice (destroy+rebuild x2)
+Result: file survived both cycles
+PASS

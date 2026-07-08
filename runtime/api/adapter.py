@@ -115,7 +115,7 @@ def adapter_dispatch():
             "reason": "Architecture/proposal intent detected",
             "signals_matched": ["design", "plan"],
             "healthy": true,
-            "next_suggested_action": "Send to V4 Reviewer for adversarial critique"
+            "next_suggested_action": "Send to Review1 for adversarial critique"
         }
     """
     data = request.get_json(silent=True) or {}
@@ -134,12 +134,18 @@ def adapter_dispatch():
 
     # Map router route names to abstraction layer roles
     ROUTE_TO_ROLE = {
-        "v4_drafter": "drafter",
-        "v4_reviewer": "reviewer",
-        "fast": "prime",
-        "qwen": "qwen",
+        "draft": "draft",
+        "v4_drafter": "draft",
+        "review1": "review1",
+        "v4_reviewer": "review1",
+        "review2": "review2",
+        "brain": "brain",
+        "fast": "brain",
+        "menter": "menter",
+        "v4_implementer": "menter",
+        "verify": "verify",
         "blocked": None,
-        "multihop": "prime",  # multihop starts with research
+        "multihop": "brain",  # multihop starts with research
     }
     role = ROUTE_TO_ROLE.get(route)
     profile = get_profile(role) if role else None
@@ -226,7 +232,7 @@ def adapter_chat():
 
     # Forward to the gateway
     payload = json.dumps({
-        "model": profile["model"],
+        "model": profile.get("hermes_profile", ""),
         "messages": messages,
         "max_tokens": 4096,
     }).encode("utf-8")
@@ -277,15 +283,18 @@ def adapter_chat():
 def _get_next_action(route: str, classification: dict) -> str:
     """Get the suggested next action based on the route."""
     if classification.get("qwen_blocked"):
-        return "Use V4 Drafter to generate a properly formatted directive first"
+        return "Use Draft to generate a properly formatted directive first"
 
     actions = {
-        "fast": "Evidence returned — forward to V4 Drafter for proposal",
-        "v4_drafter": "Send to V4 Reviewer for adversarial critique",
+        "fast": "Evidence returned — forward to Draft for proposal",
+        "v4_drafter": "Send to Review1 for adversarial critique",
+        "draft": "Send to Review1 for adversarial critique",
         "v4_reviewer": "Incorporate critique, escalate or approve via Eric Gate",
+        "review1": "Incorporate critique, escalate or approve via Eric Gate",
+        "review2": "Incorporate critique, escalate or approve via Eric Gate",
         "qwen": "Review VERDICT / ACTION / EVIDENCE output",
         "blocked": "Reformat as FINAL_DIRECTIVE or JUDGE_REQUEST",
     }
     if classification.get("multihop"):
-        return "Research preflight complete — auto-forwarding to V4 Drafter"
+        return "Research preflight complete — auto-forwarding to Draft"
     return actions.get(route, "Review classification and decide next step")

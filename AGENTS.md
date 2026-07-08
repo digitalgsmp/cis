@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-07 17:12 UTC | Run: run-e637f9fd290a | Latest pipeline: run-1010c3076e084
+Generated: 2026-07-08 05:57 UTC | Run: run-17578399d7a9 | Latest pipeline: run-1010c3076e084
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -35,12 +35,12 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ### Gateways
 | Label | Profile | Port | Model | Reasoning | NeMo | Status |
 |-------|---------|------|-------|-----------|------|--------|
-| V4 Brainstorm | hermes-brainstorm | 8644 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| V4 Drafter | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Qwen Reviewer | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| GLM Reviewer | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| V4 Implementer | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| GLM Verifier | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Brain | hermes-brainstorm | 8644 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Draft | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Review1 | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Review2 | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Menter | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Verify | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Prime/Chat | hermes-prime | 8642 | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
 
 ### Hermes Source Patches

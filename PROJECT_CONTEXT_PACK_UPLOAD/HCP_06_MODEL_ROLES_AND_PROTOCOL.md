@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-07-07 17:12 UTC | Run: run-e637f9fd290a
+Generated: 2026-07-08 05:57 UTC | Run: run-17578399d7a9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -58,12 +58,12 @@ profiles regardless of which profile receives the session start signal.
 | Label | Profile | Port | Function |
 |-------|---------|------|----------|
 
-| V4 Brainstorm | hermes-brainstorm | 8644 | — |
-| V4 Drafter | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
-| Qwen Reviewer | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
-| GLM Reviewer | hermes-glm-reviewer | 8647 | — |
-| V4 Implementer | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
-| GLM Verifier | hermes-glm-verifier | 8648 | — |
+| Brain | hermes-brainstorm | 8644 | — |
+| Draft | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
+| Review1 | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
+| Review2 | hermes-glm-reviewer | 8647 | — |
+| Menter | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
+| Verify | hermes-glm-verifier | 8648 | — |
 | Prime/Chat | hermes-prime | 8642 | Evidence firewall (NeMo) + topic grounding |
 
 ## External Advisor Protocol

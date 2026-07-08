@@ -14,7 +14,7 @@ infrastructure:
   github_repo: "https://github.com/digitalgsmp/cis"
 
 gateways:
-  - label: "V4 Brainstorm"
+  - label: "Brain"
     profile: "hermes-brainstorm"
     port: "8644"
     hermes_home: "/home/eric/.hermes-brainstorm"
@@ -23,7 +23,7 @@ gateways:
     reasoning: "xhigh"
     nemo: false
     status: "Running — verified 2026-07-07 via ss -tlnp"
-  - label: "V4 Drafter"
+  - label: "Draft"
     profile: "hermes-v4pro"
     port: "8645"
     hermes_home: "/home/eric/.hermes-v4pro"
@@ -32,7 +32,7 @@ gateways:
     reasoning: "xhigh"
     nemo: false
     status: "Running — verified 2026-07-07 via ss -tlnp"
-  - label: "Qwen Reviewer"
+  - label: "Review1"
     profile: "hermes-r1"
     port: "8643"
     hermes_home: "/home/eric/.hermes-r1"
@@ -41,7 +41,7 @@ gateways:
     reasoning: "xhigh"
     nemo: false
     status: "Running — verified 2026-07-07 via ss -tlnp"
-  - label: "GLM Reviewer"
+  - label: "Review2"
     profile: "hermes-glm-reviewer"
     port: "8647"
     hermes_home: "/home/eric/.hermes-glm-reviewer"
@@ -50,7 +50,7 @@ gateways:
     reasoning: "xhigh"
     nemo: false
     status: "Running — verified 2026-07-07 via ss -tlnp"
-  - label: "V4 Implementer"
+  - label: "Menter"
     profile: "hermes-v4impl"
     port: "8646"
     hermes_home: "/home/eric/.hermes-v4impl"
@@ -59,7 +59,7 @@ gateways:
     reasoning: "xhigh"
     nemo: false
     status: "Running — verified 2026-07-07 via ss -tlnp"
-  - label: "GLM Verifier"
+  - label: "Verify"
     profile: "hermes-glm-verifier"
     port: "8648"
     hermes_home: "/home/eric/.hermes-glm-verifier"

@@ -1,11 +1,11 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-07-07
+Date: 2026-07-08
 Authority: Eric (Architect)
 Status: Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Claude Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 
-Generated: 2026-07-07 17:12 UTC | Run: run-e637f9fd290a
+Generated: 2026-07-08 05:57 UTC | Run: run-17578399d7a9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Claude Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).**
 
-**HEAD:** `d24a448`.
+**HEAD:** `4c5109b`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -183,12 +183,12 @@ does not satisfy Eric. No direct execution authority.
 
 | Gateway | Port | HERMES_HOME | Model | Reasoning | NeMo? | Status |
 |---------|------|-------------|-------|-----------|-------|--------|
-| V4 Brainstorm (hermes-brainstorm) | 8644 | /home/eric/.hermes-brainstorm | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| V4 Drafter (hermes-v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Qwen Reviewer (hermes-r1) | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| GLM Reviewer (hermes-glm-reviewer) | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| V4 Implementer (hermes-v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| GLM Verifier (hermes-glm-verifier) | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Brain (hermes-brainstorm) | 8644 | /home/eric/.hermes-brainstorm | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Draft (hermes-v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Review1 (hermes-r1) | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Review2 (hermes-glm-reviewer) | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Menter (hermes-v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Verify (hermes-glm-verifier) | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Prime/Chat (hermes-prime) | 8642 | /home/eric/.hermes | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
 
 **Context:** AGENTS.md auto-loaded by all 4 active gateways via TERMINAL_CWD=/mnt/projects/cis. HERMES_CIS_BRIEFING_PATH retired.

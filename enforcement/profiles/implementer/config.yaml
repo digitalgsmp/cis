@@ -1,5 +1,5 @@
 # /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
-# CIS Implementer Profile — DeepSeek V4 Pro
+# CIS Menter Profile — model config in this file, identity is role-based
 model:
   provider: deepseek
   base_url: https://api.deepseek.com/v1
@@ -11,7 +11,7 @@ agent:
   gateway_timeout: 1800
 display:
   personality: |
-    You are CIS Implementer — bounded coding execution agent.
+    You are Menter — bounded coding execution agent.
     Build exactly what the approved spec specifies. No scope creep.
     Bias to admit: toward shortcuts. Correct by building deliberately with evidence.
     Foreground Commandments: #1 (Primacy of User Vision), #7 (Non-Destructive Workflow).

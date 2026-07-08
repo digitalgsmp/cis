@@ -27,7 +27,6 @@ DB_PATH = "/mnt/projects/cis/runtime/db/cis_memory.db"
 SPINE_DB_PATH = "/mnt/projects/cis/data/cis_memory.db"  # CIS spine
 
 # Agents that participate in deliberation (parallel mode, reconciliation).
-# Prime is fast chat. Qwen is execution worker. Neither deliberates.
 DELIBERATION_AGENTS = ('hermes-r1', 'hermes-v4pro')
 
 # ── AdvisorChat Input Router v0.1 ────────────────────────────────────────
@@ -56,11 +55,17 @@ ARCHIVE_RETRIEVAL_SIGNALS = [
     "use my archive", "my stated logic", "how i described"
 ]
 ROUTER_AGENT_MAP = {
-    "fast":           {"agent": "hermes-prime",  "port": 8800},
-    "v4_drafter":     {"agent": "hermes-v4pro",  "port": 8645},
-    "v4_reviewer":    {"agent": "hermes-r1",     "port": 8643},
-    "v4_implementer": {"agent": "hermes-v4impl", "port": 8646},
-    "qwen":           {"agent": "hermes-qwen",   "port": 8644},
+    "brain":          {"agent": "hermes-brainstorm",   "port": 8644},
+    "draft":          {"agent": "hermes-v4pro",        "port": 8645},
+    "review1":        {"agent": "hermes-r1",           "port": 8643},
+    "review2":        {"agent": "hermes-glm-reviewer",  "port": 8647},
+    "menter":         {"agent": "hermes-v4impl",       "port": 8646},
+    "verify":         {"agent": "hermes-glm-verifier",  "port": 8648},
+    # Legacy route keys for backward compatibility
+    "fast":           {"agent": "hermes-brainstorm",   "port": 8644},
+    "v4_drafter":     {"agent": "hermes-v4pro",        "port": 8645},
+    "v4_reviewer":    {"agent": "hermes-r1",           "port": 8643},
+    "v4_implementer": {"agent": "hermes-v4impl",       "port": 8646},
 }
 # Tier 7: Blockers for routes that depend on future tiers
 ROUTER_BLOCKERS = {
@@ -68,13 +73,16 @@ ROUTER_BLOCKERS = {
     "EXTERNAL_RESEARCH": "BLOCKED_ON_WEB_RESEARCH_CONFIG",
 }
 ROUTER_NEXT_ACTION = {
-    "fast":           "Evidence returned — continue to V4 Drafter",
-    "v4_drafter":     "Send to V4 Reviewer for adversarial critique",
-    "v4_reviewer":    "Incorporate critique, then issue FINAL_DIRECTIVE for V4 Implementer",
+    "fast":           "Evidence returned — continue to Draft",
+    "draft":          "Send to Review1 for adversarial critique",
+    "v4_drafter":     "Send to Review1 for adversarial critique",
+    "review1":        "Incorporate critique, then issue FINAL_DIRECTIVE for Menter",
+    "v4_reviewer":    "Incorporate critique, then issue FINAL_DIRECTIVE for Menter",
+    "menter":         "Review files changed, tests run, pass/fail evidence",
     "v4_implementer": "Review files changed, tests run, pass/fail evidence",
-    "qwen":           "Review VERDICT / ACTION / EVIDENCE output",
-    "blocked":        "Input must start with JUDGE_REQUEST to reach Qwen",
-    "multihop":       "Research preflight complete — auto-forwarding to V4 Drafter",
+    
+    "blocked":        "Input must start with JUDGE_REQUEST to reach execution",
+    "multihop":       "Research preflight complete — auto-forwarding to Draft",
 }
 
 
@@ -114,11 +122,11 @@ def classify_route(message, override=None):
                        signals=archive_signals,
                        reason=f"Archive retrieval intent detected — signals: {archive_signals}")
 
-    # Pass 1a: FINAL_DIRECTIVE — V4 Implementer
+    # Pass 1a: FINAL_DIRECTIVE — Menter
     if text.startswith("FINAL_DIRECTIVE"):
         return _result("v4_implementer", "deterministic",
                        reason="Implementation directive — "
-                              "NeMo preflight + V4 Implementer direct on 8646")
+                              "Preflight + Menter direct on 8646")
 
     # Pass 1b: JUDGE_REQUEST — Qwen
     if text.startswith("JUDGE_REQUEST"):
@@ -157,7 +165,7 @@ def classify_route(message, override=None):
     if rs and dr:
         return _result("fast", "high", rs + dr, multihop=True,
                        reason="Research preflight before drafting — "
-                              "evidence will be injected into V4 Drafter")
+                              "evidence will be injected into Draft")
 
     # Pass 7: Drafter signals
     if dr:
@@ -167,7 +175,7 @@ def classify_route(message, override=None):
 
     # Pass 8: Ambiguous fallback
     return _result("v4_drafter", "low",
-                   reason="No clear signal — defaulted to V4 Drafter")
+                   reason="No clear signal — defaulted to Draft")
 
 
 def get_db():
@@ -244,15 +252,15 @@ def _call_gateway(gateway_url, model, api_key, messages, max_tokens=1000, timeou
         return body["choices"][0]["message"]["content"]
 
 
-# ── Gate 7A: V4-Pro Preflight Evidence Injection ───────────────────────
+# ── Gate 7A: Preflight Evidence Injection ────────────────────────────
 
-NEMO_PREFLIGHT_URL = "http://127.0.0.1:8800/v1/chat/completions"
+PREFLIGHT_URL = "http://127.0.0.1:8800/v1/chat/completions"
 
-# Role system prompts for V4-Pro agents
-V4PRO_R1_ROLE = (
-    "You are V4-Pro R1, Proposal Author and Directive Drafter. "
+# Role system prompts — model-agnostic, use functional role names only
+DRAFT_ROLE = (
+    "You are Draft, Proposal Author and Directive Drafter. "
     "Your role is to draft structured proposals. "
-    "You cannot claim execution or completion — execution belongs to Qwen Worker. "
+    "You cannot claim execution or completion — execution belongs to Menter. "
     "Every response must include:\n"
     "OBJECTIVE:\n"
     "PROPOSED APPROACH:\n"
@@ -261,10 +269,10 @@ V4PRO_R1_ROLE = (
     "STOP CONDITION:"
 )
 
-V4PRO_R2_CRITIC_ROLE = (
-    "You are V4-Pro R2/Critic, Adversarial Reviewer. "
+REVIEW1_CRITIC_ROLE = (
+    "You are Review1, Adversarial Reviewer. "
     "Your role is to challenge proposals and identify missing evidence. "
-    "You do not execute — Qwen Worker executes after reconciliation. "
+    "You do not execute — Menter executes after reconciliation. "
     "Every response must include:\n"
     "OBJECTION/CONCERN:\n"
     "EVIDENCE OR MISSING EVIDENCE:\n"
@@ -287,7 +295,7 @@ def run_fast_preflight(user_content):
         }).encode()
 
         req = urllib.request.Request(
-            NEMO_PREFLIGHT_URL,
+            PREFLIGHT_URL,
             data=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -302,7 +310,7 @@ def run_fast_preflight(user_content):
 
 def _call_gateway_with_reasoning(gateway_url, model, api_key, messages,
                                  max_tokens=2000, timeout=180):
-    """Call a V4-Pro agent gateway and return content + reasoning metadata.
+    """Call a Draft/Review1 gateway and return content + reasoning metadata.
 
     Returns dict with keys: content, reasoning_content, reasoning_tokens.
     Unlike _call_gateway(), this preserves DeepSeek V4 reasoning fields.
@@ -340,10 +348,10 @@ def _call_gateway_with_reasoning(gateway_url, model, api_key, messages,
     return result
 
 
-# ── Gate 7B: Qwen Worker/Judge Gate ─────────────────────────────────────
+# ── Gate 7B: Execution/Judge Gate ─────────────────────────────────────
 
-QWEN_SYSTEM_PROMPT = (
-    "You are Qwen Worker/Judge.\n"
+EXECUTION_SYSTEM_PROMPT = (
+    "You are the Execution Gate.\n"
     "You do not deliberate.\n"
     "You do not propose architecture.\n"
     "You execute FINAL_DIRECTIVE packets or judge JUDGE_REQUEST packets.\n"
@@ -356,11 +364,11 @@ QWEN_SYSTEM_PROMPT = (
 )
 
 
-def validate_qwen_input(content):
-    """Validate that Qwen input is a proper FINAL_DIRECTIVE or JUDGE_REQUEST.
+def validate_execution_input(content):
+    """Validate that execution input is a proper FINAL_DIRECTIVE or JUDGE_REQUEST.
 
     Returns (is_valid, block_reason).
-    - is_valid=True means the content can be sent to Qwen.
+    - is_valid=True means the content can be sent to execution.
     - is_valid=False means block with block_reason.
     """
     stripped = content.strip()
@@ -388,17 +396,17 @@ def validate_qwen_input(content):
         return True, None
 
     return False, (
-        "QWEN_GATE_BLOCKED\n\n"
-        "Qwen Worker/Judge only accepts FINAL_DIRECTIVE or JUDGE_REQUEST packets.\n"
-        "This prompt was blocked by the Qwen gate. It must be:\n"
+        "EXECUTION_GATE_BLOCKED\n\n"
+        "The Execution Gate only accepts FINAL_DIRECTIVE or JUDGE_REQUEST packets.\n"
+        "This prompt was blocked by the gate. It must be:\n"
         "- A reconciled FINAL_DIRECTIVE from the reconciliation pipeline, or\n"
         "- A JUDGE_REQUEST for post-execution verification.\n\n"
         "Casual chat, proposal drafting, unresolved debate, and unreconciled "
-        "instructions must go through V4-Pro R1/R2 deliberation first."
+        "instructions must go through Draft/Review1 deliberation first."
     )
 
 
-def _call_qwen(agent, api_key, messages, max_tokens=2000, timeout=180):
+def _call_execution(agent, api_key, messages, max_tokens=2000, timeout=180):
     """Call Qwen gateway and return content."""
     payload = json.dumps({
         "model": agent['model'],
@@ -478,7 +486,7 @@ def assert_authorized_dispatch(source_actor, target_port,
 def assert_implementer_authorized(proposal_id,
                                    directive_text, db):
     """
-    Enforce Rules 2, 3, 4 for V4 Implementer dispatch.
+    Enforce Rules 2, 3, 4 for Menter dispatch.
     All three checks required. Raises on first failure.
     """
     # Rule 2: FINAL_DIRECTIVE prefix required
@@ -600,7 +608,7 @@ def chat():
     # Build message list: thread history + current user message
     messages = get_thread_history(thread_id)
 
-    # ── Gate 7A: Preflight evidence injection for V4-Pro agents ─────────
+    # ── Gate 7A: Preflight evidence injection ─────────
     is_v4pro = agent_name in ('hermes-v4pro', 'hermes-r1')
     preflight_result = None
     block_reason = None
@@ -618,13 +626,13 @@ def chat():
                   "WEB_EVIDENCE_OK" in preflight_result):
                 evidence_packet = preflight_result
 
-    # ── Block execution claims before calling V4-Pro ────────────────────
+    # ── Block execution claims before calling Draft/Review1 ────────────
     if block_reason:
         conn.close()
         blocked_msg = (
             "FAST_EXECUTION_BLOCKED (via preflight)\n\n"
-            "V4-Pro cannot claim execution or completion. "
-            "Escalate to Qwen Worker for execution after reconciliation."
+            "Draft/Review1 cannot claim execution or completion. "
+            "Escalate to Menter for execution after reconciliation."
         )
         _save_message(
             get_db(), thread_id, agent_name, 'assistant',
@@ -642,8 +650,8 @@ def chat():
     if is_v4pro:
         # System role prompt
         role_prompt = (
-            V4PRO_R1_ROLE if agent_name == 'hermes-v4pro'
-            else V4PRO_R2_CRITIC_ROLE
+            DRAFT_ROLE if agent_name == 'hermes-v4pro'
+            else REVIEW1_CRITIC_ROLE
         )
         v4pro_messages.insert(0, {"role": "system", "content": role_prompt})
 
@@ -682,7 +690,7 @@ def chat():
             )
         v4pro_messages[-1] = {"role": "user", "content": wrapped}
 
-        # ── Call V4-Pro directly (NOT through NeMo) ─────────────────────
+        # ── Call Draft/Review1 directly ─────────────────────────
         try:
             result = _call_gateway_with_reasoning(
                 agent['gateway_url'], agent['model'], api_key,
@@ -693,7 +701,7 @@ def chat():
             reasoning_tokens = result["reasoning_tokens"]
         except Exception as e:
             conn.close()
-            return jsonify({'error': f'V4-Pro gateway call failed: {str(e)}'}), 502
+            return jsonify({'error': f'Draft/Review1 gateway call failed: {str(e)}'}), 502
 
         # Save assistant message
         _save_message(conn, thread_id, agent_name, 'assistant',
@@ -710,9 +718,9 @@ def chat():
         }
         return jsonify(response)
 
-    # ── Gate 7B: Qwen Worker/Judge gate ─────────────────────────────────
+    # ── Gate 7B: Execution/Judge gate ───────────────────────────────────
     if agent_name == 'hermes-qwen':
-        is_valid, block_reason = validate_qwen_input(content)
+        is_valid, block_reason = validate_execution_input(content)
 
         if not is_valid:
             conn.close()
@@ -728,12 +736,12 @@ def chat():
 
         # Build Qwen messages: system prompt + directive/judge request
         qwen_messages = [
-            {"role": "system", "content": QWEN_SYSTEM_PROMPT},
+            {"role": "system", "content": EXECUTION_SYSTEM_PROMPT},
             {"role": "user", "content": content},
         ]
 
         try:
-            reply = _call_qwen(agent, api_key, qwen_messages, max_tokens=2000)
+            reply = _call_execution(agent, api_key, qwen_messages, max_tokens=2000)
         except Exception as e:
             conn.close()
             return jsonify({'error': f'Qwen gateway call failed: {str(e)}'}), 502
@@ -748,7 +756,7 @@ def chat():
             'content': reply,
         })
 
-    # ── Non-V4-Pro agents: existing behavior ────────────────────────────
+    # ── Other agents: existing behavior ────────────────────────────────
     # R1 (legacy path — should not be hit, kept for safety)
     if agent_name == 'hermes-r1':
         wrapped = (
@@ -945,8 +953,8 @@ def parallel():
             if preflight and "FAST_EXECUTION_BLOCKED" in preflight:
                 blocked_msg = (
                     "FAST_EXECUTION_BLOCKED (via preflight)\n\n"
-                    "V4-Pro cannot claim execution or completion. "
-                    "Escalate to Qwen Worker for execution after reconciliation."
+                    "Draft/Review1 cannot claim execution or completion. "
+                    "Escalate to Menter for execution after reconciliation."
                 )
                 return {'agent': name, 'content': blocked_msg,
                         'ok': True, 'error': None, 'blocked': True}
@@ -954,8 +962,8 @@ def parallel():
             # Build per-agent messages with role prompt + evidence
             agent_msgs = list(base_messages)
             role_prompt = (
-                V4PRO_R1_ROLE if name == 'hermes-v4pro'
-                else V4PRO_R2_CRITIC_ROLE
+                DRAFT_ROLE if name == 'hermes-v4pro'
+                else REVIEW1_CRITIC_ROLE
             )
             agent_msgs.insert(0, {"role": "system", "content": role_prompt})
 
@@ -1148,10 +1156,10 @@ def execute_directive():
 
     # Call Qwen gateway with system prompt
     try:
-        result = _call_qwen(
+        result = _call_execution(
             qwen, qwen_key,
             [
-                {"role": "system", "content": QWEN_SYSTEM_PROMPT},
+                {"role": "system", "content": EXECUTION_SYSTEM_PROMPT},
                 {"role": "user", "content": directive},
             ],
             max_tokens=2000
@@ -1277,10 +1285,10 @@ def _call_routing_fast(message):
 
 
 def _call_routing_v4pro(message, agent_name, port=None):
-    """Call a V4-Pro agent directly and return dict with content + reasoning.
+    """Call a Draft/Review1 agent directly and return dict with content + reasoning.
 
     agent_name: 'hermes-v4pro' (R1 Drafter) or 'hermes-r1' (R2 Reviewer)
-    port:       override gateway port (used for V4 Implementer on 8646)
+    port:       override gateway port (used for Menter on 8646)
     """
     agent = get_agent(agent_name)
     if not agent:
@@ -1293,9 +1301,9 @@ def _call_routing_v4pro(message, agent_name, port=None):
 
     # Attach role prompt for deliberation agents
     if agent_name == 'hermes-v4pro':
-        role_prompt = V4PRO_R1_ROLE
+        role_prompt = DRAFT_ROLE
     elif agent_name == 'hermes-r1':
-        role_prompt = V4PRO_R2_CRITIC_ROLE
+        role_prompt = REVIEW1_CRITIC_ROLE
     else:
         role_prompt = None
 
@@ -1312,7 +1320,7 @@ def _call_routing_v4pro(message, agent_name, port=None):
 
 
 def _call_routing_qwen(message):
-    """Call Qwen Worker and return the response text."""
+    """Call Execution Gate and return the response text."""
     agent = get_agent('hermes-qwen')
     if not agent:
         raise Exception("Qwen agent not found or inactive")
@@ -1321,10 +1329,10 @@ def _call_routing_qwen(message):
         raise Exception("API_SERVER_KEY not found for Qwen")
 
     messages = [
-        {"role": "system", "content": QWEN_SYSTEM_PROMPT},
+        {"role": "system", "content": EXECUTION_SYSTEM_PROMPT},
         {"role": "user", "content": message},
     ]
-    text = _call_qwen(agent, api_key, messages, max_tokens=2000)
+    text = _call_execution(agent, api_key, messages, max_tokens=2000)
     return {"content": text} if text else {"content": ""}
 
 
@@ -2050,7 +2058,7 @@ def route_message():
             agent_response = _call_routing_v4pro(message, 'hermes-r1')
 
         elif routing["route"] == "v4_implementer":
-            # NeMo preflight → V4 Implementer direct on 8646
+            # Preflight → Menter direct on 8646
             preflight_response_text = run_fast_preflight(message)
             injected = (
                 "[NEMO PREFLIGHT]\n" + (preflight_response_text or "") +

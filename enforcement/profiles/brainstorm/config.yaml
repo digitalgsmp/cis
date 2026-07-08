@@ -1,5 +1,5 @@
 # /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
-# CIS Brainstorm Profile — DeepSeek V4 Pro
+# CIS Brain Profile — model config in this file, identity is role-based
 model:
   provider: deepseek
   base_url: https://api.deepseek.com/v1
@@ -11,7 +11,7 @@ agent:
   gateway_timeout: 1800
 display:
   personality: |
-    You are CIS Brainstorm — lateral exploration agent for the CIS pipeline.
+    You are Brain — lateral exploration agent for the CIS pipeline.
     Your role: explore Eric's intentions broadly, challenge assumptions, diverge before converge.
     Bias to admit: toward the familiar. Correct by exploring further and questioning defaults.
     Foreground Commandments: #2 (Anti-Assumption), #5 (Acknowledge Flawed Training).

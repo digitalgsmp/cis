@@ -27,18 +27,28 @@ ARCHIVE_RETRIEVAL_SIGNALS = [
 ]
 QWEN_PREFIXES = ("FINAL_DIRECTIVE", "JUDGE_REQUEST")
 ROUTER_AGENT_MAP = {
-    "fast":        {"agent": "hermes-prime",  "port": 8800},
-    "v4_drafter":  {"agent": "hermes-v4pro",  "port": 8645},
-    "v4_reviewer": {"agent": "hermes-r1",     "port": 8643},
-    "qwen":        {"agent": "hermes-qwen",   "port": 8644},
+    "brain":       {"agent": "hermes-brainstorm",  "port": 8644},
+    "draft":       {"agent": "hermes-v4pro",       "port": 8645},
+    "review1":     {"agent": "hermes-r1",          "port": 8643},
+    "review2":     {"agent": "hermes-glm-reviewer","port": 8647},
+    "menter":      {"agent": "hermes-v4impl",      "port": 8646},
+    "verify":      {"agent": "hermes-glm-verifier","port": 8648},
+    # Legacy route keys for backward compatibility
+    "fast":           {"agent": "hermes-brainstorm",  "port": 8644},
+    "v4_drafter":     {"agent": "hermes-v4pro",       "port": 8645},
+    "v4_reviewer":    {"agent": "hermes-r1",          "port": 8643},
+    "v4_implementer": {"agent": "hermes-v4impl",      "port": 8646},
 }
 ROUTER_NEXT_ACTION = {
-    "fast":        "Evidence returned — continue to V4 Drafter",
-    "v4_drafter":  "Send to V4 Reviewer for adversarial critique",
-    "v4_reviewer": "Incorporate critique, then generate FINAL_DIRECTIVE for Qwen",
-    "qwen":        "Review VERDICT / ACTION / EVIDENCE output",
-    "blocked":     "Use V4 Drafter to generate a properly formatted directive first",
-    "multihop":    "Research preflight complete — auto-forwarding to V4 Drafter",
+    "fast":           "Evidence returned — continue to Draft",
+    "draft":          "Send to Review1 for adversarial critique",
+    "v4_drafter":     "Send to Review1 for adversarial critique",
+    "review1":        "Incorporate critique, then issue FINAL_DIRECTIVE for Menter",
+    "v4_reviewer":    "Incorporate critique, then issue FINAL_DIRECTIVE for Menter",
+    "menter":         "Review files changed, tests run, pass/fail evidence",
+    "v4_implementer": "Review files changed, tests run, pass/fail evidence",
+    "blocked":        "Use Draft to generate a properly formatted directive first",
+    "multihop":       "Research preflight complete — auto-forwarding to Draft",
 }
 
 # Helper
@@ -113,7 +123,7 @@ def classify_route(message: str, override: Optional[str] = None) -> Dict[str, an
         result["route"] = "fast"
         result["multihop"] = True
         result["confidence"] = "high"
-        result["reason"] = "Research preflight before drafting — evidence will be injected into V4 Drafter"
+        result["reason"] = "Research preflight before drafting — evidence will be injected into Draft"
         result["agent"] = ROUTER_AGENT_MAP["fast"]["agent"]
         result["port"] = ROUTER_AGENT_MAP["fast"]["port"]
         return result
@@ -130,7 +140,7 @@ def classify_route(message: str, override: Optional[str] = None) -> Dict[str, an
     # 8. Fallback
     result["route"] = "v4_drafter"
     result["confidence"] = "low"
-    result["reason"] = "No clear signal — defaulted to V4 Drafter"
+    result["reason"] = "No clear signal — defaulted to Draft"
     result["agent"] = ROUTER_AGENT_MAP["v4_drafter"]["agent"]
     result["port"] = ROUTER_AGENT_MAP["v4_drafter"]["port"]
     return result

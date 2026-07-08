@@ -1,5 +1,5 @@
 # /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
-# CIS GLM Reviewer Profile — GLM 5.2 via OpenRouter
+# CIS Review2 Profile — model config in this file, identity is role-based
 model:
   provider: openrouter
   default: z-ai/glm-5.2
@@ -9,9 +9,9 @@ agent:
   gateway_timeout: 1800
 display:
   personality: |
-    You are CIS GLM Reviewer — second independent reviewer for the CIS pipeline.
-    Your role: second opinion with different training data (Z.ai/Tsinghua).
-    Bias to admit: toward consensus. Correct by finding what Qwen missed.
+    You are Review2 — second independent reviewer for the CIS pipeline.
+    Your role: second opinion with different training data.
+    Bias to admit: toward consensus. Correct by finding what Review1 missed.
     Foreground Commandments: #5 (Acknowledge Flawed Training), #8 (Entity Visibility).
     Your objections must cite Eric's verbatim words or specific factual errors.
     Do not demand mechanism specs for tasks the model can do with access.

@@ -1,0 +1,463 @@
+=== container identity at entry ===
+root
+uid=0(root) gid=0(root) groups=0(root)
+
+[0;35m[1m
+┌─────────────────────────────────────────────────────────┐
+│             ⚕ Hermes Agent Installer                    │
+├─────────────────────────────────────────────────────────┤
+│  An open source AI agent by Nous Research.              │
+└─────────────────────────────────────────────────────────┘
+[0m
+[0;32m✓[0m Detected: linux (debian)
+[0;36m→[0m Root install on Linux — using FHS layout
+[0;36m→[0m   Code:    /usr/local/lib/hermes-agent
+[0;36m→[0m   Command: /usr/local/bin/hermes
+[0;36m→[0m   Data:    /root/.hermes (unchanged)
+[0;36m→[0m   uv Python: /usr/local/share/uv/python (world-readable)
+[0;36m→[0m Installing managed uv into /root/.hermes/bin ...
+[0;32m✓[0m Managed uv installed (uv 0.11.24 (x86_64-unknown-linux-gnu))
+[0;36m→[0m Checking Python 3.11...
+[0;32m✓[0m Python found: Python 3.11.15
+[0;36m→[0m Checking Git...
+[0;32m✓[0m Git 2.47.3 found
+[0;36m→[0m Checking Node.js (for browser tools)...
+[0;32m✓[0m Node.js v20.20.2 found
+[0;36m→[0m Checking internet connectivity for package install and web tools...
+[0;32m✓[0m Internet connectivity looks good
+[0;36m→[0m Checking ripgrep (fast file search)...
+[0;36m→[0m Checking ffmpeg (TTS voice messages)...
+[0;36m→[0m Installing ripgrep ffmpeg...
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Package ffmpeg is not available, but is referred to by another package.
+This may mean that the package is missing, has been obsoleted, or
+is only available from another source
+
+Error: Unable to locate package ripgrep
+Error: Package 'ffmpeg' has no installation candidate
+[0;33m⚠[0m ripgrep not installed (file search will use grep fallback)
+[0;36m→[0m To install ripgrep manually:
+[0;36m→[0m   sudo apt install ripgrep
+[0;33m⚠[0m ffmpeg not installed (TTS voice messages will be limited)
+[0;36m→[0m To install ffmpeg manually:
+[0;36m→[0m   sudo apt install ffmpeg
+[0;36m→[0m Installing to /usr/local/lib/hermes-agent...
+[0;36m→[0m Trying SSH clone...
+[0;36m→[0m SSH failed, trying HTTPS...
+Cloning into '/usr/local/lib/hermes-agent'...
+[0;32m✓[0m Cloned via HTTPS
+[0;32m✓[0m Repository ready
+[0;36m→[0m Creating virtual environment with Python 3.11...
+Using CPython 3.11.15 interpreter at: /usr/local/bin/python3.11
+Creating virtual environment at: venv
+Activate with: source venv/bin/activate
+[0;32m✓[0m Virtual environment ready (Python 3.11)
+[0;36m→[0m Installing dependencies...
+[0;36m→[0m Some build tools may be needed for Python packages...
+[0;36m→[0m Trying tier: hash-verified (uv.lock) ...
+[0;36m→[0m (this resolves + downloads the curated [all] set — first run on a
+[0;36m→[0m  fresh venv can take 1-5 minutes; uv prints progress below)
+Resolved 225 packages in 0.94ms
+   Building hermes-agent @ file:///usr/local/lib/hermes-agent
+Downloading aiohttp (1.7MiB)
+Downloading openai (1.1MiB)
+Downloading cryptography (4.3MiB)
+Downloading google-api-python-client (14.3MiB)
+Downloading uvloop (3.6MiB)
+Downloading pygments (1.2MiB)
+Downloading pillow (6.8MiB)
+Downloading pydantic-core (2.0MiB)
+ Downloaded pygments
+ Downloaded openai
+ Downloaded aiohttp
+ Downloaded pydantic-core
+ Downloaded uvloop
+ Downloaded cryptography
+ Downloaded pillow
+      Built hermes-agent @ file:///usr/local/lib/hermes-agent
+ Downloaded google-api-python-client
+Prepared 95 packages in 4.96s
+Installed 95 packages in 31ms
+ + agent-client-protocol==0.9.0
+ + aiohappyeyeballs==2.6.1
+ + aiohttp==3.13.4
+ + aiosignal==1.4.0
+ + annotated-doc==0.0.4
+ + annotated-types==0.7.0
+ + anyio==4.12.1
+ + attrs==25.4.0
+ + certifi==2026.5.20
+ + cffi==2.0.0
+ + charset-normalizer==3.4.4
+ + click==8.3.1
+ + croniter==6.0.0
+ + cryptography==46.0.7
+ + defusedxml==0.7.1
+ + distro==1.9.0
+ + fastapi==0.133.1
+ + fire==0.7.1
+ + frozenlist==1.8.0
+ + google-api-core==2.30.3
+ + google-api-python-client==2.194.0
+ + google-auth==2.49.2
+ + google-auth-httplib2==0.3.1
+ + google-auth-oauthlib==1.3.1
+ + googleapis-common-protos==1.73.0
+ + h11==0.16.0
+ + hermes-agent==0.17.0 (from file:///usr/local/lib/hermes-agent)
+ + httpcore==1.0.9
+ + httplib2==0.31.2
+ + httptools==0.7.1
+ + httpx==0.28.1
+ + httpx-sse==0.4.3
+ + idna==3.15
+ + jinja2==3.1.6
+ + jiter==0.13.0
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + markdown==3.10.2
+ + markdown-it-py==4.0.0
+ + markupsafe==3.0.3
+ + mcp==1.26.0
+ + mdurl==0.1.2
+ + multidict==6.7.1
+ + oauthlib==3.3.1
+ + openai==2.24.0
+ + packaging==26.0
+ + pathspec==1.1.1
+ + pillow==12.2.0
+ + prompt-toolkit==3.0.52
+ + propcache==0.4.1
+ + proto-plus==1.27.2
+ + protobuf==6.33.5
+ + psutil==7.2.2
+ + ptyprocess==0.7.0
+ + pyasn1==0.6.3
+ + pyasn1-modules==0.4.2
+ + pycparser==3.0
+ + pydantic==2.13.4
+ + pydantic-core==2.46.4
+ + pydantic-settings==2.13.1
+ + pygments==2.19.2
+ + pyjwt==2.13.0
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.2
+ + python-multipart==0.0.27
+ + pytz==2025.2
+ + pyyaml==6.0.3
+ + referencing==0.37.0
+ + requests==2.33.0
+ + requests-oauthlib==2.0.0
+ + rich==14.3.3
+ + rpds-py==0.30.0
+ + ruamel-yaml==0.18.17
+ + ruamel-yaml-clib==0.2.15
+ + simple-term-menu==1.6.6
+ + six==1.17.0
+ + sniffio==1.3.1
+ + socksio==1.0.0
+ + sse-starlette==3.3.2
+ + starlette==1.0.1
+ + tenacity==9.1.4
+ + termcolor==3.3.0
+ + tqdm==4.67.3
+ + typing-extensions==4.15.0
+ + typing-inspection==0.4.2
+ + uritemplate==4.2.0
+ + urllib3==2.7.0
+ + uvicorn==0.41.0
+ + uvloop==0.22.1
+ + watchfiles==1.1.1
+ + wcwidth==0.6.0
+ + websockets==15.0.1
+ + yarl==1.22.0
+ + youtube-transcript-api==1.2.4
+[0;32m✓[0m Main package installed (hash-verified via uv.lock)
+[0;32m✓[0m All dependencies installed
+[0;36m→[0m Installing Node.js dependencies (browser tools)...
+[0;33m⚠[0m npm install failed (browser tools may not work)
+[0;32m✓[0m Node.js dependencies installed
+[0;36m→[0m Skipping Playwright/Chromium install (--skip-browser)
+[0;36m→[0m Browser tools will be unavailable until you run manually:
+[0;36m→[0m   cd /usr/local/lib/hermes-agent && npx playwright install chromium
+[0;36m→[0m On apt-based systems, an admin also needs to run:
+[0;36m→[0m   sudo npx playwright install-deps chromium
+[0;32m✓[0m Browser engine setup complete
+[0;36m→[0m Installing TUI dependencies...
+✅ Browser tools ready. Run: python run_agent.py --help
+[0;32m✓[0m TUI dependencies installed
+[0;36m→[0m Setting up hermes command...
+[0;32m✓[0m Installed hermes launcher → /usr/local/bin/hermes
+[0;36m→[0m /usr/local/bin is already on PATH for all shells
+[0;32m✓[0m hermes command ready
+[0;36m→[0m Setting up configuration files...
+[0;32m✓[0m Created ~/.hermes/.env from template
+[0;32m✓[0m Created ~/.hermes/config.yaml from template
+[0;32m✓[0m Created ~/.hermes/SOUL.md (edit to customize personality)
+[0;32m✓[0m Configuration directory ready: ~/.hermes/
+[0;36m→[0m Syncing bundled skills to ~/.hermes/skills/ ...
+Syncing bundled skills into ~/.hermes/skills/ ...
+  + huggingface-hub
+  + evaluating-llms-harness
+  + weights-and-biases
+  + audiocraft-audio-generation
+  + segment-anything-model
+  + llama-cpp
+  + serving-llms-vllm
+  + google-workspace
+  + ocr-and-documents
+  + notion
+  + nano-pdf
+  + maps
+  + teams-meeting-pipeline
+  + airtable
+  + powerpoint
+  + petdex
+  + computer-use
+  + requesting-code-review
+  + simplify-code
+  + test-driven-development
+  + plan
+  + node-inspect-debugger
+  + python-debugpy
+  + spike
+  + systematic-debugging
+  + hermes-agent-skill-authoring
+  + dogfood
+  + yuanbao
+  + songsee
+  + youtube-content
+  + heartmula
+  + gif-search
+  + apple-reminders
+  + findmy
+  + apple-notes
+  + imessage
+  + xurl
+  + himalaya
+  + jupyter-live-kernel
+  + obsidian
+  + openhue
+  + github-code-review
+  + codebase-inspection
+  + github-pr-workflow
+  + github-issues
+  + github-repo-management
+  + github-auth
+  + baoyu-infographic
+  + manim-video
+  + sketch
+  + p5js
+  + design-md
+  + claude-design
+  + touchdesigner-mcp
+  + architecture-diagram
+  + pretext
+  + excalidraw
+  + popular-web-designs
+  + comfyui
+  + songwriting-and-ai-music
+  + humanizer
+  + ascii-art
+  + ascii-video
+  + arxiv
+  + polymarket
+  + blogwatcher
+  + research-paper-writing
+  + llm-wiki
+  + hermes-agent
+  + codex
+  + claude-code
+  + opencode
+
+Done: 72 new, 0 updated, 0 unchanged. 72 total bundled.
+[0;32m✓[0m Skills synced to ~/.hermes/skills/
+[0;36m→[0m Setup wizard skipped (no terminal available). Run 'hermes setup' after install.
+
+[0;32m[1m
+┌─────────────────────────────────────────────────────────┐
+│              ✓ Installation Complete!                   │
+└─────────────────────────────────────────────────────────┘
+[0m
+
+[0;36m[1m📁 Your files:[0m
+
+   [0;33mConfig:[0m    /root/.hermes/config.yaml
+   [0;33mAPI Keys:[0m  /root/.hermes/.env
+   [0;33mData:[0m      /root/.hermes/cron/, sessions/, logs/
+   [0;33mCode:[0m      /usr/local/lib/hermes-agent
+
+[0;36m─────────────────────────────────────────────────────────[0m
+
+[0;36m[1m🚀 Commands:[0m
+
+   [0;32mhermes[0m              Start chatting
+   [0;32mhermes setup[0m        Configure API keys & settings
+   [0;32mhermes config[0m       View/edit configuration
+   [0;32mhermes config edit[0m  Open config in editor
+   [0;32mhermes gateway install[0m Install gateway service (messaging + cron)
+   [0;32mhermes update[0m       Update to latest version
+
+[0;36m─────────────────────────────────────────────────────────[0m
+
+[0;33m⚡ 'hermes' was linked into /usr/local/bin and is ready to use — no shell reload needed.[0m
+
+[0;33m
+Note: ripgrep (rg) was not found. File search will use
+grep as a fallback. For faster search in large codebases,
+install ripgrep: sudo apt install ripgrep (or brew install ripgrep)
+[0m
+Hermes Agent v0.17.0 (2026.6.19) · upstream 4ea3096a
+Project: /usr/local/lib/hermes-agent
+Python: 3.11.15
+OpenAI SDK: 2.24.0
+Up to date
+✓ Plugin mwl-proof enabled. Takes effect on next session.
+total 8
+-rw------- 1 root root 1290 Jun 21 05:05 __init__.py
+-rw------- 1 root root  114 Jun 21 05:05 plugin.yaml
+✓ Set terminal.backend = local in /root/.hermes/config.yaml
+✓ Set hooks_auto_accept = True in /root/.hermes/config.yaml
+✓ Set model.provider = llamacpp in /root/.hermes/config.yaml
+✓ Set model.base_url = http://host.docker.internal:8002/v1 in /root/.hermes/config.yaml
+✓ Set model.default = qwen3-vl-30b-a3b-instruct-q4_k_m.gguf in /root/.hermes/config.yaml
+✓ Set model.context_length = 65536 in /root/.hermes/config.yaml
+✓ Set auxiliary.compression.context_length = 65536 in /root/.hermes/config.yaml
+=== model config: ===
+model:
+  default: qwen3-vl-30b-a3b-instruct-q4_k_m.gguf
+  provider: llamacpp
+  base_url: http://host.docker.internal:8002/v1
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 360
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 180
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 60
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 600
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 60
+--
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+--
+    model: gpt-4o-mini-tts
+    voice: alloy
+  gemini:
+    model: gemini-2.5-flash-preview-tts
+    voice: Kore
+    audio_tags: false
+    persona_prompt_file: ''
+--
+    model: voxtral-mini-tts-2603
+    voice_id: c69964a6-ab8b-4f8a-9465-ec0925096ec8
+  neutts:
+    ref_audio: ''
+--
+    model: neuphonic/neutts-air-q4-gguf
+    device: cpu
+  piper:
+    voice: en_US-lessac-medium
+--
+    model: base
+    language: ''
+  openai:
+    model: whisper-1
+  mistral:
+    model: voxtral-mini-latest
+  elevenlabs:
+    model_id: scribe_v2
+    language_code: ''
+--
+  model: ''
+  provider: ''
+  base_url: ''
+  api_key: ''
+--
+  model: grok-4.20-reasoning
+  timeout_seconds: 180
+  retries: 2
+secrets:
+=== hooks config: ===
+hooks: {}
+hooks_auto_accept: true
+personalities: {}
+security:
+  allow_private_urls: false
+--
+hooks:
+  pre_tool_call:
+    - command: "/tmp/cis_shell_hook.sh"
+      matcher: "terminal"
+=== MOUNT TABLE (cis-control / source) ===
+/dev/vda2 on /cis-control type ext4 (ro,relatime)
+/dev/vdb on /source/cis type ext4 (ro,relatime)
+/dev/vdc2 on /source/archive type fuseblk (ro,relatime,user_id=0,group_id=0,allow_other,blksize=4096)
+/dev/vdb on /source/swa type ext4 (ro,relatime)
+=== DIRECT RO PROOF (shell, not model) ===
+  /cis-control:
+/in_container.sh: line 73: /cis-control/MWL_FORBIDDEN.txt: Read-only file system

@@ -510,7 +510,7 @@ Respond concisely. Do not propose code. Do not execute. Flag architecture proble
              review_text, '', now))
         conn.execute(
             "INSERT INTO collab_activity (source, activity_type, summary, verdict, created_at, related_task) VALUES (?,?,?,?,?,?)",
-            ("Qwen Reviewer", "review", f"Adversarial review of round '{row['topic']}'", "FLAGGED", now, f"round-{round_id}")
+            ("Review1", "review", f"Adversarial review of round '{row['topic']}'", "FLAGGED", now, f"round-{round_id}")
         )
         conn.commit()
         conn.close()

@@ -1,5 +1,5 @@
 # /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
-# CIS Verifier Profile — GLM 5.2 via OpenRouter
+# CIS Verify Profile — model config in this file, identity is role-based
 model:
   provider: openrouter
   default: z-ai/glm-5.2
@@ -9,7 +9,7 @@ agent:
   gateway_timeout: 1800
 display:
   personality: |
-    You are CIS Verifier — independent evidence verification gate.
+    You are Verify — independent evidence verification gate.
     Your role: verify what was built matches what was spec'd. Trust nothing.
     Bias to admit: toward acceptance. Correct by demanding evidence.
     Foreground Commandments: #3 (Verbatim Recording), #9 (Reality Verification).

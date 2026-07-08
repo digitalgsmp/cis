@@ -2,9 +2,11 @@
 dispatch.py — CIS Abstraction Layer: Profile Dispatch & Health
 
 Maps CIS role names to Hermes profiles, gateway ports, and capabilities.
-One source of truth for "which port is the Drafter on."
+One source of truth for "which port is Draft on."
 
 Per DEV-PIVOT-05 §5: When Hermes updates and ports change, only this file changes.
+Role names are model-agnostic — they describe function, not provider.
+Model/provider details live in agents_static.yaml and enforcement profile configs.
 """
 
 import urllib.request
@@ -14,71 +16,98 @@ from typing import Dict, Optional, List, Tuple
 
 # ═══════════════════════════════════════════════════════════════════════
 #  PROFILE DISPATCH MAP (canonical — update here when ports change)
+#  Role keys are model-agnostic. hermes_profile is the filesystem path,
+#  not an identity. Model fields are for gateway calls only.
 # ═══════════════════════════════════════════════════════════════════════
 
 PROFILES: Dict[str, dict] = {
-    "drafter": {
-        "role": "drafter",
+    "brain": {
+        "role": "brain",
+        "label": "Brain",
+        "hermes_profile": "hermes-brainstorm",
+        "port": 8644,
+        "description": "Brain — lateral exploration, challenges assumptions, surfaces possibilities",
+        "capabilities": ["brainstorm", "explore", "diverge", "challenge", "question"],
+    },
+    "draft": {
+        "role": "draft",
+        "label": "Draft",
         "hermes_profile": "hermes-v4pro",
         "port": 8645,
-        "model": "deepseek-v4-pro",
-        "description": "V4 Drafter — authors proposals, designs, plans",
+        "description": "Draft — authors proposals, designs, plans",
         "capabilities": ["draft", "design", "plan", "research", "write"],
     },
-    "reviewer": {
-        "role": "reviewer",
+    "review1": {
+        "role": "review1",
+        "label": "Review1",
         "hermes_profile": "hermes-r1",
         "port": 8643,
-        "model": "deepseek-v4-pro",
-        "description": "V4 Reviewer — adversarial critique, verification",
+        "description": "Review1 — adversarial critique, first independent reviewer",
         "capabilities": ["review", "critique", "verify", "challenge", "audit"],
     },
-    "implementer": {
-        "role": "implementer",
+    "review2": {
+        "role": "review2",
+        "label": "Review2",
+        "hermes_profile": "hermes-glm-reviewer",
+        "port": 8647,
+        "description": "Review2 — second independent reviewer, different training distribution",
+        "capabilities": ["review", "critique", "verify", "challenge", "audit"],
+    },
+    "menter": {
+        "role": "menter",
+        "label": "Menter",
         "hermes_profile": "hermes-v4impl",
         "port": 8646,
-        "model": "deepseek-v4-pro",
-        "description": "V4 Implementer — builds code, executes plans",
+        "description": "Menter — builds code, executes plans",
         "capabilities": ["implement", "build", "execute", "test", "deploy"],
     },
-    "prime": {
-        "role": "prime",
-        "hermes_profile": "hermes-prime",
-        "port": 8642,
-        "model": "deepseek-v4-flash",
-        "description": "Prime/Research — fast lookups, web search",
-        "capabilities": ["research", "search", "fact-check", "summarize"],
-    },
-    "qwen": {
-        "role": "qwen",
-        "hermes_profile": "hermes-qwen",
-        "port": 8644,
-        "model": "qwen3-vl-30b",
-        "description": "Qwen Reviewer — second opinion, local GPU",
-        "capabilities": ["review", "analyze", "vision"],
+    "verify": {
+        "role": "verify",
+        "label": "Verify",
+        "hermes_profile": "hermes-glm-verifier",
+        "port": 8648,
+        "description": "Verify — independent evidence verification gate",
+        "capabilities": ["verify", "audit", "validate", "check", "confirm"],
     },
 }
 
-# Role aliases (what users/agents might call them)
+# Role aliases (what users/agents might call them — includes legacy names)
 ROLE_ALIASES = {
-    "drafter": "drafter",
-    "v4_drafter": "drafter",
-    "v4pro": "drafter",
-    "hermes-v4pro": "drafter",
-    "reviewer": "reviewer",
-    "v4_reviewer": "reviewer",
-    "r1": "reviewer",
-    "hermes-r1": "reviewer",
-    "implementer": "implementer",
-    "v4_implementer": "implementer",
-    "v4impl": "implementer",
-    "hermes-v4impl": "implementer",
-    "prime": "prime",
-    "research": "prime",
-    "fast": "prime",
-    "hermes-prime": "prime",
-    "qwen": "qwen",
-    "hermes-qwen": "qwen",
+    "brain": "brain",
+    "brainstorm": "brain",
+    "v4_brainstorm": "brain",
+    "hermes-brainstorm": "brain",
+    "draft": "draft",
+    "drafter": "draft",
+    "v4_drafter": "draft",
+    "v4pro": "draft",
+    "hermes-v4pro": "draft",
+    "review1": "review1",
+    "reviewer1": "review1",
+    "v4_reviewer": "review1",
+    "reviewer": "review1",
+    "r1": "review1",
+    "hermes-r1": "review1",
+    "review2": "review2",
+    "reviewer2": "review2",
+    "glm_reviewer": "review2",
+    "hermes-glm-reviewer": "review2",
+    "menter": "menter",
+    "implementer": "menter",
+    "v4_implementer": "menter",
+    "v4impl": "menter",
+    "hermes-v4impl": "menter",
+    "verify": "verify",
+    "verifier": "verify",
+    "glm_verifier": "verify",
+    "hermes-glm-verifier": "verify",
+    # Legacy aliases — keep for backward compatibility, route to review1
+    "qwen": "review1",
+    "hermes-qwen": "review1",
+    "prime": "brain",  # legacy: prime research now maps to brain for research
+    "research": "brain",
+    "fast": "brain",
+    "hermes-prime": "brain",
 }
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -130,9 +159,9 @@ def health_all() -> Dict[str, dict]:
         healthy, error, rt = check_gateway(profile["port"])
         results[role] = {
             "role": role,
+            "label": profile.get("label", role),
             "profile": profile["hermes_profile"],
             "port": profile["port"],
-            "model": profile["model"],
             "healthy": healthy,
             "error": error,
             "response_time": rt,
@@ -172,8 +201,8 @@ def dispatch_summary() -> Dict:
     """Return a summary of all profiles with their capabilities for API consumers."""
     return {
         role: {
+            "label": p.get("label", role),
             "port": p["port"],
-            "model": p["model"],
             "description": p["description"],
             "capabilities": p["capabilities"],
         }

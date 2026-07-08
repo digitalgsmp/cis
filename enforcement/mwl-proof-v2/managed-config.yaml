@@ -4,20 +4,16 @@
 # The worker's own ~/.hermes/config.yaml cannot override these keys.
 #
 # This is the contract the worker reads but cannot author.
-
 model:
   provider: llamacpp
   base_url: http://host.docker.internal:8002/v1
   default: qwen3-vl-30b-a3b-instruct-q4_k_m.gguf
   context_length: 65536
-
 auxiliary:
   compression:
     context_length: 65536
-
 terminal:
   backend: local
-
 # THE WALL is the mwl-proof PLUGIN (__init__.py pre_tool_call), not a shell hook.
 # The plugin must stay enabled AND the disabled-list pinned empty.
 # Pinning only `enabled` is NOT enough: `hermes plugins disable` writes the
@@ -28,3 +24,5 @@ plugins:
   enabled:
     - mwl-proof
   disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true

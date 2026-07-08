@@ -1,5 +1,5 @@
 # Active Architecture — Hermes Harness / CIS
-Generated: 2026-07-07 17:12 UTC | Run: run-e637f9fd290a
+Generated: 2026-07-08 05:57 UTC | Run: run-17578399d7a9
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -27,12 +27,12 @@ terminal.cwd in config.yaml does not currently replace TERMINAL_CWD for context 
 
 | Service | Role | Port | HERMES_HOME | Model |
 |------|------|------|------|------|
-| unknown | V4 Brainstorm | 8644 | /home/eric/.hermes-brainstorm | deepseek-v4-pro |
-| hermes-gateway-v4pro | V4 Drafter | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro |
-| hermes-gateway-r1 | Qwen Reviewer | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max |
-| unknown | GLM Reviewer | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 |
-| hermes-gateway-v4impl | V4 Implementer | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro |
-| unknown | GLM Verifier | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 |
+| unknown | Brain | 8644 | /home/eric/.hermes-brainstorm | deepseek-v4-pro |
+| hermes-gateway-v4pro | Draft | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro |
+| hermes-gateway-r1 | Review1 | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max |
+| unknown | Review2 | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 |
+| hermes-gateway-v4impl | Menter | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro |
+| unknown | Verify | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 |
 | hermes-gateway | Prime/Chat | 8642 | /home/eric/.hermes | deepseek-v4-pro |
 | nemo-fast | NeMo Guardrails | 8800 | — | — |
 

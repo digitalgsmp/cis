@@ -28,6 +28,25 @@ RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --s
     && /usr/local/bin/hermes --version | grep -q "0.17.0" \
     && echo "HERMES_PIN_OK"
 
+# --- install Telegram adapter into Hermes venv (not in base install) ---
+# Hermes venv ships without pip — bootstrap it, then install
+RUN /usr/local/lib/hermes-agent/venv/bin/python -m ensurepip --upgrade \
+    && /usr/local/lib/hermes-agent/venv/bin/python -m pip install 'python-telegram-bot[webhooks]==22.6'
+
+# --- patch loop-breaker: vendor 0.17.0 lacks _success_repeat_counts (NA-SEED-018) ---
+COPY tool_guardrails.py /usr/local/lib/hermes-agent/agent/tool_guardrails.py
+
+# --- bake all 51 CIS gate scripts into /opt/cis-gates/ (root-owned, RO) ---
+COPY gates/ /opt/cis-gates/
+RUN chown -R root:root /opt/cis-gates \
+    && find /opt/cis-gates -type d -exec chmod 0555 {} \; \
+    && find /opt/cis-gates -type f -exec chmod 0555 {} \;
+
+# --- bake the container gate runner (pre-tool-call enforcement) ---
+COPY container_gate_runner.py /opt/cis-gates/container_gate_runner.py
+RUN chown root:root /opt/cis-gates/container_gate_runner.py \
+    && chmod 0555 /opt/cis-gates/container_gate_runner.py
+
 # --- bake the OBSERVER plugin, root-owned, world-readable, worker-unwritable ---
 COPY plugin/ /opt/cis-policy/plugin/
 RUN chown -R root:root /opt/cis-policy \
@@ -69,5 +88,5 @@ RUN echo "---MANAGED-SCOPE-RESOLVED---" \
     echo "---PLUGIN-OWNERSHIP---" \
     && ls -l /home/worker/.hermes/plugins/mwl-proof
 
-# Run command supplied by harness.sh (keep-alive), not baked here.
-CMD ["sleep", "infinity"]
+# Default command: gateway server (override with docker run args to shell in)
+CMD ["hermes", "gateway", "run"]
