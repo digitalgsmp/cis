@@ -16,6 +16,7 @@ Access:
 # already handles intent submission, status polling, gates, and verification.
 
 from flask import Flask, jsonify, send_from_directory, request
+from datetime import datetime, timezone
 import os
 import sys
 from config import RUNTIME_DIR
@@ -132,6 +133,16 @@ app.register_blueprint(dashboard_bp)              # Tier 11A — Dashboard
 def api_worker_status():
     """Return current queue worker state. Used by dashboard polling."""
     return jsonify(worker_status())
+
+# ── Health check endpoint ──────────────────────────────────────────────────────
+
+@app.route("/api/health")
+def api_health():
+    """Return service health status — no database dependency."""
+    return jsonify({
+        "status": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
 
 # ── Archive file server (before SPA catch-all) ─────────────────────────────────
 
