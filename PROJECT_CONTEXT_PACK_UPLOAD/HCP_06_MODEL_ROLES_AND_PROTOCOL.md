@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-07-09 03:09 UTC | Run: run-86b7d0a65d1a
+Generated: 2026-07-09 03:15 UTC | Run: run-423b772007b0
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 

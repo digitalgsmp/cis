@@ -407,7 +407,7 @@ def relay_gate(run_id: str):
         # Update run status based on decision
         if decision == "APPROVE":
             conn.execute(
-                "UPDATE workflow_runs SET status = 'EXECUTION' WHERE id = ?",
+                "UPDATE workflow_runs SET status = 'PATTERN_CATALOG' WHERE id = ?",
                 (run_id,),
             )
         elif decision == "REJECT":
@@ -423,7 +423,7 @@ def relay_gate(run_id: str):
 
         conn.commit()
 
-        # If approved, trigger execution in background
+        # If approved, trigger pattern catalog + code review in background
         if decision == "APPROVE":
             thread = threading.Thread(
                 target=_run_pipeline_background,
@@ -442,7 +442,7 @@ def relay_gate(run_id: str):
             "rationale": rationale,
             "decided_at": now,
             "directive_hash": directive_hash[:16] + "..." if directive_hash else None,
-            "new_status": "EXECUTION" if decision == "APPROVE" else
+            "new_status": "PATTERN_CATALOG" if decision == "APPROVE" else
                           "ESCALATED" if decision == "REJECT" else "DRAFT_PHASE",
         })
     finally:

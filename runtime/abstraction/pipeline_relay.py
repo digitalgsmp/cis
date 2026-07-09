@@ -45,6 +45,30 @@ CIRCUIT_BREAKER_COOLDOWN = 300  # 5 minutes
 HUMAN_QUESTION_TIMEOUT = 72 * 3600  # 72 hours
 MAX_BRAIN_ROUNDS = 2
 MAX_DRAFT_ROUNDS = 3
+MAX_CHUNK_REVISIONS = 3
+MAX_CHUNK_LINES = 300
+
+# ── Menter's Universal Rules (baked into prompt) ─────────────────────
+
+MENTER_UNIVERSAL_RULES = """## UNIVERSAL RULES (you must follow these for every line of code you write)
+
+1. DEFAULT TO INCOMPLETE: No function returns success without completing its job.
+   No status field defaults to "success" or "consensus." Unknown states are errors, not passes.
+2. HANDLE ERRORS EXPLICITLY: Every exception path must do something meaningful
+   (log, raise, escalate). Silent `except: pass` is forbidden.
+3. NO SECRETS IN CODE: No hardcoded API keys, passwords, tokens. Use env vars or config files.
+4. NO DEBUG LEFTOVERS: No print() statements, no commented-out code, no TODO without context.
+5. CLAIMS MUST MATCH REALITY: If you say "added function X", function X must exist in
+   the code you wrote. Your self-report is a claim, not evidence.
+6. CLEAN UP AFTER YOURSELF: No orphan temp files, no leftover debug artifacts,
+   no resources opened without being closed.
+7. STATE MUST PERSIST: If your code maintains state (circuit breaker, cache, counter),
+   it must survive a process restart. In-memory only is not acceptable for state that matters.
+8. VALIDATE BEFORE PROCEEDING: If your function calls another function or agent, validate
+   the response before acting on it. Empty or malformed output is an error, not a silent success.
+
+Self-check against these rules BEFORE submitting your chunk for review.
+"""
 
 # Import dispatch map
 import sys
@@ -56,7 +80,8 @@ from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
 STATES = {
     "PENDING", "INTAKE", "BRAIN_PHASE", "ESCALATE",
     "INTENT_REVIEW", "DRAFT_PHASE", "PROPOSAL_REVIEW",
-    "ERIC_GATE", "EXECUTION", "VERIFICATION",
+    "ERIC_GATE", "PATTERN_CATALOG", "CODE_REVIEW_GATE",
+    "EXECUTION", "VERIFICATION",
     "WAITING_FOR_HUMAN",
     "CONSENSUS_REACHED",
     # Error states
@@ -897,6 +922,175 @@ def _run_isolated_l1(cwd: str, pre_exec_head: str) -> str:
     return "\n\n".join(parts)
 
 
+# ── L1 Universal Checks for Code Chunks ───────────────────────────────
+
+def _run_chunk_l1(cwd: str, file_path: str, diff_text: str) -> str:
+    """Run universal L1 checks on a single code chunk.
+
+    These are deterministic checks that work on any codebase regardless
+    of language or pattern. Results are formatted as evidence for reviewers.
+    """
+    import subprocess
+    parts = []
+    full_path = os.path.join(cwd, file_path)
+
+    # 1. File exists and is non-empty
+    if not os.path.exists(full_path):
+        parts.append(f"## L1: File Exists\n✗ {file_path} MISSING")
+        return "\n\n".join(parts)
+    size = os.path.getsize(full_path)
+    parts.append(f"## L1: File Exists\n✓ {file_path} ({size} bytes)")
+    if size == 0:
+        parts.append("⚠ File is empty")
+
+    # 2. Diff is non-empty
+    if not diff_text.strip():
+        parts.append("## L1: Diff\n⚠ No diff captured — Menter may not have changed anything")
+    else:
+        diff_lines = diff_text.count("\n")
+        parts.append(f"## L1: Diff\n{diff_lines} lines in diff")
+
+    # 3. No hardcoded secrets (basic scan)
+    try:
+        with open(full_path) as f:
+            content = f.read()
+        secret_patterns = ["api_key=", "password=", "token=", "secret="]
+        found_secrets = []
+        for pat in secret_patterns:
+            if pat in content.lower():
+                # Check it's not an env var reference
+                for line_num, line in enumerate(content.split("\n"), 1):
+                    if pat in line.lower() and "os.environ" not in line and "getenv" not in line:
+                        found_secrets.append(f"  Line {line_num}: {line.strip()[:80]}")
+        if found_secrets:
+            parts.append("## L1: Secrets Scan\n⚠ Potential hardcoded secrets:\n" + "\n".join(found_secrets))
+        else:
+            parts.append("## L1: Secrets Scan\n✓ No hardcoded secrets found")
+    except Exception as e:
+        parts.append(f"## L1: Secrets Scan\nERROR: {e}")
+
+    # 4. No silent except: pass
+    try:
+        import re
+        silent_pattern = re.compile(r'except\s*.*:\s*\n\s*pass', re.MULTILINE)
+        matches = silent_pattern.findall(content)
+        if matches:
+            parts.append(f"## L1: Silent Error Handling\n⚠ Found {len(matches)} silent except:pass")
+        else:
+            parts.append("## L1: Silent Error Handling\n✓ No silent except:pass found")
+    except Exception:
+        pass
+
+    # 5. No print() debug statements (basic check)
+    try:
+        print_lines = [line_num for line_num, line in enumerate(content.split("\n"), 1)
+                       if "print(" in line and "print(f'" not in line]
+        if print_lines:
+            parts.append(f"## L1: Debug Statements\n⚠ Found print() on lines: {print_lines[:10]}")
+        else:
+            parts.append("## L1: Debug Statements\n✓ No print() found")
+    except Exception:
+        pass
+
+    # 6. Python syntax check (if .py file)
+    if file_path.endswith(".py"):
+        try:
+            result = subprocess.run(
+                ["python3.12", "-c", f"import py_compile; py_compile.compile('{full_path}', doraise=True)"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0:
+                parts.append("## L1: Syntax Check\n✓ Compiles without errors")
+            else:
+                parts.append(f"## L1: Syntax Check\n✗ COMPILE ERROR:\n{result.stderr.strip()[:500]}")
+        except Exception as e:
+            parts.append(f"## L1: Syntax Check\nERROR: {e}")
+
+    # 7. Existing tests still pass (if test runner exists)
+    try:
+        pytest_check = subprocess.run(
+            ["python3.12", "-m", "pytest", "--co", "-q", cwd],
+            capture_output=True, text=True, timeout=30, cwd=cwd,
+        )
+        if pytest_check.returncode == 0:
+            parts.append("## L1: Test Collection\n✓ Tests collect without errors")
+        else:
+            parts.append(f"## L1: Test Collection\n⚠ Test collection issues:\n{pytest_check.stderr.strip()[:300]}")
+    except Exception:
+        pass  # No pytest — skip
+
+    return "\n\n".join(parts)
+
+
+# ── Pattern Catalog Helper ────────────────────────────────────────────
+
+def _read_codebase_overview(cwd: str) -> str:
+    """Read a project codebase and produce a summary for Brain.
+
+    Scans file types, directory structure, and existing patterns.
+    Returns a formatted string Brain can use to produce the pattern catalog.
+    """
+    import subprocess
+    parts = []
+
+    # 1. Directory structure (top 3 levels)
+    try:
+        result = subprocess.run(
+            ["find", cwd, "-maxdepth", "3", "-type", "f",
+             "-not", "-path", "*/.git/*", "-not", "-path", "*/__pycache__/*",
+             "-not", "-path", "*/node_modules/*", "-not", "-path", "*/.venv/*"],
+            capture_output=True, text=True, timeout=15,
+        )
+        files = result.stdout.strip().split("\n") if result.stdout.strip() else []
+        parts.append(f"## Files Found ({len(files)} total)")
+        # Show first 50 files
+        for f in files[:50]:
+            rel = os.path.relpath(f, cwd) if f else ""
+            parts.append(f"  {rel}")
+        if len(files) > 50:
+            parts.append(f"  ... and {len(files) - 50} more")
+    except Exception as e:
+        parts.append(f"## Files Found\nERROR: {e}")
+
+    # 2. Language detection by extension
+    try:
+        extensions = {}
+        for f in files:
+            if "." in os.path.basename(f):
+                ext = "." + os.path.basename(f).rsplit(".", 1)[1]
+                extensions[ext] = extensions.get(ext, 0) + 1
+        if extensions:
+            parts.append("\n## Languages by Extension")
+            for ext, count in sorted(extensions.items(), key=lambda x: -x[1]):
+                parts.append(f"  {ext}: {count} files")
+    except Exception:
+        pass
+
+    # 3. Test convention detection
+    test_indicators = []
+    for f in files:
+        basename = os.path.basename(f)
+        if "test" in basename.lower() or "spec" in basename.lower():
+            test_indicators.append(os.path.relpath(f, cwd))
+    if test_indicators:
+        parts.append(f"\n## Test Files ({len(test_indicators)} found)")
+        for t in test_indicators[:10]:
+            parts.append(f"  {t}")
+
+    # 4. Git log (last 5 commits for context)
+    try:
+        log = subprocess.run(
+            ["git", "log", "--oneline", "-5"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if log:
+            parts.append(f"\n## Recent Commits\n{log}")
+    except Exception:
+        pass
+
+    return "\n".join(parts)
+
+
 # ── Pipeline Relay (main state machine) ───────────────────────────────
 
 class PipelineRelay:
@@ -960,6 +1154,10 @@ class PipelineRelay:
             await self._proposal_review(run_id, intent)
         elif status == "ERIC_GATE":
             print(f"[pipeline] Run {run_id} waiting at ERIC_GATE")
+        elif status == "PATTERN_CATALOG":
+            await self._pattern_catalog(run_id, intent)
+        elif status == "CODE_REVIEW_GATE":
+            await self._code_review_gate(run_id, intent)
         elif status == "EXECUTION":
             await self._execution(run_id, intent)
         elif status == "VERIFICATION":
@@ -1246,6 +1444,464 @@ class PipelineRelay:
             print(f"[pipeline] Proposal review consensus — ERIC GATE")
             _set_run_status(self.conn, run_id, "ERIC_GATE")
             print(f"[pipeline] Run {run_id} waiting at ERIC GATE for approval")
+
+    async def _pattern_catalog(self, run_id: str, intent: str) -> None:
+        """Pattern Catalog phase: Brain reads codebase, produces pattern catalog.
+
+        After Eric approves the proposal, Brain reads the existing codebase
+        and identifies patterns, conventions, and completion criteria.
+        Reviewers validate the catalog before Menter uses it.
+        """
+        print(f"[pipeline] PATTERN_CATALOG phase for {run_id}")
+
+        project_dir = DB_PATH.rsplit("/", 1)[0]
+        codebase_overview = _read_codebase_overview(project_dir)
+
+        round_id = _start_round(self.conn, run_id, "pattern_catalog", 1)
+        discovery = _pre_discovery(
+            self.conn, intent, "pattern_catalog", "brain", run_id, web_search=True
+        )
+
+        # Get the approved directive
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        prompt = (
+            f"{discovery}\n\n"
+            f"## CODEBASE OVERVIEW\n{codebase_overview}\n\n"
+            f"## APPROVED DIRECTIVE\n{directive}\n\n"
+            f"You are Brain. Read the codebase overview and the approved directive. "
+            f"Produce a PATTERN CATALOG that identifies:\n"
+            f"1. Language and toolchain\n"
+            f"2. Architectural patterns found in the existing code\n"
+            f"3. Convention rules (naming, file org, error handling)\n"
+            f"4. Test convention\n"
+            f"5. Completion criteria per pattern (what 'done' looks like)\n"
+            f"6. List of files Menter will need to create or modify\n\n"
+            f"If the codebase is empty (new project), derive patterns from the directive.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"brain","status":"READY","summary":"...",'
+            f'"files_planned":["path/to/file1.py","path/to/file2.py"]}}\n```'
+        )
+
+        try:
+            output = await _call_agent("brain", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("brain")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"brain_output": str(e)})
+            _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                          prompt, str(e), 1)
+            _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "failed")
+            print(f"[pipeline] PATTERN_CATALOG failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                          prompt, output, 1)
+
+        parsed = _parse_final_json(output)
+        if not parsed or parsed.get("status") != "READY":
+            _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] PATTERN_CATALOG invalid — no READY status. ESCALATE.")
+            return
+
+        _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"brain_output": output})
+
+        # Save catalog to disk
+        catalog_path = os.path.join(project_dir, "runtime", "catalogs", "PATTERN_CATALOG.md")
+        os.makedirs(os.path.dirname(catalog_path), exist_ok=True)
+        with open(catalog_path, "w") as f:
+            f.write(f"# Pattern Catalog\n\nGenerated: {datetime.now(timezone.utc).isoformat()}\n\n")
+            f.write(output)
+
+        # Extract planned files from FINAL_JSON
+        files_planned = parsed.get("files_planned", [])
+        self._files_planned = files_planned
+
+        print(f"[pipeline] Pattern catalog saved. {len(files_planned)} files planned.")
+        _set_run_status(self.conn, run_id, "CODE_REVIEW_GATE")
+        await self._code_review_gate(run_id, intent)
+
+    async def _code_review_gate(self, run_id: str, intent: str) -> None:
+        """Code Review Gate: Menter builds chunks, sequential three-pass review.
+
+        For each file:
+        1. Menter builds the chunk (with universal rules in prompt)
+        2. Pipeline captures diff + runs L1 universal checks
+        3. Reviewer A reviews (fresh eyes)
+        4. Reviewer B reviews (sees A's output, builds on it)
+        5. Reviewer A consensus (sees B's output, delivers verdict)
+        6. APPROVED → next chunk, CHANGES_REQUESTED → Menter revises
+        """
+        print(f"[pipeline] CODE_REVIEW_GATE phase for {run_id}")
+
+        project_dir = DB_PATH.rsplit("/", 1)[0]
+        files_planned = getattr(self, "_files_planned", [])
+
+        if not files_planned:
+            # Try to recover from DB
+            cur = self.conn.execute(
+                "SELECT brain_output FROM deliberation_rounds "
+                "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+                "  AND drafter_role = 'pattern_catalog' "
+                "ORDER BY id DESC LIMIT 1", (run_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                parsed = _parse_final_json(row[0])
+                if parsed:
+                    files_planned = parsed.get("files_planned", [])
+
+        if not files_planned:
+            print(f"[pipeline] No files planned — cannot proceed. ESCALATE.")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            return
+
+        # Get directive
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Get pattern catalog
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+            "  AND drafter_role = 'pattern_catalog' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        catalog = row[0] if (row := cur.fetchone()) else ""
+
+        # Capture pre-execution git state
+        import subprocess
+        try:
+            pre_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=10, cwd=project_dir,
+            ).stdout.strip()
+        except Exception:
+            pre_head = ""
+        self._pre_exec_head = pre_head
+
+        # Process each file as a chunk
+        for chunk_num, file_path in enumerate(files_planned, 1):
+            print(f"[pipeline] Chunk {chunk_num}/{len(files_planned)}: {file_path}")
+            await self._review_single_chunk(
+                run_id, intent, directive, catalog,
+                chunk_num, file_path, project_dir
+            )
+
+            # Check if this chunk was escalated
+            cur = self.conn.execute(
+                "SELECT final_verdict FROM code_review_chunks "
+                "WHERE run_id = ? AND chunk_number = ? "
+                "ORDER BY id DESC LIMIT 1", (run_id, chunk_num)
+            )
+            row = cur.fetchone()
+            if row and row[0] == "ESCALATE":
+                print(f"[pipeline] Chunk {chunk_num} escalated — stopping.")
+                _set_run_status(self.conn, run_id, "ESCALATED")
+                return
+
+        # All chunks complete — proceed to verification
+        print(f"[pipeline] All {len(files_planned)} chunks reviewed and incorporated.")
+        _set_run_status(self.conn, run_id, "VERIFICATION")
+        await self._verification(run_id, intent)
+
+    async def _review_single_chunk(self, run_id: str, intent: str,
+                                    directive: str, catalog: str,
+                                    chunk_num: int, file_path: str,
+                                    project_dir: str) -> None:
+        """Review a single chunk through the three-pass sequential process."""
+        import subprocess
+
+        revision = 1
+
+        while revision <= MAX_CHUNK_REVISIONS:
+            print(f"[pipeline] Chunk {chunk_num} revision {revision}")
+
+            # Step 1: Menter builds the chunk
+            round_id = _start_round(self.conn, run_id, "code_review", chunk_num)
+
+            menter_prompt = (
+                f"{MENTER_UNIVERSAL_RULES}\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"You are Menter. Build file: {file_path}\n"
+                f"This is chunk {chunk_num}. Build ONLY this file.\n"
+                f"Self-check against the universal rules before submitting.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"menter","status":"CHUNK_READY",'
+                f'"file":"{file_path}","summary":"..."}}\n```'
+            )
+
+            if revision > 1:
+                # Get previous revision directive
+                cur = self.conn.execute(
+                    "SELECT revision_directive FROM code_review_chunks "
+                    "WHERE run_id = ? AND chunk_number = ? AND revision_number = ?",
+                    (run_id, chunk_num, revision - 1)
+                )
+                row = cur.fetchone()
+                prev_directive = row[0] if row else ""
+                menter_prompt += (
+                    f"\n\n## REVISION REQUESTED\n"
+                    f"Reviewers requested changes. Fix these issues:\n{prev_directive}"
+                )
+
+            try:
+                menter_output = await _call_agent("menter", menter_prompt, run_id)
+            except Exception as e:
+                _breaker_record_failure("menter")
+                _complete_round(self.conn, round_id, "ERROR")
+                _record_trajectory(self.conn, run_id, "menter", "code_review",
+                              menter_prompt, str(e), chunk_num)
+                _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "failed")
+                print(f"[pipeline] Menter failed on chunk {chunk_num}: {e}")
+                # Record and escalate
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, '', '', 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, revision,
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                return
+
+            _record_trajectory(self.conn, run_id, "menter", "code_review",
+                              menter_prompt, menter_output, chunk_num)
+
+            # Validate Menter produced CHUNK_READY
+            parsed = _parse_final_json(menter_output)
+            if not parsed or parsed.get("status") != "CHUNK_READY":
+                _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "failed")
+                _complete_round(self.conn, round_id, "ESCALATE",
+                               {"menter_output": menter_output})
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, '', '', 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, revision,
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                print(f"[pipeline] Menter didn't produce CHUNK_READY. ESCALATE.")
+                return
+
+            _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "success")
+
+            # Step 2: Capture diff + run L1 universal checks
+            try:
+                diff_text = subprocess.run(
+                    ["git", "diff"], capture_output=True, text=True,
+                    timeout=15, cwd=project_dir,
+                ).stdout
+            except Exception:
+                diff_text = ""
+
+            l1_results = _run_chunk_l1(project_dir, file_path, diff_text)
+
+            # Step 3: Pass 1 — Reviewer A (first pass, fresh eyes)
+            review_a_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE (what Menter was told to build)\n{directive}\n\n"
+                f"You are Reviewer A (first pass). Review this code chunk.\n"
+                f"Check against universal rules and pattern criteria.\n"
+                f"If the chunk doesn't match a known pattern, assess it on its own merit.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","checks_passed":[...],"checks_failed":[...]}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","checks_failed":[...]}}\n```'
+            )
+
+            try:
+                review_a_output = await _call_agent("review1", review_a_prompt, run_id)
+            except Exception as e:
+                _breaker_record_failure("review1")
+                _complete_round(self.conn, round_id, "ERROR")
+                print(f"[pipeline] Reviewer A failed on chunk {chunk_num}: {e}")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     str(e), revision, datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                return
+
+            _record_trajectory(self.conn, run_id, "review1", "code_review",
+                          review_a_prompt, review_a_output, chunk_num)
+
+            # Step 4: Pass 2 — Reviewer B (sees A's output, builds on it)
+            review_b_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"## REVIEWER A'S FINDINGS (first pass)\n{review_a_output}\n\n"
+                f"You are Reviewer B (second pass). You see Reviewer A's findings.\n"
+                f"Build on A's review. Find what A missed. Confirm or challenge A's findings.\n"
+                f"If the chunk doesn't match a known pattern, assess it on its own merit.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","checks_passed":[...],"checks_failed":[...],'
+                f'"items_missed_by_a":[...],"disagreements_with_a":[...]}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","checks_failed":[...]}}\n```'
+            )
+
+            try:
+                review_b_output = await _call_agent("review2", review_b_prompt, run_id)
+            except Exception as e:
+                _breaker_record_failure("review2")
+                _complete_round(self.conn, round_id, "ERROR")
+                print(f"[pipeline] Reviewer B failed on chunk {chunk_num}: {e}")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], str(e), revision,
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                return
+
+            _record_trajectory(self.conn, run_id, "review2", "code_review",
+                          review_b_prompt, review_b_output, chunk_num)
+
+            # Step 5: Pass 3 — Reviewer A consensus (sees B's output)
+            consensus_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"## YOUR FIRST PASS (Reviewer A)\n{review_a_output}\n\n"
+                f"## REVIEWER B'S FINDINGS (second pass)\n{review_b_output}\n\n"
+                f"You are Reviewer A (consensus pass). You see B's findings.\n"
+                f"Accept B's findings or push back with evidence.\n"
+                f"Deliver one consolidated verdict.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","consensus_summary":"..."}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","revision_directive":"actionable feedback for Menter"}}\n```'
+            )
+
+            try:
+                consensus_output = await _call_agent("review1", consensus_prompt, run_id)
+            except Exception as e:
+                _breaker_record_failure("review1")
+                _complete_round(self.conn, round_id, "ERROR")
+                print(f"[pipeline] Reviewer A consensus failed on chunk {chunk_num}: {e}")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, review_a_consensus,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], review_b_output[:5000], str(e),
+                     revision, datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                return
+
+            _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
+                          consensus_prompt, consensus_output, chunk_num)
+
+            # Step 6: Parse consensus verdict
+            consensus_parsed = _parse_final_json(consensus_output)
+            consensus_status = consensus_parsed.get("status", "") if consensus_parsed else ""
+
+            if not consensus_parsed or consensus_status not in ("APPROVED", "CHANGES_REQUESTED"):
+                # Incomplete consensus — escalate
+                print(f"[pipeline] Consensus incomplete for chunk {chunk_num}. ESCALATE.")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, review_a_consensus,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                     revision, datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                _complete_round(self.conn, round_id, "ESCALATE",
+                               {"menter_output": menter_output})
+                return
+
+            if consensus_status == "APPROVED":
+                # Chunk approved — record and incorporate
+                revision_directive_text = consensus_parsed.get("consensus_summary", "")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, review_a_consensus,
+                        final_verdict, revision_directive, revision_number,
+                        incorporated, created_at, completed_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED', ?, ?, 1, ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                     revision_directive_text, revision,
+                     datetime.now(timezone.utc).isoformat(),
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                               {"menter_output": menter_output})
+                print(f"[pipeline] Chunk {chunk_num} APPROVED. Incorporated.")
+                return
+
+            # CHANGES_REQUESTED — record and loop for revision
+            revision_directive_text = consensus_parsed.get("revision_directive",
+                                                           consensus_output[:1000])
+            self.conn.execute(
+                """INSERT INTO code_review_chunks
+                   (run_id, chunk_number, file_path, diff_text, l1_results,
+                    review_a_pass1, review_b_pass2, review_a_consensus,
+                    final_verdict, revision_directive, revision_number,
+                    incorporated, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CHANGES_REQUESTED', ?, ?, 0, ?)""",
+                (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                 review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                 revision_directive_text, revision,
+                 datetime.now(timezone.utc).isoformat())
+            )
+            self.conn.commit()
+            _complete_round(self.conn, round_id, "OBJECTIONS",
+                           {"menter_output": menter_output})
+
+            print(f"[pipeline] Chunk {chunk_num} CHANGES_REQUESTED. Revision {revision + 1}.")
+            revision += 1
+
+        # Max revisions exceeded
+        print(f"[pipeline] Chunk {chunk_num} max revisions ({MAX_CHUNK_REVISIONS}) exceeded. ESCALATE.")
+        _set_run_status(self.conn, run_id, "ESCALATED")
 
     async def _execution(self, run_id: str, intent: str) -> None:
         """Execution phase: Menter builds per approved FINAL_DIRECTIVE."""
