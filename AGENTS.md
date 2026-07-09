@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-09 13:14 UTC | Run: run-4c8b4973cc5a | Latest pipeline: run-e4aac6f86dc70fd4-1783600639
+Generated: 2026-07-09 16:20 UTC | Run: run-0ed82e166887 | Latest pipeline: run-3f1a189b54aff9ad-1783613651
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-3f1a189b54aff9ad-1783613651] Add a one-line comment to the top of runtime/container_app.py saying: # CIS pipe — PENDING (0 rounds, incomplete)
+- [run-aed5aeb3911b6d6a-1783612242] Add a one-line comment to runtime/container_app.py saying it works — PENDING (0 rounds, incomplete)
 - [run-e4aac6f86dc70fd4-1783600639] Add a docstring to the _pre_discovery function in runtime/abstraction/pipeline_r — PENDING (0 rounds, incomplete)
 - [run-fcb0058efcaa0f28-1783570097] Add a health check endpoint at /api/health that returns JSON with status ok and  — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-fcb0058efcaa0f28-1783569224] Add a health check endpoint at /api/health that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
-- [run-fcb0058efcaa0f28-1783568814] Add a health check endpoint at /api/health that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
-- [run-892e86ca512a0056-1783535751] Add a TODO comment to the top of runtime/app.py noting that the relay blueprint  — CONSENSUS_REACHED (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-e4aac6f86dc70fd4-1783600639

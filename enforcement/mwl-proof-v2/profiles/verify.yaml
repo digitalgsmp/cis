@@ -24,6 +24,10 @@ api_server:
   host: 0.0.0.0
   port: 8648
   api_key: cis-verifier-gateway-key-2026
+platforms:
+  api_server:
+    extra:
+      port: 8648
 mcp_servers:
   cis-knowledge:
     command: /usr/local/lib/hermes-agent/venv/bin/python
@@ -31,8 +35,8 @@ mcp_servers:
     - -m
     - mcp_bridge.server
     env:
-      CIS_SPINE_PATH: /source/cis/data/cis_memory.db
-      PYTHONPATH: /source/cis/runtime
+      CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
+      PYTHONPATH: /workspace/cis/runtime
     enabled: true
     timeout: 60
 terminal:

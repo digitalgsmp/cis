@@ -33,6 +33,9 @@ RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --s
 RUN /usr/local/lib/hermes-agent/venv/bin/python -m ensurepip --upgrade \
     && /usr/local/lib/hermes-agent/venv/bin/python -m pip install 'python-telegram-bot[webhooks]==22.6'
 
+# --- install Flask + httpx for the pipeline API and relay ---
+RUN /usr/local/lib/hermes-agent/venv/bin/python -m pip install flask httpx pyyaml
+
 # --- patch loop-breaker: vendor 0.17.0 lacks _success_repeat_counts (NA-SEED-018) ---
 COPY tool_guardrails.py /usr/local/lib/hermes-agent/agent/tool_guardrails.py
 
@@ -70,17 +73,38 @@ COPY launch_profiles.sh /opt/cis-control/launch_profiles.sh
 RUN chown root:root /opt/cis-control/launch_profiles.sh \
     && chmod 0555 /opt/cis-control/launch_profiles.sh
 
+# --- bake the container entrypoint (gateways + pipeline API) ---
+COPY entrypoint.sh /opt/cis-control/entrypoint.sh
+RUN chown root:root /opt/cis-control/entrypoint.sh \
+    && chmod 0555 /opt/cis-control/entrypoint.sh
+
 # --- create the unprivileged worker user (NO sudo, NO root) ---
-RUN useradd -m -s /bin/bash worker
+# Use UID/GID 1000 to match host user (eric) so mounted volumes are writable.
+# Remove the base image's default 'pn' user (UID 1000) first.
+RUN deluser pn 2>/dev/null; \
+    groupadd -g 1000 worker 2>/dev/null; \
+    useradd -m -s /bin/bash -u 1000 -g 1000 worker
 
 # --- install the OBSERVER plugin into the worker's home AS ROOT, then seal it ---
 # Observer only — not the wall. Sealed anyway so the worker can't tamper.
+# Install into base .hermes AND all 6 profile homes (pre-created at build time
+# so the plugin is root-owned and read-only; entrypoint only copies config.yaml)
 RUN mkdir -p /home/worker/.hermes/plugins \
     && cp -a /opt/cis-policy/plugin /home/worker/.hermes/plugins/mwl-proof \
     && chown -R root:root /home/worker/.hermes/plugins/mwl-proof \
     && find /home/worker/.hermes/plugins/mwl-proof -type d -exec chmod 0555 {} \; \
     && find /home/worker/.hermes/plugins/mwl-proof -type f -exec chmod 0444 {} \; \
     && chown worker:worker /home/worker/.hermes /home/worker/.hermes/plugins
+
+# Pre-create all 6 profile home directories with sealed enforcement plugin
+RUN for profile in brain draft review1 review2 menter verify; do \
+        mkdir -p /home/worker/.hermes-$profile/plugins; \
+        cp -a /opt/cis-policy/plugin /home/worker/.hermes-$profile/plugins/mwl-proof; \
+        chown -R root:root /home/worker/.hermes-$profile/plugins/mwl-proof; \
+        find /home/worker/.hermes-$profile/plugins/mwl-proof -type d -exec chmod 0555 {} \; ; \
+        find /home/worker/.hermes-$profile/plugins/mwl-proof -type f -exec chmod 0444 {} \; ; \
+        chown worker:worker /home/worker/.hermes-$profile /home/worker/.hermes-$profile/plugins; \
+    done
 
 # --- bake managed-scope + hook-consent env into the IMAGE (not runtime) ---
 # Fixed here so the worker's subprocess env cannot repoint managed scope or
@@ -92,6 +116,14 @@ ENV HERMES_MANAGED_DIR=/etc/hermes \
 USER worker
 WORKDIR /home/worker
 
+# ── CIS pipeline environment ──────────────────────────────────────────
+# The CIS repo is mounted at /workspace/cis (volume, not baked — so code
+# changes on the host show up immediately without rebuilding the image).
+# The pipeline reads DB_PATH from CIS_SPINE_PATH env var.
+ENV CIS_SPINE_PATH=/workspace/cis/data/cis_memory.db \
+    CIS_PROJECT_ROOT=/workspace/cis \
+    PYTHONPATH=/workspace/cis/runtime
+
 # Prove at build time the worker can READ the sealed managed config + plugin,
 # and that managed scope is resolved (doctor reports the managed dir).
 RUN echo "---MANAGED-SCOPE-RESOLVED---" \
@@ -99,5 +131,5 @@ RUN echo "---MANAGED-SCOPE-RESOLVED---" \
     echo "---PLUGIN-OWNERSHIP---" \
     && ls -l /home/worker/.hermes/plugins/mwl-proof
 
-# Default command: launch all 6 profiles
-CMD ["/opt/cis-control/launch_profiles.sh"]
+# Default command: launch all 6 profiles, then start the pipeline API
+CMD ["/opt/cis-control/entrypoint.sh"]

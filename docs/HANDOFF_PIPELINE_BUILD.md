@@ -1,105 +1,125 @@
 # CIS Pipeline Build — Session Handoff
 
-**Last updated:** 2026-07-08  
+**Last updated:** 2026-07-09 (session 2)  
 **Branch:** main  
-**Latest commit:** `ffd3c1c` — self-evolution bridge
+**Latest commit:** `c5ad216` — handoff update (pre-container work)  
+**Uncommitted changes:** Container transition — see below
 
 ---
 
-## What's Built
+## Container Status: RUNNING
 
-A multi-agent deliberation pipeline (CIS Pipeline Relay) that routes work through:
+The CIS pipeline is now running inside Docker container `cis-pipeline` (image `cis-hermes:pipeline`).
 
-```
-Brain → Intent Review → Draft (multi-round) → Proposal Review → Eric Gate →
-Pattern Catalog → Code Review Gate (3-pass sequential) → Menter (chunked) → Verify
-```
+**All 7 services UP inside container:**
+- 6 gateways: Brain 8644, Draft 8645, Review1 8643, Review2 8647, Menter 8646, Verify 8648
+- Pipeline API: port 5000 (published to host)
 
-### Key properties
-- **No default-to-success** — rounds start PENDING, Verify escalates on no verdict, all phases validate FINAL_JSON
-- **3-pass sequential code review** — Reviewer A (less competent) → Reviewer B (more competent, sees A) → A consensus (sees B, delivers one voice to Menter)
-- **Self-evolution** — every round's narrative auto-ingested into `knowledge_messages` → FTS5 auto-indexes → next run's pre-discovery searches it
-- **Circuit breaker** — persisted to DB, trips after 3 consecutive broken agent responses
-- **Health check** — validates JSON structure + content, catches zombie processes (port open but empty response)
-- **Isolated verification** — `git worktree`-based isolation, Menter's diff applied to clean pre-Menter HEAD
-- **Pattern catalog** — Brain reads codebase, generates per-project pattern catalog, reviewers validate it
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `runtime/abstraction/pipeline_relay.py` | Main state machine (~2,100 lines) |
-| `runtime/api/relay.py` | Flask API endpoints (6 routes) |
-| `runtime/app.py` | Flask app, registers relay blueprint |
-| `docs/SPEC_CODE_REVIEW_GATE.md` | Code Review Gate spec (REV-2) |
-| `docs/SPEC_PRODUCTION_PIPELINE_RELAY.md` | Pipeline spec (REV-2) |
-| `data/cis_memory.db` | SQLite spine (migrations through 0020) |
-
-## Commits This Session
-
-```
-ffd3c1c — self-evolution bridge (pipeline → knowledge_messages → FTS5)
-b11af59 — end-to-end test verified (full 10-round pass)
-44cfd1c — FINAL_JSON parser fix + migrations 0019/0020
-e44268f — Code Review Gate implementation
-7682ad1 — Code Review Gate spec REV-2
-1ad844d — 10 bug fixes (default-to-success elimination)
-6c2207d — 4 data integrity bugs fixed
-b888d5f — API + query fixes, first full end-to-end pass
-a6f88a1 — Flask API endpoints + gateway auth fix
+**First real container pipeline run started:** `run-aed5aeb3911b6d6a-1783612242` — status was `BRAIN_PHASE` when session ended. Poll with:
+```bash
+curl -s http://localhost:5000/api/relay/run-aed5aeb3911b6d6a-1783612242 | python3 -m json.tool
 ```
 
-## Gateways
+## Fixes Applied This Session (Container Transition)
 
-| Role | Port | Model | Profile |
-|------|------|-------|---------|
-| Brain | 8644 | deepseek-v4-pro | hermes-brainstorm |
-| Draft | 8645 | deepseek-v4-pro | hermes-v4pro |
-| Review1 | 8643 | qwen3.7-max | hermes-r1 |
-| Review2 | 8647 | glm-5.2 | hermes-glm-reviewer |
-| Menter | 8646 | deepseek-v4-pro | hermes-v4impl |
-| Verify | 8648 | glm-5.2 | hermes-glm-verifier |
+All changes are on disk, uncommitted. Files to commit:
 
-API keys are auto-discovered from each gateway's `.env` file (`API_SERVER_KEY`).
+### 1. `runtime/container_app.py` (NEW)
+Minimal Flask app — imports only `relay_bp` + health endpoint. Avoids 30+ legacy blueprints in `app.py` with hardcoded `/mnt/projects` paths that crash in container. This is what the container runs instead of `app.py`.
 
-## What's Done
+### 2. `enforcement/mwl-proof-v2/Dockerfile`
+- Worker UID changed from default to 1000 (matches host user `eric` so mounted volumes + SQLite DB are writable)
+- `deluser pn` (base image's UID 1000 user) before creating `worker`
+- Pre-creates all 6 profile home dirs with sealed enforcement plugin at build time (root-owned 0444)
+- Removed model pinning from managed config (was forcing all profiles to llamacpp/qwen)
 
-- ✅ Full pipeline state machine (all phases)
-- ✅ Flask API (start, status, gate, trace, resume, health)
-- ✅ Eric Gate (human approval via API)
-- ✅ Code Review Gate (3-pass sequential, pattern catalog)
-- ✅ Isolated verification (git worktree)
-- ✅ Circuit breaker (persisted to DB)
-- ✅ Health check (content validation, not just port)
-- ✅ Self-evolution bridge (pipeline → knowledge_messages → FTS5)
-- ✅ End-to-end test passed (10 rounds, full pipeline)
+### 3. `enforcement/mwl-proof-v2/entrypoint.sh`
+- `python3` → `/usr/local/lib/hermes-agent/venv/bin/python` (Flask installed in venv)
+- `runtime.app` → `runtime.container_app` (minimal app)
+- Creates per-profile `.env` files with `API_SERVER_KEY` + `DEEPSEEK_API_KEY` + `OPENROUTER_API_KEY`
+- Plugin install moved to Dockerfile (entrypoint runs as worker, can't chown to root)
+
+### 4. `enforcement/mwl-proof-v2/managed-config.yaml`
+- Removed `model:` section (was pinning llamacpp/qwen for all profiles)
+- Only enforcement surfaces pinned: `plugins`, `terminal.backend`, `tool_loop_guardrails`, `auxiliary.compression`
+
+### 5. `enforcement/mwl-proof-v2/profiles/*.yaml` (all 6)
+- Added `platforms.api_server.extra.port: <port>` — Hermes reads port from `config.extra.get("port")`, NOT top-level `api_server.port`
+- Without this, all gateways defaulted to 8642 (prime port) and failed with "port already in use"
+
+### 6. `runtime/api/idea_uploads.py`
+- Hardcoded `/mnt/projects/cis/ingest/incoming` → `CIS_PROJECT_ROOT` env var
+
+### 7. File permission fixes (already on disk)
+- `runtime/config.py`, `runtime/api/relay.py`, `runtime/api/session.py`, `runtime/cis_conflict_append.py`, `runtime/primer_update_v2.py` — `0600` → `0644` (worker couldn't read them)
+
+## Enforcement Verification
+
+Container containment verified intact:
+- `/etc/hermes/config.yaml` — root:root 0644 — worker **cannot write** ✅
+- Plugin `__init__.py` (per-profile) — root:root 0444 — worker **cannot write** ✅
+- `/opt/cis-gates/container_gate_runner.py` — root:root 0555 — worker **cannot write** ✅
+- Worker has no sudo, no root access
+- `HERMES_MANAGED_DIR=/etc/hermes` + `HERMES_ACCEPT_HOOKS=1` baked into image env
+
+## How to Resume
+
+### Start the container
+```bash
+cd /mnt/projects/cis/enforcement/mwl-proof-v2
+./run_container.sh -d
+# Pipeline API: http://localhost:5000
+# Logs: ./run_container.sh logs
+# Exec: ./run_container.sh exec
+```
+
+### Stop the container
+```bash
+./run_container.sh stop
+```
+
+### Rebuild after code changes (Dockerfile/profiles)
+```bash
+cd /mnt/projects/cis/enforcement/mwl-proof-v2
+sg docker -c "docker build -t cis-hermes:pipeline -f Dockerfile ."
+```
+Note: `runtime/` code is mounted as a volume — no rebuild needed for Python changes. Only rebuild for Dockerfile/profile/plugin changes.
+
+### Submit a pipeline run
+```bash
+curl -s -X POST http://localhost:5000/api/relay/start \
+  -H "Content-Type: application/json" \
+  -d '{"intent": "Your task description"}'
+```
+
+### Check status
+```bash
+curl -s http://localhost:5000/api/relay/<run_id> | python3 -m json.tool
+```
+
+### Prerequisites
+- `/tmp/cis-secrets.env` with `DEEPSEEK_API_KEY` and `OPENROUTER_API_KEY`
+- Docker image `cis-hermes:pipeline` built
+- Host gateways on 8642-8648 should be STOPPED before starting container (port conflict on 5000 only — gateway ports are internal to container)
 
 ## What's Next
 
-1. **✅ Test self-evolution** — DONE (2026-07-09). Run `run-e4aac6f86dc70fd4` confirmed: 22 KB entries ingested across 6 phases, FTS5 search finds pipeline narratives, pre-discovery returns them. Self-evolution bridge verified end-to-end.
-2. **✅ Code review retry fix** — DONE (commit `8e620ec`). Added `_call_agent_with_retry` helper: retries once with 2s backoff before escalating. Fixes empty `str(e)` with `repr(e)` fallback. Root cause: Reviewer B threw empty exception on revision 3, escalating the run.
-3. **Container transition** — move pipeline into Docker containers (production target). Host is dev only.
-4. **Systemd fix** — add `KillMode=control-group` to service files to prevent stale processes
-5. **UI** — display pipeline runs, trajectories, code review results in the CIS UI
+1. **Verify the test run completes** — poll `run-aed5aeb3911b6d6a-1783612242`. If it progresses through Brain → Draft → Review → Menter → Verify, the container pipeline is fully functional.
+2. **Commit the container work** — all files listed above
+3. **Stop host gateways** — host gateways (8643-8648) should be stopped when container is running to avoid confusion about which environment is handling work
+4. **Systemd fix** — add `KillMode=control-group` to service files (item 4 from previous handoff)
+5. **UI** — display pipeline runs in CIS portal (item 5 from previous handoff)
 
-## How to Resume After Reset
+## Key Architecture Notes
 
-1. **Read this file:** `docs/HANDOFF_PIPELINE_BUILD.md`
-2. **Check git log:** `git log --oneline -10`
-3. **Check DB state:** `sqlite3 data/cis_memory.db "SELECT * FROM workflow_runs ORDER BY created_at DESC LIMIT 5;"`
-4. **Start a pipeline run:**
-   ```bash
-   cd /mnt/projects/cis
-   python3.12 -c "
-   from runtime.abstraction.pipeline_relay import PipelineRelay
-   r = PipelineRelay()
-   r.start_sync('Your task description here')
-   "
-   ```
-5. **Check status:** `curl localhost:5000/api/relay/status/<run_id>`
+- **Host = development.** Host gateways run for dev/testing. Container = production target.
+- **Container app = `container_app.py`**, not `app.py`. The full `app.py` has 30+ legacy blueprints with hardcoded host paths. Container app imports only the relay blueprint.
+- **Enforcement model**: Managed config (`/etc/hermes/config.yaml`) pins `plugins.enabled`, `plugins.disabled`, `tool_loop_guardrails`, `terminal.backend`. Profile configs own their model settings. The mwl-proof plugin is root-owned and read-only in every profile home.
+- **DB path**: `CIS_SPINE_PATH=/workspace/cis/data/cis_memory.db` — set in Dockerfile ENV, points to the mounted volume.
+- **Gateway ports are internal** — only port 5000 is published to host. Gateways communicate via `127.0.0.1:864X` inside the container.
 
-## Known Blockers
+## Known Issues
 
+- **Host gateways still running** — if host gateways on 8643-8648 are up, they don't conflict (container ports are internal) but it's confusing. Stop them when using container.
 - **DeepSeek API balance** — Brain/Draft/Menter depend on it. HTTP 402 if depleted.
-- **Systemd stale processes** — `systemctl restart` doesn't always kill children. Workaround: manually kill PID on the port before restart.
-- **~~Self-evolution untested end-to-end~~** — RESOLVED 2026-07-09. Verified working: 22 KB entries, FTS5 indexed, pre-discovery returns results.
+- **Legacy `app.py`** — still used for host dev. Container uses `container_app.py`. Eventually `app.py` should be cleaned up to be container-compatible too.

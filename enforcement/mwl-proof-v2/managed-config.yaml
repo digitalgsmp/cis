@@ -4,11 +4,8 @@
 # The worker's own ~/.hermes/config.yaml cannot override these keys.
 #
 # This is the contract the worker reads but cannot author.
-model:
-  provider: llamacpp
-  base_url: http://host.docker.internal:8002/v1
-  default: qwen3-vl-30b-a3b-instruct-q4_k_m.gguf
-  context_length: 65536
+# Only enforcement surfaces are pinned here. Model settings come from
+# each profile's own config.yaml so each gateway can use its assigned model.
 auxiliary:
   compression:
     context_length: 65536

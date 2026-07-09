@@ -4,9 +4,11 @@ All other modules import from here. Change paths in one place only.
 """
 
 from pathlib import Path
+import os
 
 # ── Root paths ─────────────────────────────────────────────────────────────────
-PROJECTS_ROOT = Path("/mnt/projects/cis")
+# Support container layout (/workspace/cis) via env var, fallback to host path
+PROJECTS_ROOT = Path(os.environ.get("CIS_PROJECT_ROOT", "/mnt/projects/cis"))
 RECORDS_ROOT  = PROJECTS_ROOT / "knowledge" / "records"
 INGEST_ROOT   = PROJECTS_ROOT / "ingest" / "processing"
 PROJECTS_DIR  = PROJECTS_ROOT / "projects"

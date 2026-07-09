@@ -30,6 +30,8 @@ import httpx
 # ── Constants ──────────────────────────────────────────────────────────
 
 DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
+# Project root: use CIS_PROJECT_ROOT env, or derive from DB_PATH parent dir
+PROJECT_ROOT = os.environ.get("CIS_PROJECT_ROOT", os.path.dirname(os.path.dirname(DB_PATH)))
 BASE_URL = "http://127.0.0.1"
 AGENT_TIMEOUT = 180  # seconds per agent call (default)
 # Per-role timeout overrides (verify/menter use tools and need more time)
@@ -698,6 +700,13 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
         raise ConnectionError(f"Gateway {role} (port {port}) is down: {error}")
 
     api_key = _resolve_api_key(role)
+
+    # Inject project root context so the agent knows where files live.
+    # Inside the container, the project is at /workspace/cis (CIS_PROJECT_ROOT).
+    # On the host dev environment, it's at /mnt/projects/cis.
+    # Without this, agents search their home dir and can't find the codebase.
+    project_context = f"[PROJECT_ROOT: {PROJECT_ROOT}]\n"
+    prompt = project_context + prompt
 
     payload = {
         "model": "agent",

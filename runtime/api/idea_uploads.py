@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 idea_uploads_bp = Blueprint("idea_uploads", __name__, url_prefix="/api/ideas")
 
-UPLOAD_DIR = Path("/mnt/projects/cis/ingest/incoming")
+UPLOAD_DIR = Path(os.environ.get("CIS_PROJECT_ROOT", "/mnt/projects/cis")) / "ingest" / "incoming"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {

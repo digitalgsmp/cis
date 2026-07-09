@@ -138,6 +138,28 @@ def _run_pipeline_background(run_id: str, intent: str) -> None:
 # ── Endpoints ───────────────────────────────────────────────────────────
 
 
+@relay_bp.route("/api/relay/health", methods=["GET"])
+def relay_health():
+    """Health check — no auth required, used by container entrypoint."""
+    from abstraction.dispatch import PROFILES, check_gateway
+    gateways = {}
+    for role, profile in PROFILES.items():
+        healthy, error, latency = check_gateway(profile["port"])
+        gateways[role] = {
+            "port": profile["port"],
+            "healthy": healthy,
+            "latency_ms": round(latency * 1000) if latency else None,
+            "error": error,
+        }
+    healthy_count = sum(1 for g in gateways.values() if g["healthy"])
+    return jsonify({
+        "status": "ok",
+        "gateways": gateways,
+        "gateways_healthy": healthy_count,
+        "gateways_total": len(gateways),
+    })
+
+
 @relay_bp.route("/api/relay/start", methods=["POST"])
 def relay_start():
     """Submit intent to the pipeline relay. Returns run_id.

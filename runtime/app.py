@@ -19,10 +19,13 @@ from flask import Flask, jsonify, send_from_directory, request
 from datetime import datetime, timezone
 import os
 import sys
-from config import RUNTIME_DIR
 
-# Ensure runtime dir is in path for API blueprints
-sys.path.insert(0, str(RUNTIME_DIR))
+# Ensure runtime dir is in path for config and API blueprints
+RUNTIME_DIR = os.path.dirname(os.path.abspath(__file__))
+if RUNTIME_DIR not in sys.path:
+    sys.path.insert(0, RUNTIME_DIR)
+
+from config import RUNTIME_DIR
 
 # ── Blueprint imports ──────────────────────────────────────────────────────────
 from api.system          import system_bp
