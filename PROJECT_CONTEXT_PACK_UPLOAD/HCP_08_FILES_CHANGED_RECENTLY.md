@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-07-09 01:37 UTC | Run: run-6e39b4b87e65
+Generated: 2026-07-09 03:09 UTC | Run: run-86b7d0a65d1a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 7682ad1 spec: Code Review Gate REV-2 — sequential three-pass review
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/SPEC_CODE_REVIEW_GATE.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 06e8e8d spec: Code Review Gate — pattern catalog + chunk-based code review
 
@@ -660,51 +690,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## docs/MASTER_GOAL_INVENTORY.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## d24a448 fix: reconcile gateway configs, add Brainstorm on 8644, document Docker group escalation
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## config/agents_static.yaml 
-
-## docs/SECURITY_DOCKER_GROUP_ESCALATION.md 
-
-## enforcement/profile-harness.sh 
-
-## enforcement/profiles/brainstorm/config.yaml 
-
-## enforcement/profiles/drafter/config.yaml 
-
-## enforcement/profiles/glm-reviewer/config.yaml 
-
-## enforcement/profiles/implementer/config.yaml 
-
-## enforcement/profiles/qwen-reviewer/config.yaml 
-
-## enforcement/profiles/verifier/config.yaml 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 

@@ -443,10 +443,12 @@ of failures this gate would catch:
    because the back-and-forth IS the consensus mechanism.
 
 4. **What if a chunk doesn't match any pattern in the catalog?**
-   The reviewer applies universal criteria only and notes in the review
-   that no pattern match was found. The pattern catalog is updated to
-   include the new pattern on the next catalog revision. This is not an
-   error — it's how the catalog grows.
+   The reviewers assess it on its own merit. These are smart LLMs —
+   they don't need a rigid checklist for every possible code structure.
+   Universal criteria still apply, but pattern-specific criteria are
+   derived by the reviewers' own judgment for novel patterns. New
+   patterns discovered this way are added to the catalog on the next
+   revision, so the catalog grows organically from real code.
 
 ## 10. Provenance
 
