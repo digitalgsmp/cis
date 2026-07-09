@@ -271,8 +271,13 @@ def _complete_round(conn: sqlite3.Connection, round_id: int,
                     extra: Optional[Dict] = None) -> None:
     """Mark a deliberation round as complete with outputs.
 
-    reviewer_signal must be one of: OBJECTIONS, CONSENSUS_REACHED, ESCALATE, ERROR
-    (per spine CHECK constraint).
+    reviewer_signal must be one of: PENDING, OBJECTIONS, CONSENSUS_REACHED,
+    ESCALATE, ERROR (per spine CHECK constraint).
+
+    After completing the round, ingests all narrative content into the
+    knowledge base (knowledge_messages) for FTS5 indexing. This is the
+    self-evolution bridge — every round's content becomes searchable by
+    future pipeline runs via pre-discovery.
     """
     fields = ["reviewer_signal = ?"]
     values = [reviewer_signal]
@@ -286,6 +291,112 @@ def _complete_round(conn: sqlite3.Connection, round_id: int,
         values
     )
     conn.commit()
+
+    # Self-evolution: ingest this round's narrative into the knowledge base
+    # so future runs can discover it via FTS5 search in pre-discovery
+    try:
+        # Get run_id and phase for source tagging
+        cur = conn.execute(
+            "SELECT run_id, drafter_role FROM deliberation_rounds WHERE id = ?",
+            (round_id,)
+        )
+        row = cur.fetchone()
+        if row:
+            run_id, phase = row[0], row[1]
+            _ingest_round_to_kb(conn, run_id, round_id, phase, reviewer_signal)
+    except Exception as e:
+        print(f"[pipeline] KB ingestion for round {round_id} failed: {e}")
+
+
+# ── Knowledge Base Ingestion (self-evolution bridge) ─────────────────
+
+def _ingest_to_kb(conn: sqlite3.Connection, run_id: str, phase: str,
+                  role: str, content: str, signal: str = "",
+                  extra_context: str = "") -> None:
+    """Ingest pipeline narrative into the knowledge_messages table.
+
+    This is the self-evolution bridge. Every phase's output flows into
+    the FTS5 knowledge base so future runs can discover it via pre-discovery.
+
+    The knowledge_messages table has an AFTER INSERT trigger that auto-indexes
+    into knowledge_messages_fts, so we just INSERT and the FTS5 index updates.
+
+    Source naming convention:
+      pipeline_{phase} — e.g. pipeline_brain, pipeline_code_review
+
+    Content format includes:
+      - Run ID and phase for traceability
+      - Signal (CONSENSUS_REACHED / OBJECTIONS / etc) for filtering
+      - The full narrative output
+      - Extra context (review pass, revision number, etc.)
+    """
+    if not content or not content.strip():
+        return
+
+    source = f"pipeline_{phase}"
+
+    # Build the narrative document
+    parts = [
+        f"[CIS Pipeline | Run: {run_id} | Phase: {phase} | Role: {role}]",
+    ]
+    if signal:
+        parts.append(f"[Signal: {signal}]")
+    if extra_context:
+        parts.append(f"[Context: {extra_context}]")
+    parts.append("")
+    parts.append(content)
+
+    document = "\n".join(parts)
+
+    try:
+        conn.execute(
+            """INSERT INTO knowledge_messages (role, content, source, timestamp)
+               VALUES (?, ?, ?, ?)""",
+            (role, document, source,
+             datetime.now(timezone.utc).isoformat())
+        )
+        conn.commit()
+    except Exception as e:
+        # KB ingestion is best-effort — don't crash the pipeline
+        print(f"[pipeline] KB ingest failed for {phase}/{role}: {e}")
+
+
+def _ingest_round_to_kb(conn: sqlite3.Connection, run_id: str,
+                        round_id: int, phase: str, signal: str) -> None:
+    """Ingest a complete deliberation round into the knowledge base.
+
+    Called after _complete_round(). Extracts all narrative content from
+    the round and ingests each piece with appropriate source tags.
+    """
+    cur = conn.execute(
+        """SELECT brain_output, drafter_output, reviewer1_output,
+                  reviewer2_output, menter_output, verify_output,
+                  human_question
+           FROM deliberation_rounds WHERE id = ?""",
+        (round_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+
+    brain_out, draft_out, r1_out, r2_out, menter_out, verify_out, human_q = row
+
+    context = f"round_{round_id}_signal_{signal}"
+
+    if brain_out:
+        _ingest_to_kb(conn, run_id, phase, "brain", brain_out, signal, context)
+    if draft_out:
+        _ingest_to_kb(conn, run_id, phase, "draft", draft_out, signal, context)
+    if r1_out:
+        _ingest_to_kb(conn, run_id, phase, "review1", r1_out, signal, context)
+    if r2_out:
+        _ingest_to_kb(conn, run_id, phase, "review2", r2_out, signal, context)
+    if menter_out:
+        _ingest_to_kb(conn, run_id, phase, "menter", menter_out, signal, context)
+    if verify_out:
+        _ingest_to_kb(conn, run_id, phase, "verify", verify_out, signal, context)
+    if human_q:
+        _ingest_to_kb(conn, run_id, phase, "human", human_q, signal, context)
 
 
 # ── Pre-Discovery (mandatory before every agent call) ──────────────────
@@ -1774,6 +1885,7 @@ class PipelineRelay:
 
             _record_trajectory(self.conn, run_id, "review1", "code_review",
                           review_a_prompt, review_a_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review1", "code_review", "success")
 
             # Step 4: Pass 2 — Reviewer B (sees A's output, builds on it)
             review_b_prompt = (
@@ -1813,6 +1925,7 @@ class PipelineRelay:
 
             _record_trajectory(self.conn, run_id, "review2", "code_review",
                           review_b_prompt, review_b_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review2", "code_review", "success")
 
             # Step 5: Pass 3 — Reviewer A consensus (sees B's output)
             consensus_prompt = (
@@ -1853,6 +1966,7 @@ class PipelineRelay:
 
             _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
                           consensus_prompt, consensus_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review1", "code_review_consensus", "success")
 
             # Step 6: Parse consensus verdict
             consensus_parsed = _parse_final_json(consensus_output)
@@ -1896,6 +2010,20 @@ class PipelineRelay:
                 _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                                {"menter_output": menter_output})
                 print(f"[pipeline] Chunk {chunk_num} APPROVED. Incorporated.")
+
+                # Ingest code review findings into knowledge base
+                _ingest_to_kb(self.conn, run_id, "code_review", "menter",
+                            menter_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_rev_{revision}_file_{file_path}")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review1",
+                            review_a_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass1_first_review")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review2",
+                            review_b_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass2_builds_on_review1")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review1_consensus",
+                            consensus_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass3_consensus")
                 return
 
             # CHANGES_REQUESTED — record and loop for revision
@@ -1918,6 +2046,24 @@ class PipelineRelay:
                            {"menter_output": menter_output})
 
             print(f"[pipeline] Chunk {chunk_num} CHANGES_REQUESTED. Revision {revision + 1}.")
+
+            # Ingest code review findings (including objections) into knowledge base
+            _ingest_to_kb(self.conn, run_id, "code_review", "menter",
+                        menter_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_rev_{revision}_file_{file_path}")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review1",
+                        review_a_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass1_first_review")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review2",
+                        review_b_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass2_builds_on_review1")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review1_consensus",
+                        consensus_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass3_consensus_revision_directive")
+            _ingest_to_kb(self.conn, run_id, "code_review", "revision_directive",
+                        revision_directive_text, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_rev_{revision}")
+
             revision += 1
 
         # Max revisions exceeded
