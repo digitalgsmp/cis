@@ -394,16 +394,37 @@ def _parse_final_json(text: str) -> Optional[dict]:
     containing role, status, summary, recommendation, next_action.
 
     Returns parsed dict or None if not found.
+
+    Priority:
+    1. JSON blocks containing "role" field (FINAL_JSON signature)
+    2. Bare JSON at end of text containing "status" field
+    3. Any JSON code block (fallback)
     """
-    # Try code-block JSON first
+    # Collect all JSON code blocks and bare FINAL_JSON blocks
     matches = _FINAL_JSON_RE.findall(text)
+    candidates = []
     for match in matches:
         for group in match:
             if group:
                 try:
-                    return json.loads(group)
+                    parsed = json.loads(group)
+                    candidates.append(parsed)
                 except json.JSONDecodeError:
                     continue
+
+    # Priority 1: JSON with "role" field (the FINAL_JSON signature)
+    for c in candidates:
+        if "role" in c:
+            return c
+
+    # Priority 2: candidates with "status" field
+    for c in candidates:
+        if "status" in c:
+            return c
+
+    # Priority 3: any candidate
+    if candidates:
+        return candidates[-1]
 
     # Try bare JSON at end of text
     lines = text.strip().split("\n")

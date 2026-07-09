@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-09 03:15 UTC | Run: run-423b772007b0 | Latest pipeline: run-892e86ca512a0056-1783535751
+Generated: 2026-07-09 03:53 UTC | Run: run-50ce4cd14554 | Latest pipeline: run-fcb0058efcaa0f28-1783568814
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-fcb0058efcaa0f28-1783568814] Add a health check endpoint at /api/health that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
 - [run-892e86ca512a0056-1783535751] Add a TODO comment to the top of runtime/app.py noting that the relay blueprint  — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-276deec37c084f70-1783534754] Add a health-check badge to the CIS portal header — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-1de17cbeb554b252-1783529623] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
 - [run-1de17cbeb554b252-1783529450] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
-- [run-1de17cbeb554b252-1783529222] Add a health-check badge to the CIS portal header showing pipeline status — CONSENSUS_REACHED (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-892e86ca512a0056-1783535751
