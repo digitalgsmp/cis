@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# CIS pipeline container entry point — it works
 """
 container_app.py — Minimal Flask app for the CIS pipeline container.
 Only imports the relay blueprint (pipeline API). No legacy UI endpoints.
@@ -35,6 +36,9 @@ def health():
         "container": True
     })
 
+@app.route("/api/ping")
+def ping():
+    return jsonify({"status": "pong"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)

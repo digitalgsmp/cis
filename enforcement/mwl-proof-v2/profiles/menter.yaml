@@ -43,6 +43,9 @@ mcp_servers:
     timeout: 60
 terminal:
   backend: local
+hooks_auto_accept: true
+approvals:
+  mode: "off"
 # THE WALL
 plugins:
   enabled:

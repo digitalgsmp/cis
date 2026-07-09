@@ -2,9 +2,9 @@
 Date: 2026-07-09
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `4c0b7f8`
+HEAD: `30525fd`
 
-Generated: 2026-07-09 16:20 UTC | Run: run-6be44895ae9f
+Generated: 2026-07-09 19:28 UTC | Run: run-0ee9ff2de986
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-e4aac6f86dc70fd4-1783600639
-- Decided at: 2026-07-09T12:47:15.014516+00:00
+- Workflow run: run-ef8d1a812b994a03-1783623679
+- Decided at: 2026-07-09T19:11:51.627089+00:00
 - Goal reference: None
-- Briefing hash: beadc7574f8589500b909c8fcb950aec5b3f05adafeaa63d2bcfe0838194343d
+- Briefing hash: ddb823c038375d7ef588532fcf29de25d8b1d21341473cba3f1b0475c7655e28

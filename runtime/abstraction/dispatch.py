@@ -24,7 +24,7 @@ PROFILES: Dict[str, dict] = {
     "brain": {
         "role": "brain",
         "label": "Brain",
-        "hermes_profile": "hermes-brainstorm",
+        "hermes_profile": "hermes-brain",
         "port": 8644,
         "description": "Brain — lateral exploration, challenges assumptions, surfaces possibilities",
         "capabilities": ["brainstorm", "explore", "diverge", "challenge", "question"],
@@ -32,7 +32,7 @@ PROFILES: Dict[str, dict] = {
     "draft": {
         "role": "draft",
         "label": "Draft",
-        "hermes_profile": "hermes-v4pro",
+        "hermes_profile": "hermes-draft",
         "port": 8645,
         "description": "Draft — authors proposals, designs, plans",
         "capabilities": ["draft", "design", "plan", "research", "write"],
@@ -40,7 +40,7 @@ PROFILES: Dict[str, dict] = {
     "review1": {
         "role": "review1",
         "label": "Review1",
-        "hermes_profile": "hermes-r1",
+        "hermes_profile": "hermes-review1",
         "port": 8643,
         "description": "Review1 — adversarial critique, first independent reviewer",
         "capabilities": ["review", "critique", "verify", "challenge", "audit"],
@@ -48,7 +48,7 @@ PROFILES: Dict[str, dict] = {
     "review2": {
         "role": "review2",
         "label": "Review2",
-        "hermes_profile": "hermes-glm-reviewer",
+        "hermes_profile": "hermes-review2",
         "port": 8647,
         "description": "Review2 — second independent reviewer, different training distribution",
         "capabilities": ["review", "critique", "verify", "challenge", "audit"],
@@ -56,7 +56,7 @@ PROFILES: Dict[str, dict] = {
     "menter": {
         "role": "menter",
         "label": "Menter",
-        "hermes_profile": "hermes-v4impl",
+        "hermes_profile": "hermes-menter",
         "port": 8646,
         "description": "Menter — builds code, executes plans",
         "capabilities": ["implement", "build", "execute", "test", "deploy"],
@@ -64,7 +64,7 @@ PROFILES: Dict[str, dict] = {
     "verify": {
         "role": "verify",
         "label": "Verify",
-        "hermes_profile": "hermes-glm-verifier",
+        "hermes_profile": "hermes-verify",
         "port": 8648,
         "description": "Verify — independent evidence verification gate",
         "capabilities": ["verify", "audit", "validate", "check", "confirm"],
