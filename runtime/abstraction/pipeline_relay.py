@@ -67,33 +67,78 @@ TERMINAL_STATES = {"CONSENSUS_REACHED", "ESCALATED", "VERIFY_FAILED", "STALE", "
 
 # ── Circuit Breaker ────────────────────────────────────────────────────
 
+# In-memory cache, backed by circuit_breaker_state table for persistence
 _circuit_breaker: Dict[str, dict] = {}  # role -> {failures, last_failure_ts}
 
 
+def _breaker_load(role: str) -> dict:
+    """Load circuit breaker state from DB (persists across restarts)."""
+    try:
+        conn = _db_connect()
+        cur = conn.execute(
+            "SELECT failures, last_failure_ts FROM circuit_breaker_state WHERE role = ?",
+            (role,)
+        )
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            return {"failures": row[0], "last_failure_ts": row[1]}
+    except Exception:
+        pass
+    return {"failures": 0, "last_failure_ts": 0}
+
+
+def _breaker_save(role: str, entry: dict) -> None:
+    """Persist circuit breaker state to DB."""
+    try:
+        conn = _db_connect()
+        conn.execute(
+            """INSERT INTO circuit_breaker_state (role, failures, last_failure_ts, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(role) DO UPDATE SET
+               failures = excluded.failures,
+               last_failure_ts = excluded.last_failure_ts,
+               updated_at = excluded.updated_at""",
+            (role, entry["failures"], entry["last_failure_ts"],
+             datetime.now(timezone.utc).isoformat())
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def _breaker_record_failure(role: str) -> None:
-    """Record a gateway failure for circuit breaker."""
-    entry = _circuit_breaker.get(role, {"failures": 0, "last_failure_ts": 0})
+    """Record a gateway failure for circuit breaker (persisted to DB)."""
+    entry = _circuit_breaker.get(role)
+    if not entry:
+        entry = _breaker_load(role)
     entry["failures"] += 1
     entry["last_failure_ts"] = time.time()
     _circuit_breaker[role] = entry
+    _breaker_save(role, entry)
 
 
 def _breaker_record_success(role: str) -> None:
-    """Reset circuit breaker on success."""
-    _circuit_breaker.pop(role, None)
+    """Reset circuit breaker on success (persisted to DB)."""
+    if role in _circuit_breaker:
+        _circuit_breaker.pop(role, None)
+    _breaker_save(role, {"failures": 0, "last_failure_ts": 0})
 
 
 def _breaker_is_tripped(role: str) -> bool:
     """Check if circuit breaker is tripped for a role."""
     entry = _circuit_breaker.get(role)
     if not entry:
-        return False
+        entry = _breaker_load(role)
+        _circuit_breaker[role] = entry
     if entry["failures"] < CIRCUIT_BREAKER_THRESHOLD:
         return False
     elapsed = time.time() - entry["last_failure_ts"]
     if elapsed > CIRCUIT_BREAKER_COOLDOWN:
         # Cooldown passed — reset
         _circuit_breaker.pop(role, None)
+        _breaker_save(role, {"failures": 0, "last_failure_ts": 0})
         return False
     return True
 
@@ -144,7 +189,7 @@ def _create_run(conn: sqlite3.Connection, intent_text: str,
     conn.execute(
         """INSERT INTO workflow_runs
            (id, topic, result, status, created_at, max_rounds, rounds_completed)
-           VALUES (?, ?, 'CONSENSUS_REACHED', 'INTAKE', ?, 3, 0)""",
+           VALUES (?, ?, 'PENDING', 'INTAKE', ?, 3, 0)""",
         (run_id, intent_text[:500], datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
@@ -188,7 +233,7 @@ def _start_round(conn: sqlite3.Connection, run_id: str, phase: str,
            (run_id, round_number, drafter_role, drafter_output,
             reviewer_role, reviewer_signal, revision_number,
             requires_eric_review, created_at)
-           VALUES (?, ?, ?, '', '', 'CONSENSUS_REACHED', ?, 0, ?)""",
+           VALUES (?, ?, ?, '', '', 'PENDING', ?, 0, ?)""",
         (run_id, actual_round_num, phase, round_num,
          datetime.now(timezone.utc).isoformat())
     )
@@ -281,8 +326,8 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
                     f"--- Trajectory (run {t_run}, {t_role}/{t_phase}, {outcome}) ---\n"
                     f"{preview}"
                 )
-    except Exception:
-        pass  # Table may be empty — fine
+    except Exception as e:
+        results.append(f"\n## Prior Agent Trajectories\n(Search error: {e})")
 
     # 3. Web search (Brain and Draft only)
     if web_search:
@@ -299,8 +344,8 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
                 results.append("\n## Current Research (web)")
                 for item in search_results:
                     results.append(f"- {item['title']}: {item.get('snippet', '')[:200]}")
-        except Exception:
-            pass  # Web search is best-effort
+        except Exception as e:
+            results.append(f"\n## Current Research (web)\n(Search error: {e})")
 
     return (
         "[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
@@ -374,16 +419,20 @@ def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
     version = different reliability).
     """
     # Capture config_version (git HEAD short hash)
-    config_version = ""
+    config_version = "unknown"
     try:
         import subprocess
-        config_version = subprocess.run(
+        result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             capture_output=True, text=True, timeout=5,
             cwd=DB_PATH.rsplit("/", 1)[0],
-        ).stdout.strip()
-    except Exception:
-        pass
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            config_version = result.stdout.strip()
+        else:
+            config_version = f"git-error: {result.stderr.strip()[:50]}"
+    except Exception as e:
+        config_version = f"exception: {str(e)[:50]}"
 
     conn.execute(
         """INSERT INTO agent_trajectories
@@ -776,6 +825,12 @@ def _run_isolated_l1(cwd: str, pre_exec_head: str) -> str:
             if wt_result.returncode != 0:
                 parts.append(f"## L1-ISOLATED: Worktree creation FAILED\n{wt_result.stderr.strip()[:300]}")
                 parts.append("FALLING BACK to in-place checks — isolation NOT guaranteed.")
+                # Clean up the orphan tempdir
+                import shutil
+                try:
+                    shutil.rmtree(worktree_path, ignore_errors=True)
+                except Exception:
+                    pass
                 worktree_path = None
             else:
                 parts.append(f"## L1-ISOLATED: Clean Worktree\nChecked out {pre_exec_head[:12]} at {worktree_path}")
@@ -944,9 +999,6 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "brain", "brain",
                           prompt, output, round_num)
-        _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "success")
-        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                       {"brain_output": output})
 
         # Check for HUMAN_QUESTION
         parsed = _parse_final_json(output)
@@ -958,6 +1010,19 @@ class PipelineRelay:
             print(f"[pipeline] BRAIN needs clarification: {question}")
             print(f"[pipeline] Run {run_id} waiting for human answer")
             return
+
+        # Validate Brain produced a valid status
+        if not parsed or parsed.get("status") not in ("READY", "NEEDS_CLARIFICATION"):
+            _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] BRAIN output invalid — no READY status. ESCALATE.")
+            return
+
+        _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"brain_output": output})
 
         # Proceed to intent review
         _set_run_status(self.conn, run_id, "INTENT_REVIEW")
@@ -1086,6 +1151,17 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "draft", "draft",
                           prompt, output, round_num)
+
+        # Validate Draft produced PROPOSAL_READY or REVISION_READY
+        parsed = _parse_final_json(output)
+        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] DRAFT output invalid — no PROPOSAL_READY status. ESCALATE.")
+            return
+
         _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"drafter_output": output})
@@ -1227,9 +1303,20 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "menter", "execution",
                           prompt, output, 1)
+
+        # Validate Menter produced a valid status
+        parsed = _parse_final_json(output)
+        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] MENTER output invalid — no completion status. ESCALATE.")
+            return
+
         _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                        {"drafter_output": output})
+                        {"menter_output": output})
 
         _set_run_status(self.conn, run_id, "VERIFICATION")
         await self._verification(run_id, intent)
@@ -1243,12 +1330,22 @@ class PipelineRelay:
         """
         print(f"[pipeline] VERIFICATION phase for {run_id}")
 
+        # Get the directive (Draft's proposal) — NOT Menter's self-report
         cur = self.conn.execute(
             "SELECT drafter_output FROM deliberation_rounds "
             "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
             "ORDER BY id DESC LIMIT 1", (run_id,)
         )
         directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Get Menter's output (what was actually built)
+        cur = self.conn.execute(
+            "SELECT menter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND menter_output IS NOT NULL AND menter_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        menter_output = row[0] if (row := cur.fetchone()) else ""
 
         # Run L1 deterministic checks with clean-checkout isolation
         project_dir = DB_PATH.rsplit("/", 1)[0]
@@ -1265,8 +1362,10 @@ class PipelineRelay:
             f"{discovery}\n\n"
             f"## L1 DETERMINISTIC EVIDENCE (auto-collected)\n"
             f"{l1_evidence}\n\n"
-            f"## FINAL_DIRECTIVE (Menter's task)\n{directive}\n\n"
+            f"## FINAL_DIRECTIVE (what Menter was told to build)\n{directive}\n\n"
+            f"## MENTER'S SELF-REPORT (what Menter claims it did)\n{menter_output}\n\n"
             f"You are Verify. Cross-check the L1 evidence against the directive. "
+            f"Menter's self-report is NOT evidence — it is a claim. Verify independently. "
             f"Run additional evidence commands if needed (git diff, tests, "
             f"file state). Trust nothing Menter claimed — verify independently. "
             f"End with FINAL_JSON:\n"
@@ -1293,9 +1392,19 @@ class PipelineRelay:
         parsed = _parse_final_json(output)
         status = parsed.get("status", "") if parsed else ""
 
+        if not parsed or status not in ("PASS", "FAIL"):
+            # Verify did not produce a valid verdict — NOT a pass
+            print(f"[pipeline] VERIFY incomplete — no valid PASS/FAIL verdict")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] Run {run_id} ESCALATED — verify output unparseable")
+            return
+
         if status == "FAIL":
             # Saga compensation: git stash Menter's changes
             print(f"[pipeline] VERIFY FAIL — compensating (git stash)")
+            stash_ref = ""
             try:
                 import subprocess
                 result = subprocess.run(
@@ -1304,11 +1413,22 @@ class PipelineRelay:
                     cwd=DB_PATH.rsplit("/", 1)[0],
                 )
                 if result.returncode == 0:
-                    print(f"[pipeline] Compensation: changes stashed ({result.stdout.strip()})")
+                    stash_ref = result.stdout.strip()
+                    print(f"[pipeline] Compensation: changes stashed ({stash_ref})")
                 else:
                     print(f"[pipeline] Compensation: git stash failed: {result.stderr.strip()}")
             except Exception as e:
                 print(f"[pipeline] Compensation error: {e}")
+
+            # Record compensation in DB audit trail
+            self.conn.execute(
+                """UPDATE deliberation_rounds SET
+                   verify_output = ?,
+                   objections_json = ?
+                   WHERE id = ?""",
+                (output, json.dumps({"stash_ref": stash_ref, "status": "FAIL"}), round_id)
+            )
+            self.conn.commit()
             _set_run_status(self.conn, run_id, "VERIFY_FAILED")
         else:
             print(f"[pipeline] VERIFY PASS — run complete")
