@@ -1665,6 +1665,63 @@ class PipelineRelay:
         _set_run_status(self.conn, run_id, "CODE_REVIEW_GATE")
         await self._code_review_gate(run_id, intent)
 
+    async def _call_agent_with_retry(
+        self, role: str, prompt: str, run_id: str, chunk_num: int,
+        label: str, round_id: int, conn, diff_text: str, l1_results: str,
+        revision: int, review_a_output: str = "", review_b_output: str = "",
+    ) -> Optional[str]:
+        """Call an agent with one retry. Returns None if both attempts fail.
+
+        On failure, records the escalation to code_review_chunks and
+        completes the round with ERROR signal. The caller should check
+        for None and return immediately.
+        """
+        last_error = ""
+        for attempt in range(2):  # original + 1 retry
+            try:
+                output = await _call_agent(role, prompt, run_id)
+                if output.strip():
+                    return output
+                # Empty output — retry
+                last_error = "empty output"
+                print(f"[pipeline] {label} returned empty on chunk {chunk_num}"
+                      f" (attempt {attempt + 1}), retrying...")
+            except Exception as e:
+                err_msg = str(e) or repr(e)  # repr fallback for empty str(e)
+                last_error = err_msg
+                print(f"[pipeline] {label} failed on chunk {chunk_num}"
+                      f" (attempt {attempt + 1}): {err_msg}")
+                if attempt == 0:
+                    import asyncio as _aio
+                    await _aio.sleep(2)  # brief backoff before retry
+
+        # Both attempts failed — escalate
+        _breaker_record_failure(role)
+        _complete_round(conn, round_id, "ERROR")
+
+        # Build the INSERT based on which review phase we're in
+        cols = ["run_id", "chunk_number", "file_path", "diff_text", "l1_results"]
+        vals = [run_id, chunk_num, "", diff_text[:5000], l1_results]
+
+        if review_a_output:
+            cols.append("review_a_pass1")
+            vals.append(review_a_output[:5000])
+        if review_b_output:
+            cols.append("review_b_pass2")
+            vals.append(review_b_output[:5000])
+
+        cols.extend(["final_verdict", "revision_number", "created_at"])
+        vals.extend(["ESCALATE", revision, datetime.now(timezone.utc).isoformat()])
+
+        placeholders = ",".join("?" * len(vals))
+        col_list = ",".join(cols)
+        conn.execute(
+            f"INSERT INTO code_review_chunks ({col_list}) VALUES ({placeholders})",
+            vals
+        )
+        conn.commit()
+        return None
+
     async def _code_review_gate(self, run_id: str, intent: str) -> None:
         """Code Review Gate: Menter builds chunks, sequential three-pass review.
 
@@ -1795,25 +1852,10 @@ class PipelineRelay:
                     f"Reviewers requested changes. Fix these issues:\n{prev_directive}"
                 )
 
-            try:
-                menter_output = await _call_agent("menter", menter_prompt, run_id)
-            except Exception as e:
-                _breaker_record_failure("menter")
-                _complete_round(self.conn, round_id, "ERROR")
-                _record_trajectory(self.conn, run_id, "menter", "code_review",
-                              menter_prompt, str(e), chunk_num)
-                _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "failed")
-                print(f"[pipeline] Menter failed on chunk {chunk_num}: {e}")
-                # Record and escalate
-                self.conn.execute(
-                    """INSERT INTO code_review_chunks
-                       (run_id, chunk_number, file_path, diff_text, l1_results,
-                        final_verdict, revision_number, created_at)
-                       VALUES (?, ?, ?, '', '', 'ESCALATE', ?, ?)""",
-                    (run_id, chunk_num, file_path, revision,
-                     datetime.now(timezone.utc).isoformat())
-                )
-                self.conn.commit()
+            menter_output = await self._call_agent_with_retry(
+                "menter", menter_prompt, run_id, chunk_num, "Menter",
+                round_id, self.conn, "", "", revision)
+            if menter_output is None:
                 return
 
             _record_trajectory(self.conn, run_id, "menter", "code_review",
@@ -1866,21 +1908,10 @@ class PipelineRelay:
                 f'"summary":"...","checks_failed":[...]}}\n```'
             )
 
-            try:
-                review_a_output = await _call_agent("review1", review_a_prompt, run_id)
-            except Exception as e:
-                _breaker_record_failure("review1")
-                _complete_round(self.conn, round_id, "ERROR")
-                print(f"[pipeline] Reviewer A failed on chunk {chunk_num}: {e}")
-                self.conn.execute(
-                    """INSERT INTO code_review_chunks
-                       (run_id, chunk_number, file_path, diff_text, l1_results,
-                        review_a_pass1, final_verdict, revision_number, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
-                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
-                     str(e), revision, datetime.now(timezone.utc).isoformat())
-                )
-                self.conn.commit()
+            review_a_output = await self._call_agent_with_retry(
+                "review1", review_a_prompt, run_id, chunk_num, "Reviewer A",
+                round_id, self.conn, diff_text, l1_results, revision)
+            if review_a_output is None:
                 return
 
             _record_trajectory(self.conn, run_id, "review1", "code_review",
@@ -1905,22 +1936,11 @@ class PipelineRelay:
                 f'"summary":"...","checks_failed":[...]}}\n```'
             )
 
-            try:
-                review_b_output = await _call_agent("review2", review_b_prompt, run_id)
-            except Exception as e:
-                _breaker_record_failure("review2")
-                _complete_round(self.conn, round_id, "ERROR")
-                print(f"[pipeline] Reviewer B failed on chunk {chunk_num}: {e}")
-                self.conn.execute(
-                    """INSERT INTO code_review_chunks
-                       (run_id, chunk_number, file_path, diff_text, l1_results,
-                        review_a_pass1, review_b_pass2, final_verdict, revision_number, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
-                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
-                     review_a_output[:5000], str(e), revision,
-                     datetime.now(timezone.utc).isoformat())
-                )
-                self.conn.commit()
+            review_b_output = await self._call_agent_with_retry(
+                "review2", review_b_prompt, run_id, chunk_num, "Reviewer B",
+                round_id, self.conn, diff_text, l1_results, revision,
+                review_a_output=review_a_output)
+            if review_b_output is None:
                 return
 
             _record_trajectory(self.conn, run_id, "review2", "code_review",
@@ -1945,23 +1965,11 @@ class PipelineRelay:
                 f'"summary":"...","revision_directive":"actionable feedback for Menter"}}\n```'
             )
 
-            try:
-                consensus_output = await _call_agent("review1", consensus_prompt, run_id)
-            except Exception as e:
-                _breaker_record_failure("review1")
-                _complete_round(self.conn, round_id, "ERROR")
-                print(f"[pipeline] Reviewer A consensus failed on chunk {chunk_num}: {e}")
-                self.conn.execute(
-                    """INSERT INTO code_review_chunks
-                       (run_id, chunk_number, file_path, diff_text, l1_results,
-                        review_a_pass1, review_b_pass2, review_a_consensus,
-                        final_verdict, revision_number, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
-                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
-                     review_a_output[:5000], review_b_output[:5000], str(e),
-                     revision, datetime.now(timezone.utc).isoformat())
-                )
-                self.conn.commit()
+            consensus_output = await self._call_agent_with_retry(
+                "review1", consensus_prompt, run_id, chunk_num, "Reviewer A consensus",
+                round_id, self.conn, diff_text, l1_results, revision,
+                review_a_output=review_a_output, review_b_output=review_b_output)
+            if consensus_output is None:
                 return
 
             _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
