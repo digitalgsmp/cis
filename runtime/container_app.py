@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Pipeline fixed and operational
 # CIS pipeline container entry point — it works
 """
 container_app.py — Minimal Flask app for the CIS pipeline container.

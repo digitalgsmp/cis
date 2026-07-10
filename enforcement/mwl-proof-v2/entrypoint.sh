@@ -13,6 +13,10 @@ set -e
 LOG_DIR="/tmp/cis-logs"
 mkdir -p "$LOG_DIR"
 
+# ── Clean stale pidfiles from previous container run ───────────────────
+# docker restart preserves /tmp, so old pidfiles cause false "already running"
+rm -f /tmp/brain.pid /tmp/draft.pid /tmp/review1.pid /tmp/review2.pid /tmp/menter.pid /tmp/verify.pid /tmp/pipeline_api.pid
+
 # ── Load API keys from secrets file ────────────────────────────────────
 if [ -f /workspace/secrets.env ]; then
     set -a

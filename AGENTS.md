@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-09 19:28 UTC | Run: run-0ee9ff2de986 | Latest pipeline: run-ef8d1a812b994a03-1783623679
+Generated: 2026-07-10 05:05 UTC | Run: run-87d4950358a4 | Latest pipeline: run-12d5aa6946666b73-1783649571
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,16 +79,16 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-ef8d1a812b994a03-1783623679] Add a /api/ping endpoint to runtime/container_app.py that returns JSON with stat — PENDING (0 rounds, incomplete)
-- [run-2985cc6a71956faa-1783621395] Add a comment to runtime/container_app.py saying it works — PENDING (0 rounds, incomplete)
-- [run-2985cc6a71956faa-1783617686] Add a comment to runtime/container_app.py saying it works — PENDING (0 rounds, incomplete)
-- [run-2985cc6a71956faa-1783616389] Add a comment to runtime/container_app.py saying it works — PENDING (0 rounds, incomplete)
-- [run-3f1a189b54aff9ad-1783613651] Add a one-line comment to the top of runtime/container_app.py saying: # CIS pipe — PENDING (0 rounds, incomplete)
+- [run-12d5aa6946666b73-1783649571] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
+- [run-12d5aa6946666b73-1783646867] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
+- [run-86bc4d1009b8fb44-1783645778] Add a comment to the top of runtime/container_app.py saying: # Pipeline fixed an — PENDING (0 rounds, incomplete)
+- [run-12d5aa6946666b73-1783641453] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
+- [run-12d5aa6946666b73-1783630035] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-ef8d1a812b994a03-1783623679
+- Workflow run: run-86bc4d1009b8fb44-1783645778
 - Status: APPROVE
-- Decided at: 2026-07-09T19:11:51.627089+00:00
+- Decided at: 2026-07-10T01:18:01.501491+00:00
 - Goal: No goal label
 
 ## 10. Verification Hardening Rule

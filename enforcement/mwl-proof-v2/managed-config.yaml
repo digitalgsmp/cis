@@ -11,6 +11,13 @@ auxiliary:
     context_length: 65536
 terminal:
   backend: local
+# Headless gateway agents have no human to click "Approve" on execute_code
+# or dangerous-command prompts. Pinning approvals.mode: off here ensures
+# the managed config (authoritative) doesn't fall back to manual (default),
+# which would block every execute_code call indefinitely.
+# Individual profiles also set this, but managed scope overrides profile scope.
+approvals:
+  mode: "off"
 # THE WALL is the mwl-proof PLUGIN (__init__.py pre_tool_call), not a shell hook.
 # The plugin must stay enabled AND the disabled-list pinned empty.
 # Pinning only `enabled` is NOT enough: `hermes plugins disable` writes the

@@ -196,8 +196,11 @@ def _db_retry(fn, max_attempts=3, base_delay=1.0):
 
 def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
                     extra: Optional[Dict] = None) -> None:
-    """Atomically update run status. Raises if run not found."""
-    # Concurrent run protection: only update if status is not terminal
+    """Atomically update run status. Raises if run not found.
+
+    If status is a terminal failure (ESCALATED, ERROR, VERIFY_FAILED),
+    fires a Telegram notification so Eric knows without manually polling.
+    """
     cur = conn.execute(
         "UPDATE workflow_runs SET status = ?, updated_at = ? WHERE id = ?",
         (status, datetime.now(timezone.utc).isoformat(), run_id)
@@ -205,6 +208,68 @@ def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
     if cur.rowcount == 0:
         raise ValueError(f"Run {run_id} not found or update failed")
     conn.commit()
+
+    # Notify on terminal failures
+    if status in ("ESCALATED", "ERROR", "VERIFY_FAILED"):
+        try:
+            _notify_terminal_failure(conn, run_id, status)
+        except Exception as e:
+            print(f"[pipeline] Notification failed: {e}")
+
+
+def _notify_terminal_failure(conn: sqlite3.Connection, run_id: str, status: str) -> None:
+    """Send a Telegram notification when a run hits a terminal failure."""
+    import urllib.request
+    import urllib.parse
+
+    # Get run details
+    cur = conn.execute(
+        "SELECT topic, status FROM workflow_runs WHERE id = ?", (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+    topic = row[0] or ""
+    topic_preview = topic[:100] + "..." if len(topic) > 100 else topic
+
+    # Get last phase from deliberation_rounds
+    cur = conn.execute(
+        "SELECT drafter_role, reviewer_signal FROM deliberation_rounds "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1", (run_id,)
+    )
+    last = cur.fetchone()
+    last_phase = last[0] if last else "unknown"
+    last_signal = last[1] if last else "unknown"
+
+    # Telegram bot token and chat ID from environment
+    bot_token = os.environ.get("CIS_TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("CIS_TELEGRAM_CHAT_ID", "")
+
+    if not bot_token or not chat_id:
+        print(f"[pipeline] Run {run_id} → {status} (no Telegram notification configured)")
+        return
+
+    message = (
+        f"⚠️ Pipeline Run {status}\n"
+        f"Run: {run_id}\n"
+        f"Phase: {last_phase}\n"
+        f"Signal: {last_signal}\n"
+        f"Intent: {topic_preview}\n"
+        f"Check: curl localhost:5000/api/relay/{run_id}"
+    )
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = urllib.parse.urlencode({
+        "chat_id": chat_id,
+        "text": message,
+    }).encode()
+
+    req = urllib.request.Request(url, data=data, method="POST")
+    resp = urllib.request.urlopen(req, timeout=10)
+    if resp.status == 200:
+        print(f"[pipeline] Telegram notification sent for {run_id} ({status})")
+    else:
+        print(f"[pipeline] Telegram notification failed: HTTP {resp.status}")
 
 
 def _create_run(conn: sqlite3.Connection, intent_text: str,
@@ -217,7 +282,7 @@ def _create_run(conn: sqlite3.Connection, intent_text: str,
         """INSERT INTO workflow_runs
            (id, topic, result, status, created_at, max_rounds, rounds_completed)
            VALUES (?, ?, 'PENDING', 'INTAKE', ?, 3, 0)""",
-        (run_id, intent_text[:500], datetime.now(timezone.utc).isoformat())
+        (run_id, intent_text, datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
     return run_id
@@ -412,6 +477,13 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
     Returns a formatted string to prepend to the agent's prompt.
     """
     keywords = " ".join(intent.split()[:10])
+    # Sanitize FTS5 special chars: . " * ( ) : ^ { } +
+    # These cause "fts5: syntax error near X" if unescaped
+    import re as _re
+    keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords)
+    keywords = keywords.strip()
+    if not keywords:
+        keywords = "CIS pipeline"
     results = []
 
     # 1. Spine FTS5 search
@@ -763,7 +835,7 @@ async def _call_reviewers_parallel(prompt: str, run_id: str) -> Tuple[str, str, 
     A reviewer that returns a valid FINAL_JSON (CONSENSUS_REACHED or OBJECTIONS)
     is considered to have completed its role, regardless of the signal.
     """
-    MAX_REVIEWER_RETRIES = 1
+    MAX_REVIEWER_RETRIES = 2
 
     async def _call_with_retry(role: str) -> Tuple[str, Optional[str]]:
         """Call a reviewer, retry once if output is empty or unparseable."""
@@ -824,23 +896,52 @@ def _check_consensus(r1_output: str, r2_output: str,
 
     Only reviewers that completed their role (produced a parseable signal)
     can express consensus or objections. A reviewer with an error or
-    ambiguous output did NOT complete its role — this is NOT an objection,
-    it's an incomplete review that the caller must handle separately.
+    ambiguous output did NOT complete its role.
 
-    A reviewer that completed its role and said OBJECTIONS is a real
-    objection. A reviewer that completed and said CONSENSUS_REACHED is
-    real agreement. These are stored as trajectory memory.
+    SINGLE-REVIEWER DEGRADATION: If one reviewer fails (empty/error) but the
+    other completed with OBJECTIONS, the objections are honored and Brain is
+    sent back for revision. Don't throw away valid feedback because the other
+    model hiccuped. Only escalate if BOTH reviewers fail, or if both complete
+    and can't reach consensus after max rounds.
     """
     # A reviewer with an error did not complete its role
     r1_complete = r1_output.strip() and not r1_error
     r2_complete = r2_output.strip() and not r2_error
 
     if not r1_complete and not r2_complete:
-        return False, False, None  # Neither completed — not an objection, incomplete
-    if not r1_complete:
-        return False, False, None  # r1 incomplete
+        return False, False, None  # Neither completed — incomplete, escalate
+
+    # Single-reviewer degradation: one failed, one completed
     if not r2_complete:
-        return False, False, None  # r2 incomplete
+        # Only r1 completed — check if it has objections
+        r1_json = _parse_final_json(r1_output)
+        r1_status = r1_json.get("status", "") if r1_json else ""
+        if r1_status == "OBJECTIONS" or r1_status == "ESCALATE":
+            return False, True, f"[Review1] {r1_output[:2000]}\n[Review2] (no response — model failure)"
+        if r1_status == "CONSENSUS_REACHED":
+            # One reviewer says consensus, other is silent — proceed with caution
+            return True, False, None
+        # Text-scan fallback
+        if "OBJECTION" in r1_output.upper() or "ESCALATE" in r1_output.upper():
+            return False, True, f"[Review1] {r1_output[:2000]}\n[Review2] (no response — model failure)"
+        if "CONSENSUS" in r1_output.upper():
+            return True, False, None
+        return False, False, None  # r1 ambiguous, r2 incomplete
+
+    if not r1_complete:
+        # Only r2 completed — check if it has objections
+        r2_json = _parse_final_json(r2_output)
+        r2_status = r2_json.get("status", "") if r2_json else ""
+        if r2_status == "OBJECTIONS" or r2_status == "ESCALATE":
+            return False, True, f"[Review1] (no response — model failure)\n[Review2] {r2_output[:2000]}"
+        if r2_status == "CONSENSUS_REACHED":
+            return True, False, None
+        # Text-scan fallback
+        if "OBJECTION" in r2_output.upper() or "ESCALATE" in r2_output.upper():
+            return False, True, f"[Review1] (no response — model failure)\n[Review2] {r2_output[:2000]}"
+        if "CONSENSUS" in r2_output.upper():
+            return True, False, None
+        return False, False, None  # r2 ambiguous, r1 incomplete
 
     # Both completed — parse their signals
     r1_json = _parse_final_json(r1_output)
@@ -1305,7 +1406,11 @@ class PipelineRelay:
             await self._verification(run_id, intent)
 
     async def _brain_phase(self, run_id: str, intent: str, round_num: int = 1) -> None:
-        """Brain phase: explore intent, produce structured understanding."""
+        """Brain phase: explore intent, produce structured understanding.
+
+        On round >1 (revision after reviewer objections), the reviewer
+        feedback is injected so Brain knows what to fix.
+        """
         print(f"[pipeline] BRAIN phase (round {round_num}) for {run_id}")
 
         round_id = _start_round(self.conn, run_id, "brain", round_num)
@@ -1313,8 +1418,33 @@ class PipelineRelay:
             self.conn, intent, "brain", "brain", run_id, web_search=True
         )
 
+        # On revision rounds, fetch reviewer objections from last intent_review
+        reviewer_feedback = ""
+        if round_num > 1:
+            cur = self.conn.execute(
+                "SELECT reviewer1_output, reviewer2_output "
+                "FROM deliberation_rounds "
+                "WHERE run_id = ? AND reviewer1_output IS NOT NULL "
+                "  AND reviewer1_output != '' "
+                "ORDER BY id DESC LIMIT 1",
+                (run_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                r1, r2 = row[0] or "", row[1] or ""
+                reviewer_feedback = (
+                    f"\n\n## Reviewer Feedback (round {round_num - 1} objections)\n"
+                    f"Your previous understanding was REJECTED by reviewers. "
+                    f"Fix these issues:\n\n"
+                    f"### Reviewer 1:\n{r1[:2000]}\n\n"
+                    f"### Reviewer 2:\n{r2[:2000]}\n\n"
+                    f"Revise your INTENT_UNDERSTANDING to address every objection above. "
+                    f"Do not repeat claims that were debunked. "
+                    f"Stick to verified facts from the knowledge base and file system.\n"
+                )
+
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{reviewer_feedback}\n\n"
             f"Eric's intent: {intent}\n\n"
             f"You are Brain. Explore this intent and produce an INTENT_UNDERSTANDING.\n"
             f"End with a FINAL_JSON block:\n"

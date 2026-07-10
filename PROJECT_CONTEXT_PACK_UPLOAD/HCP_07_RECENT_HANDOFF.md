@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-07-09
+Date: 2026-07-10
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `30525fd`
+HEAD: `6629d1b`
 
-Generated: 2026-07-09 19:28 UTC | Run: run-0ee9ff2de986
+Generated: 2026-07-10 05:05 UTC | Run: run-87d4950358a4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-ef8d1a812b994a03-1783623679
-- Decided at: 2026-07-09T19:11:51.627089+00:00
+- Workflow run: run-86bc4d1009b8fb44-1783645778
+- Decided at: 2026-07-10T01:18:01.501491+00:00
 - Goal reference: None
-- Briefing hash: ddb823c038375d7ef588532fcf29de25d8b1d21341473cba3f1b0475c7655e28
+- Briefing hash: defdd0188e4ab7f358c9c14af9e55691054288f234d919d8d118dbde8379e299
