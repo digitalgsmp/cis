@@ -1416,7 +1416,7 @@ def guardrail_trajectory_monitor(
     try:
         # Get previous outputs for this role+phase
         rows = conn.execute(
-            "SELECT prompt_hash, output_hash, outcome "
+            "SELECT input_text, output_text, outcome "
             "FROM agent_trajectories "
             "WHERE run_id = ? AND role = ? "
             "ORDER BY id DESC LIMIT 5",
@@ -1431,13 +1431,18 @@ def guardrail_trajectory_monitor(
                 mode="ADVISORY",
             )
         
-        # Check for repeated identical outputs
-        output_hashes = [r["output_hash"] for r in rows if r["output_hash"]]
+        # Check for repeated identical outputs (hash the output_text)
+        output_hashes = []
+        for r in rows:
+            out_text = r["output_text"] if "output_text" in r.keys() else ""
+            if out_text:
+                output_hashes.append(hashlib.sha256(out_text.encode()).hexdigest()[:16])
+        
         if output_hashes and len(set(output_hashes)) == 1 and len(output_hashes) >= 2:
             return GuardrailResult(
                 name="trajectory_monitor",
                 verdict="FAIL",
-                evidence=f"Last {len(output_hashes)} outputs for {role} all have identical hash: {output_hashes[0][:16]}",
+                evidence=f"Last {len(output_hashes)} outputs for {role} all have identical hash: {output_hashes[0]}",
                 summary=f"Trajectory stuck: {role} produced identical output {len(output_hashes)} times",
                 mode="ADVISORY",
             )
@@ -1782,6 +1787,7 @@ def guardrail_output_sanitizer(
 # ═══════════════════════════════════════════════════════════════════════════
 
 import ast as _ast
+import sqlite3
 
 # ── 21: Intent Compliance Checker (§2.11) ─────────────────────────────────
 
@@ -2440,6 +2446,8 @@ def guardrail_raw_source_preservation(
     
     try:
         # Check the most recent deliberation round for this run
+        # Use Row factory for named access
+        conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT brain_output, drafter_output, reviewer1_output, reviewer2_output, "
             "menter_output, verify_output "

@@ -61,6 +61,12 @@ case "${1:-start}" in
         -p 5000:5000 \
         -v $CIS_REPO:/workspace/cis \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
+        -e CIS_BRAIN_API_KEY=cis-brainstorm-gateway-key-2026 \
+        -e CIS_DRAFT_API_KEY=cis-drafter-gateway-key-2026 \
+        -e CIS_REVIEW1_API_KEY=cis-qwen-reviewer-gateway-key-2026 \
+        -e CIS_REVIEW2_API_KEY=cis-glm-reviewer-gateway-key-2026 \
+        -e CIS_MENTER_API_KEY=cis-implementer-gateway-key-2026 \
+        -e CIS_VERIFY_API_KEY=cis-verifier-gateway-key-2026 \
         $IMAGE"
 
     if [ -n "$DETACH_FLAG" ]; then
