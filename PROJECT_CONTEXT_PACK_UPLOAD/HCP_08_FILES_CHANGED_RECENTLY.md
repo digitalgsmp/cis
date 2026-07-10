@@ -1,7 +1,77 @@
 # Files Changed Recently
-Generated: 2026-07-10 13:48 UTC | Run: run-7ef1e0469a38
+Generated: 2026-07-10 14:12 UTC | Run: run-e254ecb21cee
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 16484c3 14-component control plane build + deterministic guardrail spec
+
+## .gitignore 
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DETERMINISTIC_GUARDRAIL_SPECIFICATION.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/HANDOFF_2026_07_10_CONTROL_PLANE_BUILD.md 
+
+## docs/REMOTE_ACCESS_SETUP.md 
+
+## docs/SPEC_CONTROL_PLANE_BUILD.md 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/api/relay.py 
+
+## runtime/config/role_overlays.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/schema/migrations/0021_corpus_entries.sql 
+
+## runtime/schema/migrations/0022_projects_table.sql 
+
+## runtime/schema/migrations/0023_run_decomposition.sql 
+
+## runtime/schema/migrations/0024_dead_letter_queue.sql 
+
+## runtime/schema/migrations/0025_agent_token_tracking.sql 
+
+## runtime/schema/spine_schema.sql 
+
+## runtime/ui/src/App.jsx 
+
+## runtime/ui/src/api.js 
+
+## runtime/ui/src/pages/RelayPage.jsx 
+
+## tools/extract_corpus.py 
 
 ## be6bd94 Add deterministic guardrail spec + pipeline fixes
 
@@ -426,36 +496,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 7682ad1 spec: Code Review Gate REV-2 — sequential three-pass review
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/SPEC_CODE_REVIEW_GATE.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 06e8e8d spec: Code Review Gate — pattern catalog + chunk-based code review
 
 ## AGENTS.md 
 

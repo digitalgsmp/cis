@@ -611,7 +611,7 @@ def relay_kb_search():
     conn = _db()
     try:
         rows = conn.execute(
-            """SELECT content, source, timestamp
+            """SELECT content, source, role
                FROM knowledge_messages_fts
                WHERE knowledge_messages_fts MATCH ?
                ORDER BY rank
@@ -622,7 +622,7 @@ def relay_kb_search():
             {
                 "content": r["content"][:500] if r["content"] else "",
                 "source": r["source"],
-                "timestamp": r["timestamp"],
+                "role": r["role"],
             }
             for r in rows
         ]
