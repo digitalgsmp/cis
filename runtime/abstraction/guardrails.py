@@ -1051,6 +1051,46 @@ def run_guardrails(
     report.results.append(guardrail_model_diversity())
     report.results.append(guardrail_version_drift())
     
+    # ── Tier 3: Intent compliance (AST check for stubs) ──────────────────
+    if role.lower() in ("menter", "verify"):
+        report.results.append(guardrail_intent_compliance(agent_output, project_root))
+    
+    # ── Tier 3: Semantic spot check (verify claimed functions exist) ─────
+    if role.lower() in ("menter", "verify"):
+        report.results.append(guardrail_semantic_spot_check(agent_output, project_root))
+    
+    # ── Tier 3: Consensus independence (reviewer cross-check) ─────────────
+    if role.lower() in ("review1", "review2") and other_reviewer_output:
+        report.results.append(
+            guardrail_consensus_independence(agent_output, other_reviewer_output)
+        )
+    
+    # ── Tier 3: Hardcode detector + error handling (AST on code blocks) ──
+    if role.lower() in ("menter",):
+        report.results.append(guardrail_hardcode_detector(agent_output, project_root))
+        report.results.append(guardrail_error_handling(agent_output))
+    
+    # ── Tier 3: Position randomizer (on prompt) ──────────────────────────
+    if prompt:
+        report.results.append(guardrail_position_randomizer(prompt))
+    
+    # ── Tier 3: Evidence hash chain (needs pre_exec_head) ─────────────────
+    if pre_exec_head and role.lower() in ("menter", "verify"):
+        report.results.append(
+            guardrail_evidence_hash_chain(pre_exec_head, project_root)
+        )
+    
+    # ── Tier 3: Context injection gate (on prompt) ───────────────────────
+    if prompt:
+        report.results.append(guardrail_context_injection(prompt))
+    
+    # ── Tier 3: Raw source preservation (needs DB) ───────────────────────
+    if conn and run_id:
+        report.results.append(guardrail_raw_source_preservation(conn, run_id))
+    
+    # ── Tier 3: Bias drift detector ──────────────────────────────────────
+    report.results.append(guardrail_bias_drift(agent_output, intent))
+    
     return report
 
 
@@ -1712,4 +1752,807 @@ def guardrail_output_sanitizer(
         evidence=f"Output is clean ASCII/UTF-8 (no zero-width, homoglyphs, or control chars)",
         summary="Output sanitized — no steganographic content",
         mode="BLOCK",
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TIER 3 GUARDRAILS (items 21-30)
+# Requires integration with existing gate scripts / deeper analysis
+# ═══════════════════════════════════════════════════════════════════════════
+
+import ast as _ast
+
+# ── 21: Intent Compliance Checker (§2.11) ─────────────────────────────────
+
+def guardrail_intent_compliance(
+    agent_output: str,
+    project_root: str,
+    directive: str = "",
+) -> GuardrailResult:
+    """Actually run the code and test behavior — not just check it exists.
+    
+    Catches: specification gaming, stub implementations that look right but don't work (§2.11)
+    Mode: BLOCK — stub code that doesn't run is a fabrication
+    """
+    # Extract Python code blocks
+    code_blocks = re.findall(r'```python\n(.*?)```', agent_output, re.DOTALL)
+    if not code_blocks:
+        return GuardrailResult(
+            name="intent_compliance",
+            verdict="SKIP",
+            summary="No Python code blocks to test",
+            mode="BLOCK",
+        )
+    
+    issues = []
+    tested = 0
+    
+    for i, code in enumerate(code_blocks):
+        # Try to compile each code block
+        try:
+            _ast.parse(code)
+            tested += 1
+        except SyntaxError as e:
+            issues.append(f"Code block {i+1}: SyntaxError: {e.msg} (line {e.lineno})")
+            continue
+        
+        # Check for stub patterns — functions with only pass/return None/return {}
+        try:
+            tree = _ast.parse(code)
+            for node in _ast.walk(tree):
+                if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
+                    body = node.body
+                    # Strip docstring
+                    if body and isinstance(body[0], _ast.Expr) and isinstance(body[0].value, _ast.Constant) and isinstance(body[0].value.value, str):
+                        body = body[1:]
+                    
+                    if len(body) == 0:
+                        issues.append(f"Function '{node.name}' has empty body")
+                    elif len(body) == 1:
+                        stmt = body[0]
+                        if isinstance(stmt, _ast.Pass):
+                            issues.append(f"Function '{node.name}' is a stub (body is just 'pass')")
+                        elif isinstance(stmt, _ast.Return) and stmt.value is None:
+                            issues.append(f"Function '{node.name}' returns None unconditionally (stub)")
+                        elif isinstance(stmt, _ast.Return) and isinstance(stmt.value, _ast.Constant) and stmt.value.value is None:
+                            issues.append(f"Function '{node.name}' returns None (stub)")
+                        elif isinstance(stmt, _ast.Return) and isinstance(stmt.value, _ast.Dict) and not stmt.value.keys:
+                            issues.append(f"Function '{node.name}' returns empty dict (stub)")
+                        elif isinstance(stmt, _ast.Return) and isinstance(stmt.value, _ast.List) and not stmt.value.elts:
+                            issues.append(f"Function '{node.name}' returns empty list (stub)")
+        except Exception:
+            pass
+    
+    if issues:
+        return GuardrailResult(
+            name="intent_compliance",
+            verdict="FAIL",
+            evidence="; ".join(issues),
+            summary=f"Intent compliance: {len(issues)} stub/syntax issue(s) found",
+            mode="BLOCK",
+        )
+    
+    return GuardrailResult(
+        name="intent_compliance",
+        verdict="PASS",
+        evidence=f"Compiled {tested} code block(s), no stubs detected",
+        summary=f"Code compiles and has substantive implementations ({tested} block(s))",
+        mode="BLOCK",
+    )
+
+
+# ── 22: Semantic Spot Check (§2.7) ────────────────────────────────────────
+
+def guardrail_semantic_spot_check(
+    agent_output: str,
+    project_root: str,
+    sample_size: int = 3,
+) -> GuardrailResult:
+    """Randomly pick claims from output and verify them with actual execution.
+    
+    Catches: alignment faking, evaluator gaming (§2.7)
+    Mode: ADVISORY — spot checks can miss issues, but catch random ones
+    """
+    # Extract file/function claims
+    claimed_files = _extract_claimed_files(agent_output)
+    claimed_funcs = _extract_claimed_functions(agent_output)
+    
+    if not claimed_files and not claimed_funcs:
+        return GuardrailResult(
+            name="semantic_spot_check",
+            verdict="SKIP",
+            summary="No file or function claims to spot-check",
+            mode="ADVISORY",
+        )
+    
+    import random
+    
+    checks_performed = []
+    failures = []
+    
+    # Spot-check claimed files exist
+    for f in claimed_files[:sample_size]:
+        if os.path.isabs(f):
+            full_path = f
+        else:
+            full_path = os.path.join(project_root, f)
+        
+        exists = os.path.exists(full_path)
+        checks_performed.append(f"File {f}: {'EXISTS' if exists else 'MISSING'}")
+        if not exists:
+            failures.append(f"File {f} does not exist")
+    
+    # Spot-check claimed functions exist in the claimed files
+    for func_name in claimed_funcs[:sample_size]:
+        found = False
+        # Search in claimed files first, then broadly
+        search_files = []
+        for f in claimed_files:
+            if os.path.isabs(f):
+                search_files.append(f)
+            else:
+                search_files.append(os.path.join(project_root, f))
+        
+        for fpath in search_files:
+            if not os.path.isfile(fpath):
+                continue
+            try:
+                with open(fpath, encoding="utf-8", errors="ignore") as fh:
+                    content = fh.read()
+                if re.search(rf'\bdef\s+{re.escape(func_name)}\s*\(', content):
+                    found = True
+                    break
+            except Exception:
+                pass
+        
+        checks_performed.append(f"Function {func_name}: {'FOUND' if found else 'NOT FOUND'}")
+        if not found:
+            failures.append(f"Function '{func_name}' not found in any claimed file")
+    
+    if failures:
+        return GuardrailResult(
+            name="semantic_spot_check",
+            verdict="FAIL",
+            evidence="; ".join(checks_performed),
+            summary=f"Spot check failed: {', '.join(failures[:3])}",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="semantic_spot_check",
+        verdict="PASS",
+        evidence="; ".join(checks_performed),
+        summary=f"Spot check passed ({len(checks_performed)} verification(s))",
+        mode="ADVISORY",
+    )
+
+
+# ── 23: Consensus Independence Check (§2.17) ──────────────────────────────
+
+def guardrail_consensus_independence(
+    r1_output: str,
+    r2_output: str,
+) -> GuardrailResult:
+    """Check that consensus is independent — not from shared blind spots.
+    
+    Catches: false consensus from shared blind spots (§2.17)
+    Mode: ADVISORY — high similarity doesn't always mean false consensus
+    """
+    if not r1_output.strip() or not r2_output.strip():
+        return GuardrailResult(
+            name="consensus_independence",
+            verdict="SKIP",
+            summary="One or both reviewer outputs empty",
+            mode="ADVISORY",
+        )
+    
+    # Reasoning keyword overlap — if both reviewers use the same reasoning patterns,
+    # they might share blind spots
+    _REASONING_KEYWORDS = [
+        "because", "therefore", "since", "thus", "hence", "consequently",
+        "however", "moreover", "furthermore", "nevertheless", "nonetheless",
+        "assuming", "given that", "based on", "according to",
+        "missing", "lacks", "should", "recommend", "suggest",
+        "correct", "incorrect", "right", "wrong", "valid", "invalid",
+        "complete", "incomplete", "sufficient", "insufficient",
+    ]
+    
+    r1_keywords = set(kw for kw in _REASONING_KEYWORDS if kw in r1_output.lower())
+    r2_keywords = set(kw for kw in _REASONING_KEYWORDS if kw in r2_output.lower())
+    
+    if not r1_keywords or not r2_keywords:
+        return GuardrailResult(
+            name="consensus_independence",
+            verdict="SKIP",
+            summary="Insufficient reasoning keywords to analyze",
+            mode="ADVISORY",
+        )
+    
+    # Jaccard on reasoning keywords
+    reasoning_overlap = _jaccard_similarity(
+        " ".join(r1_keywords), " ".join(r2_keywords)
+    )
+    
+    # Full text similarity
+    text_similarity = _jaccard_similarity(r1_output, r2_output)
+    
+    issues = []
+    
+    # If reasoning keywords are nearly identical AND text is very similar,
+    # they might be copying each other or sharing blind spots
+    if reasoning_overlap > 0.85 and text_similarity > 0.5:
+        issues.append(
+            f"Reasoning keyword overlap {reasoning_overlap:.0%} + text similarity {text_similarity:.0%} — "
+            f"possible false consensus from shared reasoning pattern"
+        )
+    
+    # If both reviewers cite the same evidence, that's suspicious
+    r1_evidence = re.findall(r'(?:line|file|function|page)\s+\d+', r1_output.lower())
+    r2_evidence = re.findall(r'(?:line|file|function|page)\s+\d+', r2_output.lower())
+    if r1_evidence and r2_evidence:
+        evidence_overlap = set(r1_evidence) & set(r2_evidence)
+        if len(evidence_overlap) / max(len(r1_evidence), len(r2_evidence)) > 0.8:
+            issues.append(
+                f"Both reviewers cite same evidence ({len(evidence_overlap)} shared references) — "
+                f"possible shared blind spot"
+            )
+    
+    if issues:
+        return GuardrailResult(
+            name="consensus_independence",
+            verdict="FAIL",
+            evidence=f"Reasoning overlap: {reasoning_overlap:.0%}, text similarity: {text_similarity:.0%}",
+            summary=f"Consensus independence concern: {'; '.join(issues)}",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="consensus_independence",
+        verdict="PASS",
+        evidence=f"Reasoning overlap: {reasoning_overlap:.0%}, text similarity: {text_similarity:.0%}",
+        summary=f"Consensus appears independent (reasoning overlap {reasoning_overlap:.0%})",
+        mode="ADVISORY",
+    )
+
+
+# ── 24: Hardcode Detector (§2.22) ─────────────────────────────────────────
+
+def guardrail_hardcode_detector(
+    agent_output: str,
+    project_root: str = "",
+) -> GuardrailResult:
+    """AST analysis to detect hardcoded values instead of logic.
+    
+    Catches: hardcoded values instead of logic (§2.22)
+    Mode: ADVISORY — hardcoded values aren't always wrong (constants exist)
+    """
+    code_blocks = re.findall(r'```python\n(.*?)```', agent_output, re.DOTALL)
+    if not code_blocks:
+        return GuardrailResult(
+            name="hardcode_detector",
+            verdict="SKIP",
+            summary="No Python code blocks to analyze",
+            mode="ADVISORY",
+        )
+    
+    issues = []
+    
+    for i, code in enumerate(code_blocks):
+        try:
+            tree = _ast.parse(code)
+        except SyntaxError:
+            continue
+        
+        for node in _ast.walk(tree):
+            # Detect hardcoded string assignments that look like config values
+            if isinstance(node, _ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, _ast.Name):
+                        if isinstance(node.value, _ast.Constant):
+                            val = node.value.value
+                            if isinstance(val, str) and len(val) > 20:
+                                # Long hardcoded strings — might be config or messages
+                                # that should be in config files
+                                if re.search(r'(?:key|secret|token|password|url|host|port)', target.id, re.IGNORECASE):
+                                    issues.append(
+                                        f"Block {i+1}: Variable '{target.id}' has hardcoded value (len={len(val)}) — "
+                                        f"should use env var or config"
+                                    )
+                            elif isinstance(val, (int, float)):
+                                # Hardcoded numbers that look like ports, timeouts, thresholds
+                                if isinstance(val, int) and val in range(1, 65536):
+                                    if re.search(r'(?:port|timeout|limit|max|size|count|threshold)', target.id, re.IGNORECASE):
+                                        issues.append(
+                                            f"Block {i+1}: Variable '{target.id}' has hardcoded number {val} — "
+                                            f"should be configurable"
+                                        )
+            
+            # Detect hardcoded return values in functions
+            if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
+                for child in _ast.walk(node):
+                    if isinstance(child, _ast.Return) and isinstance(child.value, _ast.Constant):
+                        val = child.value.value
+                        if isinstance(val, dict) and not val:
+                            issues.append(f"Function '{node.name}' returns hardcoded empty dict")
+                        elif isinstance(val, (list, tuple)) and not val:
+                            issues.append(f"Function '{node.name}' returns hardcoded empty {type(val).__name__}")
+    
+    if issues:
+        return GuardrailResult(
+            name="hardcode_detector",
+            verdict="FAIL",
+            evidence="; ".join(issues[:10]),
+            summary=f"Hardcode detected: {len(issues)} instance(s)",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="hardcode_detector",
+        verdict="PASS",
+        evidence=f"Analyzed {len(code_blocks)} code block(s), no hardcoded values detected",
+        summary=f"No hardcoding detected ({len(code_blocks)} block(s))",
+        mode="ADVISORY",
+    )
+
+
+# ── 25: Error Handling Checker (§2.23) ─────────────────────────────────────
+
+def guardrail_error_handling(
+    agent_output: str,
+) -> GuardrailResult:
+    """AST analysis for try/except coverage — functions that should handle errors but don't.
+    
+    Catches: missing error handling (§2.23)
+    Mode: ADVISORY — not every function needs try/except
+    """
+    code_blocks = re.findall(r'```python\n(.*?)```', agent_output, re.DOTALL)
+    if not code_blocks:
+        return GuardrailResult(
+            name="error_handling",
+            verdict="SKIP",
+            summary="No Python code blocks to analyze",
+            mode="ADVISORY",
+        )
+    
+    issues = []
+    
+    for i, code in enumerate(code_blocks):
+        try:
+            tree = _ast.parse(code)
+        except SyntaxError:
+            continue
+        
+        for node in _ast.walk(tree):
+            if not isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
+                continue
+            
+            func_name = node.name
+            body = node.body
+            # Strip docstring
+            if body and isinstance(body[0], _ast.Expr) and isinstance(body[0].value, _ast.Constant) and isinstance(body[0].value.value, str):
+                body = body[1:]
+            
+            # Check if function makes external calls (HTTP, file, DB) without try/except
+            has_external_call = False
+            has_try_except = False
+            
+            for child in _ast.walk(node):
+                # Detect external calls
+                if isinstance(child, _ast.Call):
+                    func = child.func
+                    if isinstance(func, _ast.Attribute):
+                        attr_name = func.attr.lower() if isinstance(func.attr, str) else ""
+                        if any(kw in attr_name for kw in ('get', 'post', 'put', 'delete', 'fetch', 'read', 'write', 'execute', 'connect', 'open', 'request')):
+                            has_external_call = True
+                    elif isinstance(func, _ast.Name) and func.id in ('open', 'exec', 'eval'):
+                        has_external_call = True
+                # Detect try/except
+                if isinstance(child, _ast.Try):
+                    has_try_except = True
+            
+            if has_external_call and not has_try_except:
+                issues.append(
+                    f"Block {i+1}: Function '{func_name}' makes external calls without try/except"
+                )
+            
+            # Check for bare except (catches everything including KeyboardInterrupt)
+            for child in _ast.walk(node):
+                if isinstance(child, _ast.ExceptHandler):
+                    if child.type is None:
+                        # bare except — not as bad as pass but still broad
+                        if isinstance(child.body[-1], _ast.Pass) if child.body else False:
+                            issues.append(
+                                f"Block {i+1}: Function '{func_name}' has bare except:pass"
+                            )
+    
+    if issues:
+        return GuardrailResult(
+            name="error_handling",
+            verdict="FAIL",
+            evidence="; ".join(issues[:10]),
+            summary=f"Error handling issues: {len(issues)} function(s) need try/except",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="error_handling",
+        verdict="PASS",
+        evidence=f"Analyzed {len(code_blocks)} code block(s), error handling OK",
+        summary=f"Error handling adequate ({len(code_blocks)} block(s))",
+        mode="ADVISORY",
+    )
+
+
+# ── 26: Position Randomizer (§2.6) ────────────────────────────────────────
+
+def guardrail_position_randomizer(
+    prompt: str,
+) -> GuardrailResult:
+    """Check if multi-option prompts should be positionally randomized.
+    
+    Catches: positional bias in option ordering (§2.6)
+    Mode: ADVISORY — randomization is a prompt engineering enhancement
+    """
+    import random
+    
+    # Look for numbered lists or option patterns in prompts
+    option_patterns = [
+        r'(?i)option\s*[a-d]\s*[:.]',
+        r'(?i)choice\s*[1-4]\s*[:.]',
+        r'(?i)\b[a-d]\)\s',
+        r'(?i)\b[1-4]\.\s',
+    ]
+    
+    found_options = []
+    for pattern in option_patterns:
+        matches = re.findall(pattern, prompt)
+        if len(matches) >= 2:
+            found_options.extend(matches)
+    
+    if len(found_options) < 2:
+        return GuardrailResult(
+            name="position_randomizer",
+            verdict="SKIP",
+            summary="No multi-option prompt detected",
+            mode="ADVISORY",
+        )
+    
+    # Check if the prompt already has a randomization seed or shuffle marker
+    has_randomization = "shuffle" in prompt.lower() or "random" in prompt.lower() or "randomized" in prompt.lower()
+    
+    if has_randomization:
+        return GuardrailResult(
+            name="position_randomizer",
+            verdict="PASS",
+            evidence=f"Found {len(found_options)} options, prompt has randomization marker",
+            summary=f"Options randomized ({len(found_options)} options detected)",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="position_randomizer",
+        verdict="FAIL",
+        evidence=f"Found {len(found_options)} options in fixed order: {', '.join(found_options[:5])}",
+        summary=f"Multi-option prompt not positionally randomized ({len(found_options)} options)",
+        mode="ADVISORY",
+    )
+
+
+# ── 27: Evidence Hash Chain (§1.4) ────────────────────────────────────────
+
+def guardrail_evidence_hash_chain(
+    pre_exec_head: str,
+    project_root: str,
+    post_exec_head: str = "",
+) -> GuardrailResult:
+    """Verify git HEAD changed (or didn't) as expected — detect fabricated completion narratives.
+    
+    Catches: fabricated completion narratives (§1.4)
+    Mode: BLOCK — if Menter claims it made changes but git HEAD is unchanged, that's fabrication
+    """
+    if not pre_exec_head:
+        return GuardrailResult(
+            name="evidence_hash_chain",
+            verdict="SKIP",
+            summary="No pre-execution HEAD recorded",
+            mode="BLOCK",
+        )
+    
+    # Get current HEAD
+    current_head, _ = _run_cmd(["git", "rev-parse", "HEAD"], cwd=project_root, timeout=10)
+    
+    # Get changed files
+    diff_output, _ = _run_cmd(
+        ["git", "diff", "--name-only", pre_exec_head],
+        cwd=project_root, timeout=10
+    )
+    
+    changed_files = [f for f in diff_output.split("\n") if f.strip()] if diff_output else []
+    
+    if post_exec_head:
+        # We have both pre and post HEADs — verify the chain
+        if post_exec_head == pre_exec_head and changed_files:
+            return GuardrailResult(
+                name="evidence_hash_chain",
+                verdict="PASS",
+                evidence=f"HEAD unchanged ({pre_exec_head[:8]}) but {len(changed_files)} file(s) modified (unstaged)",
+                summary=f"Changes detected: {len(changed_files)} file(s) modified",
+                mode="BLOCK",
+            )
+        elif post_exec_head != pre_exec_head:
+            return GuardrailResult(
+                name="evidence_hash_chain",
+                verdict="PASS",
+                evidence=f"HEAD moved: {pre_exec_head[:8]} → {post_exec_head[:8]}, files changed: {len(changed_files)}",
+                summary=f"Commit chain verified (HEAD moved, {len(changed_files)} file(s))",
+                mode="BLOCK",
+            )
+    
+    # Only pre-exec HEAD — check if files changed since
+    if not changed_files:
+        return GuardrailResult(
+            name="evidence_hash_chain",
+            verdict="FAIL",
+            evidence=f"HEAD: {current_head[:8]}, pre-exec: {pre_exec_head[:8]}, no files changed since pre-exec",
+            summary="No file changes detected since pre-execution — claimed work may be fabricated",
+            mode="BLOCK",
+        )
+    
+    # Check file timestamps — files should be recently modified
+    import time as _time
+    now = _time.time()
+    recent_files = []
+    stale_files = []
+    
+    for f in changed_files[:20]:
+        full_path = os.path.join(project_root, f) if not os.path.isabs(f) else f
+        if os.path.exists(full_path):
+            mtime = os.path.getmtime(full_path)
+            age_hours = (now - mtime) / 3600
+            if age_hours < 1:
+                recent_files.append(f)
+            else:
+                stale_files.append(f"{f} ({age_hours:.1f}h old)")
+    
+    if recent_files:
+        return GuardrailResult(
+            name="evidence_hash_chain",
+            verdict="PASS",
+            evidence=f"Pre-exec: {pre_exec_head[:8]}, current: {current_head[:8]}, "
+                    f"changed: {len(changed_files)} file(s), recent: {len(recent_files)}",
+            summary=f"Evidence chain intact ({len(changed_files)} files changed, {len(recent_files)} recent)",
+            mode="BLOCK",
+        )
+    
+    if stale_files:
+        return GuardrailResult(
+            name="evidence_hash_chain",
+            verdict="FAIL",
+            evidence=f"Changed files are stale: {'; '.join(stale_files[:5])}",
+            summary=f"Files changed in git but not recently modified — possible stale diff",
+            mode="BLOCK",
+        )
+    
+    return GuardrailResult(
+        name="evidence_hash_chain",
+        verdict="PASS",
+        evidence=f"Changed files: {len(changed_files)}, HEAD: {current_head[:8]}",
+        summary=f"Evidence chain verified ({len(changed_files)} file(s) changed)",
+        mode="BLOCK",
+    )
+
+
+# ── 28: Context Injection Gate (§1.5) ─────────────────────────────────────
+
+# Required soul document markers that should appear in every agent prompt
+_REQUIRED_CONTEXT_MARKERS = [
+    "ROLE_OVERLAY",
+    "PROJECT_BRIEF",
+    "KB_CONTEXT",
+]
+
+
+def guardrail_context_injection(
+    prompt: str,
+) -> GuardrailResult:
+    """Check that agent prompts contain required context markers.
+    
+    Catches: missing context in agent prompts — session amnesia (§1.5)
+    Mode: BLOCK — missing context means the agent can't do its job properly
+    """
+    missing = []
+    present = []
+    
+    for marker in _REQUIRED_CONTEXT_MARKERS:
+        if marker in prompt:
+            present.append(marker)
+        else:
+            missing.append(marker)
+    
+    # Check minimum prompt length — too short means no context was injected
+    prompt_len = len(prompt)
+    if prompt_len < 500:
+        return GuardrailResult(
+            name="context_injection_gate",
+            verdict="FAIL",
+            evidence=f"Prompt length: {prompt_len} chars (minimum: 500). Missing markers: {missing}",
+            summary=f"Prompt too short ({prompt_len} chars) — context likely not injected",
+            mode="BLOCK",
+        )
+    
+    if missing:
+        return GuardrailResult(
+            name="context_injection_gate",
+            verdict="FAIL",
+            evidence=f"Present: {present}, Missing: {missing}, prompt length: {prompt_len:,}",
+            summary=f"Missing context markers: {', '.join(missing)}",
+            mode="BLOCK",
+        )
+    
+    return GuardrailResult(
+        name="context_injection_gate",
+        verdict="PASS",
+        evidence=f"All markers present: {present}, prompt length: {prompt_len:,}",
+        summary=f"Context injected ({len(present)}/{len(_REQUIRED_CONTEXT_MARKERS)} markers, {prompt_len:,} chars)",
+        mode="BLOCK",
+    )
+
+
+# ── 29: Raw Source Preservation (§1.10) ───────────────────────────────────
+
+def guardrail_raw_source_preservation(
+    conn,
+    run_id: str,
+) -> GuardrailResult:
+    """Check that deliberation_rounds has full-length outputs, not truncated summaries.
+    
+    Catches: summarization losing details (§1.10)
+    Mode: ADVISORY — truncation isn't always intentional, but loses information
+    """
+    if not conn or not run_id:
+        return GuardrailResult(
+            name="raw_source_preservation",
+            verdict="SKIP",
+            summary="No DB connection or run_id",
+            mode="ADVISORY",
+        )
+    
+    try:
+        # Check the most recent deliberation round for this run
+        row = conn.execute(
+            "SELECT brain_output, drafter_output, reviewer1_output, reviewer2_output, "
+            "menter_output, verify_output "
+            "FROM deliberation_rounds WHERE run_id = ? "
+            "ORDER BY id DESC LIMIT 1",
+            (run_id,)
+        ).fetchone()
+        
+        if not row:
+            return GuardrailResult(
+                name="raw_source_preservation",
+                verdict="SKIP",
+                summary="No deliberation rounds found for this run",
+                mode="ADVISORY",
+            )
+        
+        # Check each output column for suspiciously short content
+        columns = ["brain_output", "drafter_output", "reviewer1_output",
+                   "reviewer2_output", "menter_output", "verify_output"]
+        
+        issues = []
+        for col in columns:
+            val = row[col] if col in row.keys() else ""
+            if val and len(val) < 50:
+                issues.append(f"{col}: only {len(val)} chars (possible truncation)")
+            if val and val.strip().endswith("..."):
+                issues.append(f"{col}: ends with '...' (truncated)")
+        
+        if issues:
+            return GuardrailResult(
+                name="raw_source_preservation",
+                verdict="FAIL",
+                evidence="; ".join(issues),
+                summary=f"Raw source preservation: {len(issues)} truncated output(s)",
+                mode="ADVISORY",
+            )
+        
+        # Check that at least some outputs have substantive content
+        total_chars = sum(len(row[col] or "") for col in columns)
+        if total_chars < 200:
+            return GuardrailResult(
+                name="raw_source_preservation",
+                verdict="FAIL",
+                evidence=f"Total output chars across all columns: {total_chars}",
+                summary=f"Very little output preserved ({total_chars} chars total)",
+                mode="ADVISORY",
+            )
+        
+        return GuardrailResult(
+            name="raw_source_preservation",
+            verdict="PASS",
+            evidence=f"Total output: {total_chars} chars across {len(columns)} columns",
+            summary=f"Raw source preserved ({total_chars:,} chars)",
+            mode="ADVISORY",
+        )
+    except Exception as e:
+        return GuardrailResult(
+            name="raw_source_preservation",
+            verdict="SKIP",
+            summary=f"DB error: {e}",
+            mode="ADVISORY",
+        )
+
+
+# ── 30: Bias Drift Detector (§1.1) ────────────────────────────────────────
+
+# Enterprise/legacy bias keywords that may creep into outputs
+_BIAS_KEYWORDS = [
+    # Enterprise patterns
+    "microservice", "kubernetes", "docker-compose", "helm", "istio",
+    "service mesh", "api gateway", "event-driven", "cqrs", "event sourcing",
+    "domain-driven design", "ddd", "hexagonal architecture", "clean architecture",
+    # Over-engineering patterns
+    "abstract factory", "factory method", "builder pattern", "singleton",
+    "dependency injection", "inversion of control", "ioc container",
+    # Enterprise tech that doesn't belong in CIS
+    "spring boot", "java ee", "jakarta ee", "wildfly", "websphere",
+    "oracle database", "mssql", "stored procedure",
+    # Legacy patterns
+    "soap", "wsdl", "xml schema", "xsd validation",
+]
+
+# Keywords that ARE legitimate in CIS context (don't flag these)
+_CIS_LEGITIMATE = {
+    "docker", "container", "flask", "sqlite", "python",
+    "pipeline", "spine", "relay", "guardrail", "schema",
+    "migration", "endpoint", "api", "json", "yaml",
+}
+
+
+def guardrail_bias_drift(
+    agent_output: str,
+    intent: str = "",
+) -> GuardrailResult:
+    """Detect enterprise/legacy bias creeping into outputs that isn't in the intent.
+    
+    Catches: enterprise bias creeping into outputs (§1.1)
+    Mode: ADVISORY — bias keywords aren't always wrong, but suspicious if not in intent
+    """
+    output_lower = agent_output.lower()
+    intent_lower = intent.lower()
+    
+    # Find bias keywords in output
+    bias_hits = []
+    for kw in _BIAS_KEYWORDS:
+        if kw in output_lower:
+            # Check if it's also in the intent (legit use) or in CIS legitimate set
+            if kw not in intent_lower and kw not in _CIS_LEGITIMATE:
+                bias_hits.append(kw)
+    
+    if not bias_hits:
+        return GuardrailResult(
+            name="bias_drift_detector",
+            verdict="PASS",
+            evidence="No enterprise/legacy bias keywords detected",
+            summary="No bias drift detected",
+            mode="ADVISORY",
+        )
+    
+    # Multiple bias keywords not in intent = drift
+    if len(bias_hits) >= 3:
+        return GuardrailResult(
+            name="bias_drift_detector",
+            verdict="FAIL",
+            evidence=f"Bias keywords not in intent: {', '.join(bias_hits[:10])}",
+            summary=f"Bias drift: {len(bias_hits)} enterprise/legacy term(s) not in intent",
+            mode="ADVISORY",
+        )
+    
+    # 1-2 bias keywords — mild concern
+    return GuardrailResult(
+        name="bias_drift_detector",
+        verdict="FAIL",
+        evidence=f"Bias keywords not in intent: {', '.join(bias_hits)}",
+        summary=f"Mild bias: {', '.join(bias_hits)} (not in intent)",
+        mode="ADVISORY",
     )

@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-07-10 14:53 UTC | Run: run-36113f85c8f5
+Generated: 2026-07-10 15:22 UTC | Run: run-e3526faa861e
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 141d742 Tier 2 guardrails: 10 more deterministic checks wired in
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/abstraction/guardrails.py 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## f6a9143 Tier 1 guardrails: 10 deterministic checks wired into pipeline
 
@@ -504,41 +540,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/schema/migrations/0019_workflow_runs_result_check.sql 
 
 ## runtime/schema/migrations/0020_deliberation_rounds_signal_check.sql 
-
-## e44268f implement: Code Review Gate — pattern catalog + three-pass sequential review
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## runtime/abstraction/pipeline_relay.py 
-
-## runtime/api/relay.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/schema/migrations/0018_code_review_chunks.sql 
