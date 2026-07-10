@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-07-10 16:55 UTC | Run: run-9ef27defe5f0
+Generated: 2026-07-10 16:55 UTC | Run: run-d6a25bdd66d6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 9a3d27c final export regen before context reset
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 88c634c regenerated exports
 
@@ -478,73 +510,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## docs/DEV-PIVOT_STATUS.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 4c0b7f8 Container pipeline: fix project root injection + health endpoint import
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## cis_kernel/source/SESSION_LOG.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/HANDOFF_PIPELINE_BUILD.md 
-
-## enforcement/mwl-proof-v2/Dockerfile 
-
-## enforcement/mwl-proof-v2/entrypoint.sh 
-
-## enforcement/mwl-proof-v2/managed-config.yaml 
-
-## enforcement/mwl-proof-v2/profiles/brain.yaml 
-
-## enforcement/mwl-proof-v2/profiles/draft.yaml 
-
-## enforcement/mwl-proof-v2/profiles/menter.yaml 
-
-## enforcement/mwl-proof-v2/profiles/review1.yaml 
-
-## enforcement/mwl-proof-v2/profiles/review2.yaml 
-
-## enforcement/mwl-proof-v2/profiles/verify.yaml 
-
-## enforcement/mwl-proof-v2/run_container.sh 
-
-## runtime/abstraction/pipeline_relay.py 
-
-## runtime/api/idea_uploads.py 
-
-## runtime/api/relay.py 
-
-## runtime/app.py 
-
-## runtime/config.py 
-
-## runtime/container_app.py 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
