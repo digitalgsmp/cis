@@ -76,7 +76,7 @@ Self-check against these rules BEFORE submitting your chunk for review.
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
-from guardrails import run_guardrails, record_gate_outcomes  # noqa: E402
+from guardrails import run_guardrails, run_external_gates, record_gate_outcomes  # noqa: E402
 
 # ── State Machine ─────────────────────────────────────────────────────
 
@@ -1764,6 +1764,17 @@ class PipelineRelay:
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # ── Tier 5: External gate scripts (staleness, research artifact, no_secrets) ─
+        ext_report = run_external_gates(
+            phase="brain", role="brain", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            gr_report = ext_report  # propagate block check
+        
         if gr_report.any_blocked:
             _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
@@ -1849,6 +1860,20 @@ class PipelineRelay:
                 )
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
+        
+        # ── Tier 5: External gates (review_round_valid, consensus_signal_valid) ─
+        ext_r1 = run_external_gates(
+            phase="review", role="review1", agent_output=r1_out,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        ext_r2 = run_external_gates(
+            phase="review", role="review2", agent_output=r2_out,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_r1.summary)
+        print(ext_r2.summary)
+        record_gate_outcomes(self.conn, run_id, ext_r1)
+        record_gate_outcomes(self.conn, run_id, ext_r2)
 
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review",
@@ -1944,6 +1969,17 @@ class PipelineRelay:
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # ── Tier 5: External gates (proposal_schema_valid, no_secrets) ─
+        ext_report = run_external_gates(
+            phase="draft", role="draft", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            gr_report = ext_report
+        
         if gr_report.any_blocked:
             _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
@@ -2015,6 +2051,20 @@ class PipelineRelay:
                 )
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
+        
+        # ── Tier 5: External gates (review_round_valid, consensus_signal_valid) ─
+        ext_r1 = run_external_gates(
+            phase="review", role="review1", agent_output=r1_out,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        ext_r2 = run_external_gates(
+            phase="review", role="review2", agent_output=r2_out,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_r1.summary)
+        print(ext_r2.summary)
+        record_gate_outcomes(self.conn, run_id, ext_r1)
+        record_gate_outcomes(self.conn, run_id, ext_r2)
 
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review",
@@ -2592,6 +2642,20 @@ class PipelineRelay:
         self.conn.commit()
 
         round_id = _start_round(self.conn, run_id, "execution", 1)
+        
+        # ── Tier 5: Pre-execution external gates (git_state, final_directive_allowed) ─
+        pre_ext = run_external_gates(
+            phase="pre_menter", role="menter", agent_output=directive,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(pre_ext.summary)
+        record_gate_outcomes(self.conn, run_id, pre_ext)
+        if pre_ext.any_blocked:
+            print(f"[pipeline] MENTER blocked by external gate — ESCALATE.")
+            _complete_round(self.conn, round_id, "ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            return
+        
         discovery = _pre_discovery(
             self.conn, intent, "execution", "menter", run_id
         )
@@ -2626,6 +2690,17 @@ class PipelineRelay:
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # ── Tier 5: External gates (file_exists, implementation_artifact, no_secrets) ─
+        ext_report = run_external_gates(
+            phase="menter", role="menter", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            gr_report = ext_report
+        
         if gr_report.any_blocked:
             _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
@@ -2725,6 +2800,17 @@ class PipelineRelay:
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # ── Tier 5: External gates (service_health, endpoint, db_state, eric_approval) ─
+        ext_report = run_external_gates(
+            phase="verify", role="verify", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            gr_report = ext_report
+        
         if gr_report.any_blocked:
             _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",

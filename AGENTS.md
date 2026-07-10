@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-10 16:24 UTC | Run: run-64f47816b75a | Latest pipeline: run-554e035439dd53dd-1783699874
+Generated: 2026-07-10 16:51 UTC | Run: run-97d995e7e7f2 | Latest pipeline: run-4dec3443458bceb1-1783702140
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-4dec3443458bceb1-1783702140] Test external gates. Create hello.py. — PENDING (0 rounds, incomplete)
 - [run-554e035439dd53dd-1783699874] Add a health check endpoint at /api/status that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
 - [run-554e035439dd53dd-1783698339] Add a health check endpoint at /api/status that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
 - [run-12d5aa6946666b73-1783649571] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — ESCALATE (0 rounds, 2026-07-10 13:36:42)
 - [run-12d5aa6946666b73-1783646867] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
-- [run-86bc4d1009b8fb44-1783645778] Add a comment to the top of runtime/container_app.py saying: # Pipeline fixed an — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-12d5aa6946666b73-1783649571

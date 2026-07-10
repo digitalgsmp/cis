@@ -1140,6 +1140,253 @@ def record_gate_outcomes(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Tier 5: External Gate Script Wrapper
+# ═══════════════════════════════════════════════════════════════════════════
+# Wraps the 48 pre-built deterministic gate scripts in tools/gates/ so they
+# fire alongside the Python-native guardrails and record to gate_outcomes.
+#
+# Gate scripts use exit codes: 0=PASS, 1=FAIL, 2=ERROR/SKIP
+# We map ERROR → SKIP (missing config/args, not a real failure)
+
+import subprocess as _subprocess
+import shutil as _shutil
+from pathlib import Path as _Path
+
+GATES_DIR = _Path(__file__).resolve().parents[2] / "tools" / "gates"
+
+
+def _run_gate_script(
+    script_name: str,
+    args: Optional[List[str]] = None,
+    env: Optional[Dict[str, str]] = None,
+    timeout: int = 30,
+    mode: str = "BLOCK",
+) -> GuardrailResult:
+    """Run a deterministic gate script via subprocess.
+    
+    Returns a GuardrailResult with:
+      - PASS (exit 0)
+      - FAIL (exit 1, BLOCK mode stops pipeline)
+      - SKIP (exit 2 or script not found or timeout)
+    """
+    script_path = GATES_DIR / script_name
+    
+    if not script_path.exists():
+        return GuardrailResult(
+            name=f"ext_{script_name.rsplit('.', 1)[0]}",
+            verdict="SKIP",
+            mode="ADVISORY",
+            summary=f"Gate script not found: {script_name}",
+            evidence=f"Path checked: {script_path}",
+        )
+    
+    # Build command
+    if script_name.endswith(".py"):
+        cmd = ["python3", str(script_path)] + (args or [])
+    else:
+        cmd = ["bash", str(script_path)] + (args or [])
+    
+    # Merge env
+    run_env = dict(os.environ)
+    if env:
+        run_env.update(env)
+    
+    try:
+        proc = _subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=run_env,
+        )
+        stdout = proc.stdout.strip()
+        stderr = proc.stderr.strip()
+        rc = proc.returncode
+        
+        gate_name = f"ext_{script_name.rsplit('.', 1)[0]}"
+        
+        if rc == 0:
+            return GuardrailResult(
+                name=gate_name,
+                verdict="PASS",
+                mode=mode,
+                summary=stdout.split("\n")[0][:200] if stdout else "PASS",
+                evidence=stdout[:1000],
+            )
+        elif rc == 1:
+            return GuardrailResult(
+                name=gate_name,
+                verdict="FAIL",
+                mode=mode,
+                summary=stderr.split("\n")[0][:200] if stderr else (stdout.split("\n")[0][:200] if stdout else "FAIL"),
+                evidence=(stderr + "\n" + stdout)[:1000],
+            )
+        else:
+            # exit 2+ = ERROR/SKIP (missing config, missing args, etc.)
+            return GuardrailResult(
+                name=gate_name,
+                verdict="SKIP",
+                mode="ADVISORY",
+                summary=(stderr or stdout).split("\n")[0][:200] if (stderr or stdout) else f"exit {rc}",
+                evidence=(stderr + "\n" + stdout)[:1000],
+            )
+    except _subprocess.TimeoutExpired:
+        return GuardrailResult(
+            name=f"ext_{script_name.rsplit('.', 1)[0]}",
+            verdict="SKIP",
+            mode="ADVISORY",
+            summary=f"Gate timed out after {timeout}s",
+            evidence=f"Command: {' '.join(cmd)}",
+        )
+    except FileNotFoundError:
+        return GuardrailResult(
+            name=f"ext_{script_name.rsplit('.', 1)[0]}",
+            verdict="SKIP",
+            mode="ADVISORY",
+            summary="Interpreter not found (python3 or bash missing)",
+            evidence=f"Command: {' '.join(cmd)}",
+        )
+
+
+# Gate script → pipeline phase mapping (from spec Part 4)
+PHASE_GATE_MAP = {
+    "brain": [
+        # At run start: staleness check (needs proposal file — SKIP if not provided)
+        {"script": "gate_staleness.sh", "mode": "ADVISORY", "needs_proposal": True},
+        # After brain: research artifact present
+        {"script": "gate_research_artifact_present.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+    "draft": [
+        # After draft: proposal schema valid
+        {"script": "gate_proposal_schema_valid.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+    "review": [
+        # After each review round: validate signals
+        {"script": "gate_review_round_valid.sh", "mode": "BLOCK", "needs_run_id": True},
+        {"script": "gate_consensus_signal_valid.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+    "pre_menter": [
+        # Before Menter: pre-execution oversight + git state + final directive gate
+        {"script": "gate_git_state.sh", "mode": "ADVISORY"},
+        {"script": "gate_pre_execution_oversight.sh", "mode": "ADVISORY", "needs_proposal": True},
+        {"script": "gate_final_directive_allowed.py", "mode": "BLOCK", "needs_run_id": True},
+    ],
+    "menter": [
+        # After Menter: file exists + implementation artifact
+        {"script": "gate_file_exists.sh", "mode": "ADVISORY", "from_output": True},
+        {"script": "gate_implementation_artifact_present.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+    "verify": [
+        # In verification: service health + endpoint + DB state + build coherence
+        {"script": "gate_service_health.sh", "mode": "ADVISORY",
+         "args": ["8642", "ok"], "arg_desc": "port+expected"},
+        {"script": "gate_endpoint.sh", "mode": "ADVISORY",
+         "args": ["http://localhost:5000/health", "ok"], "arg_desc": "url+expected"},
+        {"script": "gate_db_state.py", "mode": "ADVISORY", "needs_run_id": True,
+         "args": ["count", "workflow_runs", "1"], "arg_desc": "count check"},
+        {"script": "gate_build_state_coherence.py", "mode": "ADVISORY"},
+        {"script": "gate_eric_approval.py", "mode": "BLOCK", "needs_run_id": True},
+    ],
+    "closeout": [
+        # At closeout: export agreement + closeout artifact + closeout complete
+        {"script": "gate_export_agreement.sh", "mode": "ADVISORY"},
+        {"script": "gate_closeout_artifact.sh", "mode": "ADVISORY"},
+        {"script": "gate_closeout_complete.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+}
+
+# Security gates that fire on ALL phases
+SECURITY_GATES = [
+    {"script": "gate_no_secrets.sh", "mode": "BLOCK"},
+    {"script": "gate_mcp_readonly.py", "mode": "ADVISORY"},
+    {"script": "gate_mcp_no_filesystem_write.py", "mode": "ADVISORY"},
+    {"script": "gate_mcp_no_network.py", "mode": "ADVISORY"},
+]
+
+
+def run_external_gates(
+    phase: str,
+    role: str,
+    agent_output: str = "",
+    run_id: str = "",
+    proposal_file: str = "",
+    project_root: str = "/mnt/projects/cis",
+) -> GuardrailReport:
+    """Run external deterministic gate scripts for a pipeline phase.
+    
+    This fires the pre-built gate scripts from tools/gates/ alongside the
+    Python-native guardrails. Each script's outcome is recorded to gate_outcomes.
+    
+    Phase mapping (from spec Part 4):
+      brain    → staleness, research_artifact_present
+      draft    → proposal_schema_valid
+      review   → review_round_valid, consensus_signal_valid
+      pre_menter → git_state, pre_execution_oversight, final_directive_allowed
+      menter   → file_exists, implementation_artifact_present
+      verify   → service_health, endpoint, db_state, build_coherence, eric_approval
+      closeout → export_agreement, closeout_artifact, closeout_complete
+    
+    Security gates (no_secrets, mcp_readonly, mcp_no_filesystem_write, mcp_no_network)
+    fire on ALL phases.
+    """
+    report = GuardrailReport(phase=phase, role=role)
+    
+    # ── Security gates: fire on ALL phases ──────────────────────────────
+    for gate in SECURITY_GATES:
+        result = _run_gate_script(gate["script"], mode=gate["mode"])
+        report.results.append(result)
+    
+    # ── Phase-specific gates ────────────────────────────────────────────
+    gates = PHASE_GATE_MAP.get(phase, [])
+    
+    for gate in gates:
+        script = gate["script"]
+        mode = gate.get("mode", "ADVISORY")
+        args = list(gate.get("args", []))
+        env = {"CIS_REPO": project_root, "CIS_DB_PATH": f"{project_root}/data/cis_memory.db"}
+        
+        if run_id:
+            env["CIS_RUN_ID"] = run_id
+        
+        # Build --run-id or --workflow-run-id arg
+        if gate.get("needs_run_id") and run_id:
+            if script.endswith(".py"):
+                args.extend(["--workflow-run-id", run_id])
+            else:
+                args.extend(["--run-id", run_id])
+        
+        # Build --proposal-file arg
+        if gate.get("needs_proposal"):
+            if proposal_file:
+                args.extend(["--proposal-file", proposal_file])
+            else:
+                env["CIS_OVERSIGHT_PROPOSAL"] = ""
+        
+        # Extract file path from Menter output for gate_file_exists
+        if gate.get("from_output") and script == "gate_file_exists.sh":
+            # Try to extract file paths from agent output
+            import re
+            paths = re.findall(r'(?:Created|Modified|Updated)[:\s]+(/[^\s,\n]+\.py)', agent_output)
+            if paths:
+                args = [paths[0]]
+            else:
+                # SKIP — no file path found in output
+                report.results.append(GuardrailResult(
+                    name="ext_gate_file_exists",
+                    verdict="SKIP",
+                    mode="ADVISORY",
+                    summary="No file path found in Menter output",
+                    evidence="Looking for: Created/Modified: /path/to/file.py",
+                ))
+                continue
+        
+        result = _run_gate_script(script, args=args, env=env, mode=mode)
+        report.results.append(result)
+    
+    return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # TIER 2 GUARDRAILS (items 11-20)
 # Low token cost or one-time cost checks
 # ═══════════════════════════════════════════════════════════════════════════

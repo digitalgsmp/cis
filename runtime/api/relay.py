@@ -940,6 +940,10 @@ def relay_guardrails():
             "outcomes": outcomes,
             "count": len(outcomes),
             "stats": stats,
+            "gate_types": {
+                "native": "Tier 1-4 Python guardrails (34 checks)",
+                "external": "Tier 5 external gate scripts (ext_ prefix)",
+            },
         })
     except Exception as e:
         return jsonify({"outcomes": [], "count": 0, "error": str(e)})
