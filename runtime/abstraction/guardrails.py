@@ -948,6 +948,10 @@ def run_guardrails(
     other_reviewer_output: str = "",
     downstream_prompt: str = "",
     prompt: str = "",
+    previous_outputs: List[str] = None,
+    round_num: int = 1,
+    conn=None,
+    run_id: str = "",
 ) -> GuardrailReport:
     """Run all applicable Tier 1 guardrails for a phase.
     
@@ -958,16 +962,27 @@ def run_guardrails(
       - review1/review2: sycophancy_detector
       - verify: claim_action_verifier, honesty_reporter
       - All: tool_result_sandboxing (on prompt, not output)
+    
+    Tier 2 guardrails also run on all applicable phases:
+      - context_budget_monitor (on prompt)
+      - verbosity_density (on output)
+      - output_sanitizer (on output)
+      - loop_detector (on output, needs previous_outputs)
+      - mode_collapse_detector (on output, needs previous_outputs)
+      - goal_anchoring (on output, needs round_num > 1)
+      - trajectory_monitor (on output, needs conn + run_id)
+      - model_diversity (one-time config check)
+      - version_drift (one-time config check)
     """
     report = GuardrailReport(phase=phase, role=role)
     
-    # ── Guardrails that run on ALL agent outputs ──────────────────────────
+    # ── Tier 1: Guardrails that run on ALL agent outputs ──────────────────
     
     report.results.append(guardrail_output_schema(agent_output, role))
     report.results.append(guardrail_content_specificity(agent_output))
     report.results.append(guardrail_honesty_reporter(agent_output))
     
-    # ── Role-specific guardrails ──────────────────────────────────────────
+    # ── Tier 1: Role-specific guardrails ──────────────────────────────────
     
     if role.lower() in ("brain", "draft"):
         report.results.append(guardrail_scope_compliance(intent, agent_output))
@@ -989,15 +1004,52 @@ def run_guardrails(
             guardrail_claim_action(agent_output, role, project_root, pre_exec_head)
         )
     
-    # ── Unverified claim block (checks prompt→output relationship) ────────
+    # ── Tier 1: Unverified claim block (checks prompt→output relationship) ─
     if downstream_prompt:
         report.results.append(
             guardrail_unverified_claim_block(agent_output, downstream_prompt)
         )
     
-    # ── Tool result sandboxing (checks prompt, not output) ───────────────
+    # ── Tier 1: Tool result sandboxing (checks prompt, not output) ───────
     if prompt:
         report.results.append(guardrail_tool_result_sandboxing(prompt))
+    
+    # ── Tier 2: Context budget monitor (on prompt) ────────────────────────
+    if prompt:
+        report.results.append(guardrail_context_budget(prompt, role))
+    
+    # ── Tier 2: Verbosity / density metric (on output) ───────────────────
+    report.results.append(guardrail_verbosity_density(agent_output, role))
+    
+    # ── Tier 2: Output sanitizer (on output) ──────────────────────────────
+    report.results.append(guardrail_output_sanitizer(agent_output))
+    
+    # ── Tier 2: Loop detector + mode collapse (need previous outputs) ─────
+    if previous_outputs:
+        report.results.append(
+            guardrail_loop_detector(agent_output, previous_outputs)
+        )
+        report.results.append(
+            guardrail_mode_collapse(agent_output, previous_outputs)
+        )
+    
+    # ── Tier 2: Goal anchoring (needs round_num > 1) ──────────────────────
+    if round_num and round_num > 1:
+        report.results.append(
+            guardrail_goal_anchoring(intent, agent_output, round_num)
+        )
+    
+    # ── Tier 2: Trajectory monitor (needs DB) ─────────────────────────────
+    if conn and run_id:
+        report.results.append(
+            guardrail_trajectory_monitor(
+                agent_output, role, conn=conn, run_id=run_id, phase=phase
+            )
+        )
+    
+    # ── Tier 2: Model diversity + version drift (config checks) ───────────
+    report.results.append(guardrail_model_diversity())
+    report.results.append(guardrail_version_drift())
     
     return report
 
@@ -1024,3 +1076,640 @@ def record_gate_outcomes(
              result.verdict, result.mode, result.summary, result.evidence[:2000], ts)
         )
     conn.commit()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TIER 2 GUARDRAILS (items 11-20)
+# Low token cost or one-time cost checks
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── 11: Context Budget Monitor (§2.9) ──────────────────────────────────────
+
+# Context window thresholds per model (chars, approx 4 chars/token)
+_CONTEXT_THRESHOLDS = {
+    "brain": 120_000,   # deepseek-v4-pro ~32K tokens
+    "draft": 120_000,
+    "review1": 120_000,
+    "review2": 120_000,
+    "menter": 120_000,
+    "verify": 120_000,
+}
+_DEFAULT_CONTEXT_THRESHOLD = 100_000  # ~25K tokens, conservative
+
+
+def guardrail_context_budget(
+    prompt: str,
+    role: str,
+) -> GuardrailResult:
+    """Check that prompt is within context window budget.
+    
+    Catches: context window exhaustion (§2.9)
+    Mode: ADVISORY — large prompts aren't proof of failure, but risk it
+    """
+    prompt_len = len(prompt)
+    threshold = _CONTEXT_THRESHOLDS.get(role.lower(), _DEFAULT_CONTEXT_THRESHOLD)
+    warn_threshold = int(threshold * 0.8)
+    
+    if prompt_len > threshold:
+        return GuardrailResult(
+            name="context_budget_monitor",
+            verdict="FAIL",
+            evidence=f"Prompt length: {prompt_len:,} chars, threshold: {threshold:,} chars",
+            summary=f"Prompt exceeds context budget ({prompt_len:,} > {threshold:,})",
+            mode="ADVISORY",
+        )
+    
+    if prompt_len > warn_threshold:
+        return GuardrailResult(
+            name="context_budget_monitor",
+            verdict="FAIL",
+            evidence=f"Prompt length: {prompt_len:,} chars, warn at 80%: {warn_threshold:,} chars",
+            summary=f"Prompt approaching context limit ({prompt_len:,} > 80% of {threshold:,})",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="context_budget_monitor",
+        verdict="PASS",
+        evidence=f"Prompt length: {prompt_len:,} chars (budget: {threshold:,})",
+        summary=f"Prompt within budget ({prompt_len:,}/{threshold:,})",
+        mode="ADVISORY",
+    )
+
+
+# ── 12: Mode Collapse Detector (§2.3) ──────────────────────────────────────
+
+def guardrail_mode_collapse(
+    current_output: str,
+    previous_outputs: List[str],
+) -> GuardrailResult:
+    """Detect diversity collapse — agent producing near-identical outputs across rounds.
+    
+    Catches: diversity collapse in multi-agent (§2.3)
+    Mode: ADVISORY — similarity isn't always wrong (could be convergence on correct answer)
+    """
+    if not previous_outputs:
+        return GuardrailResult(
+            name="mode_collapse_detector",
+            verdict="SKIP",
+            summary="No previous outputs to compare",
+            mode="ADVISORY",
+        )
+    
+    similarities = []
+    for prev in previous_outputs:
+        if prev.strip():
+            sim = _jaccard_similarity(current_output, prev)
+            similarities.append(sim)
+    
+    if not similarities:
+        return GuardrailResult(
+            name="mode_collapse_detector",
+            verdict="SKIP",
+            summary="No non-empty previous outputs",
+            mode="ADVISORY",
+        )
+    
+    max_sim = max(similarities)
+    avg_sim = sum(similarities) / len(similarities)
+    
+    if max_sim > 0.9:
+        return GuardrailResult(
+            name="mode_collapse_detector",
+            verdict="FAIL",
+            evidence=f"Max similarity: {max_sim:.0%}, avg: {avg_sim:.0%} across {len(similarities)} previous output(s)",
+            summary=f"Mode collapse: output {max_sim:.0%} identical to a previous round",
+            mode="ADVISORY",
+        )
+    
+    if avg_sim > 0.75:
+        return GuardrailResult(
+            name="mode_collapse_detector",
+            verdict="FAIL",
+            evidence=f"Avg similarity: {avg_sim:.0%}, max: {max_sim:.0%} across {len(similarities)} previous output(s)",
+            summary=f"Possible mode collapse (avg similarity {avg_sim:.0%})",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="mode_collapse_detector",
+        verdict="PASS",
+        evidence=f"Max similarity: {max_sim:.0%}, avg: {avg_sim:.0%}",
+        summary=f"Output is diverse from previous rounds (max sim {max_sim:.0%})",
+        mode="ADVISORY",
+    )
+
+
+# ── 13: Loop Detector (§2.4) ──────────────────────────────────────────────
+
+def guardrail_loop_detector(
+    current_output: str,
+    previous_outputs: List[str],
+) -> GuardrailResult:
+    """Detect degeneration loops — agent cycling through the same output.
+    
+    Catches: degeneration loops, revision cycling (§2.4)
+    Mode: BLOCK — a loop means the agent is stuck, no progress will be made
+    """
+    if not previous_outputs:
+        return GuardrailResult(
+            name="loop_detector",
+            verdict="SKIP",
+            summary="No previous outputs to compare",
+            mode="BLOCK",
+        )
+    
+    # Hash the current output
+    current_hash = hashlib.sha256(current_output.encode()).hexdigest()[:16]
+    
+    # Check if this exact output was produced before
+    for i, prev in enumerate(previous_outputs):
+        if not prev.strip():
+            continue
+        prev_hash = hashlib.sha256(prev.encode()).hexdigest()[:16]
+        if current_hash == prev_hash:
+            return GuardrailResult(
+                name="loop_detector",
+                verdict="FAIL",
+                evidence=f"Output hash {current_hash} matches round {i+1}'s hash — identical output",
+                summary=f"Degeneration loop: output identical to round {i+1}",
+                mode="BLOCK",
+            )
+    
+    # Also check near-duplicates (>95% similar is effectively a loop)
+    for i, prev in enumerate(previous_outputs):
+        if not prev.strip():
+            continue
+        sim = _jaccard_similarity(current_output, prev)
+        if sim > 0.95:
+            return GuardrailResult(
+                name="loop_detector",
+                verdict="FAIL",
+                evidence=f"Output {sim:.0%} similar to round {i+1} (hash: {current_hash})",
+                summary=f"Near-loop: output {sim:.0%} identical to round {i+1}",
+                mode="BLOCK",
+            )
+    
+    return GuardrailResult(
+        name="loop_detector",
+        verdict="PASS",
+        evidence=f"Output hash: {current_hash}, no match in {len(previous_outputs)} previous round(s)",
+        summary=f"No loop detected (output unique across {len(previous_outputs)} round(s))",
+        mode="BLOCK",
+    )
+
+
+# ── 14: Goal Anchoring Check (§2.1) ────────────────────────────────────────
+
+def guardrail_goal_anchoring(
+    intent: str,
+    agent_output: str,
+    round_num: int = 1,
+) -> GuardrailResult:
+    """Check that agent output stays anchored to the original goal across rounds.
+    
+    Catches: task drift over long horizons (§2.1)
+    Mode: ADVISORY — drift is a judgment call, not always wrong
+    """
+    if round_num <= 1:
+        return GuardrailResult(
+            name="goal_anchoring",
+            verdict="SKIP",
+            summary="First round — no drift possible yet",
+            mode="ADVISORY",
+        )
+    
+    # Extract significant words from intent
+    stop_words = {
+        "the", "a", "an", "to", "for", "of", "in", "on", "at", "by",
+        "is", "are", "was", "were", "be", "and", "or", "not",
+        "this", "that", "it", "with", "from", "as", "so", "if", "but",
+        "about", "into", "than", "then", "also", "just", "want", "need",
+        "build", "create", "add", "make", "please", "can", "you", "i",
+    }
+    intent_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}")
+        for w in intent.split()
+        if len(w) > 3 and w.lower() not in stop_words
+    )
+    output_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}")
+        for w in agent_output.split()
+        if len(w) > 3
+    )
+    
+    if not intent_words:
+        return GuardrailResult(
+            name="goal_anchoring",
+            verdict="SKIP",
+            summary="Intent has no significant words",
+            mode="ADVISORY",
+        )
+    
+    overlap = intent_words & output_words
+    overlap_ratio = len(overlap) / len(intent_words)
+    
+    # Drift threshold gets stricter in later rounds
+    min_expected = max(0.1, 0.3 - (round_num - 1) * 0.05)
+    
+    if overlap_ratio < min_expected:
+        return GuardrailResult(
+            name="goal_anchoring",
+            verdict="FAIL",
+            evidence=f"Intent word overlap: {overlap_ratio:.0%} (round {round_num}, min expected: {min_expected:.0%})",
+            summary=f"Goal drift: output only {overlap_ratio:.0%} anchored to intent (round {round_num})",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="goal_anchoring",
+        verdict="PASS",
+        evidence=f"Intent word overlap: {overlap_ratio:.0%} (round {round_num})",
+        summary=f"Goal anchored ({overlap_ratio:.0%} overlap with intent)",
+        mode="ADVISORY",
+    )
+
+
+# ── 15: Trajectory Monitor (§2.14) ────────────────────────────────────────
+
+def guardrail_trajectory_monitor(
+    current_output: str,
+    role: str,
+    conn=None,
+    run_id: str = "",
+    phase: str = "",
+) -> GuardrailResult:
+    """Detect repeated actions without progress at phase level.
+    
+    Catches: trajectory degeneration — agent doing the same thing repeatedly (§2.14)
+    Mode: ADVISORY — repeated actions might be retries, not degeneration
+    """
+    if not conn or not run_id:
+        return GuardrailResult(
+            name="trajectory_monitor",
+            verdict="SKIP",
+            summary="No DB connection or run_id — cannot check trajectory history",
+            mode="ADVISORY",
+        )
+    
+    try:
+        # Get previous outputs for this role+phase
+        rows = conn.execute(
+            "SELECT prompt_hash, output_hash, outcome "
+            "FROM agent_trajectories "
+            "WHERE run_id = ? AND role = ? "
+            "ORDER BY id DESC LIMIT 5",
+            (run_id, role)
+        ).fetchall()
+        
+        if len(rows) < 2:
+            return GuardrailResult(
+                name="trajectory_monitor",
+                verdict="PASS",
+                summary=f"Only {len(rows)} trajectory entries — no repetition pattern",
+                mode="ADVISORY",
+            )
+        
+        # Check for repeated identical outputs
+        output_hashes = [r["output_hash"] for r in rows if r["output_hash"]]
+        if output_hashes and len(set(output_hashes)) == 1 and len(output_hashes) >= 2:
+            return GuardrailResult(
+                name="trajectory_monitor",
+                verdict="FAIL",
+                evidence=f"Last {len(output_hashes)} outputs for {role} all have identical hash: {output_hashes[0][:16]}",
+                summary=f"Trajectory stuck: {role} produced identical output {len(output_hashes)} times",
+                mode="ADVISORY",
+            )
+        
+        # Check for repeated failures
+        outcomes = [r["outcome"] for r in rows if r["outcome"]]
+        if len(outcomes) >= 3 and all(o == "failed" for o in outcomes[:3]):
+            return GuardrailResult(
+                name="trajectory_monitor",
+                verdict="FAIL",
+                evidence=f"Last {len(outcomes)} outcomes for {role}: {outcomes}",
+                summary=f"Trajectory degeneration: {role} failed {len(outcomes)} consecutive times",
+                mode="ADVISORY",
+            )
+        
+        return GuardrailResult(
+            name="trajectory_monitor",
+            verdict="PASS",
+            evidence=f"Checked {len(rows)} trajectory entries for {role}",
+            summary=f"Trajectory healthy ({len(rows)} entries, no repetition)",
+            mode="ADVISORY",
+        )
+    except Exception as e:
+        return GuardrailResult(
+            name="trajectory_monitor",
+            verdict="SKIP",
+            summary=f"DB error: {e}",
+            mode="ADVISORY",
+        )
+
+
+# ── 16: Verbosity / Density Metric (§2.20) ─────────────────────────────────
+
+def guardrail_verbosity_density(
+    agent_output: str,
+    role: str = "",
+) -> GuardrailResult:
+    """Check for reward hacking via excessive length without substance.
+    
+    Catches: reward hacking via length (§2.20)
+    Mode: ADVISORY — verbose output isn't always wrong, but high length/low density is suspicious
+    """
+    if not agent_output.strip():
+        return GuardrailResult(
+            name="verbosity_density",
+            verdict="SKIP",
+            summary="Empty output",
+            mode="ADVISORY",
+        )
+    
+    word_count = len(agent_output.split())
+    char_count = len(agent_output)
+    
+    # Density = unique words / total words (low density = lots of repetition)
+    words = agent_output.lower().split()
+    unique_words = len(set(words))
+    density = unique_words / len(words) if words else 0
+    
+    # Code density — how much of the output is actual code vs prose
+    code_blocks = re.findall(r'```.*?```', agent_output, re.DOTALL)
+    code_chars = sum(len(b) for b in code_blocks)
+    code_ratio = code_chars / char_count if char_count else 0
+    
+    issues = []
+    
+    # Very long output with low density = padding
+    if word_count > 2000 and density < 0.3:
+        issues.append(f"Very long ({word_count} words) with low density ({density:.0%} unique) — padding suspected")
+    
+    # Extremely long output regardless of density
+    if word_count > 5000:
+        issues.append(f"Extremely long output ({word_count} words) — verbosity hacking suspected")
+    
+    # Very short output for a phase that should produce substance
+    if role.lower() in ("brain", "draft", "menter") and word_count < 20:
+        issues.append(f"Very short output ({word_count} words) for {role} — insufficient substance")
+    
+    if issues:
+        return GuardrailResult(
+            name="verbosity_density",
+            verdict="FAIL",
+            evidence=f"Words: {word_count}, Density: {density:.0%}, Code ratio: {code_ratio:.0%}",
+            summary=f"Verbosity issue: {'; '.join(issues)}",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="verbosity_density",
+        verdict="PASS",
+        evidence=f"Words: {word_count}, Density: {density:.0%}, Code ratio: {code_ratio:.0%}",
+        summary=f"Output density OK ({word_count} words, {density:.0%} unique)",
+        mode="ADVISORY",
+    )
+
+
+# ── 17: Sequential Review Enforcer (§1.8) ─────────────────────────────────
+
+def guardrail_sequential_review(
+    prompt: str,
+    previous_reviewer_output: str = "",
+) -> GuardrailResult:
+    """Check that sequential review is enforced — reviewer 2 sees reviewer 1's findings.
+    
+    Catches: shared blind spots in parallel review (§1.8)
+    Mode: ADVISORY — parallel review is the current pipeline design, sequential is enhancement
+    """
+    # Check if the prompt injects previous reviewer findings
+    if previous_reviewer_output.strip():
+        if previous_reviewer_output[:200] in prompt:
+            return GuardrailResult(
+                name="sequential_review_enforcer",
+                verdict="PASS",
+                evidence="Previous reviewer output found in current reviewer prompt",
+                summary="Sequential review: reviewer sees prior reviewer's findings",
+                mode="ADVISORY",
+            )
+        else:
+            return GuardrailResult(
+                name="sequential_review_enforcer",
+                verdict="FAIL",
+                evidence="Previous reviewer output exists but not injected into current prompt",
+                summary="Parallel review: reviewer does NOT see prior reviewer's findings",
+                mode="ADVISORY",
+            )
+    
+    return GuardrailResult(
+        name="sequential_review_enforcer",
+        verdict="SKIP",
+        summary="No previous reviewer output — first reviewer",
+        mode="ADVISORY",
+    )
+
+
+# ── 18: Model Diversity Enforcement (§1.6) ────────────────────────────────
+
+def guardrail_model_diversity(
+    profiles_config: Dict[str, Any] = None,
+) -> GuardrailResult:
+    """Check that reviewers use different model providers (not same model reviewing itself).
+    
+    Catches: same model reviewing its own work (§1.6)
+    Mode: BLOCK — same model reviewing itself is a fundamental design violation
+    """
+    if not profiles_config:
+        # Try to load from dispatch module
+        try:
+            import sys
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from dispatch import PROFILES
+            profiles_config = PROFILES
+        except Exception:
+            return GuardrailResult(
+                name="model_diversity",
+                verdict="SKIP",
+                summary="Cannot load profiles config",
+                mode="BLOCK",
+            )
+    
+    # Get models for review1 and review2
+    r1_model = profiles_config.get("review1", {}).get("model", "")
+    r2_model = profiles_config.get("review2", {}).get("model", "")
+    
+    if not r1_model or not r2_model:
+        return GuardrailResult(
+            name="model_diversity",
+            verdict="SKIP",
+            summary="Missing model info for reviewers",
+            mode="BLOCK",
+        )
+    
+    if r1_model == r2_model:
+        return GuardrailResult(
+            name="model_diversity",
+            verdict="FAIL",
+            evidence=f"review1 model: {r1_model}, review2 model: {r2_model}",
+            summary=f"Model diversity violation: both reviewers use {r1_model}",
+            mode="BLOCK",
+        )
+    
+    return GuardrailResult(
+        name="model_diversity",
+        verdict="PASS",
+        evidence=f"review1: {r1_model}, review2: {r2_model}",
+        summary=f"Reviewers use different models ({r1_model} vs {r2_model})",
+        mode="BLOCK",
+    )
+
+
+# ── 19: Version Drift Check (§2.8) ────────────────────────────────────────
+
+# Track known model versions at guardrail deployment time
+_KNOWN_MODELS: Dict[str, str] = {}  # filled on first call
+
+
+def guardrail_version_drift(
+    profiles_config: Dict[str, Any] = None,
+) -> GuardrailResult:
+    """Check for silent model version changes since last run.
+    
+    Catches: silent model version changes (§2.8)
+    Mode: ADVISORY — version changes aren't always wrong, but should be detected
+    """
+    if not profiles_config:
+        try:
+            import sys
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from dispatch import PROFILES
+            profiles_config = PROFILES
+        except Exception:
+            return GuardrailResult(
+                name="version_drift",
+                verdict="SKIP",
+                summary="Cannot load profiles config",
+                mode="ADVISORY",
+            )
+    
+    global _KNOWN_MODELS
+    
+    current_models = {
+        role: cfg.get("model", "unknown")
+        for role, cfg in profiles_config.items()
+    }
+    
+    if not _KNOWN_MODELS:
+        # First call — record baseline
+        _KNOWN_MODELS = current_models.copy()
+        return GuardrailResult(
+            name="version_drift",
+            verdict="PASS",
+            evidence=f"Baseline models: {json.dumps(current_models)}",
+            summary="Version baseline recorded",
+            mode="ADVISORY",
+        )
+    
+    # Compare current to known
+    drift = {}
+    for role, model in current_models.items():
+        if role in _KNOWN_MODELS and _KNOWN_MODELS[role] != model:
+            drift[role] = {"was": _KNOWN_MODELS[role], "now": model}
+    
+    if drift:
+        # Update baseline
+        _KNOWN_MODELS = current_models.copy()
+        return GuardrailResult(
+            name="version_drift",
+            verdict="FAIL",
+            evidence=f"Version drift: {json.dumps(drift)}",
+            summary=f"Model version changed for: {', '.join(drift.keys())}",
+            mode="ADVISORY",
+        )
+    
+    return GuardrailResult(
+        name="version_drift",
+        verdict="PASS",
+        evidence=f"All models match baseline: {json.dumps(current_models)}",
+        summary="No version drift detected",
+        mode="ADVISORY",
+    )
+
+
+# ── 20: Output Sanitizer (§2.24) ──────────────────────────────────────────
+
+# Common unicode tricks for steganography
+_SUSPICIOUS_UNICODE = [
+    # Zero-width characters
+    "\u200b",  # zero-width space
+    "\u200c",  # zero-width non-joiner
+    "\u200d",  # zero-width joiner
+    "\u200e",  # left-to-right mark
+    "\u200f",  # right-to-left mark
+    "\u2060",  # word joiner
+    "\u2061",  # function application
+    "\u2062",  # invisible times
+    "\u2063",  # invisible separator
+    "\u2064",  # invisible plus
+    # Homoglyphs — cyrillic letters that look like latin
+    "\u0430",  # cyrillic a
+    "\u0435",  # cyrillic e
+    "\u043e",  # cyrillic o
+    "\u0440",  # cyrillic p
+    "\u0441",  # cyrillic c
+    "\u0445",  # cyrillic x
+    "\u0443",  # cyrillic y
+]
+
+# Control characters (except common whitespace)
+_SUSPICIOUS_CONTROL = [chr(i) for i in range(0, 9)] + [chr(11), chr(12)] + [chr(i) for i in range(14, 32)]
+
+
+def guardrail_output_sanitizer(
+    agent_output: str,
+) -> GuardrailResult:
+    """Detect steganography and unicode tricks in agent output.
+    
+    Catches: token-level steganography, unicode tricks (§2.24)
+    Mode: BLOCK — steganography is adversarial, should not propagate
+    """
+    found = []
+    
+    # Check for zero-width and invisible characters
+    for char in _SUSPICIOUS_UNICODE:
+        if char in agent_output:
+            count = agent_output.count(char)
+            found.append(f"unicode U+{ord(char):04X} ({count}x)")
+    
+    # Check for suspicious control characters
+    for char in _SUSPICIOUS_CONTROL:
+        if char in agent_output:
+            count = agent_output.count(char)
+            found.append(f"control char U+{ord(char):04X} ({count}x)")
+    
+    # Check for mixed scripts (latin + cyrillic in same text = homoglyph attack)
+    has_cyrillic = any("\u0400" <= c <= "\u04FF" for c in agent_output)
+    has_latin = any("\u0041" <= c <= "\u007A" for c in agent_output)
+    if has_cyrillic and has_latin:
+        # Count cyrillic chars
+        cyrillic_count = sum(1 for c in agent_output if "\u0400" <= c <= "\u04FF")
+        if cyrillic_count > 3:
+            found.append(f"mixed script: {cyrillic_count} cyrillic chars in latin text")
+    
+    if found:
+        return GuardrailResult(
+            name="output_sanitizer",
+            verdict="FAIL",
+            evidence=f"Suspicious characters found: {'; '.join(found)}",
+            summary=f"Steganography detected: {', '.join(found[:5])}",
+            mode="BLOCK",
+        )
+    
+    return GuardrailResult(
+        name="output_sanitizer",
+        verdict="PASS",
+        evidence=f"Output is clean ASCII/UTF-8 (no zero-width, homoglyphs, or control chars)",
+        summary="Output sanitized — no steganographic content",
+        mode="BLOCK",
+    )

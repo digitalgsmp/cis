@@ -1756,10 +1756,11 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "brain", "brain",
                           prompt, output, round_num)
 
-        # ── Tier 1 Guardrails ────────────────────────────────────────────
+        # ── Tier 1+2 Guardrails ────────────────────────────────────────────
         gr_report = run_guardrails(
             phase="brain", role="brain", agent_output=output,
             intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+            round_num=round_num, conn=self.conn, run_id=run_id,
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
@@ -1837,13 +1838,14 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "review2", "intent_review",
                           prompt, r2_out, round_num)
 
-        # ── Tier 1 Guardrails (sycophancy + schema on each reviewer) ──────
+        # ── Tier 1+2 Guardrails (sycophancy + schema on each reviewer) ──────
         for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
             if rout.strip():
                 gr = run_guardrails(
                     phase="intent_review", role=rrole, agent_output=rout,
                     intent=intent, project_root=PROJECT_ROOT,
                     other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                    round_num=round_num, conn=self.conn, run_id=run_id,
                 )
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
@@ -1934,10 +1936,11 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "draft", "draft",
                           prompt, output, round_num)
 
-        # ── Tier 1 Guardrails ────────────────────────────────────────────
+        # ── Tier 1+2 Guardrails ────────────────────────────────────────────
         gr_report = run_guardrails(
             phase="draft", role="draft", agent_output=output,
             intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+            round_num=round_num, conn=self.conn, run_id=run_id,
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
@@ -2001,13 +2004,14 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "review2", "proposal_review",
                           prompt, r2_out, round_num)
 
-        # ── Tier 1 Guardrails (sycophancy + schema on each reviewer) ──────
+        # ── Tier 1+2 Guardrails (sycophancy + schema on each reviewer) ──────
         for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
             if rout.strip():
                 gr = run_guardrails(
                     phase="proposal_review", role=rrole, agent_output=rout,
                     intent=intent, project_root=PROJECT_ROOT,
                     other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                    round_num=round_num, conn=self.conn, run_id=run_id,
                 )
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
@@ -2613,12 +2617,12 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "menter", "execution",
                           prompt, output, 1)
 
-        # ── Tier 1 Guardrails (claim-action, code quality, path contract) ─
+        # ── Tier 1+2 Guardrails (claim-action, code quality, path contract) ─
         gr_report = run_guardrails(
             phase="execution", role="menter", agent_output=output,
             intent=intent, project_root=PROJECT_ROOT,
             pre_exec_head=getattr(self, "_pre_exec_head", ""),
-            prompt=prompt,
+            prompt=prompt, conn=self.conn, run_id=run_id,
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
@@ -2712,12 +2716,12 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "verify", "verification",
                           prompt, output, 1)
 
-        # ── Tier 1 Guardrails (claim-action, honesty, schema) ────────────
+        # ── Tier 1+2 Guardrails (claim-action, honesty, schema) ────────────
         gr_report = run_guardrails(
             phase="verification", role="verify", agent_output=output,
             intent=intent, project_root=PROJECT_ROOT,
             pre_exec_head=getattr(self, "_pre_exec_head", ""),
-            prompt=prompt,
+            prompt=prompt, conn=self.conn, run_id=run_id,
         )
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
