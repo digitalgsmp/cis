@@ -3,7 +3,7 @@
 set -euo pipefail
 echo "=== 11B: No VETO/RETURN_TO_DRAFT ==="
 
-API_FILE="/mnt/projects/cis/runtime/api/dashboard_api.py"
+API_FILE="${CIS_REPO:-/mnt/projects/cis}/runtime/api/dashboard_api.py"
 
 # Verify the code only hardcodes APPROVE, not VETO or RETURN_TO_DRAFT
 if grep -q "VETO\|RETURN_TO_DRAFT" "$API_FILE"; then

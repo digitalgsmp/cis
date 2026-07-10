@@ -4,7 +4,7 @@ set -euo pipefail
 
 echo "=== 11A: System Overview ==="
 
-YAML="/mnt/projects/cis/runtime/api/system_overview.yaml"
+YAML="${CIS_REPO:-/mnt/projects/cis}/runtime/api/system_overview.yaml"
 
 if [ ! -f "$YAML" ]; then
   echo "FAIL: system_overview.yaml not found"

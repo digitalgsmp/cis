@@ -23,6 +23,10 @@
 
 FROM nikolaik/python-nodejs:python3.11-nodejs20
 
+# --- install sqlite3 CLI for gate scripts that query the spine directly ---
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
 # --- install pinned Hermes as root, at build time, once ---
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser \
     && /usr/local/bin/hermes --version | grep -q "0.17.0" \
@@ -122,6 +126,8 @@ WORKDIR /home/worker
 # The pipeline reads DB_PATH from CIS_SPINE_PATH env var.
 ENV CIS_SPINE_PATH=/workspace/cis/data/cis_memory.db \
     CIS_PROJECT_ROOT=/workspace/cis \
+    CIS_REPO=/workspace/cis \
+    CIS_DB_PATH=/workspace/cis/data/cis_memory.db \
     PYTHONPATH=/workspace/cis/runtime
 
 # Prove at build time the worker can READ the sealed managed config + plugin,

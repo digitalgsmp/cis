@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-CIS_REPO="/mnt/projects/cis"
+CIS_REPO="${CIS_REPO:-/mnt/projects/cis}"
 
 # ── Preflight ──────────────────────────────────────────────────────
 

@@ -23,7 +23,7 @@ import sys
 
 SPINE_PATH = os.environ.get(
     "CIS_SPINE_PATH",
-    "/mnt/projects/cis/data/cis_memory.db",
+    os.environ.get("CIS_DB_PATH", "/mnt/projects/cis/data/cis_memory.db"),
 )
 
 
@@ -214,8 +214,9 @@ def check_6_export_agreement():
     import subprocess
 
     # Check generate_all.py
+    repo_root = os.environ.get("CIS_REPO", "/mnt/projects/cis")
     result = subprocess.run(
-        ["python3", "/mnt/projects/cis/tools/export/generate_all.py"],
+        ["python3", f"{repo_root}/tools/export/generate_all.py"],
         capture_output=True, text=True, timeout=60,
     )
     if result.returncode != 0:
@@ -223,7 +224,7 @@ def check_6_export_agreement():
 
     # Check export agreement gate
     result2 = subprocess.run(
-        ["bash", "/mnt/projects/cis/tools/gates/gate_export_agreement.sh"],
+        ["bash", f"{repo_root}/tools/gates/gate_export_agreement.sh"],
         capture_output=True, text=True, timeout=30,
     )
     if result2.returncode != 0:

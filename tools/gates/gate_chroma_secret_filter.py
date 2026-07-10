@@ -13,7 +13,7 @@ import os
 import sys
 import tempfile
 
-sys.path.insert(0, "/mnt/projects/cis/runtime")
+sys.path.insert(0, os.environ.get("CIS_REPO", "/mnt/projects/cis") + "/runtime")
 
 try:
     from mcp_bridge.chroma_index import SecretFilterPipeline

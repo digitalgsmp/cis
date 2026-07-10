@@ -3,7 +3,7 @@
 set -euo pipefail
 echo "=== 11B: No goal reference creation ==="
 
-API_FILE="/mnt/projects/cis/runtime/api/dashboard_api.py"
+API_FILE="${CIS_REPO:-/mnt/projects/cis}/runtime/api/dashboard_api.py"
 
 # 1. Verify no INSERT INTO goal_references
 if grep -q "INSERT.*INTO.*goal_references" "$API_FILE"; then

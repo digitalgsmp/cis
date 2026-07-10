@@ -3,7 +3,7 @@
 # Scans runtime/api/pipeline_views.py for POST/PUT/PATCH/DELETE decorators.
 # Exit 0 = PASS (no write endpoints), exit 1 = FAIL (write endpoints found).
 
-BLUEPRINT="/mnt/projects/cis/runtime/api/pipeline_views.py"
+BLUEPRINT="${CIS_REPO:-/mnt/projects/cis}/runtime/api/pipeline_views.py"
 
 if [[ ! -f "$BLUEPRINT" ]]; then
     echo "FAIL: $BLUEPRINT not found"

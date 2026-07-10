@@ -1269,6 +1269,7 @@ PHASE_GATE_MAP = {
         # Before Menter: pre-execution oversight + git state + final directive gate
         {"script": "gate_git_state.sh", "mode": "ADVISORY"},
         {"script": "gate_pre_execution_oversight.sh", "mode": "ADVISORY", "needs_proposal": True},
+        {"script": "gate_deliberation.sh", "mode": "ADVISORY", "needs_run_id": True},
         {"script": "gate_final_directive_allowed.py", "mode": "BLOCK", "needs_run_id": True},
     ],
     "menter": [
@@ -1286,12 +1287,30 @@ PHASE_GATE_MAP = {
          "args": ["count", "workflow_runs", "1"], "arg_desc": "count check"},
         {"script": "gate_build_state_coherence.py", "mode": "ADVISORY"},
         {"script": "gate_eric_approval.py", "mode": "BLOCK", "needs_run_id": True},
+        {"script": "gate_eric_approval_present.sh", "mode": "BLOCK", "needs_run_id": True},
+        {"script": "gate_escalation_packet.py", "mode": "ADVISORY", "needs_run_id": True},
     ],
     "closeout": [
         # At closeout: export agreement + closeout artifact + closeout complete
+        # + role-specific closeout gates + UI security gates
         {"script": "gate_export_agreement.sh", "mode": "ADVISORY"},
         {"script": "gate_closeout_artifact.sh", "mode": "ADVISORY"},
         {"script": "gate_closeout_complete.sh", "mode": "ADVISORY", "needs_run_id": True},
+        {"script": "gate_drafter_closeout.sh", "mode": "ADVISORY", "needs_run_id": True},
+        {"script": "gate_reviewer_closeout.sh", "mode": "ADVISORY", "needs_run_id": True},
+    ],
+    "ui": [
+        # UI security gates — fire when UI changes are made
+        {"script": "gate_ui_acceptance.sh", "mode": "ADVISORY"},
+        {"script": "gate_ui_method_allowlist.sh", "mode": "ADVISORY"},
+        {"script": "gate_ui_no_secrets_in_jsx.sh", "mode": "BLOCK"},
+        {"script": "gate_ui_no_write_endpoints.sh", "mode": "ADVISORY"},
+        {"script": "gate_ui_no_pipeline_bypass.py", "mode": "ADVISORY"},
+    ],
+    "chroma": [
+        # ChromaDB security gates — fire when VDB is in use
+        {"script": "gate_chroma_secret_filter.py", "mode": "ADVISORY"},
+        {"script": "gate_chroma_no_secrets_in_results.py", "mode": "ADVISORY"},
     ],
 }
 
