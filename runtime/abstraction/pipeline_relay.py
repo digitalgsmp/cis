@@ -172,9 +172,13 @@ def _breaker_is_tripped(role: str) -> bool:
 
 # ── Database Helpers ──────────────────────────────────────────────────
 
-def _db_connect() -> sqlite3.Connection:
-    """Connect to spine DB with WAL mode and busy timeout."""
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+def _db_connect(db_path: str = DB_PATH) -> sqlite3.Connection:
+    """Connect to spine DB with WAL mode and busy timeout.
+
+    Accepts db_path parameter so PipelineRelay instances can connect
+    to per-project spine databases (ADR-SEED-010 filesystem isolation).
+    """
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -215,6 +219,23 @@ def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
             _notify_terminal_failure(conn, run_id, status)
         except Exception as e:
             print(f"[pipeline] Notification failed: {e}")
+        # Insert into dead letter queue (Component 11)
+        try:
+            conn.execute(
+                """INSERT INTO dead_letter_queue (run_id, error_message, phase, status)
+                   VALUES (?, ?, ?, 'pending')""",
+                (run_id, f"Run escalated with status: {status}", status)
+            )
+            conn.commit()
+        except Exception:
+            pass  # DLQ table may not exist in older DBs
+
+    # Notify on Eric Gate (so Eric knows to approve)
+    if status == "ERIC_GATE":
+        try:
+            _notify_eric_gate(conn, run_id)
+        except Exception as e:
+            print(f"[pipeline] Eric Gate notification failed: {e}")
 
 
 def _notify_terminal_failure(conn: sqlite3.Connection, run_id: str, status: str) -> None:
@@ -270,6 +291,50 @@ def _notify_terminal_failure(conn: sqlite3.Connection, run_id: str, status: str)
         print(f"[pipeline] Telegram notification sent for {run_id} ({status})")
     else:
         print(f"[pipeline] Telegram notification failed: HTTP {resp.status}")
+
+
+def _notify_eric_gate(conn: sqlite3.Connection, run_id: str) -> None:
+    """Send a Telegram notification when a run reaches Eric Gate."""
+    import urllib.request
+    import urllib.parse
+
+    cur = conn.execute(
+        "SELECT topic FROM workflow_runs WHERE id = ?", (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+    topic = row[0] or ""
+    topic_preview = topic[:100] + "..." if len(topic) > 100 else topic
+
+    bot_token = os.environ.get("CIS_TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("CIS_TELEGRAM_CHAT_ID", "")
+
+    if not bot_token or not chat_id:
+        print(f"[pipeline] Run {run_id} → ERIC_GATE (no Telegram notification configured)")
+        return
+
+    message = (
+        f"🔷 Pipeline Run at Eric Gate\n"
+        f"Run: {run_id}\n"
+        f"Intent: {topic_preview}\n"
+        f"Approve: curl -X POST localhost:5000/api/relay/{run_id}/gate "
+        f"-H 'Content-Type: application/json' "
+        f"-d '{{\"decision\":\"APPROVE\",\"rationale\":\"\"}}'"
+    )
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = urllib.parse.urlencode({
+        "chat_id": chat_id,
+        "text": message,
+    }).encode()
+
+    req = urllib.request.Request(url, data=data, method="POST")
+    resp = urllib.request.urlopen(req, timeout=10)
+    if resp.status == 200:
+        print(f"[pipeline] Eric Gate notification sent for {run_id}")
+    else:
+        print(f"[pipeline] Eric Gate notification failed: HTTP {resp.status}")
 
 
 def _create_run(conn: sqlite3.Connection, intent_text: str,
@@ -466,6 +531,137 @@ def _ingest_round_to_kb(conn: sqlite3.Connection, run_id: str,
         _ingest_to_kb(conn, run_id, phase, "human", human_q, signal, context)
 
 
+# ── Soul Document Builder (Component 6) ─────────────────────────────────
+
+import yaml as _yaml
+
+_ROLE_OVERLAYS = None
+_ROLE_OVERLAYS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config", "role_overlays.yaml"
+)
+
+
+def _load_role_overlays() -> dict:
+    """Load role overlays from YAML config. Cached after first load."""
+    global _ROLE_OVERLAYS
+    if _ROLE_OVERLAYS is not None:
+        return _ROLE_OVERLAYS
+    try:
+        with open(_ROLE_OVERLAYS_PATH) as f:
+            _ROLE_OVERLAYS = _yaml.safe_load(f) or {}
+    except Exception:
+        _ROLE_OVERLAYS = {}
+    return _ROLE_OVERLAYS
+
+
+def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
+                         run_id: str, db_path: str = None) -> str:
+    """Build the soul document for an agent dispatch.
+
+    Structured as: PROJECT_BRIEF > ROLE_OVERLAY > KB_CONTEXT > RECENT_RUNS > ERICS_WORKING_METHODS
+    Total size budget: 8000 chars. Sections truncated if needed.
+    """
+    overlays = _load_role_overlays()
+    overlay = overlays.get(role, {})
+    role_text = overlay.get("role", "")
+    bias_text = overlay.get("bias_overlay", "")
+
+    # PROJECT_BRIEF — AGENTS.md content (truncated)
+    project_brief = ""
+    agents_md_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "AGENTS.md"
+    )
+    try:
+        with open(agents_md_path) as f:
+            project_brief = f.read()[:3000]  # truncate to 3000 chars
+    except Exception:
+        project_brief = "(AGENTS.md not found)"
+
+    # KB_CONTEXT — top 3 KB hits (reuse pre-discovery logic but standalone)
+    kb_context = ""
+    try:
+        keywords = " ".join(intent.split()[:8])
+        import re as _re
+        keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords).strip()
+        if keywords:
+            cur = conn.execute(
+                "SELECT content, source FROM knowledge_messages_fts "
+                "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 3",
+                (keywords,)
+            )
+            hits = cur.fetchall()
+            if hits:
+                kb_lines = []
+                for content, source in hits:
+                    preview = (content[:300] + "...") if len(content) > 300 else content
+                    kb_lines.append(f"- [{source}] {preview}")
+                kb_context = "\n".join(kb_lines)
+    except Exception:
+        kb_context = "(KB search unavailable)"
+
+    # RECENT_RUNS — last 3 completed runs
+    recent_runs = ""
+    try:
+        cur = conn.execute(
+            "SELECT id, topic, result, rounds_completed FROM workflow_runs "
+            "WHERE result = 'CONSENSUS_REACHED' "
+            "ORDER BY created_at DESC LIMIT 3"
+        )
+        runs = cur.fetchall()
+        if runs:
+            run_lines = []
+            for r_id, r_topic, r_result, r_rounds in runs:
+                topic_preview = (r_topic[:100] + "...") if r_topic and len(r_topic) > 100 else (r_topic or "")
+                run_lines.append(f"- [{r_id[:20]}...] {r_result} ({r_rounds} rounds): {topic_preview}")
+            recent_runs = "\n".join(run_lines)
+    except Exception:
+        recent_runs = "(no prior runs)"
+
+    # ERICS_WORKING_METHODS — static
+    methods = (
+        "Verification-hardening rule: self-report is not truth.\n"
+        "Evidence-backed response rule: every claim needs raw evidence.\n"
+        "READ_ONLY_STANDING_BY: do not modify until explicitly directed."
+    )
+
+    # Assemble with token budget — priority order
+    parts = []
+
+    # ROLE_OVERLAY (highest priority — always include)
+    if role_text:
+        parts.append(f"[ROLE_OVERLAY]\n{role_text}")
+    if bias_text:
+        parts.append(f"\n[BIAS_OVERLAY]\n{bias_text}")
+
+    # TASK (always include — this is what the agent is doing)
+    parts.append(f"\n[TASK]\n(Pipeline will provide the task prompt below)")
+
+    # KB_CONTEXT
+    if kb_context:
+        parts.append(f"\n[KB_CONTEXT]\n{kb_context[:1500]}")
+
+    # RECENT_RUNS
+    if recent_runs:
+        parts.append(f"\n[RECENT_RUNS]\n{recent_runs[:800]}")
+
+    # PROJECT_BRIEF
+    if project_brief:
+        parts.append(f"\n[PROJECT_BRIEF]\n{project_brief[:2000]}")
+
+    # ERICS_WORKING_METHODS
+    parts.append(f"\n[ERICS_WORKING_METHODS]\n{methods}")
+
+    soul = "\n".join(parts)
+
+    # Enforce 8000 char budget
+    if len(soul) > 8000:
+        soul = soul[:8000] + "\n...(soul document truncated)"
+
+    return soul
+
+
 # ── Pre-Discovery (mandatory before every agent call) ──────────────────
 
 def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
@@ -558,7 +754,8 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
             results.append(f"\n## Current Research (web)\n(Search error: {e})")
 
     return (
-        "[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
+        _build_soul_document(conn, role, intent, run_id)
+        + "\n\n[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
         + "\n".join(results)
         + "\n\n[END PRE-DISCOVERY — now produce your output]"
     )
@@ -792,10 +989,25 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
         headers["Authorization"] = f"Bearer {api_key}"
 
     timeout = AGENT_TIMEOUTS.get(role, AGENT_TIMEOUT)
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.post(gateway_url, json=payload, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
+    # Retry once on transient failures (Component 11 — Error Recovery)
+    last_error = None
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(gateway_url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+            break
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            last_error = e
+            if attempt == 0:
+                print(f"[pipeline] Transient error for {role}, retrying in 5s: {e}")
+                await asyncio.sleep(5)
+            else:
+                _breaker_record_failure(role)
+                raise ConnectionError(
+                    f"Gateway {role} (port {port}) failed after retry: {e}"
+                )
 
     choices = data.get("choices", [])
     if not choices:
@@ -1261,6 +1473,39 @@ def _run_chunk_l1(cwd: str, file_path: str, diff_text: str) -> str:
     except Exception:
         pass  # No pytest — skip
 
+    # 7b. Actually run tests (Component 10 — Verification Depth)
+    try:
+        pytest_run = subprocess.run(
+            ["python3.12", "-m", "pytest", "-x", "-q", "--tb=short", "--no-header"],
+            capture_output=True, text=True, timeout=120, cwd=cwd,
+        )
+        if pytest_run.returncode == 0:
+            lines = pytest_run.stdout.strip().split("\n")
+            summary = lines[-1] if lines else "All tests passed"
+            parts.append(f"## L1: Test Execution\n✓ {summary}")
+        else:
+            # Extract failure summary
+            stderr_lines = pytest_run.stdout.strip().split("\n")[-5:]
+            parts.append(f"## L1: Test Execution\n✗ FAILURES:\n" + "\n".join(stderr_lines)[:500])
+    except subprocess.TimeoutExpired:
+        parts.append("## L1: Test Execution\n⚠ Tests timed out after 120s")
+    except Exception:
+        pass  # No pytest — skip
+
+    # 7c. Directive scope verification (Component 10)
+    # Check if claimed files actually exist
+    try:
+        import re as _re
+        file_claims = _re.findall(r'(?:Created|Modified|Wrote|Updated):\s*`?([^\s`]+)`?', content)
+        if file_claims:
+            missing = [f for f in file_claims if not os.path.exists(os.path.join(cwd, f))]
+            if missing:
+                parts.append(f"## L1: Scope Verification\n✗ CLAIMED FILES NOT FOUND:\n" + "\n".join(missing[:10]))
+            else:
+                parts.append(f"## L1: Scope Verification\n✓ All {len(file_claims)} claimed files exist")
+    except Exception:
+        pass
+
     return "\n\n".join(parts)
 
 
@@ -1344,10 +1589,51 @@ class PipelineRelay:
 
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
-        self.conn = _db_connect()
+        self.conn = _db_connect(self.db_path)
 
     def close(self) -> None:
         self.conn.close()
+
+    # ── Git Workflow (Component 9) ────────────────────────────────────
+
+    def _git(self, *args) -> str:
+        """Run a git command in the project root. Returns stdout."""
+        import subprocess
+        project_root = os.path.dirname(os.path.dirname(self.db_path))
+        result = subprocess.run(
+            ["git", "-C", project_root] + list(args),
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            print(f"[git] ERROR: {result.stderr.strip()}")
+            return ""
+        return result.stdout.strip()
+
+    def _git_create_branch(self, run_id: str):
+        """Create a feature branch for the run."""
+        branch = f"cis/run-{run_id[:20]}"
+        self._git("checkout", "-b", branch)
+        print(f"[git] Created branch: {branch}")
+
+    def _git_commit(self, run_id: str, topic: str):
+        """Commit all changes after Menter completes."""
+        msg = f"run-{run_id[:12]}: {topic[:80]}"
+        self._git("add", "-A")
+        self._git("commit", "-m", msg, "--no-gpg-sign")
+        print(f"[git] Committed: {msg}")
+
+    def _git_rollback(self, run_id: str):
+        """Rollback changes on verification failure."""
+        branch = f"cis/run-{run_id[:20]}"
+        self._git("checkout", "--", ".")
+        self._git("checkout", "master")
+        self._git("branch", "-D", branch)
+        print(f"[git] Rolled back branch: {branch}")
+
+    def _git_pr_command(self, run_id: str, topic: str) -> str:
+        """Generate the gh pr create command (does not auto-execute)."""
+        branch = f"cis/run-{run_id[:20]}"
+        return f"gh pr create --title \"{topic[:80]}\" --body \"Pipeline run: {run_id}\" --head {branch}"
 
     async def start(self, intent_text: str) -> str:
         """Create a new pipeline run and begin processing."""

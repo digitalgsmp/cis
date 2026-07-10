@@ -614,3 +614,115 @@ Wiring Tier 1 guardrails (items 1-10) would:
 - Cost zero additional tokens
 
 The harness fixes the wrapper, not the weights. The model is the swappable part. The guardrails survive model changes.
+
+---
+
+## Part 6: Self-Evolving Harness Strategy — Adaptive Threshold Tuning
+
+### 6.1 The Problem with Static Thresholds
+
+Every guardrail in Part 3 has a hardcoded threshold:
+- Scope compliance: Jaccard similarity < 0.3 = SCOPE_DRIFT
+- Sycophancy: reviewer output must contain objection keywords
+- Content specificity: summary must contain ≥ 1 project-specific technical term
+- Verbosity: output length > 2x intent length = VERBOSE_EXPANSION
+- Mode collapse: > 80% token overlap = MODE_COLLAPSE
+
+These thresholds are initial guesses. A threshold that's too aggressive generates false positives — flagging legitimate output as problematic, triggering unnecessary revision rounds, and ADDING token cost instead of saving it. A threshold that's too lenient misses real failures — letting errors propagate through the pipeline.
+
+A static harness lives with this trade-off forever. You either manually tune thresholds (maintenance burden) or accept the error rate (quality burden). Neither scales.
+
+### 6.2 The Self-Evolving Loop
+
+The harness treats every threshold as a learned parameter. The feedback loop:
+
+1. **Guardrail fires** — flags output with a specific signal (e.g., SCOPE_DRIFT at similarity 0.28)
+2. **Pipeline continues** — reviewer sees the flagged output, evaluates it independently
+3. **Final outcome recorded** — pipeline run ends with a result: accepted, rejected, needed revision, escalated
+4. **Outcome correlated to guardrail signal** — was the flag a true positive (revision was needed) or false positive (output was fine)?
+5. **Threshold adjusts** — based on accumulated evidence, the threshold shifts for the next run
+
+Over 20-30 runs, the harness learns which guardrails are reliable for which task types and which model combinations. Scope drift detection may be reliable for code implementation tasks but noisy for research/brainstorming. Sycophancy detection may be reliable when Reviewer 2 uses GLM but noisy when it uses Qwen. The harness learns model-specific blind spots through observed behavior, not hardcoded assumptions.
+
+### 6.3 Data Model — gate_outcomes Table
+
+A new spine table records every guardrail outcome alongside the pipeline's final result:
+
+```sql
+CREATE TABLE IF NOT EXISTS gate_outcomes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    gate_name TEXT NOT NULL,
+    gate_result TEXT NOT NULL,          -- PASS, FAIL, SKIP
+    signal_type TEXT,                   -- SCOPE_DRIFT, SYCOPHANCY_RISK, etc.
+    signal_value REAL,                  -- the raw metric (e.g., 0.28 Jaccard similarity)
+    threshold_value REAL,               -- the threshold that was applied (e.g., 0.30)
+    advisory_mode INTEGER DEFAULT 1,    -- 1=advisory (log only), 0=block (halts pipeline)
+    final_outcome TEXT,                 -- ACCEPTED, REJECTED, REVISED, ESCALATED
+    was_false_positive INTEGER,         -- derived post-hoc: 1 if gate fired but final_outcome=ACCEPTED
+    task_type TEXT,                     -- implementation, research, brainstorm, review, closeout
+    model_profile TEXT,                 -- hermes-v4pro, hermes-r1, hermes-glm-reviewer, etc.
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (run_id) REFERENCES workflow_runs(id)
+);
+```
+
+This table is the training dataset. After enough runs, you query:
+- "What is the false positive rate of SCOPE_DRIFT detection on implementation tasks when using deepseek-v4-pro?"
+- "At what Jaccard threshold does the false positive rate drop below 5% for this model/task combination?"
+- "Which guardrails have NEVER produced a true positive?" (candidates for removal)
+
+### 6.4 Build Order — Three Phases
+
+**Phase A: Static Gates (immediate value)**
+- Wire deterministic gates with hardcoded thresholds
+- BLOCK mode for hard checks (file exists, git state, DB artifact present, schema valid) — zero false positive risk
+- ADVISORY mode for soft checks (sycophancy, scope drift, content depth, verbosity) — log findings, inject into reviewer prompt, do NOT halt pipeline
+- gate_outcomes table created and populated, but no threshold tuning yet
+- All threshold_value and signal_value data is recorded for future analysis
+
+**Phase B: Feedback Analysis (after 20-30 runs)**
+- Query gate_outcomes to compute false positive rates per guardrail per task type per model
+- Identify which guardrails are reliable enough to promote from ADVISORY to BLOCK
+- Identify which thresholds need adjustment
+- Manual threshold updates based on observed data — not yet automated
+
+**Phase C: Adaptive Thresholds (self-evolving)**
+- Threshold tuning logic reads gate_outcomes and adjusts thresholds automatically
+- Per-model, per-task-type thresholds — not one global threshold
+- Guardrails that consistently produce false positives are demoted back to ADVISORY or removed
+- New guardrails can be added in ADVISORY mode and promoted based on observed accuracy
+- The harness evolves without human intervention
+
+### 6.5 Connection to RSI / Harness Engineering Framework
+
+This is the RSI (Recursive Self-Improvement) loop applied to the harness layer, not the model layer. Eric introduced the RSI/harness engineering framework (Lilian Weng, July 2026; HASE paper) as CIS's theoretical foundation.
+
+The key insight: **the models are the tools, the harness is the system.** Models are interchangeable — they change, their biases shift, their failure modes evolve. A self-evolving harness is what makes that interchangeability real. When you swap DeepSeek for Qwen for GLM, the harness learns each model's specific blind spots through observed behavior. The guardrails don't just survive model changes — they adapt to them.
+
+This is distinct from model-level RSI (where the model improves itself). Harness-level RSI is safer and more controllable:
+- The adaptation surface is small (threshold values, not model weights)
+- Changes are auditable (every threshold adjustment is a row in gate_outcomes)
+- Rollback is trivial (revert to previous threshold)
+- The model cannot game the harness because the harness learns from observed outcomes, not from model self-report
+
+### 6.6 Design Constraint: No LLM in the Tuning Loop
+
+The threshold tuning must remain deterministic. The harness does not use an LLM to decide whether a guardrail was a false positive — it derives that from the pipeline's final outcome:
+
+- Gate fired (FAIL) + final_outcome = ACCEPTED → false positive
+- Gate fired (FAIL) + final_outcome = REVISED/REJECTED → true positive
+- Gate passed (PASS) + final_outcome = REVISED/REJECTED → false negative (missed a real failure)
+
+This is a simple correlation, not a judgment call. The LLM's output (reviewer verdict, pipeline result) is the ground truth. The harness learns from it without injecting another LLM call into the tuning loop.
+
+### 6.7 What This Enables
+
+Once the self-evolving loop is operational:
+
+- **New guardrails can be added with zero risk** — they start in ADVISORY mode, accumulate data, and are promoted to BLOCK only when their false positive rate is proven low enough
+- **Model swaps don't require re-tuning** — the harness automatically learns the new model's failure profile
+- **The harness becomes more accurate over time** — every run improves the dataset, every threshold adjustment reduces false positives
+- **The guardrail inventory is self-pruning** — guardrails that never produce true positives are identified and removed, keeping the system lean
+
+This closes the gap between the static guardrail specification (Part 3) and the reality that no static threshold is correct for all tasks, all models, and all time. The harness evolves. The models are the swappable part.

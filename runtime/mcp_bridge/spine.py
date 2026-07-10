@@ -200,7 +200,7 @@ def query_run_detail(run_id, db_path=None):
 
         artifacts = _rows_to_list(conn.execute(
             """SELECT * FROM workflow_run_artifacts
-               WHERE workflow_run_id = ?
+               WHERE run_id = ?
                ORDER BY created_at""",
             (run_id,),
         ).fetchall())

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-10 05:05 UTC | Run: run-87d4950358a4 | Latest pipeline: run-12d5aa6946666b73-1783649571
+Generated: 2026-07-10 13:48 UTC | Run: run-7ef1e0469a38 | Latest pipeline: run-12d5aa6946666b73-1783649571
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,16 +79,16 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-12d5aa6946666b73-1783649571] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
+- [run-12d5aa6946666b73-1783649571] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — ESCALATE (0 rounds, 2026-07-10 13:36:42)
 - [run-12d5aa6946666b73-1783646867] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
 - [run-86bc4d1009b8fb44-1783645778] Add a comment to the top of runtime/container_app.py saying: # Pipeline fixed an — PENDING (0 rounds, incomplete)
 - [run-12d5aa6946666b73-1783641453] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
 - [run-12d5aa6946666b73-1783630035] Build the CIS Control Plane and SWA Development Infrastructure. This is a 14-com — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-86bc4d1009b8fb44-1783645778
+- Workflow run: run-12d5aa6946666b73-1783649571
 - Status: APPROVE
-- Decided at: 2026-07-10T01:18:01.501491+00:00
+- Decided at: 2026-07-10T12:37:39.263821+00:00
 - Goal: No goal label
 
 ## 10. Verification Hardening Rule

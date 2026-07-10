@@ -162,4 +162,39 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ run_id: runId, rationale: rationale || '' }),
     }).then(r => r.json()),
+
+  // ── Relay API (Component 1 — Control Plane UI) ────────────────────────
+  relayStart: (intent, project) => {
+    const body = { intent }
+    if (project) body.project = project
+    return fetch('/api/relay/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => r.json())
+  },
+  relayStatus: (runId) =>
+    fetch(`/api/relay/${encodeURIComponent(runId)}`).then(r => r.json()),
+  relayGate: (runId, decision, rationale) =>
+    fetch(`/api/relay/${encodeURIComponent(runId)}/gate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, rationale: rationale || '' }),
+    }).then(r => r.json()),
+  relayAnswer: (runId, answer) =>
+    fetch(`/api/relay/${encodeURIComponent(runId)}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer }),
+    }).then(r => r.json()),
+  relayVerify: (runId) =>
+    fetch(`/api/relay/${encodeURIComponent(runId)}/verify`).then(r => r.json()),
+  relayTrace: (runId) =>
+    fetch(`/api/relay/${encodeURIComponent(runId)}/trace`).then(r => r.json()),
+  relayListRuns: (limit = 50) =>
+    fetch(`/api/relay/runs?limit=${limit}`).then(r => r.json()),
+  relayKbSearch: (query, topK = 10) =>
+    fetch(`/api/relay/kb/search?q=${encodeURIComponent(query)}&top_k=${topK}`).then(r => r.json()),
+  relayKbDecisions: () =>
+    fetch('/api/relay/kb/decisions').then(r => r.json()),
 }

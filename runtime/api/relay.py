@@ -57,8 +57,8 @@ def _check_auth() -> Optional[tuple]:
 # ── DB Helper ────────────────────────────────────────────────────────────
 
 
-def _db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+def _db(db_path: str = None) -> sqlite3.Connection:
+    conn = sqlite3.connect(db_path or DB_PATH, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
@@ -106,8 +106,11 @@ def _get_trajectories(conn: sqlite3.Connection, run_id: str) -> list:
 _active_runs: Dict[str, dict] = {}  # run_id → {thread, error, started_at}
 
 
-def _run_pipeline_background(run_id: str, intent: str) -> None:
-    """Run pipeline_relay.py in a background thread (non-blocking)."""
+def _run_pipeline_background(run_id: str, intent: str, db_path: str = None) -> None:
+    """Run pipeline_relay.py in a background thread (non-blocking).
+
+    Accepts db_path for multi-project support (ADR-SEED-010).
+    """
     import sys
 
     abstraction_dir = os.path.join(
@@ -119,7 +122,7 @@ def _run_pipeline_background(run_id: str, intent: str) -> None:
 
     from pipeline_relay import PipelineRelay
 
-    relay = PipelineRelay()
+    relay = PipelineRelay(db_path=db_path) if db_path else PipelineRelay()
     try:
         asyncio.run(relay.resume(run_id))
     except Exception as e:
@@ -175,9 +178,26 @@ def relay_start():
     if not intent:
         return jsonify({"error": "intent required"}), 400
 
+    # Multi-project support: look up project spine_path if project specified
+    project_id = (data.get("project") or "").strip()
+    project_db_path = None
+    if project_id:
+        conn = _db()
+        try:
+            row = conn.execute(
+                "SELECT spine_path FROM projects WHERE id = ? AND status = 'active'",
+                (project_id,),
+            ).fetchone()
+            if row:
+                project_db_path = row["spine_path"]
+            else:
+                return jsonify({"error": f"Unknown project: {project_id}"}), 400
+        finally:
+            conn.close()
+
     # Idempotency: check for existing non-terminal run with same intent
     intent_hash = hashlib.sha256(intent.encode()).hexdigest()[:16]
-    conn = _db()
+    conn = _db(project_db_path) if project_db_path else _db()
     try:
         existing = conn.execute(
             "SELECT id, status FROM workflow_runs "
@@ -206,7 +226,7 @@ def relay_start():
         _sys.path.insert(0, sys_path)
     from pipeline_relay import PipelineRelay
 
-    relay = PipelineRelay()
+    relay = PipelineRelay(db_path=project_db_path) if project_db_path else PipelineRelay()
     try:
         run_id = relay.start_sync(intent)
     finally:
@@ -215,7 +235,7 @@ def relay_start():
     # Start the async pipeline in a background thread
     thread = threading.Thread(
         target=_run_pipeline_background,
-        args=(run_id, intent),
+        args=(run_id, intent, project_db_path),
         daemon=True,
     )
     _active_runs[run_id] = {
@@ -536,5 +556,351 @@ def relay_trace(run_id: str):
             "rounds": rounds,
             "trajectories": trajectories,
         })
+    finally:
+        conn.close()
+
+
+# ── Run List Endpoint ────────────────────────────────────────────────────
+
+
+@relay_bp.route("/api/relay/runs", methods=["GET"])
+def relay_list_runs():
+    """List recent pipeline runs."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    limit = request.args.get("limit", 50, type=int)
+    conn = _db()
+    try:
+        rows = conn.execute(
+            """SELECT id, topic, status, created_at, rounds_completed, result
+               FROM workflow_runs
+               ORDER BY created_at DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        runs = [
+            {
+                "id": r["id"],
+                "topic": r["topic"][:200] if r["topic"] else "",
+                "status": r["status"],
+                "created_at": r["created_at"],
+                "rounds_completed": r["rounds_completed"],
+                "result": r["result"],
+            }
+            for r in rows
+        ]
+        return jsonify({"runs": runs, "count": len(runs)})
+    finally:
+        conn.close()
+
+
+# ── KB Search Endpoints ──────────────────────────────────────────────────
+
+
+@relay_bp.route("/api/relay/kb/search", methods=["GET"])
+def relay_kb_search():
+    """Search the knowledge base (FTS5 across 287K messages)."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"error": "Query parameter 'q' is required"}), 400
+    top_k = request.args.get("top_k", 10, type=int)
+    conn = _db()
+    try:
+        rows = conn.execute(
+            """SELECT content, source, timestamp
+               FROM knowledge_messages_fts
+               WHERE knowledge_messages_fts MATCH ?
+               ORDER BY rank
+               LIMIT ?""",
+            (query, top_k),
+        ).fetchall()
+        results = [
+            {
+                "content": r["content"][:500] if r["content"] else "",
+                "source": r["source"],
+                "timestamp": r["timestamp"],
+            }
+            for r in rows
+        ]
+        return jsonify({"query": query, "results": results, "count": len(results)})
+    except sqlite3.OperationalError as e:
+        return jsonify({"query": query, "results": [], "error": str(e)}), 200
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/kb/decisions", methods=["GET"])
+def relay_kb_decisions():
+    """Return open project decisions (ADRs)."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            """SELECT label, decision, reason, status
+               FROM project_decisions
+               WHERE status IN ('DECIDED', 'OPEN')
+               ORDER BY label"""
+        ).fetchall()
+        decisions = [dict(r) for r in rows]
+        return jsonify({"decisions": decisions, "count": len(decisions)})
+    finally:
+        conn.close()
+
+
+# ── Project Management Endpoints ─────────────────────────────────────────
+
+
+@relay_bp.route("/api/projects", methods=["GET"])
+def list_projects():
+    """List all registered projects."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT id, name, repo_path, spine_path, agents_md_path, status, created_at "
+            "FROM projects ORDER BY created_at"
+        ).fetchall()
+        projects = [dict(r) for r in rows]
+        return jsonify({"projects": projects, "count": len(projects)})
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/projects", methods=["POST"])
+def register_project():
+    """Register a new project.
+
+    Body: {id, name, repo_path, spine_path, agents_md_path?}
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    data = request.get_json(silent=True) or {}
+    project_id = (data.get("id") or "").strip()
+    name = (data.get("name") or "").strip()
+    repo_path = (data.get("repo_path") or "").strip()
+    spine_path = (data.get("spine_path") or "").strip()
+    agents_md_path = (data.get("agents_md_path") or "").strip() or None
+
+    if not all([project_id, name, repo_path, spine_path]):
+        return jsonify({"error": "id, name, repo_path, spine_path are required"}), 400
+
+    conn = _db()
+    try:
+        conn.execute(
+            """INSERT OR REPLACE INTO projects (id, name, repo_path, spine_path, agents_md_path, status)
+               VALUES (?, ?, ?, ?, ?, 'active')""",
+            (project_id, name, repo_path, spine_path, agents_md_path),
+        )
+        conn.commit()
+        return jsonify({
+            "id": project_id,
+            "name": name,
+            "repo_path": repo_path,
+            "spine_path": spine_path,
+            "agents_md_path": agents_md_path,
+            "status": "active",
+        }), 201
+    finally:
+        conn.close()
+
+
+# ── Task Decomposition Endpoints (Component 8) ──────────────────────────
+
+
+@relay_bp.route("/api/relay/<run_id>/decompose", methods=["POST"])
+def relay_decompose(run_id: str):
+    """Split a run's directive into child runs.
+
+    Body: {subtasks: [{intent: "...", depends_on: "child_id"?}, ...]}
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    data = request.get_json(silent=True) or {}
+    subtasks = data.get("subtasks", [])
+    if not subtasks:
+        return jsonify({"error": "subtasks array required"}), 400
+
+    conn = _db()
+    try:
+        parent = _get_run(conn, run_id)
+        if not parent:
+            return jsonify({"error": "Parent run not found"}), 404
+
+        import sys as _sys
+        sys_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "abstraction",
+        )
+        if sys_path not in _sys.path:
+            _sys.path.insert(0, sys_path)
+        from pipeline_relay import PipelineRelay
+
+        relay = PipelineRelay()
+        children = []
+        try:
+            for subtask in subtasks:
+                sub_intent = subtask.get("intent", "").strip()
+                if not sub_intent:
+                    continue
+                child_id = relay.start_sync(sub_intent)
+                # Set parent_run_id
+                conn.execute(
+                    "UPDATE workflow_runs SET parent_run_id = ? WHERE id = ?",
+                    (run_id, child_id),
+                )
+                # Set dependency if specified
+                depends_on = subtask.get("depends_on")
+                if depends_on:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO run_dependencies (run_id, depends_on_run_id, dependency_type) VALUES (?, ?, 'sequential')",
+                        (child_id, depends_on),
+                    )
+                children.append({"run_id": child_id, "intent": sub_intent[:100]})
+            conn.commit()
+        finally:
+            relay.close()
+
+        return jsonify({"parent_run_id": run_id, "children": children, "count": len(children)})
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/<run_id>/children", methods=["GET"])
+def relay_children(run_id: str):
+    """List child runs of a parent run."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            """SELECT id, topic, status, result, rounds_completed, created_at
+               FROM workflow_runs
+               WHERE parent_run_id = ?
+               ORDER BY created_at""",
+            (run_id,),
+        ).fetchall()
+        children = [dict(r) for r in rows]
+        return jsonify({"parent_run_id": run_id, "children": children, "count": len(children)})
+    finally:
+        conn.close()
+
+
+# ── Monitoring Endpoints (Component 12) ─────────────────────────────────
+
+
+@relay_bp.route("/api/relay/metrics", methods=["GET"])
+def relay_metrics():
+    """Return pipeline metrics summary."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        # Total runs by status
+        status_rows = conn.execute(
+            "SELECT status, COUNT(*) as cnt FROM workflow_runs GROUP BY status"
+        ).fetchall()
+        runs_by_status = {r["status"]: r["cnt"] for r in status_rows}
+        total_runs = sum(runs_by_status.values())
+
+        # Average rounds
+        avg_row = conn.execute(
+            "SELECT AVG(rounds_completed) as avg FROM workflow_runs WHERE rounds_completed > 0"
+        ).fetchone()
+        avg_rounds = round(avg_row["avg"], 1) if avg_row and avg_row["avg"] else 0
+
+        # Agent success rates
+        agent_rows = conn.execute(
+            "SELECT role, "
+            "SUM(CASE WHEN outcome='success' THEN 1 ELSE 0 END) as success, "
+            "COUNT(*) as total "
+            "FROM agent_trajectories GROUP BY role"
+        ).fetchall()
+        agent_rates = {}
+        for r in agent_rows:
+            total = r["total"] or 0
+            success = r["success"] or 0
+            agent_rates[r["role"]] = {
+                "success": success,
+                "total": total,
+                "rate": round(success / total * 100, 1) if total > 0 else 0,
+            }
+
+        # Token totals
+        token_row = conn.execute(
+            "SELECT SUM(tokens_in) as tin, SUM(tokens_out) as tout FROM agent_trajectories"
+        ).fetchone()
+        total_tokens_in = token_row["tin"] or 0 if token_row else 0
+        total_tokens_out = token_row["tout"] or 0 if token_row else 0
+
+        # Dead letter queue count
+        try:
+            dlq_row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM dead_letter_queue WHERE status='pending'"
+            ).fetchone()
+            dlq_pending = dlq_row["cnt"] if dlq_row else 0
+        except Exception:
+            dlq_pending = 0
+
+        return jsonify({
+            "total_runs": total_runs,
+            "runs_by_status": runs_by_status,
+            "avg_rounds": avg_rounds,
+            "agent_success_rates": agent_rates,
+            "total_tokens_in": total_tokens_in,
+            "total_tokens_out": total_tokens_out,
+            "dlq_pending": dlq_pending,
+        })
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/<run_id>/errors", methods=["GET"])
+def relay_errors(run_id: str):
+    """Return error-level entries from agent trajectories."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT id, role, phase, substr(output_text, 1, 500) as output_preview, created_at "
+            "FROM agent_trajectories WHERE run_id = ? AND outcome != 'success' "
+            "ORDER BY id",
+            (run_id,),
+        ).fetchall()
+        errors = [dict(r) for r in rows]
+        return jsonify({"run_id": run_id, "errors": errors, "count": len(errors)})
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/dlq", methods=["GET"])
+def relay_dlq():
+    """List pending dead letter queue entries."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT id, run_id, failed_at, error_message, phase, retry_count, status "
+            "FROM dead_letter_queue WHERE status = 'pending' ORDER BY failed_at DESC"
+        ).fetchall()
+        entries = [dict(r) for r in rows]
+        return jsonify({"dlq": entries, "count": len(entries)})
+    except Exception:
+        return jsonify({"dlq": [], "count": 0})
     finally:
         conn.close()

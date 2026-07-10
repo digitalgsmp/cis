@@ -18,6 +18,7 @@ import ChatConsole from './pages/ChatConsole'
 import AdvisorChat from './pages/infra/AdvisorChat'
 import PipelinePage from './pages/PipelinePage'
 import EricGatePage from './pages/EricGatePage'
+import RelayPage from './pages/RelayPage'
 import RoadmapPage from './pages/RoadmapPage'
 import ArchiveSearchPage from './pages/ArchiveSearchPage'
 import SessionArchivePage from './pages/SessionArchivePage'
@@ -29,6 +30,7 @@ const NAV_GROUPS = [
   {
     label: 'Monitor',
     items: [
+      { path: '/relay', label: 'Relay' },
       { path: '/pipeline', label: 'Pipeline' },
       { path: '/eric-gate', label: 'Eric Gate' },
       { path: '/archive/search', label: 'Archive' },
@@ -106,6 +108,7 @@ export default function App() {
           <Route path="/advisor-chat" element={<AdvisorChat />} />
           <Route path="/pipeline" element={<PipelinePage />} />
           <Route path="/eric-gate" element={<EricGatePage />} />
+          <Route path="/relay" element={<RelayPage />} />
           <Route path="/archive/search" element={<ArchiveSearchPage />} />
           <Route path="/archive/sessions" element={<SessionArchivePage />} />
           <Route path="/decisions" element={<DecisionsPage />} />

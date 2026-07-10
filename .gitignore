@@ -143,3 +143,4 @@ runtime/eric_gate/briefings/*.json
 # Anthropic export moved to /mnt/archive/anthropic_exports/ (2026-06-27)
 enforcement/mwl-proof-v2/tagging_input/
 enforcement/mwl-proof-v2/tagging_results/
+spine_schema.sql.bak
