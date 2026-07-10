@@ -904,3 +904,44 @@ def relay_dlq():
         return jsonify({"dlq": [], "count": 0})
     finally:
         conn.close()
+
+
+@relay_bp.route("/api/relay/guardrails", methods=["GET"])
+def relay_guardrails():
+    """Get guardrail outcomes for a run (or all recent)."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    run_id = request.args.get("run_id", "").strip()
+    conn = _db()
+    try:
+        if run_id:
+            rows = conn.execute(
+                "SELECT id, run_id, phase, role, guardrail_name, verdict, mode, summary, timestamp "
+                "FROM gate_outcomes WHERE run_id = ? ORDER BY id",
+                (run_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, run_id, phase, role, guardrail_name, verdict, mode, summary, timestamp "
+                "FROM gate_outcomes ORDER BY id DESC LIMIT 200",
+            ).fetchall()
+        outcomes = [dict(r) for r in rows]
+        # Summary stats
+        stats = {}
+        for o in outcomes:
+            key = o["guardrail_name"]
+            if key not in stats:
+                stats[key] = {"PASS": 0, "FAIL": 0, "SKIP": 0}
+            verdict = o.get("verdict", "SKIP")
+            if verdict in stats[key]:
+                stats[key][verdict] += 1
+        return jsonify({
+            "outcomes": outcomes,
+            "count": len(outcomes),
+            "stats": stats,
+        })
+    except Exception as e:
+        return jsonify({"outcomes": [], "count": 0, "error": str(e)})
+    finally:
+        conn.close()

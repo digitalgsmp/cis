@@ -76,6 +76,7 @@ Self-check against these rules BEFORE submitting your chunk for review.
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
+from guardrails import run_guardrails, record_gate_outcomes  # noqa: E402
 
 # ── State Machine ─────────────────────────────────────────────────────
 
@@ -1755,6 +1756,21 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "brain", "brain",
                           prompt, output, round_num)
 
+        # ── Tier 1 Guardrails ────────────────────────────────────────────
+        gr_report = run_guardrails(
+            phase="brain", role="brain", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] BRAIN blocked by guardrail — ESCALATE.")
+            return
+
         # Check for HUMAN_QUESTION
         parsed = _parse_final_json(output)
         if parsed and parsed.get("status") == "NEEDS_CLARIFICATION":
@@ -1820,6 +1836,17 @@ class PipelineRelay:
                           prompt, r1_out, round_num)
         _record_trajectory(self.conn, run_id, "review2", "intent_review",
                           prompt, r2_out, round_num)
+
+        # ── Tier 1 Guardrails (sycophancy + schema on each reviewer) ──────
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            if rout.strip():
+                gr = run_guardrails(
+                    phase="intent_review", role=rrole, agent_output=rout,
+                    intent=intent, project_root=PROJECT_ROOT,
+                    other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                )
+                print(gr.summary)
+                record_gate_outcomes(self.conn, run_id, gr)
 
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review",
@@ -1907,6 +1934,21 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "draft", "draft",
                           prompt, output, round_num)
 
+        # ── Tier 1 Guardrails ────────────────────────────────────────────
+        gr_report = run_guardrails(
+            phase="draft", role="draft", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            return
+
         # Validate Draft produced PROPOSAL_READY or REVISION_READY
         parsed = _parse_final_json(output)
         if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
@@ -1958,6 +2000,17 @@ class PipelineRelay:
                           prompt, r1_out, round_num)
         _record_trajectory(self.conn, run_id, "review2", "proposal_review",
                           prompt, r2_out, round_num)
+
+        # ── Tier 1 Guardrails (sycophancy + schema on each reviewer) ──────
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            if rout.strip():
+                gr = run_guardrails(
+                    phase="proposal_review", role=rrole, agent_output=rout,
+                    intent=intent, project_root=PROJECT_ROOT,
+                    other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                )
+                print(gr.summary)
+                record_gate_outcomes(self.conn, run_id, gr)
 
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review",
@@ -2560,6 +2613,23 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "menter", "execution",
                           prompt, output, 1)
 
+        # ── Tier 1 Guardrails (claim-action, code quality, path contract) ─
+        gr_report = run_guardrails(
+            phase="execution", role="menter", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT,
+            pre_exec_head=getattr(self, "_pre_exec_head", ""),
+            prompt=prompt,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            return
+
         # Validate Menter produced a valid status
         parsed = _parse_final_json(output)
         if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
@@ -2641,6 +2711,24 @@ class PipelineRelay:
 
         _record_trajectory(self.conn, run_id, "verify", "verification",
                           prompt, output, 1)
+
+        # ── Tier 1 Guardrails (claim-action, honesty, schema) ────────────
+        gr_report = run_guardrails(
+            phase="verification", role="verify", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT,
+            pre_exec_head=getattr(self, "_pre_exec_head", ""),
+            prompt=prompt,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
+            return
+
         _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"verify_output": output})
