@@ -639,9 +639,11 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
     # TASK (always include — this is what the agent is doing)
     parts.append(f"\n[TASK]\n(Pipeline will provide the task prompt below)")
 
-    # KB_CONTEXT
+    # KB_CONTEXT (always include marker even if empty — guardrail checks for marker presence)
     if kb_context:
         parts.append(f"\n[KB_CONTEXT]\n{kb_context[:1500]}")
+    else:
+        parts.append("\n[KB_CONTEXT]\n(No knowledge base hits for this intent)")
 
     # RECENT_RUNS
     if recent_runs:

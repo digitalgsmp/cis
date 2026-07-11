@@ -1,1 +1,4 @@
 {"tool_name": "terminal", "args": {"command": "echo MWL_PROOF_BLOCK_ME"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 3}}
+{"tool_name": "mcp__cis_knowledge__cis_search_knowledge", "args": {"query": "hello operational smoke test pipeline liveness", "top_k": 3}}

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-11 07:01 UTC | Run: run-126856cc8660 | Latest pipeline: run-507be3b0859f338d-1783742158
+Generated: 2026-07-11 07:50 UTC | Run: run-c6a1a7032dd4 | Latest pipeline: run-96e46184588b8f94-1783755835
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-96e46184588b8f94-1783755835] Say hello and confirm you are operational. Keep it brief. — PENDING (0 rounds, incomplete)
+- [run-96e46184588b8f94-1783755762] Say hello and confirm you are operational. Keep it brief. — PENDING (0 rounds, incomplete)
+- [run-96e46184588b8f94-1783755289] Say hello and confirm you are operational. Keep it brief. — PENDING (0 rounds, incomplete)
 - [run-507be3b0859f338d-1783742158] I want to redesign the portal into a different desing can you help me? — PENDING (0 rounds, incomplete)
 - [run-5e4279cd54346630-1783740711] I'm not sure intent is what this is, It more accurately a chat where conversatio — PENDING (0 rounds, incomplete)
-- [run-4dec3443458bceb1-1783702140] Test external gates. Create hello.py. — PENDING (0 rounds, incomplete)
-- [run-554e035439dd53dd-1783699874] Add a health check endpoint at /api/status that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
-- [run-554e035439dd53dd-1783698339] Add a health check endpoint at /api/status that returns JSON with status ok and  — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-12d5aa6946666b73-1783649571
