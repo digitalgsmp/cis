@@ -2,3 +2,44 @@
 {"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
 {"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 3}}
 {"tool_name": "mcp__cis_knowledge__cis_search_knowledge", "args": {"query": "hello operational smoke test pipeline liveness", "top_k": 3}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_run_detail", "args": {"run_id": "run-6ae556ee18f5fc97-1783773556"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_run_detail", "args": {"run_id": "run-96e46184588b8f94-1783755835"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_run_detail", "args": {"run_id": "run-6ae556ee18f5fc97-1783773556"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "mcp__cis_knowledge__cis_search_knowledge", "args": {"query": "timing fix pipeline loop stall", "top_k": 5}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 5}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "mcp__cis_knowledge__cis_get_eric_gate_status", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "search_files", "args": {"pattern": "*.py", "target": "files", "path": "/workspace/cis", "limit": 30}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "mcp__cis_knowledge__cis_get_run_detail", "args": {"run_id": "run-24513e261d9076b6-1783774145"}}
+{"tool_name": "search_files", "args": {"pattern": "health", "target": "content", "path": "/workspace/cis/runtime", "output_mode": "content"}}
+{"tool_name": "search_files", "args": {"pattern": "TODO", "target": "content", "path": "/workspace/cis/runtime/app.py", "output_mode": "content"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_build_status", "args": {"node_label": "Enforcement \u2014 Container Isolation (ADR-015/016)"}}
+{"tool_name": "search_files", "args": {"pattern": "/api/health|/api/system/health|/api/adapter/health|/api/relay/health|/api/operator/slot1-health|/health", "target": "content"}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_current_phase", "args": {}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "mcp__cis_knowledge__cis_get_recent_runs", "args": {"limit": 10}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/container_app.py | head -10"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/api/system.py | head -10"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/api/adapter.py | head -10"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/api/relay.py | head -10"}}
+{"tool_name": "search_files", "args": {"pattern": "health", "target": "content"}}
+{"tool_name": "search_files", "args": {"pattern": "runtime", "target": "files"}}
+{"tool_name": "search_files", "args": {"pattern": "*.py", "target": "files"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/api/operator.py | head -10"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && grep -n \"health\" runtime/rails/cis_fast_proxy.py | head -10"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && test -f runtime/cis_slot1_healthcheck.py && head -20 runtime/cis_slot1_healthcheck.py || echo \"FILE NOT FOUND\""}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && sed -n '10,15p' runtime/app.py"}}
+{"tool_name": "terminal", "args": {"command": "cd /workspace/cis && sed -n '794,917p' runtime/app.py | head -5"}}
+{"tool_name": "terminal", "args": {"command": "ls /workspace/cis/runtime/ 2>&1 || echo \"DIR_NOT_FOUND\""}}
+{"tool_name": "terminal", "args": {"command": "ls /workspace/cis/ 2>&1 | head -30"}}
+{"tool_name": "search_files", "args": {"path": "/workspace/cis/runtime", "pattern": "health", "target": "content"}}
+{"tool_name": "read_file", "args": {"limit": 10, "offset": 10, "path": "/workspace/cis/runtime/app.py"}}
+{"tool_name": "terminal", "args": {"command": "ls /workspace/cis/runtime/container_app.py /workspace/cis/runtime/api/system.py /workspace/cis/runtime/api/adapter.py /workspace/cis/runtime/api/relay.py /workspace/cis/runtime/api/operator.py /workspace/cis/runtime/rails/cis_fast_proxy.py /workspace/cis/runtime/cis_slot1_healthcheck.py 2>&1"}}

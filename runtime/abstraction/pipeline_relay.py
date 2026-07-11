@@ -1889,20 +1889,6 @@ class PipelineRelay:
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
         
-        # ── Tier 5: External gates (review_round_valid, consensus_signal_valid) ─
-        ext_r1 = run_external_gates(
-            phase="review", role="review1", agent_output=r1_out,
-            run_id=run_id, project_root=PROJECT_ROOT,
-        )
-        ext_r2 = run_external_gates(
-            phase="review", role="review2", agent_output=r2_out,
-            run_id=run_id, project_root=PROJECT_ROOT,
-        )
-        print(ext_r1.summary)
-        print(ext_r2.summary)
-        record_gate_outcomes(self.conn, run_id, ext_r1)
-        record_gate_outcomes(self.conn, run_id, ext_r2)
-
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review",
                                   "failed" if r1_err else "success")
@@ -1924,6 +1910,14 @@ class PipelineRelay:
                 "reviewer1_output": r1_out,
                 "reviewer2_output": r2_out,
             })
+            # External gates fire AFTER _complete_round so they can query persisted data
+            for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+                ext = run_external_gates(
+                    phase="review", role=rrole, agent_output=rout,
+                    run_id=run_id, project_root=PROJECT_ROOT,
+                )
+                print(ext.summary)
+                record_gate_outcomes(self.conn, run_id, ext)
             _set_run_status(self.conn, run_id, "ESCALATED")
             print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
             return
@@ -1934,6 +1928,14 @@ class PipelineRelay:
             "reviewer1_output": r1_out,
             "reviewer2_output": r2_out,
         })
+        # External gates fire AFTER _complete_round so they can query persisted data
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            ext = run_external_gates(
+                phase="review", role=rrole, agent_output=rout,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext.summary)
+            record_gate_outcomes(self.conn, run_id, ext)
 
         if has_obj and round_num < MAX_BRAIN_ROUNDS:
             print(f"[pipeline] Reviewers object — back to Brain (round {round_num+1})")
@@ -1998,7 +2000,35 @@ class PipelineRelay:
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
         
+        # Validate Draft produced PROPOSAL_READY or REVISION_READY
+        parsed = _parse_final_json(output)
+        
+        # If native guardrails blocked or invalid status → persist then run ext gates
+        if gr_report.any_blocked or not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="draft", role="draft", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] DRAFT output invalid — no PROPOSAL_READY status. ESCALATE.")
+            return
+
+        # Success — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"drafter_output": output})
+
         # ── Tier 5: External gates (proposal_schema_valid, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
         ext_report = run_external_gates(
             phase="draft", role="draft", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
@@ -2006,29 +2036,9 @@ class PipelineRelay:
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
         if ext_report.any_blocked:
-            gr_report = ext_report
-        
-        if gr_report.any_blocked:
-            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"drafter_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            print(f"[pipeline] DRAFT blocked by external gate — ESCALATE.")
             return
-
-        # Validate Draft produced PROPOSAL_READY or REVISION_READY
-        parsed = _parse_final_json(output)
-        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
-            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"drafter_output": output})
-            _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] DRAFT output invalid — no PROPOSAL_READY status. ESCALATE.")
-            return
-
-        _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "success")
-        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                       {"drafter_output": output})
 
         _set_run_status(self.conn, run_id, "PROPOSAL_REVIEW")
         await self._proposal_review(run_id, intent, round_num)
@@ -2080,20 +2090,6 @@ class PipelineRelay:
                 print(gr.summary)
                 record_gate_outcomes(self.conn, run_id, gr)
         
-        # ── Tier 5: External gates (review_round_valid, consensus_signal_valid) ─
-        ext_r1 = run_external_gates(
-            phase="review", role="review1", agent_output=r1_out,
-            run_id=run_id, project_root=PROJECT_ROOT,
-        )
-        ext_r2 = run_external_gates(
-            phase="review", role="review2", agent_output=r2_out,
-            run_id=run_id, project_root=PROJECT_ROOT,
-        )
-        print(ext_r1.summary)
-        print(ext_r2.summary)
-        record_gate_outcomes(self.conn, run_id, ext_r1)
-        record_gate_outcomes(self.conn, run_id, ext_r2)
-
         # Mark trajectory outcomes — only 'success' if reviewer completed its role
         _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review",
                                   "failed" if r1_err else "success")
@@ -2114,16 +2110,36 @@ class PipelineRelay:
                 "reviewer1_output": r1_out,
                 "reviewer2_output": r2_out,
             })
+            # External gates fire AFTER _complete_round so they can query persisted data
+            for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+                ext = run_external_gates(
+                    phase="review", role=rrole, agent_output=rout,
+                    run_id=run_id, project_root=PROJECT_ROOT,
+                )
+                print(ext.summary)
+                record_gate_outcomes(self.conn, run_id, ext)
             _set_run_status(self.conn, run_id, "ESCALATED")
             print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
             return
 
         # Both reviewers completed — store their actual signal
         actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
-        _complete_round(self.conn, round_id, actual_signal, {
+        extra = {
             "reviewer1_output": r1_out,
             "reviewer2_output": r2_out,
-        })
+        }
+        # Proposal review consensus requires Eric's approval
+        if actual_signal == "CONSENSUS_REACHED":
+            extra["requires_eric_review"] = 1
+        _complete_round(self.conn, round_id, actual_signal, extra)
+        # External gates fire AFTER _complete_round so they can query persisted data
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            ext = run_external_gates(
+                phase="review", role=rrole, agent_output=rout,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext.summary)
+            record_gate_outcomes(self.conn, run_id, ext)
 
         if has_obj and round_num < MAX_DRAFT_ROUNDS:
             print(f"[pipeline] Reviewers object — back to Draft (round {round_num+1})")
@@ -2719,7 +2735,35 @@ class PipelineRelay:
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
         
+        # Validate Menter produced a valid status
+        parsed = _parse_final_json(output)
+        
+        # If native guardrails blocked or invalid status → persist then run ext gates
+        if gr_report.any_blocked or not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="menter", role="menter", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] MENTER output invalid — no completion status. ESCALATE.")
+            return
+
+        # Success — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                        {"menter_output": output})
+
         # ── Tier 5: External gates (file_exists, implementation_artifact, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
         ext_report = run_external_gates(
             phase="menter", role="menter", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
@@ -2727,29 +2771,9 @@ class PipelineRelay:
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
         if ext_report.any_blocked:
-            gr_report = ext_report
-        
-        if gr_report.any_blocked:
-            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"menter_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            print(f"[pipeline] MENTER blocked by external gate — ESCALATE.")
             return
-
-        # Validate Menter produced a valid status
-        parsed = _parse_final_json(output)
-        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
-            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"menter_output": output})
-            _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] MENTER output invalid — no completion status. ESCALATE.")
-            return
-
-        _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "success")
-        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                        {"menter_output": output})
 
         _set_run_status(self.conn, run_id, "VERIFICATION")
         await self._verification(run_id, intent)
@@ -2829,7 +2853,36 @@ class PipelineRelay:
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
         
+        # Parse verify output
+        parsed = _parse_final_json(output)
+        status = parsed.get("status", "") if parsed else ""
+        
+        # If native guardrails blocked or invalid verdict → persist then run ext gates
+        if gr_report.any_blocked or not parsed or status not in ("PASS", "FAIL"):
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="verify", role="verify", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] Run {run_id} ESCALATED — verify output unparseable")
+            return
+
+        # Valid verdict — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"verify_output": output})
+
         # ── Tier 5: External gates (service_health, endpoint, db_state, eric_approval) ─
+        # NOW fire after round is persisted so gates can query the DB
         ext_report = run_external_gates(
             phase="verify", role="verify", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
@@ -2837,30 +2890,8 @@ class PipelineRelay:
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
         if ext_report.any_blocked:
-            gr_report = ext_report
-        
-        if gr_report.any_blocked:
-            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"verify_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
-            return
-
-        _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "success")
-        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                       {"verify_output": output})
-
-        parsed = _parse_final_json(output)
-        status = parsed.get("status", "") if parsed else ""
-
-        if not parsed or status not in ("PASS", "FAIL"):
-            # Verify did not produce a valid verdict — NOT a pass
-            print(f"[pipeline] VERIFY incomplete — no valid PASS/FAIL verdict")
-            _complete_round(self.conn, round_id, "ESCALATE",
-                           {"verify_output": output})
-            _set_run_status(self.conn, run_id, "ESCALATED")
-            print(f"[pipeline] Run {run_id} ESCALATED — verify output unparseable")
+            print(f"[pipeline] VERIFY blocked by external gate — ESCALATE.")
             return
 
         if status == "FAIL":

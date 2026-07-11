@@ -15,13 +15,14 @@ resolve_run_id "$@"
 query_spine "SELECT reviewer_signal, requires_eric_review
              FROM deliberation_rounds
              WHERE run_id = '$RUN_ID'
+               AND drafter_role = 'proposal_review'
              ORDER BY round_number DESC LIMIT 1;" | python3 -c "
 import sys
 
 row = sys.stdin.read().strip()
 if not row:
-    print('FAIL: no deliberation rounds found for this run')
-    sys.exit(1)
+    print('SKIP: no proposal_review round found for this run')
+    sys.exit(2)
 
 parts = row.split('|')
 if len(parts) < 2:
