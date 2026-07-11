@@ -1,7 +1,187 @@
 # Files Changed Recently
-Generated: 2026-07-11 20:08 UTC | Run: run-39b76cadaae8
+Generated: 2026-07-11 21:49 UTC | Run: run-b573703fc1c6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 5fed779 feat: intent provenance, drift detection, brain chat UI, backchannel interjections
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## enforcement/mwl-proof-v2/gates/gate_eric_approval.py 
+
+## enforcement/mwl-proof-v2/gates/gate_intent_verification.py 
+
+## gate_runner_payload.jsonl 
+
+## hook_payload.jsonl 
+
+## runtime/abstraction/guardrails.py 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/api/relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/schema/migrations/0027_add_pipeline_run_advancement_type.sql 
+
+## runtime/schema/migrations/0028_brain_chat_interjections.sql 
+
+## runtime/schema/migrations/0029_intent_provenance_drift.sql 
+
+## runtime/ui/index.html 
+
+## runtime/ui/package-lock.json 
+
+## runtime/ui/package.json 
+
+## runtime/ui/src/App.jsx 
+
+## runtime/ui/src/BrainChat.jsx 
+
+## runtime/ui/src/PipelineLive.jsx 
+
+## runtime/ui/src/RunsList.jsx 
+
+## runtime/ui/src/api.js 
+
+## runtime/ui/src/index.css 
+
+## runtime/ui/src/main.jsx 
+
+## runtime/ui_legacy_backup/dist_20260711/assets/index-Bs6fWTyn.js 
+
+## runtime/ui_legacy_backup/dist_20260711/assets/index-Dp8RgJdk.css 
+
+## runtime/ui_legacy_backup/dist_20260711/favicon.svg 
+
+## runtime/ui_legacy_backup/dist_20260711/icons.svg 
+
+## runtime/ui_legacy_backup/dist_20260711/index.html 
+
+## runtime/ui_legacy_backup/dist_20260711/monitor-test.html 
+
+## runtime/ui_legacy_backup/dist_20260711/portal.html 
+
+## runtime/ui_legacy_backup/dist_20260711/roadmap-live.html 
+
+## runtime/ui_legacy_backup/public_20260711/favicon.svg 
+
+## runtime/ui_legacy_backup/public_20260711/icons.svg 
+
+## runtime/ui_legacy_backup/public_20260711/monitor-test.html 
+
+## runtime/ui_legacy_backup/public_20260711/portal.html 
+
+## runtime/ui_legacy_backup/public_20260711/roadmap-live.html 
+
+## runtime/ui_legacy_backup/src_20260711/App.css 
+
+## runtime/ui_legacy_backup/src_20260711/App.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/api.js 
+
+## runtime/ui_legacy_backup/src_20260711/assets/hero.png 
+
+## runtime/ui_legacy_backup/src_20260711/assets/react.svg 
+
+## runtime/ui_legacy_backup/src_20260711/assets/vite.svg 
+
+## runtime/ui_legacy_backup/src_20260711/components/IdeaWorkbench.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/components/NavGroup.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/hooks/useLifecycle.js 
+
+## runtime/ui_legacy_backup/src_20260711/index.css 
+
+## runtime/ui_legacy_backup/src_20260711/main.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/ArchiveSearchPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/AssetDetail.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/ChatConsole.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/DamPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/DashboardPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/DecisionsPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/EricGatePage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/IdeasPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/InfraPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/IngestionPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/LearningPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/PipelinePage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/ProjectDetail.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/ProjectsPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/RelayPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/ReviewQueue.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/RoadmapPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/SchedulePage.css 
+
+## runtime/ui_legacy_backup/src_20260711/pages/SchedulePage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/SessionArchivePage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/SpineGraphPage.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/AdvisorChat.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/CollabTracker.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/Hardware.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/Models.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/Services.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/Software.jsx 
+
+## runtime/ui_legacy_backup/src_20260711/pages/infra/Storage.jsx 
+
+## tools/gates/gate_eric_approval.py 
+
+## tools/gates/gate_intent_verification.py 
 
 ## 0666d6c feat: redefine greet.py — hello() prints 'Hello from CIS'
 
@@ -578,40 +758,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/DEV-PIVOT_STATUS.md 
 
 ## enforcement/mwl-proof-v2/run_container.sh 
-
-## runtime/abstraction/guardrails.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 94b3658 Tier 4 guardrails: 4 advanced checks wired in — all 34 complete
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
 
 ## runtime/abstraction/guardrails.py 
 

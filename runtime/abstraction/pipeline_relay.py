@@ -770,10 +770,8 @@ def _measure_drift(
 
     Returns (drift_score 0.0-1.0, reasons list, verdict string).
 
-    This is a deterministic heuristic — not an LLM judgment. It measures:
-    1. Keyword overlap: do the core concepts from the intent appear in the output?
-    2. Scope expansion: did the output introduce many new concepts not in the intent?
-    3. Action alignment: for implementation phases, did it do what the intent asked?
+    Layer 1: Fast deterministic heuristic — keyword overlap, scope expansion, action alignment.
+    Layer 2 (optional): Semantic comparison via local LLM (Qwen on port 8002).
 
     Verdict levels:
     - ALIGNED: drift < 0.2
@@ -784,6 +782,7 @@ def _measure_drift(
     if not intent or not output:
         return (0.0, [], "ALIGNED")
 
+    # ── Layer 1: Deterministic heuristic ──────────────────────────────
     stop_words = {
         "the", "a", "an", "to", "for", "of", "in", "on", "at", "by",
         "is", "are", "was", "were", "be", "been", "and", "or", "not",
@@ -826,14 +825,12 @@ def _measure_drift(
     expansion_ratio = len(output_unique) / max(len(output_words), 1)
 
     # 3. Check for intent action verbs being honored
-    # Extract key action phrases from intent (simple heuristic)
     action_words = {"add", "fix", "remove", "update", "create", "build",
                     "implement", "refactor", "test", "deploy", "configure",
                     "redesign", "rework", "change", "replace", "wire",
                     "connect", "integrate", "migrate", "document"}
     intent_actions = intent_words & action_words
     if intent_actions:
-        # Check if output mentions these actions or their results
         action_found = 0
         for action in intent_actions:
             if action in output_words:
@@ -843,12 +840,12 @@ def _measure_drift(
         action_ratio = 1.0
 
     # Weighted drift score
-    drift_score = (
-        (1.0 - overlap_ratio) * 0.4      # 40% weight: concept overlap
-        + expansion_ratio * 0.3           # 30% weight: scope expansion
-        + (1.0 - action_ratio) * 0.3     # 30% weight: action alignment
+    det_score = (
+        (1.0 - overlap_ratio) * 0.4
+        + expansion_ratio * 0.3
+        + (1.0 - action_ratio) * 0.3
     )
-    drift_score = max(0.0, min(1.0, drift_score))
+    det_score = max(0.0, min(1.0, det_score))
 
     reasons = []
     if overlap_ratio < 0.2:
@@ -867,6 +864,26 @@ def _measure_drift(
             f"({action_ratio:.0%} of actions found)"
         )
 
+    # ── Layer 2: Semantic drift via local LLM ─────────────────────────
+    # If the deterministic score is ambiguous (0.2-0.6) and a local LLM
+    # is available, do a semantic pass for a more nuanced verdict.
+    # This catches meaning drift that word overlap can't detect.
+    semantic_score = None
+    semantic_reasons = []
+    if 0.15 <= det_score <= 0.65:
+        semantic_score, semantic_reasons = _semantic_drift_check(
+            intent, output, phase
+        )
+
+    # Combine: if semantic check ran, weight it 60/40 (semantic/deterministic)
+    if semantic_score is not None:
+        drift_score = det_score * 0.4 + semantic_score * 0.6
+        reasons.extend(semantic_reasons)
+    else:
+        drift_score = det_score
+
+    drift_score = max(0.0, min(1.0, drift_score))
+
     if drift_score < 0.2:
         verdict = "ALIGNED"
     elif drift_score < 0.4:
@@ -877,6 +894,75 @@ def _measure_drift(
         verdict = "DIVERGED"
 
     return (drift_score, reasons, verdict)
+
+
+def _semantic_drift_check(
+    intent: str,
+    output: str,
+    phase: str,
+) -> tuple:
+    """Semantic drift comparison using a local LLM (Qwen on port 8002).
+
+    Returns (score 0.0-1.0, reasons list) or (None, []) if unavailable.
+
+    The LLM is asked to rate how well the output aligns with the intent
+    on a 0-10 scale, with a brief reason. This catches meaning drift
+    that word-overlap heuristics miss.
+    """
+    import urllib.request
+    import urllib.error
+
+    # Truncate to keep prompt manageable for local model
+    intent_short = intent[:1500]
+    output_short = output[:1500]
+
+    prompt = (
+        f"You are a drift detection system. Compare the OUTPUT to the INTENT.\n\n"
+        f"INTENT:\n{intent_short}\n\n"
+        f"OUTPUT (phase: {phase}):\n{output_short}\n\n"
+        f"Rate how well the OUTPUT aligns with the INTENT on a scale of 0-10:\n"
+        f"- 10 = perfectly aligned, output matches intent exactly\n"
+        f"- 7 = mostly aligned, minor deviations\n"
+        f"- 5 = partially aligned, some drift from intent\n"
+        f"- 3 = mostly drifted, output barely relates to intent\n"
+        f"- 0 = completely diverged, output has nothing to do with intent\n\n"
+        f"Respond with ONLY a JSON object:\n"
+        f'{{"score": <0-10>, "reason": "<one sentence explanation>"}}'
+    )
+
+    payload = json.dumps({
+        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 200,
+        "temperature": 0.1,
+    }).encode()
+
+    try:
+        req = urllib.request.Request(
+            "http://127.0.0.1:8002/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=60)
+        data = json.loads(resp.read())
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        # Parse the JSON response — be lenient
+        import re as _re
+        json_match = _re.search(r'\{[^}]+\}', content)
+        if json_match:
+            result = json.loads(json_match.group())
+            raw_score = float(result.get("score", -1))
+            reason = result.get("reason", "")
+            if 0 <= raw_score <= 10:
+                # Convert 0-10 to 0.0-1.0 drift score (10=aligned=0.0 drift)
+                drift_score = (10.0 - raw_score) / 10.0
+                return (drift_score, [f"Semantic: {reason} (score {raw_score}/10)"])
+    except Exception:
+        pass
+
+    return (None, [])
 
 
 # ── Pre-Discovery (mandatory before every agent call) ──────────────────
