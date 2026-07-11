@@ -1,3 +1,2 @@
-import datetime
-print("Hello World")
-print(datetime.datetime.now())
+def hello():
+    print("Hello from CIS")

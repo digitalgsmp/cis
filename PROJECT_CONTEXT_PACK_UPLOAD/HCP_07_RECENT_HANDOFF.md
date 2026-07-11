@@ -2,9 +2,9 @@
 Date: 2026-07-11
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `8ef52eb`
+HEAD: `c63a5aa`
 
-Generated: 2026-07-11 16:36 UTC | Run: run-6515f3355bca
+Generated: 2026-07-11 18:25 UTC | Run: run-f338210c66de
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-269b1220fcaf0135-1783783226
-- Decided at: 2026-07-11T15:40:37.519931+00:00
-- Goal reference: None
-- Briefing hash: a1d56813bcbf16c84b56b18f382884d69a001892260461c5b124f6162d5131bc
+- Workflow run: run-26d5215a3aba5374-1783792127
+- Decided at: 2026-07-11T18:22:32.830127+00:00
+- Goal reference: Create a Python file called greet.py that defines a function hello() which prints Hello from CIS
+- Briefing hash: 35369d44eaf04f27d61a5129ea05e86267a8de277fb4ffae4efd5ca9dd68b2fa

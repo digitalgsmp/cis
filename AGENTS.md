@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-11 16:36 UTC | Run: run-6515f3355bca | Latest pipeline: run-269b1220fcaf0135-1783783226
+Generated: 2026-07-11 18:25 UTC | Run: run-f338210c66de | Latest pipeline: run-26d5215a3aba5374-1783792127
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,17 +79,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-26d5215a3aba5374-1783792127] Create a Python file called greet.py that defines a function hello() which print — PENDING (0 rounds, incomplete)
+- [run-26d5215a3aba5374-1783788324] Create a Python file called greet.py that defines a function hello() which print — CONSENSUS_REACHED (0 rounds, 2026-07-11T16:58:26.849256+00:00)
 - [run-269b1220fcaf0135-1783783226] Create a Python file called greet.py that prints Hello World and the current tim — PENDING (0 rounds, incomplete)
 - [run-269b1220fcaf0135-1783781250] Create a Python file called greet.py that prints Hello World and the current tim — CONSENSUS_REACHED (0 rounds, 2026-07-11T14:56:04.134048+00:00)
 - [run-72566d1b5d2d5ed9-1783780815] Create a Python file called hello.py that prints Hello World and a timestamp. Ke — PENDING (0 rounds, incomplete)
-- [run-72566d1b5d2d5ed9-1783778916] Create a Python file called hello.py that prints Hello World and a timestamp. Ke — PENDING (0 rounds, incomplete)
-- [run-24513e261d9076b6-1783774145] Say hello and confirm you are operational. This is a timing fix final verificati — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-269b1220fcaf0135-1783783226
+- Workflow run: run-26d5215a3aba5374-1783792127
 - Status: APPROVE
-- Decided at: 2026-07-11T15:40:37.519931+00:00
-- Goal: No goal label
+- Decided at: 2026-07-11T18:22:32.830127+00:00
+- Goal: Create a Python file called greet.py that defines a function hello() which prints Hello from CIS
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.
