@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CIS Monitor Test</title>
+<style>
+body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;padding:20px}
+.green{color:#3fb950}.red{color:#f85149}.yellow{color:#d29922}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.dot.up{background:#3fb950}.dot.down{background:#f85149}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px;margin-bottom:12px}
+h2{font-size:14px;color:#8b949e;margin:0 0 8px}
+.item{display:flex;align-items:center;padding:4px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.item:last-child{border-bottom:none}
+.item .label{flex:1}
+.item .detail{color:#8b949e;font-size:11px}
+</style>
+</head>
+<body>
+<h1>CIS Monitor Test</h1>
+<div id="status">Loading...</div>
+<div id="content"></div>
+<script>
+async function load(){
+  const s=document.getElementById('status');
+  const c=document.getElementById('content');
+  try{
+    const r=await fetch('/api/portal/monitor');
+    const d=await r.json();
+    s.innerHTML='<span class="green">✓ API connected</span> — ' + new Date().toLocaleTimeString();
+
+    let h='';
+
+    // Gateways
+    h+='<div class="card"><h2>Gateways</h2>';
+    for(const[id,gw] of Object.entries(d.gateways||{})){
+      const up=gw.status==='up';
+      h+=`<div class="item"><span class="dot ${up?'up':'down'}"></span><span class="label">${gw.label}</span><span class="detail">:${gw.port} · ${gw.model} · ${gw.context} ${up?'✅':'❌'}</span></div>`;
+    }
+    h+='</div>';
+
+    // Services
+    h+='<div class="card"><h2>Services</h2>';
+    for(const[id,svc] of Object.entries(d.services||{})){
+      const up=svc.status==='up';
+      h+=`<div class="item"><span class="dot ${up?'up':'down'}"></span><span class="label">${svc.label}</span><span class="detail">:${svc.port} ${up?'✅':'❌'}</span></div>`;
+    }
+    h+='</div>';
+
+    // Blockers
+    if(d.blockers&&d.blockers.length){
+      h+='<div class="card"><h2 class="red">Active Blockers</h2>';
+      d.blockers.forEach(b=>h+=`<div class="item" style="color:#f85149">${b.id}: ${b.description.substring(0,150)}</div>`);
+      h+='</div>';
+    }
+
+    // Phase
+    if(d.phase){
+      h+=`<div class="card"><h2>Build Phase</h2><div class="green">${d.phase.build_phase||'unknown'}</div><div style="font-size:11px;color:#8b949e;margin-top:4px">Next: ${d.phase.next_tier||'N/A'}</div></div>`;
+    }
+
+    c.innerHTML=h;
+  }catch(e){
+    s.innerHTML='<span class="red">✗ API failed: '+e.message+'</span>';
+    c.innerHTML='<div class="card red">Could not reach /api/portal/monitor. Is the Flask app running?</div>';
+  }
+}
+load();
+setInterval(load,30000);
+</script>
+</body>
+</html>

@@ -665,7 +665,252 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
     return soul
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  INTENT PROVENANCE — lock the enriched intent, inject it everywhere,
+#  and record drift at each phase boundary
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _lock_intent_provenance(
+    conn: sqlite3.Connection,
+    run_id: str,
+    original_intent: str,
+    enriched_intent: str,
+    kb_context: str = "",
+    brain_session_id: str = "",
+) -> None:
+    """Lock the enriched intent as the provenance anchor for a run.
+
+    Called once after the Brain phase produces its understanding.
+    Every downstream phase will be checked against this anchor.
+    """
+    kb_hash = ""
+    if kb_context:
+        kb_hash = hashlib.sha256(kb_context.encode()).hexdigest()[:16]
+    conn.execute(
+        "INSERT INTO intent_provenance "
+        "(run_id, original_intent, enriched_intent, kb_context_hash, brain_session_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (run_id, original_intent, enriched_intent, kb_hash, brain_session_id),
+    )
+    conn.commit()
+
+
+def _get_enriched_intent(conn: sqlite3.Connection, run_id: str) -> str:
+    """Retrieve the locked enriched intent for a run.
+
+    Returns the enriched intent string, or falls back to the
+    original intent from workflow_runs if no enriched intent is locked.
+    """
+    row = conn.execute(
+        "SELECT enriched_intent FROM intent_provenance "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    if row and row[0]:
+        return row[0]
+    # Fallback: use the topic from the run
+    row = conn.execute(
+        "SELECT topic FROM workflow_runs WHERE id = ?", (run_id,)
+    ).fetchone()
+    return row[0] if row else ""
+
+
+def _intent_anchor_block(conn: sqlite3.Connection, run_id: str) -> str:
+    """Build the intent anchor block for injection into downstream phases.
+
+    This is the enriched intent that every phase sees as a fixed reference.
+    It's not just the previous phase's output — it's the original understanding
+    that Brain and Eric agreed on.
+    """
+    enriched = _get_enriched_intent(conn, run_id)
+    if not enriched:
+        return ""
+    return (
+        "\n\n## ══ INTENT ANCHOR (enriched — do not drift from this) ══\n"
+        f"{enriched}\n"
+        "## ══ END INTENT ANCHOR ══\n"
+    )
+
+
+def _record_phase_drift(
+    conn: sqlite3.Connection,
+    run_id: str,
+    phase: str,
+    round_num: int,
+    phase_output: str,
+    drift_score: float,
+    drift_reasons: list,
+    verdict: str,
+) -> None:
+    """Record drift measurement for a phase in phase_drift table."""
+    intent_snapshot = _get_enriched_intent(conn, run_id)
+    conn.execute(
+        "INSERT INTO phase_drift "
+        "(run_id, phase, round, intent_snapshot, phase_output, "
+        " drift_score, drift_reasons, verdict) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id, phase, round_num,
+            intent_snapshot[:4000],
+            (phase_output or "")[:4000],
+            drift_score,
+            json.dumps(drift_reasons) if drift_reasons else None,
+            verdict,
+        ),
+    )
+    conn.commit()
+
+
+def _measure_drift(
+    intent: str,
+    output: str,
+    phase: str,
+) -> tuple:
+    """Deterministic drift measurement between intent and phase output.
+
+    Returns (drift_score 0.0-1.0, reasons list, verdict string).
+
+    This is a deterministic heuristic — not an LLM judgment. It measures:
+    1. Keyword overlap: do the core concepts from the intent appear in the output?
+    2. Scope expansion: did the output introduce many new concepts not in the intent?
+    3. Action alignment: for implementation phases, did it do what the intent asked?
+
+    Verdict levels:
+    - ALIGNED: drift < 0.2
+    - MINOR_DRIFT: 0.2 <= drift < 0.4
+    - SIGNIFICANT_DRIFT: 0.4 <= drift < 0.6
+    - DIVERGED: drift >= 0.6
+    """
+    if not intent or not output:
+        return (0.0, [], "ALIGNED")
+
+    stop_words = {
+        "the", "a", "an", "to", "for", "of", "in", "on", "at", "by",
+        "is", "are", "was", "were", "be", "been", "and", "or", "not",
+        "this", "that", "it", "with", "from", "as", "so", "if", "but",
+        "about", "into", "than", "then", "also", "just", "want", "need",
+        "build", "create", "add", "make", "please", "can", "you", "i",
+        "we", "me", "my", "our", "us", "will", "would", "should", "could",
+        "eric", "cis", "pipeline", "phase", "round", "run", "agent",
+        "gate", "brain", "draft", "verify", "menter", "reviewer",
+        "consensus", "objections", "escalate", "final_json", "status",
+        "role", "summary", "proposal", "directive", "output", "input",
+        "file", "code", "function", "method", "class", "import", "return",
+        "def", "self", "none", "true", "false", "error", "exception",
+        "json", "endpoint", "route", "table", "schema", "migration",
+        "sqlite", "database", "query", "insert", "update", "select",
+        "commit", "branch", "merge", "push", "pull", "request",
+        "config", "api", "runtime", "project", "intent", "understanding",
+    }
+
+    intent_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}@#$%^&*+=/\\|<>~`")
+        for w in intent.split()
+        if len(w) > 2 and w.lower() not in stop_words
+    )
+    output_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}@#$%^&*+=/\\|<>~`")
+        for w in output.split()
+        if len(w) > 2
+    )
+
+    if not intent_words:
+        return (0.0, [], "ALIGNED")
+
+    # 1. Keyword overlap: how many intent concepts appear in output?
+    overlap = intent_words & output_words
+    overlap_ratio = len(overlap) / len(intent_words)
+
+    # 2. Scope expansion: how many new concepts did output introduce?
+    output_unique = output_words - intent_words - stop_words
+    expansion_ratio = len(output_unique) / max(len(output_words), 1)
+
+    # 3. Check for intent action verbs being honored
+    # Extract key action phrases from intent (simple heuristic)
+    action_words = {"add", "fix", "remove", "update", "create", "build",
+                    "implement", "refactor", "test", "deploy", "configure",
+                    "redesign", "rework", "change", "replace", "wire",
+                    "connect", "integrate", "migrate", "document"}
+    intent_actions = intent_words & action_words
+    if intent_actions:
+        # Check if output mentions these actions or their results
+        action_found = 0
+        for action in intent_actions:
+            if action in output_words:
+                action_found += 1
+        action_ratio = action_found / len(intent_actions) if intent_actions else 1.0
+    else:
+        action_ratio = 1.0
+
+    # Weighted drift score
+    drift_score = (
+        (1.0 - overlap_ratio) * 0.4      # 40% weight: concept overlap
+        + expansion_ratio * 0.3           # 30% weight: scope expansion
+        + (1.0 - action_ratio) * 0.3     # 30% weight: action alignment
+    )
+    drift_score = max(0.0, min(1.0, drift_score))
+
+    reasons = []
+    if overlap_ratio < 0.2:
+        reasons.append(
+            f"Low keyword overlap ({overlap_ratio:.0%}) — output barely "
+            f"references intent concepts"
+        )
+    if expansion_ratio > 0.8 and len(output_unique) > 50:
+        reasons.append(
+            f"High scope expansion ({len(output_unique)} new concepts "
+            f"not in intent)"
+        )
+    if action_ratio < 0.5 and intent_actions:
+        reasons.append(
+            f"Action verbs from intent not reflected in output "
+            f"({action_ratio:.0%} of actions found)"
+        )
+
+    if drift_score < 0.2:
+        verdict = "ALIGNED"
+    elif drift_score < 0.4:
+        verdict = "MINOR_DRIFT"
+    elif drift_score < 0.6:
+        verdict = "SIGNIFICANT_DRIFT"
+    else:
+        verdict = "DIVERGED"
+
+    return (drift_score, reasons, verdict)
+
+
 # ── Pre-Discovery (mandatory before every agent call) ──────────────────
+
+def _consume_interjections(conn: sqlite3.Connection, run_id: str,
+                           phase: str) -> str:
+    """Fetch unconsumed Eric interjections for this run.
+
+    Marks them as consumed by the given phase. Returns formatted string
+    to inject into the agent prompt, or empty string if none.
+    """
+    try:
+        rows = conn.execute(
+            "SELECT id, message FROM pipeline_interjections "
+            "WHERE run_id = ? AND consumed_by_phase IS NULL "
+            "ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        if not rows:
+            return ""
+        parts = ["\n\n## ERIC INTERJECTION (backchannel — consider this)\n"]
+        for ij_id, message in rows:
+            parts.append(f"> {message}\n")
+            conn.execute(
+                "UPDATE pipeline_interjections "
+                "SET consumed_by_phase = ?, consumed_at = datetime('now') "
+                "WHERE id = ?",
+                (phase, ij_id),
+            )
+        conn.commit()
+        return "\n".join(parts) + "\n"
+    except Exception:
+        return ""
+
 
 def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
                     role: str, run_id: str,
@@ -673,6 +918,7 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
     """Run mandatory pre-discovery and format results for injection.
 
     Searches: spine FTS5, filesystem, prior trajectories, optionally web.
+    Also injects any unconsumed Eric interjections (backchannel).
     Returns a formatted string to prepend to the agent's prompt.
     """
     keywords = " ".join(intent.split()[:10])
@@ -760,6 +1006,7 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
         _build_soul_document(conn, role, intent, run_id)
         + "\n\n[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
         + "\n".join(results)
+        + _consume_interjections(conn, run_id, phase)
         + "\n\n[END PRE-DISCOVERY — now produce your output]"
     )
 
@@ -1883,6 +2130,23 @@ class PipelineRelay:
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"brain_output": output})
 
+        # ── Lock intent provenance ──────────────────────────────────────
+        # Brain's output becomes the enriched intent anchor. Every downstream
+        # phase will be checked against this. This is the provenance chain root.
+        _lock_intent_provenance(
+            self.conn, run_id,
+            original_intent=intent,
+            enriched_intent=output,  # Brain's understanding is the enriched intent
+            kb_context=discovery,
+        )
+        # Record initial drift (Brain output vs original intent)
+        score, reasons, verdict = _measure_drift(intent, output, "brain")
+        _record_phase_drift(
+            self.conn, run_id, "brain", round_num, output,
+            score, reasons, verdict,
+        )
+        print(f"[pipeline] Intent provenance locked. Drift: {verdict} ({score:.2f})")
+
         # ── Tier 5: External gate scripts (research artifact, no_secrets) ─
         # NOW fire after round is persisted so gates can query the DB
         ext_report = run_external_gates(
@@ -1916,7 +2180,7 @@ class PipelineRelay:
         )
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"Eric's intent: {intent}\n\n"
             f"Brain's understanding:\n{brain_output}\n\n"
             f"You are a reviewer. Check Brain's understanding for gaps, "
@@ -2024,7 +2288,7 @@ class PipelineRelay:
         )
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"Eric's intent: {intent}\n\n"
             f"Brain's understanding:\n{brain_output}\n\n"
             f"You are Draft. Write a structured proposal/spec.\n"
@@ -2140,7 +2404,7 @@ class PipelineRelay:
         )
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"Eric's intent: {intent}\n\n"
             f"Draft's proposal:\n{draft_output}\n\n"
             f"You are a reviewer. Critique this proposal. End with FINAL_JSON:\n"
@@ -2259,7 +2523,7 @@ class PipelineRelay:
         directive = row[0] if (row := cur.fetchone()) else ""
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"## CODEBASE OVERVIEW\n{codebase_overview}\n\n"
             f"## APPROVED DIRECTIVE\n{directive}\n\n"
             f"You are Brain. Read the codebase overview and the approved directive. "
@@ -2820,7 +3084,7 @@ class PipelineRelay:
         )
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"FINAL_DIRECTIVE (hash: {directive_hash[:16]}):\n{directive}\n\n"
             f"You are Menter. Execute this directive. Build exactly what is spec'd.\n"
             f"End with FINAL_JSON:\n"
@@ -2953,7 +3217,7 @@ class PipelineRelay:
         )
 
         prompt = (
-            f"{discovery}\n\n"
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
             f"## L1 DETERMINISTIC EVIDENCE (auto-collected)\n"
             f"{l1_evidence}\n\n"
             f"## FINAL_DIRECTIVE (what Menter was told to build)\n{directive}\n\n"

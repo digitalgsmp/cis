@@ -426,24 +426,157 @@ def relay_gate(run_id: str):
                 (directive_hash, run_id),
             )
 
-        # Write immutable audit record
+        # ── Build provenance data for this approval ────────────────────────
+        # Provenance = audit trail that links Eric's approval to the run's
+        # deliberation history, goal context, and drift state at approval time.
+        # This data feeds the knowledge base and gate_eric_approval.py checks.
+
+        # 1. Create or find goal_reference for this run
+        existing_goal = conn.execute(
+            "SELECT id FROM goal_references WHERE workflow_run_id = ? LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        if existing_goal:
+            goal_ref_id = existing_goal[0]
+        else:
+            # Create goal reference from the run's topic/intent
+            topic = run["topic"] if "topic" in run.keys() else ""
+            cur = conn.execute(
+                "INSERT INTO goal_references "
+                "(workflow_run_id, goal_label, dependency_node, tier_advanced, "
+                "advancement_type, authored_by) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (run_id, topic[:200], "", "", "PIPELINE_RUN", "ERIC_GATE"),
+            )
+            goal_ref_id = cur.lastrowid
+
+        # 2. Create decision_trail from deliberation rounds
+        rounds = conn.execute(
+            "SELECT round_number, drafter_role, reviewer_signal "
+            "FROM deliberation_rounds WHERE run_id = ? ORDER BY round_number",
+            (run_id,),
+        ).fetchall()
+        round_count = len(rounds)
+        round_summaries = [
+            f"Round {r[0]} ({r[1]}): {r[2]}" for r in rounds
+        ]
+        consensus_signal = rounds[-1][2] if rounds else "PENDING"
+
+        # Get summaries from key phases
+        brain_row = conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_role = 'brain' "
+            "ORDER BY id DESC LIMIT 1", (run_id,),
+        ).fetchone()
+        draft_row = conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,),
+        ).fetchone()
+        review_row = conn.execute(
+            "SELECT reviewer1_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_role = 'proposal_review' "
+            "ORDER BY id DESC LIMIT 1", (run_id,),
+        ).fetchone()
+
+        brain_summary = (brain_row[0][:500] if brain_row and brain_row[0] else "")[:500]
+        draft_summary = (draft_row[0][:500] if draft_row and draft_row[0] else "")[:500]
+        review_summary = (review_row[0][:500] if review_row and review_row[0] else "")[:500]
+
+        cur = conn.execute(
+            "INSERT INTO decision_trails "
+            "(workflow_run_id, trail_sequence, problem_statement, "
+            "research_summary, draft_summary, review_summary, "
+            "proposed_action, round_count, consensus_signal, "
+            "eric_decision, eric_decision_note, eric_decided_at, authored_by) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, 1, run["topic"] if "topic" in run.keys() else "",
+             brain_summary, draft_summary, review_summary,
+             directive[:500], round_count, consensus_signal,
+             decision, rationale, now, "ROUTER"),
+        )
+        trail_id = cur.lastrowid
+
+        # 3. Capture drift snapshot
+        drift_rows = conn.execute(
+            "SELECT id, indicator_type, description, status, detected_by "
+            "FROM drift_indicators WHERE workflow_run_id = ?",
+            (run_id,),
+        ).fetchall()
+        open_drift = [d for d in drift_rows if d[3] in ("RAISED", "ACKNOWLEDGED", "ESCALATED")]
+        drift_snapshot = {
+            "open_drift_count": len(open_drift),
+            "blocking_drift": [
+                {"type": d[1], "description": d[2], "status": d[3]}
+                for d in open_drift
+            ],
+            "all_drift_count": len(drift_rows),
+        }
+        drift_snapshot_json = json.dumps(drift_snapshot)
+
+        # 4. Build briefing JSON (4 required sections)
+        goal_label = run["topic"][:200] if "topic" in run.keys() else ""
+        briefing = {
+            "briefing": {
+                "action_summary": f"Eric {decision.lower()}d run {run_id} "
+                                  f"with rationale: {rationale or '(none given)'}",
+                "goal_trace": {
+                    "goal_reference_id": goal_ref_id,
+                    "goal_label": goal_label,
+                    "dependency_node": "",
+                    "tier_advanced": "",
+                },
+                "decision_trail": {
+                    "trail_id": trail_id,
+                    "round_count": round_count,
+                    "consensus_signal": consensus_signal,
+                    "rounds": round_summaries,
+                },
+                "drift_indicators": drift_snapshot,
+            },
+            "generated_at": now,
+            "rationale": rationale,
+        }
+
+        # 5. Compute briefing hash (excluding generated_at, rationale, briefing_hash)
+        import unicodedata
+        hash_payload = {
+            k: v for k, v in briefing.items()
+            if k not in ("generated_at", "rationale", "briefing_hash")
+        }
+        canonical = unicodedata.normalize("NFC", json.dumps(
+            hash_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ))
+        briefing_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        briefing["briefing_hash"] = briefing_hash
+        briefing_json = json.dumps(briefing, ensure_ascii=False)
+
+        # 6. Store decision trail snapshot
+        trail_snapshot = {
+            "trail_id": trail_id,
+            "round_count": round_count,
+            "rounds": round_summaries,
+            "consensus_signal": consensus_signal,
+        }
+        trail_snapshot_json = json.dumps(trail_snapshot)
+
+        # Write immutable audit record with full provenance
         # Mark all previous approvals for this run as non-current
         conn.execute(
             "UPDATE eric_gate_approvals SET is_current = 0 "
             "WHERE workflow_run_id = ?",
             (run_id,),
         )
-        # eric_gate_approvals requires goal_reference_id (NOT NULL)
-        # and briefing_hash (NOT NULL) — use 0 and empty string as defaults
         conn.execute(
             "INSERT INTO eric_gate_approvals "
             "(workflow_run_id, decision, rationale, decided_at, "
             "goal_reference_id, briefing_hash, briefing_json, "
             "drift_snapshot_json, decision_trail_snapshot_json, "
             "is_current, created_at) "
-            "VALUES (?, ?, ?, ?, 0, ?, '{}', '{}', '{}', 1, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)",
             (run_id, decision, rationale, now,
-             directive_hash or "", now),
+             goal_ref_id, briefing_hash, briefing_json,
+             drift_snapshot_json, trail_snapshot_json, now),
         )
 
         # Update run status based on decision
@@ -948,5 +1081,400 @@ def relay_guardrails():
         })
     except Exception as e:
         return jsonify({"outcomes": [], "count": 0, "error": str(e)})
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  BRAIN CHAT — pre-pipeline conversational interface
+# ═══════════════════════════════════════════════════════════════════════════
+
+import uuid as _uuid
+import httpx as _httpx
+
+
+def _kb_search(conn: sqlite3.Connection, query: str, limit: int = 5) -> list:
+    """Search the knowledge base FTS5 for context relevant to the query."""
+    import re as _re
+    keywords = _re.sub(r'[."*(){}:^+\-]', ' ', query)
+    keywords = keywords.strip() or "CIS pipeline"
+    try:
+        rows = conn.execute(
+            "SELECT content, source FROM knowledge_messages_fts "
+            "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT ?",
+            (keywords, limit),
+        ).fetchall()
+        return [{"content": r[0][:500], "source": r[1]} for r in rows]
+    except Exception:
+        return []
+
+
+@relay_bp.route("/api/relay/brain/chat", methods=["POST"])
+def brain_chat():
+    """Conversational Brain interface — pre-pipeline.
+
+    Eric talks with Brain. Brain searches the KB for context.
+    Returns Brain's response + KB context used.
+    Does NOT start a pipeline run — this is exploration.
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    session_id = (data.get("session_id") or "").strip()
+    if not message:
+        return jsonify({"error": "message required"}), 400
+    if not session_id:
+        session_id = f"brain-{_uuid.uuid4().hex[:12]}"
+
+    conn = _db()
+    try:
+        # 1. Store user message
+        conn.execute(
+            "INSERT INTO brain_chats (session_id, role, content) VALUES (?, ?, ?)",
+            (session_id, "user", message),
+        )
+        conn.commit()
+
+        # 2. Search KB for context
+        kb_results = _kb_search(conn, message)
+
+        # 3. Build conversation history
+        history_rows = conn.execute(
+            "SELECT role, content FROM brain_chats "
+            "WHERE session_id = ? ORDER BY id ASC",
+            (session_id,),
+        ).fetchall()
+        history = [dict(r) for r in history_rows]
+
+        # 4. Build messages for Brain gateway
+        system_prompt = (
+            "You are Brain, the lateral exploration engine of the CIS pipeline. "
+            "Your role is to understand Eric's intent deeply by exploring it from "
+            "multiple angles, surfacing assumptions, and connecting it to the "
+            "knowledge base. Be conversational. Ask questions when something is "
+            "ambiguous. When you have enough understanding, say 'READY TO PROCEED' "
+            "and summarize the intent.\n\n"
+            "Knowledge base context for this message:\n"
+        )
+        if kb_results:
+            for hit in kb_results:
+                system_prompt += f"- [{hit['source']}] {hit['content'][:200]}\n"
+        else:
+            system_prompt += "(No KB results found for this query)\n"
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in history:
+            if msg["role"] == "user":
+                messages.append({"role": "user", "content": msg["content"]})
+            else:
+                messages.append({"role": "assistant", "content": msg["content"]})
+
+        # 5. Call Brain gateway (port 8644)
+        brain_url = "http://127.0.0.1:8644/v1/chat/completions"
+        brain_key = os.environ.get("CIS_BRAIN_API_KEY", "")
+        payload = {
+            "model": "agent",
+            "messages": messages,
+            "max_tokens": 4096,
+        }
+        headers = {"Content-Type": "application/json"}
+        if brain_key:
+            headers["Authorization"] = f"Bearer {brain_key}"
+
+        try:
+            resp = _httpx.post(brain_url, json=payload, headers=headers, timeout=120)
+            resp.raise_for_status()
+            brain_data = resp.json()
+            brain_output = brain_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        except Exception as e:
+            brain_output = f"[Brain gateway error: {e}]"
+
+        # 6. Store Brain response
+        conn.execute(
+            "INSERT INTO brain_chats (session_id, role, content, kb_context) "
+            "VALUES (?, ?, ?, ?)",
+            (session_id, "brain", brain_output,
+             json.dumps(kb_results) if kb_results else None),
+        )
+        conn.commit()
+
+        return jsonify({
+            "session_id": session_id,
+            "brain_response": brain_output,
+            "kb_context": kb_results,
+            "ready": "READY TO PROCEED" in brain_output,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/brain/history/<session_id>", methods=["GET"])
+def brain_history(session_id: str):
+    """Get conversation history for a brain chat session."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT id, role, content, created_at FROM brain_chats "
+            "WHERE session_id = ? ORDER BY id ASC",
+            (session_id,),
+        ).fetchall()
+        return jsonify({
+            "session_id": session_id,
+            "messages": [dict(r) for r in rows],
+        })
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/brain/start", methods=["POST"])
+def brain_start_pipeline():
+    """Start a pipeline run from a Brain chat session.
+
+    Takes the conversation history and builds an enriched intent,
+    then starts the pipeline.
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT role, content FROM brain_chats "
+            "WHERE session_id = ? ORDER BY id ASC",
+            (session_id,),
+        ).fetchall()
+        if not rows:
+            return jsonify({"error": "No conversation found for session"}), 404
+
+        # Build enriched intent from conversation
+        conversation = [dict(r) for r in rows]
+        enriched_intent = "## Enriched Intent (from Brain conversation)\n\n"
+        enriched_intent += "### Conversation History\n"
+        for msg in conversation:
+            speaker = "Eric" if msg["role"] == "user" else "Brain"
+            enriched_intent += f"**{speaker}:** {msg['content']}\n\n"
+        enriched_intent += (
+            "### Pipeline Directive\n"
+            "Use the conversation above as the full intent context. "
+            "Brain has explored this with Eric. Honor the nuances discussed."
+        )
+
+        # Start pipeline with enriched intent
+        sys_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "abstraction",
+        )
+        import sys as _sys
+        if sys_path not in _sys.path:
+            _sys.path.insert(0, sys_path)
+        from pipeline_relay import PipelineRelay
+
+        relay = PipelineRelay()
+        try:
+            run_id = relay.start_sync(enriched_intent)
+        finally:
+            relay.close()
+
+        # Start the async pipeline in a background thread
+        thread = threading.Thread(
+            target=_run_pipeline_background,
+            args=(run_id, enriched_intent, None),
+            daemon=True,
+        )
+        _active_runs[run_id] = {
+            "thread": thread,
+            "started_at": time.time(),
+        }
+        thread.start()
+
+        return jsonify({
+            "run_id": run_id,
+            "status": "BRAIN_PHASE",
+            "message": "Pipeline started with enriched intent from Brain chat.",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  PIPELINE INTERJECTIONS — mid-pipeline backchannel
+# ═══════════════════════════════════════════════════════════════════════════
+
+@relay_bp.route("/api/relay/<run_id>/interject", methods=["POST"])
+def relay_interject(run_id: str):
+    """Add a mid-pipeline interjection (backchannel).
+
+    Does NOT stop the pipeline. The interjection is stored and will be
+    consumed by the next phase that runs.
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "message required"}), 400
+
+    conn = _db()
+    try:
+        # Verify run exists
+        run = _get_run(conn, run_id)
+        if not run:
+            return jsonify({"error": "Run not found"}), 404
+
+        conn.execute(
+            "INSERT INTO pipeline_interjections (run_id, message) VALUES (?, ?)",
+            (run_id, message),
+        )
+        conn.commit()
+
+        return jsonify({
+            "run_id": run_id,
+            "message": "Interjection recorded. Will be consumed by the next phase.",
+            "run_status": run["status"],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/<run_id>/interjections", methods=["GET"])
+def relay_get_interjections(run_id: str):
+    """Get all interjections for a run."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT id, run_id, message, created_at, consumed_by_phase, consumed_at "
+            "FROM pipeline_interjections WHERE run_id = ? ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        return jsonify({
+            "run_id": run_id,
+            "interjections": [dict(r) for r in rows],
+        })
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  LIVE FEED — phase-by-phase output for observation
+# ═══════════════════════════════════════════════════════════════════════════
+
+@relay_bp.route("/api/relay/<run_id>/feed", methods=["GET"])
+def relay_feed(run_id: str):
+    """Live pipeline feed — all phase outputs, gate results, interjections.
+
+    Returns everything needed to observe a running pipeline in real-time.
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
+    conn = _db()
+    try:
+        run = _get_run(conn, run_id)
+        if not run:
+            return jsonify({"error": "Run not found"}), 404
+
+        rounds = _get_rounds(conn, run_id)
+        trajectories = _get_trajectories(conn, run_id)
+
+        # Get gate outcomes
+        gate_rows = conn.execute(
+            "SELECT phase, role, guardrail_name, verdict, mode, summary, timestamp "
+            "FROM gate_outcomes WHERE run_id = ? ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        gates = [dict(r) for r in gate_rows]
+
+        # Get interjections
+        interj_rows = conn.execute(
+            "SELECT id, message, created_at, consumed_by_phase "
+            "FROM pipeline_interjections WHERE run_id = ? ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        interjections = [dict(r) for r in interj_rows]
+
+        # Build phase timeline
+        phases = []
+        for r in rounds:
+            phase = {
+                "round": r["round_number"],
+                "phase": r["drafter_role"],
+                "signal": r["reviewer_signal"],
+                "created_at": r["created_at"],
+            }
+            # Include full outputs for observation
+            if r.get("brain_output"):
+                phase["brain_output"] = r["brain_output"]
+            if r.get("drafter_output"):
+                phase["drafter_output"] = r["drafter_output"]
+            if r.get("reviewer1_output"):
+                phase["reviewer1_output"] = r["reviewer1_output"]
+            if r.get("reviewer2_output"):
+                phase["reviewer2_output"] = r["reviewer2_output"]
+            if r.get("verify_output"):
+                phase["verify_output"] = r["verify_output"]
+            if r.get("human_question"):
+                phase["human_question"] = r["human_question"]
+            phases.append(phase)
+
+        # Get provenance + drift data
+        prov_row = conn.execute(
+            "SELECT original_intent, enriched_intent, kb_context_hash, "
+            "brain_session_id, locked_at "
+            "FROM intent_provenance WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        provenance = dict(prov_row) if prov_row else None
+
+        drift_rows = conn.execute(
+            "SELECT phase, round, drift_score, drift_reasons, verdict, created_at "
+            "FROM phase_drift WHERE run_id = ? ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        drift_data = [dict(r) for r in drift_rows]
+
+        return jsonify({
+            "run_id": run["id"],
+            "topic": run["topic"],
+            "status": run["status"],
+            "result": run.get("result"),
+            "created_at": run["created_at"],
+            "phases": phases,
+            "gates": gates,
+            "interjections": interjections,
+            "trajectories": trajectories,
+            "provenance": provenance,
+            "drift": drift_data,
+            "background": {
+                "active": run_id in _active_runs
+                and "finished_at" not in _active_runs.get(run_id, {}),
+                "error": _active_runs.get(run_id, {}).get("error"),
+            },
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         conn.close()

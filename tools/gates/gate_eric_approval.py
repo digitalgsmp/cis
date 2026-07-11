@@ -108,11 +108,8 @@ def check_3_briefing_integrity(conn, run_id):
 
     briefing_json = approval.get("briefing_json", "")
 
-    # Skip briefing integrity check when placeholder data is used
-    # (full Eric Gate provenance system not yet implemented)
-    if briefing_json in ("", "{}"):
-        print("[3] SKIP: Briefing JSON is placeholder — full provenance system not yet built")
-        return
+    if not briefing_json or briefing_json in ("", "{}"):
+        fail(3, "Briefing JSON is empty — provenance not captured at approval time")
 
     try:
         briefing = json.loads(briefing_json)
@@ -161,14 +158,8 @@ def check_4_goal_trace_integrity(conn, run_id):
 
     goal_id = approval.get("goal_reference_id")
 
-    # Skip goal trace check when placeholder data is used
-    # (full Eric Gate provenance system not yet implemented)
-    if goal_id in (0, None):
-        print("[4] SKIP: Goal reference is placeholder — full provenance system not yet built")
-        return
-
-    if goal_id is None:
-        fail(4, "goal_reference_id is NULL")
+    if not goal_id or goal_id == 0:
+        fail(4, "goal_reference_id is 0 or NULL — provenance not captured at approval time")
 
     row = conn.execute(
         "SELECT id, goal_label, dependency_node, tier_advanced "
@@ -181,14 +172,20 @@ def check_4_goal_trace_integrity(conn, run_id):
     goal_label = row[1] or ""
     dep_node = row[2] or ""
     tier = row[3] or ""
+    # Also check advancement_type for pipeline runs not tied to a build plan node
+    row2 = conn.execute(
+        "SELECT advancement_type FROM goal_references WHERE id = ?",
+        (goal_id,),
+    ).fetchone()
+    adv_type = row2[0] if row2 and row2[0] else ""
 
     if not goal_label.strip():
         fail(4, "goal_label is empty")
-    if not dep_node.strip() and not tier.strip():
-        fail(4, "Neither dependency_node nor tier_advanced is present")
+    if not dep_node.strip() and not tier.strip() and not adv_type.strip():
+        fail(4, "Neither dependency_node, tier_advanced, nor advancement_type is present")
 
     print(f"[4] PASS: Goal reference {goal_id}: '{goal_label}' → "
-          f"{dep_node or tier}")
+          f"{dep_node or tier or adv_type}")
 
 
 def check_5_drift_and_objection_state(conn, run_id):

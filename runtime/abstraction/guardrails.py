@@ -1063,6 +1063,16 @@ def run_guardrails(
             guardrail_capability_claim_verifier(agent_output, project_root, role)
         )
     
+    # ── Tier 5: Intent drift (needs DB + run_id) ──────────────────────
+    # Checks output against locked enriched intent. ADVISORY mode.
+    if conn and run_id:
+        report.results.append(
+            guardrail_intent_drift(
+                agent_output, phase, role,
+                conn=conn, run_id=run_id,
+            )
+        )
+    
     return report
 
 
@@ -1239,6 +1249,8 @@ PHASE_GATE_MAP = {
         {"script": "gate_eric_approval.py", "mode": "BLOCK", "needs_run_id": True},
         {"script": "gate_eric_approval_present.sh", "mode": "BLOCK", "needs_run_id": True},
         {"script": "gate_escalation_packet.py", "mode": "ADVISORY", "needs_run_id": True},
+        # Intent verification: does the pipeline output match what Eric asked for?
+        {"script": "gate_intent_verification.py", "mode": "ADVISORY", "needs_run_id": True},
     ],
     "closeout": [
         # At closeout: export agreement + closeout artifact + closeout complete
@@ -3045,3 +3057,119 @@ def guardrail_capability_claim_verifier(
         summary=f"All {verified} capability claim(s) verified through execution",
         mode="BLOCK",
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  INTENT DRIFT — provenance-based drift detection against enriched intent
+# ═══════════════════════════════════════════════════════════════════════════
+
+def guardrail_intent_drift(
+    agent_output: str,
+    phase: str,
+    role: str,
+    conn=None,
+    run_id: str = "",
+) -> GuardrailResult:
+    """Check that phase output stays aligned with the locked enriched intent.
+
+    Catches: intent drift through pipeline phases (§2.1, provenance)
+    Mode: ADVISORY — drift is a signal, not a hard block.
+    Phase B will determine which drift levels should block.
+
+    Uses the deterministic drift measurement from pipeline_relay._measure_drift.
+    If conn and run_id are available, records the drift in phase_drift table.
+    """
+    if not conn or not run_id:
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="SKIP",
+            summary="No DB connection — cannot retrieve enriched intent",
+            mode="ADVISORY",
+        )
+
+    # Skip on brain phase — that's where the intent is created, not checked
+    if phase == "brain" and role == "brain":
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="SKIP",
+            summary="Brain phase creates the intent anchor — no drift to measure",
+            mode="ADVISORY",
+        )
+
+    # Get the enriched intent from the provenance table
+    row = conn.execute(
+        "SELECT enriched_intent FROM intent_provenance "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    if not row or not row[0]:
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="SKIP",
+            summary="No locked enriched intent found for this run",
+            mode="ADVISORY",
+        )
+
+    enriched_intent = row[0]
+
+    # Import the drift measurement function from pipeline_relay
+    import sys as _sys
+    _abstraction_dir = os.path.dirname(os.path.abspath(__file__))
+    if _abstraction_dir not in _sys.path:
+        _sys.path.insert(0, _abstraction_dir)
+    try:
+        from pipeline_relay import _measure_drift, _record_phase_drift
+    except ImportError:
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="SKIP",
+            summary="Cannot import drift measurement functions",
+            mode="ADVISORY",
+        )
+
+    score, reasons, verdict = _measure_drift(
+        enriched_intent, agent_output, phase
+    )
+
+    # Record in phase_drift table
+    try:
+        # Get current round number from latest deliberation_rounds
+        round_row = conn.execute(
+            "SELECT round_number FROM deliberation_rounds "
+            "WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        round_num = round_row[0] if round_row else 1
+        _record_phase_drift(
+            conn, run_id, phase, round_num, agent_output,
+            score, reasons, verdict,
+        )
+    except Exception:
+        pass  # Don't let drift recording failure break the pipeline
+
+    if verdict == "ALIGNED":
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="PASS",
+            evidence=f"Drift score: {score:.2f}, verdict: {verdict}",
+            summary=f"Phase output aligned with intent (drift={score:.2f})",
+            mode="ADVISORY",
+        )
+    elif verdict == "MINOR_DRIFT":
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="PASS",
+            evidence=f"Drift score: {score:.2f}, verdict: {verdict}",
+            summary=f"Minor drift detected (drift={score:.2f})",
+            details="; ".join(reasons) if reasons else "",
+            mode="ADVISORY",
+        )
+    else:
+        return GuardrailResult(
+            name="intent_drift",
+            verdict="FAIL",
+            evidence=f"Drift score: {score:.2f}, verdict: {verdict}",
+            summary=f"Significant drift from intent (drift={score:.2f}): {verdict}",
+            details="; ".join(reasons) if reasons else "",
+            mode="ADVISORY",
+        )
