@@ -3,7 +3,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-ART = Path("/workspace")
+ART = Path("/workspace/cis")
 GATE_RUNNER = "/opt/cis-gates/container_gate_runner.py"
 
 

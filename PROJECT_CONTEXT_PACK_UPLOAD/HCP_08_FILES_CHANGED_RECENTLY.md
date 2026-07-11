@@ -1,7 +1,55 @@
 # Files Changed Recently
-Generated: 2026-07-11 05:57 UTC | Run: run-c2ad179d5c6b
+Generated: 2026-07-11 07:01 UTC | Run: run-126856cc8660
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## c4ce0d8 Delete 4 irrelevant gates + fix 2 broken guardrails
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## enforcement/mwl-proof-v2/Dockerfile 
+
+## enforcement/mwl-proof-v2/gates/gate_mcp_no_network.py 
+
+## enforcement/mwl-proof-v2/gates/gate_staleness.sh 
+
+## runtime/abstraction/guardrails.py 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/gates/gate_mcp_no_network.py 
+
+## tools/gates/gate_research_artifact_present.sh 
+
+## tools/gates/gate_staleness.sh 
 
 ## f655ef9 Complete gate work: env var paths, wire unwired gates, delete duplicates
 
@@ -590,9 +638,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/container_app.py 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 6629d1b chore: export timestamp sync
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## docs/DEV-PIVOT_STATUS.md 

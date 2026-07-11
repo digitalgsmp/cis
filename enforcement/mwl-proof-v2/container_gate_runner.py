@@ -16,7 +16,7 @@ import sys, json, re, os, subprocess
 from pathlib import Path
 
 GATES_DIR = Path("/opt/cis-gates")
-ART_DIR = Path("/workspace")
+ART_DIR = Path("/workspace/cis")
 
 SECRET_PATTERNS = [
     (r'(?:api[_-]?key|apikey)["\s:=]+["\']?[A-Za-z0-9_\-]{20,}["\']?', "API key"),
