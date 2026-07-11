@@ -836,6 +836,55 @@ def _parse_final_json(text: str) -> Optional[dict]:
     return None
 
 
+async def _enforce_output_contract(
+    role: str, output: str, expected_statuses: list,
+    run_id: str, file_path: str = "",
+) -> tuple:
+    """Container enforcement: ensure agent output contains FINAL_JSON
+    with one of the expected statuses.
+
+    Per ADR-SEED-012: if FINAL_JSON is missing or has wrong status,
+    issue ONE repair prompt. If repair also fails, return (output, None)
+    so the caller can escalate.
+
+    Returns (output, parsed_dict_or_None). The output may be the repaired
+    version if the original was invalid.
+    """
+    parsed = _parse_final_json(output)
+    if parsed and parsed.get("status") in expected_statuses:
+        return output, parsed
+
+    # Issue repair prompt
+    print(f"[pipeline] {role} didn't produce valid FINAL_JSON "
+          f"(expected {expected_statuses}). Issuing repair prompt.")
+
+    status_example = expected_statuses[0]
+    repair_prompt = (
+        f"{output}\n\n"
+        f"## FORMAT REPAIR REQUIRED\n"
+        f"Your output is missing the required FINAL_JSON block.\n"
+        f"You MUST end your response with exactly this format:\n"
+        f'```json\n{{"role":"{role}","status":"{status_example}",'
+    )
+    if file_path:
+        repair_prompt += f'"file":"{file_path}",'
+    repair_prompt += f'"summary":"brief summary of what you did"}}\n```'
+
+    try:
+        repaired = await _call_agent(role, repair_prompt, run_id)
+        if repaired.strip():
+            reparsed = _parse_final_json(repaired)
+            if reparsed and reparsed.get("status") in expected_statuses:
+                print(f"[pipeline] {role} repair succeeded.")
+                return repaired, reparsed
+            print(f"[pipeline] {role} repair failed — still no valid FINAL_JSON.")
+            return repaired, None
+    except Exception as e:
+        print(f"[pipeline] {role} repair prompt failed: {e}")
+
+    return output, None
+
+
 # ── Trajectory Recording (MATM) ───────────────────────────────────────
 
 def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
@@ -1806,8 +1855,16 @@ class PipelineRelay:
             record_gate_outcomes(self.conn, run_id, ext_report)
             return
 
-        # Validate Brain produced a valid status
+        # Validate Brain produced a valid status — enforce with repair prompt
         if not parsed or parsed.get("status") not in ("READY", "NEEDS_CLARIFICATION"):
+            output, parsed = await _enforce_output_contract(
+                "brain", output, ["READY", "NEEDS_CLARIFICATION"], run_id)
+            # Record the repair attempt
+            _record_trajectory(self.conn, run_id, "brain", "brain",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("READY", "NEEDS_CLARIFICATION"):
+            # Repair failed — escalate
             _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"brain_output": output})
@@ -2002,9 +2059,31 @@ class PipelineRelay:
         
         # Validate Draft produced PROPOSAL_READY or REVISION_READY
         parsed = _parse_final_json(output)
-        
-        # If native guardrails blocked or invalid status → persist then run ext gates
-        if gr_report.any_blocked or not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            ext_report = run_external_gates(
+                phase="draft", role="draft", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid status — enforce with repair prompt before escalating
+        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            output, parsed = await _enforce_output_contract(
+                "draft", output, ["PROPOSAL_READY", "REVISION_READY"], run_id)
+            _record_trajectory(self.conn, run_id, "draft", "draft",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            # Repair failed — escalate
             _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"drafter_output": output})
@@ -2215,7 +2294,13 @@ class PipelineRelay:
 
         parsed = _parse_final_json(output)
         if not parsed or parsed.get("status") != "READY":
-            _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "failed")
+            output, parsed = await _enforce_output_contract(
+                "brain", output, ["READY"], run_id)
+            _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") != "READY":
+            # Repair failed — escalate
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"brain_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
@@ -2437,9 +2522,31 @@ class PipelineRelay:
             _record_trajectory(self.conn, run_id, "menter", "code_review",
                               menter_prompt, menter_output, chunk_num)
 
-            # Validate Menter produced CHUNK_READY
+            # Validate Menter produced CHUNK_READY — enforce with repair prompt
             parsed = _parse_final_json(menter_output)
             if not parsed or parsed.get("status") != "CHUNK_READY":
+                # Container enforcement: issue ONE repair prompt, then escalate
+                print(f"[pipeline] Menter didn't produce CHUNK_READY. Issuing repair prompt.")
+                repair_prompt = (
+                    f"{menter_output}\n\n"
+                    f"## FORMAT REPAIR REQUIRED\n"
+                    f"Your output is missing the required FINAL_JSON block.\n"
+                    f"You MUST end your response with exactly this format:\n"
+                    f'```json\n{{"role":"menter","status":"CHUNK_READY",'
+                    f'"file":"{file_path}","summary":"brief summary of what you built"}}\n```'
+                )
+                menter_output = await self._call_agent_with_retry(
+                    "menter", repair_prompt, run_id, chunk_num, "Menter (repair)",
+                    round_id, self.conn, "", "", revision)
+                if menter_output is None:
+                    return
+
+                _record_trajectory(self.conn, run_id, "menter", "code_review",
+                                  repair_prompt, menter_output, chunk_num)
+                parsed = _parse_final_json(menter_output)
+
+            if not parsed or parsed.get("status") != "CHUNK_READY":
+                # Repair failed — escalate
                 _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "failed")
                 _complete_round(self.conn, round_id, "ESCALATE",
                                {"menter_output": menter_output})
@@ -2452,7 +2559,7 @@ class PipelineRelay:
                      datetime.now(timezone.utc).isoformat())
                 )
                 self.conn.commit()
-                print(f"[pipeline] Menter didn't produce CHUNK_READY. ESCALATE.")
+                print(f"[pipeline] Menter didn't produce CHUNK_READY after repair. ESCALATE.")
                 return
 
             _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "success")
@@ -2557,7 +2664,15 @@ class PipelineRelay:
             consensus_status = consensus_parsed.get("status", "") if consensus_parsed else ""
 
             if not consensus_parsed or consensus_status not in ("APPROVED", "CHANGES_REQUESTED"):
-                # Incomplete consensus — escalate
+                # Enforce with repair prompt before escalating
+                consensus_output, consensus_parsed = await _enforce_output_contract(
+                    "review1", consensus_output, ["APPROVED", "CHANGES_REQUESTED"], run_id)
+                consensus_status = consensus_parsed.get("status", "") if consensus_parsed else ""
+                _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
+                                  "REPAIR_PROMPT", consensus_output, chunk_num)
+
+            if not consensus_parsed or consensus_status not in ("APPROVED", "CHANGES_REQUESTED"):
+                # Repair failed — escalate
                 print(f"[pipeline] Consensus incomplete for chunk {chunk_num}. ESCALATE.")
                 self.conn.execute(
                     """INSERT INTO code_review_chunks
@@ -2738,8 +2853,30 @@ class PipelineRelay:
         # Validate Menter produced a valid status
         parsed = _parse_final_json(output)
         
-        # If native guardrails blocked or invalid status → persist then run ext gates
-        if gr_report.any_blocked or not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            ext_report = run_external_gates(
+                phase="menter", role="menter", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid status — enforce with repair prompt before escalating
+        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            output, parsed = await _enforce_output_contract(
+                "menter", output, ["CONSENSUS_REACHED", "DONE", "COMPLETE"], run_id)
+            _record_trajectory(self.conn, run_id, "menter", "execution",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            # Repair failed — escalate
             _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"menter_output": output})
@@ -2857,8 +2994,31 @@ class PipelineRelay:
         parsed = _parse_final_json(output)
         status = parsed.get("status", "") if parsed else ""
         
-        # If native guardrails blocked or invalid verdict → persist then run ext gates
-        if gr_report.any_blocked or not parsed or status not in ("PASS", "FAIL"):
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            ext_report = run_external_gates(
+                phase="verify", role="verify", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid verdict — enforce with repair prompt before escalating
+        if not parsed or status not in ("PASS", "FAIL"):
+            output, parsed = await _enforce_output_contract(
+                "verify", output, ["PASS", "FAIL"], run_id)
+            status = parsed.get("status", "") if parsed else ""
+            _record_trajectory(self.conn, run_id, "verify", "verification",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or status not in ("PASS", "FAIL"):
+            # Repair failed — escalate
             _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"verify_output": output})
