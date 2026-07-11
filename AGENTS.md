@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-11 12:59 UTC | Run: run-f370351b157e | Latest pipeline: run-24513e261d9076b6-1783774145
+Generated: 2026-07-11 15:52 UTC | Run: run-024fdac26c58 | Latest pipeline: run-269b1220fcaf0135-1783783226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,16 +79,16 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-269b1220fcaf0135-1783783226] Create a Python file called greet.py that prints Hello World and the current tim — PENDING (0 rounds, incomplete)
+- [run-269b1220fcaf0135-1783781250] Create a Python file called greet.py that prints Hello World and the current tim — CONSENSUS_REACHED (0 rounds, 2026-07-11T14:56:04.134048+00:00)
+- [run-72566d1b5d2d5ed9-1783780815] Create a Python file called hello.py that prints Hello World and a timestamp. Ke — PENDING (0 rounds, incomplete)
+- [run-72566d1b5d2d5ed9-1783778916] Create a Python file called hello.py that prints Hello World and a timestamp. Ke — PENDING (0 rounds, incomplete)
 - [run-24513e261d9076b6-1783774145] Say hello and confirm you are operational. This is a timing fix final verificati — PENDING (0 rounds, incomplete)
-- [run-6ae556ee18f5fc97-1783773556] Say hello and confirm you are operational. This is a timing fix verification tes — PENDING (0 rounds, incomplete)
-- [run-83abb005cec54a9d-1783773421] Say hello and confirm you are operational. This is a timing fix test. — PENDING (0 rounds, incomplete)
-- [run-96e46184588b8f94-1783755835] Say hello and confirm you are operational. Keep it brief. — PENDING (0 rounds, incomplete)
-- [run-96e46184588b8f94-1783755762] Say hello and confirm you are operational. Keep it brief. — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-12d5aa6946666b73-1783649571
+- Workflow run: run-269b1220fcaf0135-1783783226
 - Status: APPROVE
-- Decided at: 2026-07-10T12:37:39.263821+00:00
+- Decided at: 2026-07-11T15:40:37.519931+00:00
 - Goal: No goal label
 
 ## 10. Verification Hardening Rule

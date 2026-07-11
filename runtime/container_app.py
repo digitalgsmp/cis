@@ -63,6 +63,11 @@ def health():
         "container": True
     })
 
+@app.route("/health")
+def health_alias():
+    """Alias for gate_service_health.sh which checks /health on the port."""
+    return health()
+
 @app.route("/api/ping")
 def ping():
     return jsonify({"status": "pong"})

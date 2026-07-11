@@ -2881,6 +2881,22 @@ class PipelineRelay:
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"verify_output": output})
 
+        # Set workflow_runs.result BEFORE external gates fire so
+        # gate_eric_approval.py can verify result == CONSENSUS_REACHED
+        if status == "PASS":
+            self.conn.execute(
+                "UPDATE workflow_runs SET result = 'CONSENSUS_REACHED', "
+                "completed_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), run_id)
+            )
+        else:
+            self.conn.execute(
+                "UPDATE workflow_runs SET result = 'VERIFY_FAILED', "
+                "completed_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), run_id)
+            )
+        self.conn.commit()
+
         # ── Tier 5: External gates (service_health, endpoint, db_state, eric_approval) ─
         # NOW fire after round is persisted so gates can query the DB
         ext_report = run_external_gates(

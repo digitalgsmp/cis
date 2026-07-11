@@ -1230,9 +1230,9 @@ PHASE_GATE_MAP = {
     "verify": [
         # In verification: service health + endpoint + DB state + build coherence
         {"script": "gate_service_health.sh", "mode": "ADVISORY",
-         "args": ["8642", "ok"], "arg_desc": "port+expected"},
+         "args": ["5000", "ok"], "arg_desc": "port+expected"},
         {"script": "gate_endpoint.sh", "mode": "ADVISORY",
-         "args": ["http://localhost:5000/health", "ok"], "arg_desc": "url+expected"},
+         "args": ["http://localhost:5000/api/health", "ok"], "arg_desc": "url+expected"},
         {"script": "gate_db_state.py", "mode": "ADVISORY", "needs_run_id": True,
          "args": ["count", "workflow_runs", "1"], "arg_desc": "count check"},
         {"script": "gate_build_state_coherence.py", "mode": "ADVISORY"},

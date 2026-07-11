@@ -23,9 +23,12 @@
 
 FROM nikolaik/python-nodejs:python3.11-nodejs20
 
-# --- install sqlite3 CLI for gate scripts that query the spine directly ---
+# --- install sqlite3 CLI for gate scripts ---
 RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
+# --- install pyyaml for gate scripts (system python, not Hermes venv) ---
+RUN pip3 install pyyaml
 
 # --- install pinned Hermes as root, at build time, once ---
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser \

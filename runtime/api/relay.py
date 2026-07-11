@@ -449,8 +449,9 @@ def relay_gate(run_id: str):
         # Update run status based on decision
         if decision == "APPROVE":
             conn.execute(
-                "UPDATE workflow_runs SET status = 'PATTERN_CATALOG' WHERE id = ?",
-                (run_id,),
+                "UPDATE workflow_runs SET status = 'PATTERN_CATALOG', "
+                "eric_approved_at = ? WHERE id = ?",
+                (now, run_id),
             )
         elif decision == "REJECT":
             conn.execute(
