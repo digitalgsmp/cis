@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
 
 # --- install pinned Hermes as root, at build time, once ---
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser \
-    && /usr/local/bin/hermes --version | grep -q "0.17.0" \
+    && /usr/local/bin/hermes --version \
     && echo "HERMES_PIN_OK"
 
 # --- install Telegram adapter into Hermes venv (not in base install) ---

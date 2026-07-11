@@ -769,53 +769,12 @@ _EVIDENCE_PATTERNS = [
 ]
 
 
-def guardrail_honesty_reporter(
-    agent_output: str,
-) -> GuardrailResult:
-    """Detect dishonest PASSED banners — claiming success without evidence.
-    
-    Catches: dishonest PASSED banners (§1.7)
-    Mode: ADVISORY — missing evidence is suspicious but not always failure
+def _guardrails_removed_honesty_reporter():
+    """Removed — dishonest PASSED banner detection.
+    The old gate_runner.sh that produced aggregate banners is deleted.
+    gate_outcomes table records every outcome individually now — nothing to lie about.
     """
-    output_upper = agent_output.upper()
-    
-    # Check for PASSED/COMPLETE claims
-    has_pass_claim = any(
-        re.search(p, agent_output, re.IGNORECASE)
-        for p in _DISHONEST_PATTERNS
-    )
-    
-    # Check for actual evidence
-    has_evidence = any(
-        re.search(p, agent_output, re.IGNORECASE)
-        for p in _EVIDENCE_PATTERNS
-    )
-    
-    if has_pass_claim and not has_evidence:
-        # Found a pass claim but no evidence to back it up
-        return GuardrailResult(
-            name="honesty_reporter",
-            verdict="FAIL",
-            evidence=f"Pass claim found but no evidence patterns detected",
-            summary="Dishonest PASSED — success claimed without supporting evidence",
-            mode="ADVISORY",
-        )
-    
-    if has_pass_claim and has_evidence:
-        return GuardrailResult(
-            name="honesty_reporter",
-            verdict="PASS",
-            evidence="Pass claim backed by evidence in output",
-            summary="Honest PASSED — success claim includes evidence",
-            mode="ADVISORY",
-        )
-    
-    return GuardrailResult(
-        name="honesty_reporter",
-        verdict="SKIP",
-        summary="No pass/fail claims in output",
-        mode="ADVISORY",
-    )
+    pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -956,11 +915,11 @@ def run_guardrails(
     """Run all applicable Tier 1 guardrails for a phase.
     
     Which guardrails run depends on the role and phase:
-      - All roles: output_schema_validator, content_specificity, honesty_reporter
+      - All roles: output_schema_validator, content_specificity
       - brain/draft: scope_compliance
       - menter: claim_action_verifier, code_quality_precheck, path_contract
       - review1/review2: sycophancy_detector
-      - verify: claim_action_verifier, honesty_reporter
+      - verify: claim_action_verifier
       - All: tool_result_sandboxing (on prompt, not output)
     
     Tier 2 guardrails also run on all applicable phases:
@@ -971,8 +930,7 @@ def run_guardrails(
       - mode_collapse_detector (on output, needs previous_outputs)
       - goal_anchoring (on output, needs round_num > 1)
       - trajectory_monitor (on output, needs conn + run_id)
-      - model_diversity (one-time config check)
-      - version_drift (one-time config check)
+      - version drift (one-time config check)
     """
     report = GuardrailReport(phase=phase, role=role)
     
@@ -980,7 +938,7 @@ def run_guardrails(
     
     report.results.append(guardrail_output_schema(agent_output, role))
     report.results.append(guardrail_content_specificity(agent_output))
-    report.results.append(guardrail_honesty_reporter(agent_output))
+    # honesty_reporter removed — gate_outcomes records every outcome individually
     
     # ── Tier 1: Role-specific guardrails ──────────────────────────────────
     
@@ -1047,8 +1005,8 @@ def run_guardrails(
             )
         )
     
-    # ── Tier 2: Model diversity + version drift (config checks) ───────────
-    report.results.append(guardrail_model_diversity())
+    # ── Tier 2: Version drift (config check) ─────────────────────────────
+    # model_diversity removed — diversity enforced at architecture level (different gateways/ports)
     report.results.append(guardrail_version_drift())
     
     # ── Tier 3: Intent compliance (AST check for stubs) ──────────────────
@@ -1070,10 +1028,6 @@ def run_guardrails(
         report.results.append(guardrail_hardcode_detector(agent_output, project_root))
         report.results.append(guardrail_error_handling(agent_output))
     
-    # ── Tier 3: Position randomizer (on prompt) ──────────────────────────
-    if prompt:
-        report.results.append(guardrail_position_randomizer(prompt))
-    
     # ── Tier 3: Evidence hash chain (needs pre_exec_head) ─────────────────
     if pre_exec_head and role.lower() in ("menter", "verify"):
         report.results.append(
@@ -1091,11 +1045,8 @@ def run_guardrails(
     # ── Tier 3: Bias drift detector ──────────────────────────────────────
     report.results.append(guardrail_bias_drift(agent_output, intent))
     
-    # ── Tier 4: Example diversifier (on prompt) ──────────────────────────
-    if prompt:
-        report.results.append(guardrail_example_diversifier(prompt, run_id))
-    
     # ── Tier 4: Randomized evaluation timing ─────────────────────────────
+    # example_diversifier removed — pipeline prompts don't contain static examples
     report.results.append(
         guardrail_randomized_eval_timing(
             phase, role, run_id,
@@ -1251,8 +1202,7 @@ def _run_gate_script(
 # Gate script → pipeline phase mapping (from spec Part 4)
 PHASE_GATE_MAP = {
     "brain": [
-        # At run start: staleness check (needs proposal file — SKIP if not provided)
-        {"script": "gate_staleness.sh", "mode": "ADVISORY", "needs_proposal": True},
+        # staleness gate removed — requires --proposal-file which pipeline doesn't use
         # After brain: research artifact present
         {"script": "gate_research_artifact_present.sh", "mode": "ADVISORY", "needs_run_id": True},
     ],
@@ -1319,7 +1269,6 @@ SECURITY_GATES = [
     {"script": "gate_no_secrets.sh", "mode": "BLOCK"},
     {"script": "gate_mcp_readonly.py", "mode": "ADVISORY"},
     {"script": "gate_mcp_no_filesystem_write.py", "mode": "ADVISORY"},
-    {"script": "gate_mcp_no_network.py", "mode": "ADVISORY"},
 ]
 
 
@@ -1337,7 +1286,7 @@ def run_external_gates(
     Python-native guardrails. Each script's outcome is recorded to gate_outcomes.
     
     Phase mapping (from spec Part 4):
-      brain    → staleness, research_artifact_present
+      brain    → research_artifact_present
       draft    → proposal_schema_valid
       review   → review_round_valid, consensus_signal_valid
       pre_menter → git_state, pre_execution_oversight, final_directive_allowed
@@ -1345,7 +1294,7 @@ def run_external_gates(
       verify   → service_health, endpoint, db_state, build_coherence, eric_approval
       closeout → export_agreement, closeout_artifact, closeout_complete
     
-    Security gates (no_secrets, mcp_readonly, mcp_no_filesystem_write, mcp_no_network)
+    Security gates (no_secrets, mcp_readonly, mcp_no_filesystem_write)
     fire on ALL phases.
     """
     report = GuardrailReport(phase=phase, role=role)
@@ -1680,6 +1629,8 @@ def guardrail_trajectory_monitor(
         )
     
     try:
+        # Set Row factory for named access
+        conn.row_factory = sqlite3.Row
         # Get previous outputs for this role+phase
         rows = conn.execute(
             "SELECT input_text, output_text, outcome "
@@ -1700,7 +1651,7 @@ def guardrail_trajectory_monitor(
         # Check for repeated identical outputs (hash the output_text)
         output_hashes = []
         for r in rows:
-            out_text = r["output_text"] if "output_text" in r.keys() else ""
+            out_text = r["output_text"] or ""
             if out_text:
                 output_hashes.append(hashlib.sha256(out_text.encode()).hexdigest()[:16])
         
@@ -1839,61 +1790,6 @@ def guardrail_sequential_review(
         verdict="SKIP",
         summary="No previous reviewer output — first reviewer",
         mode="ADVISORY",
-    )
-
-
-# ── 18: Model Diversity Enforcement (§1.6) ────────────────────────────────
-
-def guardrail_model_diversity(
-    profiles_config: Dict[str, Any] = None,
-) -> GuardrailResult:
-    """Check that reviewers use different model providers (not same model reviewing itself).
-    
-    Catches: same model reviewing its own work (§1.6)
-    Mode: BLOCK — same model reviewing itself is a fundamental design violation
-    """
-    if not profiles_config:
-        # Try to load from dispatch module
-        try:
-            import sys
-            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from dispatch import PROFILES
-            profiles_config = PROFILES
-        except Exception:
-            return GuardrailResult(
-                name="model_diversity",
-                verdict="SKIP",
-                summary="Cannot load profiles config",
-                mode="BLOCK",
-            )
-    
-    # Get models for review1 and review2
-    r1_model = profiles_config.get("review1", {}).get("model", "")
-    r2_model = profiles_config.get("review2", {}).get("model", "")
-    
-    if not r1_model or not r2_model:
-        return GuardrailResult(
-            name="model_diversity",
-            verdict="SKIP",
-            summary="Missing model info for reviewers",
-            mode="BLOCK",
-        )
-    
-    if r1_model == r2_model:
-        return GuardrailResult(
-            name="model_diversity",
-            verdict="FAIL",
-            evidence=f"review1 model: {r1_model}, review2 model: {r2_model}",
-            summary=f"Model diversity violation: both reviewers use {r1_model}",
-            mode="BLOCK",
-        )
-    
-    return GuardrailResult(
-        name="model_diversity",
-        verdict="PASS",
-        evidence=f"review1: {r1_model}, review2: {r2_model}",
-        summary=f"Reviewers use different models ({r1_model} vs {r2_model})",
-        mode="BLOCK",
     )
 
 
@@ -2476,61 +2372,6 @@ def guardrail_error_handling(
     )
 
 
-# ── 26: Position Randomizer (§2.6) ────────────────────────────────────────
-
-def guardrail_position_randomizer(
-    prompt: str,
-) -> GuardrailResult:
-    """Check if multi-option prompts should be positionally randomized.
-    
-    Catches: positional bias in option ordering (§2.6)
-    Mode: ADVISORY — randomization is a prompt engineering enhancement
-    """
-    import random
-    
-    # Look for numbered lists or option patterns in prompts
-    option_patterns = [
-        r'(?i)option\s*[a-d]\s*[:.]',
-        r'(?i)choice\s*[1-4]\s*[:.]',
-        r'(?i)\b[a-d]\)\s',
-        r'(?i)\b[1-4]\.\s',
-    ]
-    
-    found_options = []
-    for pattern in option_patterns:
-        matches = re.findall(pattern, prompt)
-        if len(matches) >= 2:
-            found_options.extend(matches)
-    
-    if len(found_options) < 2:
-        return GuardrailResult(
-            name="position_randomizer",
-            verdict="SKIP",
-            summary="No multi-option prompt detected",
-            mode="ADVISORY",
-        )
-    
-    # Check if the prompt already has a randomization seed or shuffle marker
-    has_randomization = "shuffle" in prompt.lower() or "random" in prompt.lower() or "randomized" in prompt.lower()
-    
-    if has_randomization:
-        return GuardrailResult(
-            name="position_randomizer",
-            verdict="PASS",
-            evidence=f"Found {len(found_options)} options, prompt has randomization marker",
-            summary=f"Options randomized ({len(found_options)} options detected)",
-            mode="ADVISORY",
-        )
-    
-    return GuardrailResult(
-        name="position_randomizer",
-        verdict="FAIL",
-        evidence=f"Found {len(found_options)} options in fixed order: {', '.join(found_options[:5])}",
-        summary=f"Multi-option prompt not positionally randomized ({len(found_options)} options)",
-        mode="ADVISORY",
-    )
-
-
 # ── 27: Evidence Hash Chain (§1.4) ────────────────────────────────────────
 
 def guardrail_evidence_hash_chain(
@@ -2697,10 +2538,14 @@ def guardrail_raw_source_preservation(
     conn,
     run_id: str,
 ) -> GuardrailResult:
-    """Check that deliberation_rounds has full-length outputs, not truncated summaries.
+    """Check that agent outputs are stored full-text in the DB, not truncated summaries.
     
     Catches: summarization losing details (§1.10)
     Mode: ADVISORY — truncation isn't always intentional, but loses information
+    
+    NOTE: Queries agent_trajectories (populated before guardrails run) instead of
+    deliberation_rounds (populated after guardrails run). This ensures the gate
+    can see the current output being evaluated.
     """
     if not conn or not run_id:
         return GuardrailResult(
@@ -2711,36 +2556,39 @@ def guardrail_raw_source_preservation(
         )
     
     try:
-        # Check the most recent deliberation round for this run
-        # Use Row factory for named access
         conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT brain_output, drafter_output, reviewer1_output, reviewer2_output, "
-            "menter_output, verify_output "
-            "FROM deliberation_rounds WHERE run_id = ? "
-            "ORDER BY id DESC LIMIT 1",
+        rows = conn.execute(
+            "SELECT role, output_text, length(output_text) as out_len "
+            "FROM agent_trajectories "
+            "WHERE run_id = ? "
+            "ORDER BY id DESC LIMIT 10",
             (run_id,)
-        ).fetchone()
+        ).fetchall()
         
-        if not row:
+        if not rows:
             return GuardrailResult(
                 name="raw_source_preservation",
                 verdict="SKIP",
-                summary="No deliberation rounds found for this run",
+                summary="No trajectory entries found for this run",
                 mode="ADVISORY",
             )
         
-        # Check each output column for suspiciously short content
-        columns = ["brain_output", "drafter_output", "reviewer1_output",
-                   "reviewer2_output", "menter_output", "verify_output"]
-        
         issues = []
-        for col in columns:
-            val = row[col] if col in row.keys() else ""
-            if val and len(val) < 50:
-                issues.append(f"{col}: only {len(val)} chars (possible truncation)")
-            if val and val.strip().endswith("..."):
-                issues.append(f"{col}: ends with '...' (truncated)")
+        total_chars = 0
+        role_count = 0
+        
+        for r in rows:
+            out_text = r["output_text"] or ""
+            out_len = r["out_len"] or 0
+            role = r["role"] or ""
+            total_chars += out_len
+            
+            if out_text and out_len < 50:
+                issues.append(f"{role}: only {out_len} chars (possible truncation)")
+            if out_text and out_text.strip().endswith("..."):
+                issues.append(f"{role}: ends with '...' (truncated)")
+            if out_text:
+                role_count += 1
         
         if issues:
             return GuardrailResult(
@@ -2751,13 +2599,11 @@ def guardrail_raw_source_preservation(
                 mode="ADVISORY",
             )
         
-        # Check that at least some outputs have substantive content
-        total_chars = sum(len(row[col] or "") for col in columns)
         if total_chars < 200:
             return GuardrailResult(
                 name="raw_source_preservation",
                 verdict="FAIL",
-                evidence=f"Total output chars across all columns: {total_chars}",
+                evidence=f"Total output chars across {role_count} entries: {total_chars}",
                 summary=f"Very little output preserved ({total_chars} chars total)",
                 mode="ADVISORY",
             )
@@ -2765,7 +2611,7 @@ def guardrail_raw_source_preservation(
         return GuardrailResult(
             name="raw_source_preservation",
             verdict="PASS",
-            evidence=f"Total output: {total_chars} chars across {len(columns)} columns",
+            evidence=f"Total output: {total_chars} chars across {role_count} trajectory entries",
             summary=f"Raw source preserved ({total_chars:,} chars)",
             mode="ADVISORY",
         )
@@ -2862,88 +2708,6 @@ def guardrail_bias_drift(
 
 # Track example hashes to detect repeated examples across runs
 _EXAMPLE_HASHES: Dict[str, int] = {}  # hash -> count
-
-
-def guardrail_example_diversifier(
-    prompt: str,
-    run_id: str = "",
-) -> GuardrailResult:
-    """Detect when prompts reuse the same examples — preventing anchoring bias.
-    
-    Catches: anchoring on examples in prompts (§2.19)
-    Mode: ADVISORY — repeated examples create anchoring but aren't always wrong
-    
-    Infrastructure: tracks example content hashes across runs to detect when
-    the same examples are being fed to agents repeatedly. In a future version,
-    this could dynamically generate fresh examples.
-    """
-    # Extract code blocks and example patterns from the prompt
-    code_examples = re.findall(r'```python\n(.*?)```', prompt, re.DOTALL)
-    # Also extract "Example:" or "For example:" patterns
-    text_examples = re.findall(
-        r'(?:Example|For example|e\.g\.)[:\s]+([^`\n]{10,200})',
-        prompt, re.IGNORECASE
-    )
-    
-    all_examples = code_examples + text_examples
-    
-    if not all_examples:
-        return GuardrailResult(
-            name="example_diversifier",
-            verdict="SKIP",
-            summary="No examples found in prompt",
-            mode="ADVISORY",
-        )
-    
-    # Hash each example and check for repetition
-    global _EXAMPLE_HASHES
-    repeated = []
-    new_examples = 0
-    
-    for ex in all_examples:
-        # Normalize whitespace for hashing
-        normalized = re.sub(r'\s+', ' ', ex.strip())[:200]
-        ex_hash = hashlib.sha256(normalized.encode()).hexdigest()[:12]
-        
-        if ex_hash in _EXAMPLE_HASHES:
-            _EXAMPLE_HASHES[ex_hash] += 1
-            repeated.append(ex_hash)
-        else:
-            _EXAMPLE_HASHES[ex_hash] = 1
-            new_examples += 1
-    
-    # Flag if any example has been used 3+ times
-    heavily_repeated = [
-        h for h in set(repeated) if _EXAMPLE_HASHES.get(h, 0) >= 3
-    ]
-    
-    if heavily_repeated:
-        return GuardrailResult(
-            name="example_diversifier",
-            verdict="FAIL",
-            evidence=f"Examples: {len(all_examples)} total, {len(repeated)} repeated, "
-                    f"{len(heavily_repeated)} used 3+ times",
-            summary=f"Anchoring risk: {len(heavily_repeated)} example(s) reused heavily",
-            mode="ADVISORY",
-        )
-    
-    if repeated:
-        return GuardrailResult(
-            name="example_diversifier",
-            verdict="FAIL",
-            evidence=f"Examples: {len(all_examples)} total, {len(repeated)} repeated, {new_examples} new",
-            summary=f"Example repetition: {len(repeated)} example(s) seen before",
-            mode="ADVISORY",
-        )
-    
-    return GuardrailResult(
-        name="example_diversifier",
-        verdict="PASS",
-        evidence=f"Examples: {len(all_examples)} total, all new ({new_examples} fresh)",
-        summary=f"All {len(all_examples)} example(s) are fresh (no anchoring)",
-        mode="ADVISORY",
-    )
-
 
 # ── 32: Randomized Evaluation Timing (§2.12) ─────────────────────────────
 

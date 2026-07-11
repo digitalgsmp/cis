@@ -1756,7 +1756,7 @@ class PipelineRelay:
         _record_trajectory(self.conn, run_id, "brain", "brain",
                           prompt, output, round_num)
 
-        # ── Tier 1+2 Guardrails ────────────────────────────────────────────
+        # ── Tier 1+2 Guardrails (check output BEFORE persisting) ──────────
         gr_report = run_guardrails(
             phase="brain", role="brain", agent_output=output,
             intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
@@ -1765,33 +1765,43 @@ class PipelineRelay:
         print(gr_report.summary)
         record_gate_outcomes(self.conn, run_id, gr_report)
         
-        # ── Tier 5: External gate scripts (staleness, research artifact, no_secrets) ─
-        ext_report = run_external_gates(
-            phase="brain", role="brain", agent_output=output,
-            run_id=run_id, project_root=PROJECT_ROOT,
-        )
-        print(ext_report.summary)
-        record_gate_outcomes(self.conn, run_id, ext_report)
-        if ext_report.any_blocked:
-            gr_report = ext_report  # propagate block check
-        
         if gr_report.any_blocked:
             _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
             _complete_round(self.conn, round_id, "ESCALATE",
                            {"brain_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
             print(f"[pipeline] BRAIN blocked by guardrail — ESCALATE.")
+            # Still run external gates after round is complete so they can
+            # record outcomes even on failed runs
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
             return
 
+        # ── Persist Brain output to spine BEFORE external gates fire ──────
+        # External gates (like gate_research_artifact_present) query the DB
+        # to verify outputs were stored. They must run AFTER _complete_round()
+        # writes the data.
+        
         # Check for HUMAN_QUESTION
         parsed = _parse_final_json(output)
         if parsed and parsed.get("status") == "NEEDS_CLARIFICATION":
             question = parsed.get("question", output[:500])
             _set_run_status(self.conn, run_id, "WAITING_FOR_HUMAN")
             _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
-                           {"human_question": question})
+                           {"brain_output": output, "human_question": question})
             print(f"[pipeline] BRAIN needs clarification: {question}")
             print(f"[pipeline] Run {run_id} waiting for human answer")
+            # External gates fire after round is complete
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
             return
 
         # Validate Brain produced a valid status
@@ -1801,11 +1811,27 @@ class PipelineRelay:
                            {"brain_output": output})
             _set_run_status(self.conn, run_id, "ESCALATED")
             print(f"[pipeline] BRAIN output invalid — no READY status. ESCALATE.")
+            # External gates fire after round is complete
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
             return
 
         _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "success")
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"brain_output": output})
+
+        # ── Tier 5: External gate scripts (research artifact, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
+        ext_report = run_external_gates(
+            phase="brain", role="brain", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
 
         # Proceed to intent review
         _set_run_status(self.conn, run_id, "INTENT_REVIEW")
