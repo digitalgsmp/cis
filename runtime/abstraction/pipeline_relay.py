@@ -943,7 +943,7 @@ def _semantic_drift_check(
         payload = json.dumps({
             "model": model_name,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 200,
+            "max_tokens": 1000,
             "temperature": 0.1,
         }).encode()
 
