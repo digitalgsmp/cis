@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-07-12 19:55 UTC | Run: run-436a6ba5fefc
+Generated: 2026-07-12 20:28 UTC | Run: run-5eeea812cc14
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a016952 feat: surface menter_output in pipeline feed + UI
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/api/relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/ui/src/PipelineLive.jsx 
 
 ## 58471ab feat: project-centered UI — the control panel can now do work
 
@@ -674,95 +710,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/gates/gate_research_artifact_present.sh 
 
 ## tools/gates/gate_staleness.sh 
-
-## f655ef9 Complete gate work: env var paths, wire unwired gates, delete duplicates
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## enforcement/mwl-proof-v2/Dockerfile 
-
-## runtime/abstraction/guardrails.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/gates/gate_11a_layout_no_overlap.sh 
-
-## tools/gates/gate_11a_nav_groups.sh 
-
-## tools/gates/gate_11a_no_writes.sh 
-
-## tools/gates/gate_11a_regression_pages.sh 
-
-## tools/gates/gate_11a_system_overview.sh 
-
-## tools/gates/gate_11b_approve_schema.sh 
-
-## tools/gates/gate_11b_concurrency.sh 
-
-## tools/gates/gate_11b_idempotency.sh 
-
-## tools/gates/gate_11b_no_goal_reference_create.sh 
-
-## tools/gates/gate_11b_no_orchestrator_import.sh 
-
-## tools/gates/gate_11b_no_veto.sh 
-
-## tools/gates/gate_11b_one_post_only.sh 
-
-## tools/gates/gate_build_state_coherence.sh 
-
-## tools/gates/gate_chroma_no_secrets_in_results.py 
-
-## tools/gates/gate_chroma_secret_filter.py 
-
-## tools/gates/gate_db_state.py 
-
-## tools/gates/gate_drafter_closeout.sh 
-
-## tools/gates/gate_eric_approval.py 
-
-## tools/gates/gate_escalation_packet.py 
-
-## tools/gates/gate_git_state.sh 
-
-## tools/gates/gate_implementation_artifact_present.sh 
-
-## tools/gates/gate_reviewer_closeout.sh 
-
-## tools/gates/gate_runner.sh 
-
-## tools/gates/gate_ui_acceptance.sh 
-
-## tools/gates/gate_ui_method_allowlist.sh 
-
-## tools/gates/gate_ui_no_pipeline_bypass.py 
-
-## tools/gates/gate_ui_no_secrets_in_jsx.sh 
-
-## tools/gates/gate_ui_no_write_endpoints.sh 

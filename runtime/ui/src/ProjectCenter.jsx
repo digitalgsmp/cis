@@ -61,6 +61,8 @@ export default function ProjectCenter({ onPipelineStarted, onSelectRun }) {
   const runs = overview?.recent_runs || []
   const decisions = overview?.decisions || []
   const blockers = overview?.active_blockers || []
+  const devPivots = overview?.dev_pivots || []
+  const closeoutStats = overview?.closeout_stats || {}
   const visibleRuns = showAllRuns ? runs : runs.slice(0, 5)
 
   return (
@@ -92,6 +94,12 @@ export default function ProjectCenter({ onPipelineStarted, onSelectRun }) {
             <span className="stat-num" style={{ color: 'var(--error)' }}>{stats.at_eric_gate || 0}</span>
             <span className="stat-label">At Gate</span>
           </div>
+          {closeoutStats.total > 0 && (
+            <div className="stat-item">
+              <span className="stat-num">{closeoutStats.passed || 0}/{closeoutStats.total}</span>
+              <span className="stat-label">Closeouts</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -200,16 +208,45 @@ export default function ProjectCenter({ onPipelineStarted, onSelectRun }) {
         </div>
       )}
 
-      {/* Architecture Decisions */}
+      {/* Architecture Decisions — Governance Era (June 7-19) */}
       {decisions.length > 0 && (
         <div className="project-section">
-          <div className="section-header">ARCHITECTURE DECISIONS</div>
+          <div className="section-header">
+            GOVERNANCE-ERA ADRs
+            <span className="section-detail">Historical — June 7-19, pre-break</span>
+          </div>
           <div className="decisions-list">
             {decisions.map((d, i) => (
               <div key={i} className="decision-item">
                 <span className="decision-label">{d.label}</span>
                 <span className="decision-text">{d.decision}</span>
                 <span className="decision-status">{d.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dev Pivots — Real Governance Tracking */}
+      {devPivots.length > 0 && (
+        <div className="project-section">
+          <div className="section-header">
+            DEV PIVOTS — REAL STATUS
+            <span className="section-detail">
+              {devPivots.filter(p => p.status === 'LIVE').length} live ·
+              {' '}{devPivots.filter(p => p.status === 'INVALIDATED').length} invalidated ·
+              {' '}{devPivots.filter(p => p.status === 'PARTIALLY_INVALIDATED').length} partial
+            </span>
+          </div>
+          <div className="decisions-list">
+            {devPivots.map((p, i) => (
+              <div key={i} className={`decision-item pivot-${p.status.toLowerCase()}`}>
+                <span className="decision-label">{p.doc_id}</span>
+                <span className="decision-text">{p.title}</span>
+                <span className={`decision-status pivot-status-${p.status.toLowerCase()}`}>{p.status}</span>
+                {p.invalidation_reason && (
+                  <div className="node-detail">{p.invalidation_reason}</div>
+                )}
               </div>
             ))}
           </div>

@@ -1011,3 +1011,34 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Dev pivot status colors */
+.pivot-invalidated {
+  opacity: 0.5;
+}
+
+.pivot-status-invalidated {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.pivot-status-partially_invalidated {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.pivot-status-live {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pivot-status-superseded {
+  color: var(--text-dim);
+}
+
+.section-detail {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: auto;
+  font-weight: 400;
+}

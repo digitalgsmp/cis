@@ -909,6 +909,23 @@ def project_overview(project_id: str):
         ).fetchall()
         active_blockers = [{"blocker_id": r["id"], "title": r["description"], "status": r["status"]} for r in blockers]
 
+        # Dev pivots — the real governance tracking (not just ADRs)
+        pivots = conn.execute(
+            "SELECT doc_id, title, status, category, invalidation_reason, capability_gap "
+            "FROM dev_pivot_status ORDER BY id"
+        ).fetchall()
+        dev_pivots = [dict(r) for r in pivots]
+
+        # Session closeout stats — real development activity
+        closeout_stats = conn.execute(
+            "SELECT count(*) as total, "
+            "sum(CASE WHEN status='PASS' THEN 1 ELSE 0 END) as passed, "
+            "sum(CASE WHEN status='FAIL' THEN 1 ELSE 0 END) as failed, "
+            "sum(CASE WHEN status='BLOCKED' THEN 1 ELSE 0 END) as blocked "
+            "FROM session_closeouts"
+        ).fetchone()
+        closeout_summary = dict(closeout_stats) if closeout_stats else {"total": 0, "passed": 0, "failed": 0, "blocked": 0}
+
         return jsonify({
             "project_id": project_id,
             "build_plan": build_plan,
@@ -920,6 +937,8 @@ def project_overview(project_id: str):
             },
             "recent_runs": recent_runs,
             "decisions": adr_list,
+            "dev_pivots": dev_pivots,
+            "closeout_stats": closeout_summary,
             "stats": {
                 "total_runs": total_runs,
                 "consensus_reached": consensus_runs,
