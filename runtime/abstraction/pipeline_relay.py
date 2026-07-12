@@ -901,7 +901,10 @@ def _semantic_drift_check(
     output: str,
     phase: str,
 ) -> tuple:
-    """Semantic drift comparison using a local LLM (Qwen on port 8002).
+    """Semantic drift comparison using a local LLM.
+
+    Tries GLM-4.7-Flash (port 8003, ~90 tok/s) first, falls back to
+    Qwen3-VL-30B (port 8002, ~23 tok/s).
 
     Returns (score 0.0-1.0, reasons list) or (None, []) if unavailable.
 
@@ -926,41 +929,48 @@ def _semantic_drift_check(
         f"- 5 = partially aligned, some drift from intent\n"
         f"- 3 = mostly drifted, output barely relates to intent\n"
         f"- 0 = completely diverged, output has nothing to do with intent\n\n"
-        f"Respond with ONLY a JSON object:\n"
+        f"Respond with ONLY a JSON object, no thinking:\n"
         f'{{"score": <0-10>, "reason": "<one sentence explanation>"}}'
     )
 
-    payload = json.dumps({
-        "model": "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf",
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 200,
-        "temperature": 0.1,
-    }).encode()
+    # Try GLM first (faster), then Qwen
+    endpoints = [
+        ("http://127.0.0.1:8003/v1/chat/completions", "GLM-4.7-Flash-Q4_K_M.gguf"),
+        ("http://127.0.0.1:8002/v1/chat/completions", "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf"),
+    ]
 
-    try:
-        req = urllib.request.Request(
-            "http://127.0.0.1:8002/v1/chat/completions",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        resp = urllib.request.urlopen(req, timeout=60)
-        data = json.loads(resp.read())
-        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    for url, model_name in endpoints:
+        payload = json.dumps({
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 200,
+            "temperature": 0.1,
+        }).encode()
 
-        # Parse the JSON response — be lenient
-        import re as _re
-        json_match = _re.search(r'\{[^}]+\}', content)
-        if json_match:
-            result = json.loads(json_match.group())
-            raw_score = float(result.get("score", -1))
-            reason = result.get("reason", "")
-            if 0 <= raw_score <= 10:
-                # Convert 0-10 to 0.0-1.0 drift score (10=aligned=0.0 drift)
-                drift_score = (10.0 - raw_score) / 10.0
-                return (drift_score, [f"Semantic: {reason} (score {raw_score}/10)"])
-    except Exception:
-        pass
+        try:
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req, timeout=60)
+            data = json.loads(resp.read())
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+            # Parse the JSON response — be lenient
+            import re as _re
+            json_match = _re.search(r'\{[^}]+\}', content)
+            if json_match:
+                result = json.loads(json_match.group())
+                raw_score = float(result.get("score", -1))
+                reason = result.get("reason", "")
+                if 0 <= raw_score <= 10:
+                    drift_score = (10.0 - raw_score) / 10.0
+                    model_label = "GLM" if "8003" in url else "Qwen"
+                    return (drift_score, [f"Semantic ({model_label}): {reason} (score {raw_score}/10)"])
+        except Exception:
+            continue
 
     return (None, [])
 
