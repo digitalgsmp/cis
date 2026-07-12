@@ -3,10 +3,12 @@ import { api } from './api.js'
 import BrainChat from './BrainChat.jsx'
 import PipelineLive from './PipelineLive.jsx'
 import RunsList from './RunsList.jsx'
+import SystemDashboard from './SystemDashboard.jsx'
 
 const TAB_BRAIN = 'brain'
 const TAB_PIPELINE = 'pipeline'
 const TAB_RUNS = 'runs'
+const TAB_SYSTEM = 'system'
 
 export default function App() {
   const [tab, setTab] = useState(TAB_BRAIN)
@@ -56,6 +58,12 @@ export default function App() {
           >
             Runs
           </button>
+          <button
+            className={`nav-btn ${tab === TAB_SYSTEM ? 'active' : ''}`}
+            onClick={() => setTab(TAB_SYSTEM)}
+          >
+            System
+          </button>
         </div>
         <div className="topbar-spacer" />
         <div className="topbar-status">
@@ -90,6 +98,9 @@ export default function App() {
               setTab(TAB_PIPELINE)
             }}
           />
+        )}
+        {tab === TAB_SYSTEM && (
+          <SystemDashboard />
         )}
       </div>
     </div>

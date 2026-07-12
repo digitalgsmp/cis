@@ -1478,3 +1478,218 @@ def relay_feed(run_id: str):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+
+# ── System Dashboard Endpoints ──────────────────────────────────────────────
+
+import subprocess
+import re as _re
+
+
+@relay_bp.route("/system/health", methods=["GET"])
+def system_health():
+    """Get health of all Docker containers and key services."""
+    containers = []
+    services = []
+
+    try:
+        # Get docker container list
+        result = subprocess.run(
+            ["docker", "ps", "-a", "--format",
+             "{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                parts = line.split("\t")
+                name = parts[0] if len(parts) > 0 else ""
+                status_raw = parts[1] if len(parts) > 1 else ""
+                image = parts[2] if len(parts) > 2 else ""
+                ports = parts[3] if len(parts) > 3 else ""
+
+                # Parse status
+                is_running = status_raw.startswith("Up")
+                health = ""
+                healthy = True
+                if "unhealthy" in status_raw.lower():
+                    health = "unhealthy"
+                    healthy = False
+                elif "healthy" in status_raw.lower():
+                    health = "healthy"
+                elif "health: starting" in status_raw.lower():
+                    health = "starting"
+                    healthy = False
+
+                # Extract uptime
+                uptime = ""
+                if is_running:
+                    uptime = status_raw.replace("Up ", "").split(" (")[0]
+
+                # Determine model from container name
+                model = ""
+                name_lower = name.lower()
+                if "brainstorm" in name_lower or name_lower == "cis-brain":
+                    model = "deepseek-v4-pro"
+                elif "drafter" in name_lower:
+                    model = "deepseek-v4-pro"
+                elif "qwen" in name_lower or ("reviewer" in name_lower and "glm" not in name_lower):
+                    model = "qwen3.7-max"
+                elif "glm" in name_lower:
+                    model = "glm-5.2"
+                elif "implementer" in name_lower:
+                    model = "deepseek-v4-pro"
+                elif "verifier" in name_lower:
+                    model = "glm-5.2"
+                elif "pipeline" in name_lower:
+                    model = "control-plane"
+                elif "hermes" in name_lower:
+                    model = "prime"
+
+                # Check gateway health if running
+                if is_running and model and model not in ("control-plane", "prime"):
+                    try:
+                        port_match = _re.search(r"0\.0\.0\.0:(\d+)->", ports)
+                        if port_match:
+                            port = port_match.group(1)
+                            hresult = subprocess.run(
+                                ["curl", "-s", "--max-time", "3", f"http://localhost:{port}/api/health"],
+                                capture_output=True, text=True, timeout=5
+                            )
+                            if hresult.returncode == 0 and "ok" in hresult.stdout.lower():
+                                healthy = True
+                            else:
+                                healthy = False
+                                health = health or "gateway-down"
+                    except Exception:
+                        pass
+
+                containers.append({
+                    "name": name,
+                    "status": "running" if is_running else "stopped",
+                    "health": health,
+                    "healthy": healthy if is_running else False,
+                    "image": image[:60],
+                    "uptime": uptime,
+                    "ports": ports[:80] if ports else "",
+                    "model": model,
+                })
+
+        # Check non-Docker services
+        # SQLite DB
+        try:
+            db_path = os.environ.get("CIS_DB_PATH", "/workspace/cis/data/cis_memory.db")
+            if not os.path.exists(db_path):
+                db_path = "/mnt/projects/cis/data/cis_memory.db"
+            conn = sqlite3.connect(db_path, timeout=2)
+            conn.execute("SELECT 1")
+            conn.close()
+            services.append({"name": "SQLite Spine", "healthy": True, "detail": db_path})
+        except Exception as e:
+            services.append({"name": "SQLite Spine", "healthy": False, "detail": str(e)})
+
+        # GLM llama-server (port 8001 or 8002)
+        for port_label, port in [("GLM llama-server", 8001), ("Qwen llama-server", 8002)]:
+            try:
+                hresult = subprocess.run(
+                    ["curl", "-s", "--max-time", "3", f"http://localhost:{port}/health"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if hresult.returncode == 0:
+                    services.append({"name": port_label, "healthy": True, "url": f"localhost:{port}"})
+                else:
+                    services.append({"name": port_label, "healthy": False, "url": f"localhost:{port}"})
+            except Exception:
+                services.append({"name": port_label, "healthy": False, "url": f"localhost:{port}"})
+
+        # ChromaDB
+        try:
+            hresult = subprocess.run(
+                ["curl", "-s", "--max-time", "3", "http://localhost:8000/api/v1/heartbeat"],
+                capture_output=True, text=True, timeout=5
+            )
+            if hresult.returncode == 0 and "nanosecond" in hresult.stdout.lower():
+                services.append({"name": "ChromaDB", "healthy": True, "url": "localhost:8000"})
+            else:
+                services.append({"name": "ChromaDB", "healthy": False, "url": "localhost:8000"})
+        except Exception:
+            services.append({"name": "ChromaDB", "healthy": False, "url": "localhost:8000"})
+
+    except Exception as e:
+        return jsonify({"error": str(e), "containers": containers, "services": services}), 500
+
+    return jsonify({"containers": containers, "services": services})
+
+
+@relay_bp.route("/system/restart", methods=["POST"])
+def system_restart():
+    """Restart a single Docker container."""
+    data = request.get_json(silent=True) or {}
+    container = data.get("container", "")
+    if not container:
+        return jsonify({"error": "container name required"}), 400
+
+    allowed = ["cis-pipeline", "cis-hermes", "cis-brainstorm", "cis-drafter",
+               "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
+               "cis-verifier"]
+    if container not in allowed:
+        return jsonify({"error": f"container '{container}' not in whitelist"}), 403
+
+    try:
+        result = subprocess.run(
+            ["docker", "restart", container],
+            capture_output=True, text=True, timeout=60
+        )
+        if result.returncode == 0:
+            return jsonify({"status": "ok", "container": container, "message": "restarted"})
+        else:
+            return jsonify({"error": result.stderr.strip()}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "restart timed out (60s)"}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@relay_bp.route("/system/restart-all", methods=["POST"])
+def system_restart_all():
+    """Restart all CIS containers in dependency order."""
+    order = ["cis-hermes", "cis-brainstorm", "cis-drafter",
+             "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
+             "cis-verifier", "cis-pipeline"]
+    results = []
+    for name in order:
+        try:
+            result = subprocess.run(
+                ["docker", "restart", name],
+                capture_output=True, text=True, timeout=60
+            )
+            if result.returncode == 0:
+                results.append({"container": name, "status": "ok"})
+            else:
+                results.append({"container": name, "status": "error", "error": result.stderr.strip()})
+        except Exception as e:
+            results.append({"container": name, "status": "error", "error": str(e)})
+
+    return jsonify({"results": results})
+
+
+@relay_bp.route("/system/logs/<container>", methods=["GET"])
+def system_logs(container):
+    """Get last 50 lines of container logs."""
+    allowed = ["cis-pipeline", "cis-hermes", "cis-brainstorm", "cis-drafter",
+               "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
+               "cis-verifier"]
+    if container not in allowed:
+        return jsonify({"error": "container not in whitelist"}), 403
+
+    try:
+        result = subprocess.run(
+            ["docker", "logs", "--tail", "50", "--no-log-prefix", container],
+            capture_output=True, text=True, timeout=10
+        )
+        lines = (result.stdout + result.stderr).strip().split("\n")
+        lines = [l for l in lines if l.strip()][-50:]
+        return jsonify({"container": container, "lines": lines})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

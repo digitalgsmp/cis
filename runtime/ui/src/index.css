@@ -436,3 +436,229 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── System Dashboard ──────────────────────────────── */
+
+.system-view {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.system-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  min-width: 80px;
+}
+
+.summary-num {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.summary-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.action-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn.danger {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.action-btn.danger:hover:not(:disabled) {
+  background: var(--error);
+  color: white;
+}
+
+.action-msg {
+  padding: 8px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.action-msg.ok {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.action-msg.error {
+  background: #f8514922;
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.section-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 24px 0 12px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.loading-text {
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 20px 0;
+}
+
+.container-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.container-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.container-card.healthy {
+  border-left: 3px solid var(--accent);
+}
+
+.container-card.unhealthy {
+  border-left: 3px solid var(--warn);
+}
+
+.container-card.stopped {
+  border-left: 3px solid var(--error);
+  opacity: 0.7;
+}
+
+.container-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.container-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.container-status {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.container-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.meta-item {
+  font-family: monospace;
+}
+
+.container-error {
+  color: var(--error);
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.container-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Status dot variants */
+.status-dot.ok { background: var(--accent); }
+.status-dot.warn { background: var(--warn); }
+.status-dot.down { background: var(--error); }
+
+/* Log modal */
+.log-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.log-modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 80%;
+  max-width: 800px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.log-content {
+  overflow: auto;
+  padding: 12px 16px;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.log-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}

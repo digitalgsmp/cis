@@ -54,4 +54,17 @@ export const api = {
   // Answer human question
   answer: (runId, answer) =>
     _post(`/${runId}/answer`, { answer }),
+
+  // System dashboard
+  getSystemHealth: () =>
+    _get('/system/health'),
+
+  restartContainer: (name) =>
+    _post('/system/restart', { container: name }),
+
+  restartAllContainers: () =>
+    _post('/system/restart-all'),
+
+  getContainerLogs: (name) =>
+    _get(`/system/logs/${name}`),
 };
