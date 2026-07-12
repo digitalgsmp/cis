@@ -221,6 +221,12 @@ export default function PipelineLive({ runId, onRunIdChange }) {
                     {phase.verify_output}
                   </>
                 )}
+                {phase.menter_output && (
+                  <>
+                    <div className="phase-output-label">MENTOR (IMPLEMENTER)</div>
+                    {phase.menter_output}
+                  </>
+                )}
                 {phase.human_question && (
                   <>
                     <div className="phase-output-label" style={{ color: 'var(--warn)' }}>

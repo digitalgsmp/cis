@@ -1541,6 +1541,8 @@ def relay_feed(run_id: str):
                 phase["reviewer2_output"] = r["reviewer2_output"]
             if r.get("verify_output"):
                 phase["verify_output"] = r["verify_output"]
+            if r.get("menter_output"):
+                phase["menter_output"] = r["menter_output"]
             if r.get("human_question"):
                 phase["human_question"] = r["human_question"]
             phases.append(phase)
