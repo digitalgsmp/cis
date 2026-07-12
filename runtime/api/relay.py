@@ -847,6 +847,111 @@ def register_project():
         conn.close()
 
 
+# ── Project Overview Endpoints ──────────────────────────────────────────
+
+@relay_bp.route("/api/relay/project/<project_id>/overview", methods=["GET"])
+def project_overview(project_id: str):
+    """Get a project overview: build plan, recent runs, decisions, stats."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        # Build plan nodes
+        nodes = conn.execute(
+            "SELECT node_label, tier, sequence, status, blocked_reason, "
+            "completed_at, commit_hash FROM build_plan_nodes "
+            "WHERE project_id = ? COLLATE NOCASE ORDER BY sequence",
+            (project_id,)
+        ).fetchall()
+        build_plan = [dict(r) for r in nodes]
+        complete = sum(1 for n in build_plan if n["status"] == "COMPLETE")
+        deferred = sum(1 for n in build_plan if n["status"] == "DEFERRED")
+        pending = sum(1 for n in build_plan if n["status"] == "PENDING")
+
+        # Recent runs
+        runs = conn.execute(
+            "SELECT id, topic, status, created_at, rounds_completed, result "
+            "FROM workflow_runs WHERE project_id = ? COLLATE NOCASE "
+            "ORDER BY created_at DESC LIMIT 10",
+            (project_id,)
+        ).fetchall()
+        recent_runs = [dict(r) for r in runs]
+
+        # Project decisions (ADRs)
+        decisions = conn.execute(
+            "SELECT label, substr(decision, 1, 200) as decision, status, decided_at "
+            "FROM project_decisions ORDER BY decided_at DESC LIMIT 20"
+        ).fetchall()
+        adr_list = [dict(r) for r in decisions]
+
+        # Stats
+        total_runs = conn.execute(
+            "SELECT count(*) FROM workflow_runs WHERE project_id = ?",
+            (project_id,)
+        ).fetchone()[0]
+        consensus_runs = conn.execute(
+            "SELECT count(*) FROM workflow_runs WHERE project_id = ? AND result = 'CONSENSUS_REACHED'",
+            (project_id,)
+        ).fetchone()[0]
+        escalated_runs = conn.execute(
+            "SELECT count(*) FROM workflow_runs WHERE project_id = ? AND result = 'ESCALATED'",
+            (project_id,)
+        ).fetchone()[0]
+        eric_gate_runs = conn.execute(
+            "SELECT count(*) FROM workflow_runs WHERE project_id = ? AND status = 'ERIC_GATE'",
+            (project_id,)
+        ).fetchone()[0]
+
+        # Active blockers
+        blockers = conn.execute(
+            "SELECT id, description, status FROM active_blockers WHERE status != 'RESOLVED' LIMIT 5"
+        ).fetchall()
+        active_blockers = [{"blocker_id": r["id"], "title": r["description"], "status": r["status"]} for r in blockers]
+
+        return jsonify({
+            "project_id": project_id,
+            "build_plan": build_plan,
+            "build_plan_stats": {
+                "total": len(build_plan),
+                "complete": complete,
+                "deferred": deferred,
+                "pending": pending,
+            },
+            "recent_runs": recent_runs,
+            "decisions": adr_list,
+            "stats": {
+                "total_runs": total_runs,
+                "consensus_reached": consensus_runs,
+                "escalated": escalated_runs,
+                "at_eric_gate": eric_gate_runs,
+            },
+            "active_blockers": active_blockers,
+        })
+    finally:
+        conn.close()
+
+
+@relay_bp.route("/api/relay/project/<project_id>/build-plan", methods=["GET"])
+def project_build_plan(project_id: str):
+    """Get detailed build plan for a project."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT node_label, tier, sequence, status, blocked_reason, "
+            "required_role, allowed_mode, workflow_run_id, evidence_path, "
+            "commit_hash, completed_at, approved_at "
+            "FROM build_plan_nodes WHERE project_id = ? COLLATE NOCASE ORDER BY sequence",
+            (project_id,)
+        ).fetchall()
+        return jsonify({"nodes": [dict(r) for r in rows]})
+    finally:
+        conn.close()
+
+
 # ── Task Decomposition Endpoints (Component 8) ──────────────────────────
 
 

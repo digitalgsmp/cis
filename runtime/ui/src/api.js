@@ -67,4 +67,17 @@ export const api = {
 
   getContainerLogs: (name) =>
     _get(`/system/logs/${name}`),
+
+  // Project overview
+  getProjectOverview: (projectId) =>
+    _get(`/project/${projectId}/overview`),
+
+  getProjectBuildPlan: (projectId) =>
+    _get(`/project/${projectId}/build-plan`),
+
+  // Projects
+  getProjects: () =>
+    _get('/projects').then(r => { throw new Error('use /api/projects instead') }).catch(() => {
+      return fetch('/api/projects').then(r => r.json())
+    }),
 };

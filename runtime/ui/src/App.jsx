@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from './api.js'
+import ProjectCenter from './ProjectCenter.jsx'
 import BrainChat from './BrainChat.jsx'
 import PipelineLive from './PipelineLive.jsx'
 import RunsList from './RunsList.jsx'
 import SystemDashboard from './SystemDashboard.jsx'
 
+const TAB_PROJECT = 'project'
 const TAB_BRAIN = 'brain'
 const TAB_PIPELINE = 'pipeline'
 const TAB_RUNS = 'runs'
 const TAB_SYSTEM = 'system'
 
 export default function App() {
-  const [tab, setTab] = useState(TAB_BRAIN)
+  const [tab, setTab] = useState(TAB_PROJECT)
   const [activeRunId, setActiveRunId] = useState(null)
   const [health, setHealth] = useState(null)
 
@@ -35,11 +37,22 @@ export default function App() {
     setTab(TAB_PIPELINE)
   }
 
+  const handleSelectRun = (runId) => {
+    setActiveRunId(runId)
+    setTab(TAB_PIPELINE)
+  }
+
   return (
     <div className="app-shell">
       <div className="topbar">
         <div className="topbar-logo">CIS Control Panel</div>
         <div className="topbar-nav">
+          <button
+            className={`nav-btn ${tab === TAB_PROJECT ? 'active' : ''}`}
+            onClick={() => setTab(TAB_PROJECT)}
+          >
+            Project
+          </button>
           <button
             className={`nav-btn ${tab === TAB_BRAIN ? 'active' : ''}`}
             onClick={() => setTab(TAB_BRAIN)}
@@ -82,6 +95,12 @@ export default function App() {
       </div>
 
       <div className="main-content">
+        {tab === TAB_PROJECT && (
+          <ProjectCenter
+            onPipelineStarted={handlePipelineStarted}
+            onSelectRun={handleSelectRun}
+          />
+        )}
         {tab === TAB_BRAIN && (
           <BrainChat onPipelineStarted={handlePipelineStarted} />
         )}
@@ -93,10 +112,7 @@ export default function App() {
         )}
         {tab === TAB_RUNS && (
           <RunsList
-            onSelectRun={(id) => {
-              setActiveRunId(id)
-              setTab(TAB_PIPELINE)
-            }}
+            onSelectRun={handleSelectRun}
           />
         )}
         {tab === TAB_SYSTEM && (
