@@ -36,12 +36,15 @@ export default function PipelineLive({ runId, onRunIdChange }) {
     }
   }, [runId])
 
-  // Auto-scroll
+  // Auto-scroll only when new phases appear (not on every poll)
+  const phaseCount = feed?.phases?.length || 0
+  const prevPhaseCount = useRef(0)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && phaseCount > prevPhaseCount.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [feed])
+    prevPhaseCount.current = phaseCount
+  }, [phaseCount])
 
   const sendInterjection = useCallback(async () => {
     if (!input.trim() || !runId) return
