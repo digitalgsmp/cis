@@ -5,7 +5,9 @@ import BrainChat from './BrainChat.jsx'
 import PipelineLive from './PipelineLive.jsx'
 import RunsList from './RunsList.jsx'
 import SystemDashboard from './SystemDashboard.jsx'
+import Workbench from './Workbench.jsx'
 
+const TAB_WORKBENCH = 'workbench'
 const TAB_PROJECT = 'project'
 const TAB_BRAIN = 'brain'
 const TAB_PIPELINE = 'pipeline'
@@ -13,7 +15,7 @@ const TAB_RUNS = 'runs'
 const TAB_SYSTEM = 'system'
 
 export default function App() {
-  const [tab, setTab] = useState(TAB_PROJECT)
+  const [tab, setTab] = useState(TAB_WORKBENCH)
   const [activeRunId, setActiveRunId] = useState(null)
   const [health, setHealth] = useState(null)
 
@@ -47,6 +49,12 @@ export default function App() {
       <div className="topbar">
         <div className="topbar-logo">CIS Control Panel</div>
         <div className="topbar-nav">
+          <button
+            className={`nav-btn ${tab === TAB_WORKBENCH ? 'active' : ''}`}
+            onClick={() => setTab(TAB_WORKBENCH)}
+          >
+            Workbench
+          </button>
           <button
             className={`nav-btn ${tab === TAB_PROJECT ? 'active' : ''}`}
             onClick={() => setTab(TAB_PROJECT)}
@@ -95,6 +103,9 @@ export default function App() {
       </div>
 
       <div className="main-content">
+        {tab === TAB_WORKBENCH && (
+          <Workbench />
+        )}
         {tab === TAB_PROJECT && (
           <ProjectCenter
             onPipelineStarted={handlePipelineStarted}

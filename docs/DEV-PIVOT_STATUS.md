@@ -1,5 +1,5 @@
 # DEV-PIVOT Status Report
-Generated: 2026-07-13 13:36 UTC | Run: run-b77e8e78fa91
+Generated: 2026-07-13 16:53 UTC | Run: run-9290c5a3bb89
 Source: SQLite spine (dev_pivot_status table)
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_dev_pivot_manifest.py
 

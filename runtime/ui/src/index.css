@@ -1042,3 +1042,381 @@ body {
   margin-left: auto;
   font-weight: 400;
 }
+
+/* ── Workbench ─────────────────────────────────────────────────── */
+.workbench-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workbench-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.breadcrumb-item {
+  color: var(--text-dim);
+}
+.breadcrumb-item:hover {
+  color: var(--accent);
+  cursor: pointer;
+}
+.breadcrumb-sep {
+  color: var(--text-dim);
+  margin: 0 4px;
+}
+.breadcrumb-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.workbench-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left Panel: Brain Chat ────────────────────────────────────── */
+.workbench-left {
+  width: 40%;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+.workbench-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.thinking-indicator {
+  font-size: 11px;
+  color: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.workbench-chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chat-empty {
+  text-align: center;
+  color: var(--text-dim);
+  margin-top: 40px;
+}
+.chat-empty-hint {
+  font-size: 13px;
+  margin-top: 8px;
+  opacity: 0.7;
+}
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-msg-author {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.chat-msg.user .chat-msg-author { color: var(--warn); }
+.chat-msg.brain .chat-msg-author { color: var(--accent); }
+.chat-msg-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.chat-msg.brain .chat-msg-text {
+  background: rgba(0, 212, 170, 0.05);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 2px solid var(--accent);
+}
+.chat-msg.thinking .chat-msg-text {
+  opacity: 0.6;
+}
+.chat-refs {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.chat-refs-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.chat-ref-tag {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.workbench-input-bar {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+.workbench-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.workbench-input:focus {
+  border-color: var(--accent);
+}
+.workbench-input:disabled {
+  opacity: 0.5;
+}
+
+.typing-dots {
+  display: inline-block;
+  animation: typing 1.4s infinite;
+}
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+/* ── Right Panel: Construction View ────────────────────────────── */
+.workbench-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.construction-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text-dim);
+  margin-left: auto;
+}
+.construction-status.CONSENSUS_REACHED { color: var(--accent); }
+.construction-status.ERIC_GATE { color: var(--warn); }
+.construction-status.PENDING { color: var(--text-dim); }
+
+.construction-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.construction-empty {
+  text-align: center;
+  color: var(--text-dim);
+  margin-top: 60px;
+}
+.construction-placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+.construction-empty-hint {
+  font-size: 13px;
+  margin-top: 8px;
+  opacity: 0.6;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.construction-active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.construction-intent {
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+}
+.construction-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+.construction-intent-text {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.phase-track {
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+.phase-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-right: none;
+  font-size: 12px;
+  min-width: 100px;
+}
+.phase-node:last-child { border-right: 1px solid var(--border); }
+.phase-node.complete { background: var(--accent-dim); border-color: var(--accent); }
+.phase-node.in_progress { background: rgba(240, 136, 62, 0.1); border-color: var(--warn); }
+.phase-name { font-weight: 600; color: var(--text); }
+.phase-state { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.phase-node.complete .phase-state { color: var(--accent); }
+.phase-node.in_progress .phase-state { color: var(--warn); }
+
+.construction-output {
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 12px;
+}
+.construction-output-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.construction-code {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg-input);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.construction-waiting {
+  text-align: center;
+  color: var(--text-dim);
+  margin-top: 40px;
+}
+
+/* ── Backchannel ───────────────────────────────────────────────── */
+.backchannel-bar {
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  flex-shrink: 0;
+  max-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+.backchannel-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px;
+  max-height: 80px;
+}
+.backchannel-msg {
+  font-size: 12px;
+  color: var(--warn);
+  padding: 2px 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.backchannel-msg.consumed { opacity: 0.5; }
+.backchannel-msg .backchannel-consumed {
+  font-size: 10px;
+  color: var(--accent);
+}
+.backchannel-msg.error .backchannel-error {
+  color: var(--error);
+  font-size: 10px;
+}
+.backchannel-input-bar {
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.backchannel-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  opacity: 0.8;
+}
+.backchannel-input:focus {
+  opacity: 1;
+  border-color: var(--warn);
+}
+.backchannel-input::placeholder {
+  color: rgba(240, 136, 62, 0.5);
+}
+
+/* ── Status Strip ──────────────────────────────────────────────── */
+.workbench-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 16px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-enforcement {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.status-enforcement.intact { color: var(--accent); }
+.status-enforcement.breached { color: var(--error); }
+.status-time {
+  margin-left: auto;
+}
