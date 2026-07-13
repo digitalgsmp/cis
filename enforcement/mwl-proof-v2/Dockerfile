@@ -23,13 +23,6 @@
 
 FROM nikolaik/python-nodejs:python3.11-nodejs20
 
-# --- install docker CLI (client only, no daemon) for System Dashboard ---# System Dashboard calls `docker ps`, `docker restart`, `docker logs` from inside
-# the container. The docker socket is mounted at runtime by run_container.sh.
-# Host docker GID is 982 — create a matching group so the worker can access it.
-RUN apt-get update && apt-get install -y --no-install-recommends docker.io \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupmod -g 982 docker 2>/dev/null || groupadd -g 982 docker
-
 # --- install sqlite3 CLI for gate scripts ---
 RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
     && rm -rf /var/lib/apt/lists/*
@@ -97,7 +90,7 @@ RUN chown root:root /opt/cis-control/entrypoint.sh \
 # Remove the base image's default 'pn' user (UID 1000) first.
 RUN deluser pn 2>/dev/null; \
     groupadd -g 1000 worker 2>/dev/null; \
-    useradd -m -s /bin/bash -u 1000 -g 1000 -G docker worker
+    useradd -m -s /bin/bash -u 1000 -g 1000 worker
 
 # --- install the OBSERVER plugin into the worker's home AS ROOT, then seal it ---
 # Observer only — not the wall. Sealed anyway so the worker can't tamper.

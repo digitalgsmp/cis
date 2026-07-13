@@ -88,47 +88,14 @@ _GATEWAY_PORTS = {
 
 @app.route("/api/relay/system/health")
 def _system_health():
-    """Get health of Docker containers, internal gateways, and key services."""
+    """Get health of internal gateways and key services.
+    Docker container management is NOT available from inside the contained worker
+    — that would require docker socket access, which breaks the enforcement model.
+    Container status is available via the host-side API at port 8642/system/health."""
     containers = []
     gateways = []
     services = []
     try:
-        # ── Docker container overview (via docker ps) ───────────────────────
-        result = _subproc.run(
-            ["docker", "ps", "-a", "--format",
-             "{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            for line in result.stdout.strip().split("\n"):
-                if not line:
-                    continue
-                parts = line.split("\t")
-                name = parts[0] if len(parts) > 0 else ""
-                status_raw = parts[1] if len(parts) > 1 else ""
-                image = parts[2] if len(parts) > 2 else ""
-                ports = parts[3] if len(parts) > 3 else ""
-                is_running = status_raw.startswith("Up")
-                health = ""
-                healthy = True
-                if "unhealthy" in status_raw.lower():
-                    health = "unhealthy"
-                    healthy = False
-                elif "healthy" in status_raw.lower():
-                    health = "healthy"
-                uptime = ""
-                if is_running:
-                    uptime = status_raw.replace("Up ", "").split(" (")[0]
-                containers.append({
-                    "name": name,
-                    "status": "running" if is_running else "stopped",
-                    "health": health,
-                    "healthy": healthy if is_running else False,
-                    "image": image[:60],
-                    "uptime": uptime,
-                    "ports": ports[:80] if ports else "",
-                })
-
         # ── Internal gateway health (127.0.0.1:864x — the real gateways) ──
         for label, (port, model) in _GATEWAY_PORTS.items():
             try:
@@ -187,65 +154,160 @@ def _system_health():
 
 @app.route("/api/relay/system/restart", methods=["POST"])
 def _system_restart():
-    from flask import request as _req
-    data = _req.get_json(silent=True) or {}
-    container = data.get("container", "")
-    if not container:
-        return jsonify({"error": "container name required"}), 400
-    allowed = ["cis-pipeline", "cis-hermes", "cis-brainstorm", "cis-drafter",
-               "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer", "cis-verifier"]
-    if container not in allowed:
-        return jsonify({"error": f"container '{container}' not in whitelist"}), 403
-    # Self-restart: return success first, then restart asynchronously
-    if container == "cis-pipeline":
-        import threading
-        def _delayed_restart():
-            import time as _time
-            _time.sleep(0.5)
-            _subproc.run(["docker", "restart", container], capture_output=True, text=True, timeout=60)
-        threading.Thread(target=_delayed_restart, daemon=True).start()
-        return jsonify({"status": "ok", "container": container, "note": "self-restart scheduled"})
-    try:
-        result = _subproc.run(["docker", "restart", container], capture_output=True, text=True, timeout=60)
-        if result.returncode == 0:
-            return jsonify({"status": "ok", "container": container})
-        return jsonify({"error": result.stderr.strip()}), 500
-    except _subproc.TimeoutExpired:
-        return jsonify({"error": "restart timed out"}), 504
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """Docker restart is NOT available from inside the contained worker.
+    Container restart must be performed from the host side."""
+    return jsonify({"error": "Docker restart not available from contained worker. Use host-side: sg docker -c 'docker restart <name>'"}), 403
 
 
 @app.route("/api/relay/system/restart-all", methods=["POST"])
 def _system_restart_all():
-    order = ["cis-hermes", "cis-brainstorm", "cis-drafter",
-             "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
-             "cis-verifier", "cis-pipeline"]
-    results = []
-    for name in order:
-        try:
-            result = _subproc.run(["docker", "restart", name], capture_output=True, text=True, timeout=60)
-            results.append({"container": name, "status": "ok" if result.returncode == 0 else "error"})
-        except Exception as e:
-            results.append({"container": name, "status": "error", "error": str(e)})
-    return jsonify({"results": results})
+    """Docker restart is NOT available from inside the contained worker."""
+    return jsonify({"error": "Docker restart not available from contained worker. Use host-side: sg docker -c 'docker restart <name>'"}), 403
 
 
 @app.route("/api/relay/system/logs/<container>")
 def _system_logs(container):
-    allowed = ["cis-pipeline", "cis-hermes", "cis-brainstorm", "cis-drafter",
-               "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer", "cis-verifier"]
-    if container not in allowed:
-        return jsonify({"error": "container not in whitelist"}), 403
+    """Docker logs are NOT available from inside the contained worker.
+    Gateway logs are available at /tmp/cis-logs/<profile>.log inside the container."""
+    # Gateway logs ARE accessible — they're local files, not docker commands
+    log_map = {
+        "cis-brainstorm": "/tmp/cis-logs/brain.log",
+        "cis-drafter": "/tmp/cis-logs/draft.log",
+        "cis-qwen-reviewer": "/tmp/cis-logs/review1.log",
+        "cis-glm-reviewer": "/tmp/cis-logs/review2.log",
+        "cis-implementer": "/tmp/cis-logs/menter.log",
+        "cis-verifier": "/tmp/cis-logs/verify.log",
+        "cis-pipeline": "/tmp/cis-logs/pipeline_api.log",
+    }
+    log_path = log_map.get(container)
+    if not log_path:
+        return jsonify({"error": f"Unknown container '{container}'. Available: {list(log_map.keys())}"}), 404
     try:
-        result = _subproc.run(
-            ["docker", "logs", "--tail", "50", container],
-            capture_output=True, text=True, timeout=10
-        )
-        lines = [l for l in (result.stdout + result.stderr).strip().split("\n") if l.strip()][-50:]
-        return jsonify({"container": container, "lines": lines})
+        with open(log_path, "r") as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()][-50:]
+        return jsonify({"container": container, "lines": lines, "source": log_path})
+    except FileNotFoundError:
+        return jsonify({"error": f"Log file not found: {log_path}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ── Enforcement Security Audit ────────────────────────────────────────────────
+# Proves the containment model is intact by checking actual filesystem state.
+# Every check is deterministic — no self-report, no trust, raw evidence only.
+
+import stat as _stat_mod
+import pwd as _pwd_mod
+import grp as _grp_mod
+
+def _check_file_owner(path):
+    """Return (uid, gid, mode) for a path, or None if not found."""
+    try:
+        st = os.stat(path)
+        return (st.st_uid, st.st_gid, st.st_mode)
+    except OSError:
+        return None
+
+def _check_writable(path):
+    """Check if the current process (worker) can write to this path."""
+    return os.access(path, os.W_OK)
+
+@app.route("/api/relay/system/security")
+def _system_security():
+    """Deterministic enforcement audit. Checks actual filesystem state to prove
+    the container is secure and agents are guardrailed. No self-report — raw evidence."""
+    checks = []
+    all_pass = True
+
+    def _add(name, passed, detail):
+        nonlocal all_pass
+        checks.append({"name": name, "passed": passed, "detail": detail})
+        if not passed:
+            all_pass = False
+
+    # 1. Worker is non-root (UID must be 1000, not 0)
+    uid = os.getuid()
+    _add("Worker is non-root", uid != 0, f"UID={uid} ({_pwd_mod.getpwuid(uid).pw_name})")
+
+    # 2. No docker socket accessible
+    sock_exists = os.path.exists("/var/run/docker.sock")
+    _add("No docker socket mounted", not sock_exists,
+         "/var/run/docker.sock NOT present" if not sock_exists else "⚠ docker socket IS mounted — containment BROKEN")
+
+    # 3. Worker not in docker group
+    docker_groups = [g for g in os.getgroups()]
+    docker_gids = [_grp_mod.getgrgid(g).gr_name for g in docker_groups if _grp_mod.getgrgid(g).gr_name == "docker"]
+    _add("Worker not in docker group", len(docker_gids) == 0,
+         f"Groups: {[_grp_mod.getgrgid(g).gr_name for g in docker_groups]}" if docker_groups else "No supplementary groups")
+
+    # 4. Managed config is root-owned and worker can't write
+    managed_cfg = "/etc/hermes/config.yaml"
+    info = _check_file_owner(managed_cfg)
+    if info:
+        owner_uid, owner_gid, mode = info
+        worker_writable = _check_writable(managed_cfg)
+        _add("Managed config sealed (root-owned, worker RO)",
+             owner_uid == 0 and not worker_writable,
+             f"owner=uid:{owner_uid} mode:{oct(mode)} worker_writable={worker_writable}")
+    else:
+        _add("Managed config sealed", False, f"{managed_cfg} not found")
+
+    # 5. Enforcement plugin is root-owned and worker can't write
+    for profile in ["brain", "draft", "review1", "review2", "menter", "verify"]:
+        plugin_path = f"/home/worker/.hermes-{profile}/plugins/mwl-proof"
+        info = _check_file_owner(plugin_path)
+        if info:
+            owner_uid, _, mode = info
+            worker_writable = _check_writable(plugin_path)
+            _add(f"Plugin sealed: {profile}", owner_uid == 0 and not worker_writable,
+                 f"owner=uid:{owner_uid} worker_writable={worker_writable}")
+        else:
+            _add(f"Plugin sealed: {profile}", False, f"{plugin_path} not found")
+
+    # 6. Gate scripts are root-owned and worker can't write
+    gates_dir = "/opt/cis-gates"
+    if os.path.isdir(gates_dir):
+        info = _check_file_owner(gates_dir)
+        if info:
+            owner_uid, _, mode = info
+            worker_writable = _check_writable(gates_dir)
+            _add("Gate scripts sealed (root-owned, worker RO)",
+                 owner_uid == 0 and not worker_writable,
+                 f"owner=uid:{owner_uid} mode:{oct(mode)} worker_writable={worker_writable}")
+        else:
+            _add("Gate scripts sealed", False, f"stat failed on {gates_dir}")
+    else:
+        _add("Gate scripts sealed", False, f"{gates_dir} not found")
+
+    # 7. Hook consent baked into image env
+    hooks_enabled = os.environ.get("HERMES_ACCEPT_HOOKS") == "1"
+    managed_dir = os.environ.get("HERMES_MANAGED_DIR") == "/etc/hermes"
+    _add("Hook consent baked (HERMES_ACCEPT_HOOKS=1)", hooks_enabled,
+         f"HERMES_ACCEPT_HOOKS={os.environ.get('HERMES_ACCEPT_HOOKS', '<unset>')}")
+    _add("Managed scope baked (HERMES_MANAGED_DIR=/etc/hermes)", managed_dir,
+         f"HERMES_MANAGED_DIR={os.environ.get('HERMES_MANAGED_DIR', '<unset>')}")
+
+    # 8. Entry point script is read-only (bind-mounted RO from host or root-owned in image)
+    entrypoint = "/opt/cis-control/entrypoint.sh"
+    info = _check_file_owner(entrypoint)
+    if info:
+        owner_uid, _, mode = info
+        worker_writable = _check_writable(entrypoint)
+        # Pass if worker can't write to it — either root-owned OR bind-mounted RO
+        _add("Entrypoint sealed (worker cannot modify)",
+             not worker_writable,
+             f"owner=uid:{owner_uid} mode:{oct(mode)} worker_writable={worker_writable}")
+    else:
+        _add("Entrypoint sealed", False, f"{entrypoint} not found")
+
+    return jsonify({
+        "enforcement_intact": all_pass,
+        "checks": checks,
+        "passed": sum(1 for c in checks if c["passed"]),
+        "failed": sum(1 for c in checks if not c["passed"]),
+        "total": len(checks),
+    })
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)

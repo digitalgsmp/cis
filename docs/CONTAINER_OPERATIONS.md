@@ -110,14 +110,17 @@ The managed config at `/etc/hermes/config.yaml` provides enforcement overrides
 
 ## 8. System Dashboard (System Tab)
 
-The System tab calls these endpoints on the Flask API (port 5000):
-- `GET /api/relay/system/health` — docker ps + gateway health + services
-- `POST /api/relay/system/restart` — restart a specific container
-- `POST /api/relay/system/restart-all` — restart all CIS containers
-- `GET /api/relay/system/logs/<container>` — last 50 log lines
+The System tab shows gateway health, service health, and gateway logs.
+It does NOT have docker container management — the worker is contained and
+must not have docker socket access (that would break the enforcement model,
+ADR-015/016). Container restart must be done from the host:
+  `sg docker -c "docker restart cis-pipeline"`
 
-These require the docker socket mounted + worker in docker group (GID 982).
-Both are now baked into the Dockerfile and run_container.sh.
+Available endpoints (Flask, port 5000):
+- `GET /api/relay/system/health` — gateway health + service health (SQLite, ChromaDB, llama-servers)
+- `GET /api/relay/system/logs/<container>` — reads gateway log files from /tmp/cis-logs/<profile>.log
+- `POST /api/relay/system/restart` — returns 403 with instructions (not available from contained worker)
+- `POST /api/relay/system/restart-all` — returns 403 (not available from contained worker)
 
 ## 9. Known Operational Notes
 

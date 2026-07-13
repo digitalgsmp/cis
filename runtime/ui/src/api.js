@@ -59,11 +59,8 @@ export const api = {
   getSystemHealth: () =>
     _get('/system/health'),
 
-  restartContainer: (name) =>
-    _post('/system/restart', { container: name }),
-
-  restartAllContainers: () =>
-    _post('/system/restart-all'),
+  getSecurityAudit: () =>
+    _get('/system/security'),
 
   getContainerLogs: (name) =>
     _get(`/system/logs/${name}`),

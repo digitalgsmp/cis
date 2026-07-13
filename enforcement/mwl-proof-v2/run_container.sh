@@ -61,7 +61,6 @@ case "${1:-start}" in
         -p 5000:5000 \
         -v $CIS_REPO:/workspace/cis \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
-        -v /var/run/docker.sock:/var/run/docker.sock \
         -e CIS_BRAIN_API_KEY=cis-brainstorm-gateway-key-2026 \
         -e CIS_DRAFT_API_KEY=cis-drafter-gateway-key-2026 \
         -e CIS_REVIEW1_API_KEY=cis-qwen-reviewer-gateway-key-2026 \

@@ -1,25 +1,28 @@
-// CIS Control Panel v1.1.0 — System Dashboard
+// CIS Control Panel v1.3.0 — System Dashboard
+// No docker socket access — worker is contained. Shows gateway health, services, gateway logs,
+// and deterministic enforcement audit.
 import { useState, useEffect, useCallback } from 'react'
 import { api } from './api.js'
 
 export default function SystemDashboard() {
-  const [containers, setContainers] = useState([])
   const [gateways, setGateways] = useState([])
   const [services, setServices] = useState([])
+  const [security, setSecurity] = useState(null)
   const [logs, setLogs] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionMsg, setActionMsg] = useState(null)
-  const [restarting, setRestarting] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
 
   const fetchHealth = useCallback(async () => {
     try {
-      const data = await api.getSystemHealth()
-      setContainers(data.containers || [])
-      setGateways(data.gateways || [])
-      setServices(data.services || [])
+      const [healthData, secData] = await Promise.all([
+        api.getSystemHealth(),
+        api.getSecurityAudit().catch(() => null),
+      ])
+      setGateways(healthData.gateways || [])
+      setServices(healthData.services || [])
+      setSecurity(secData)
     } catch (e) {
-      setContainers([])
       setGateways([])
       setServices([])
     } finally {
@@ -35,57 +38,34 @@ export default function SystemDashboard() {
     }
   }, [fetchHealth, autoRefresh])
 
-  const restartContainer = async (name) => {
-    setRestarting(name)
-    setActionMsg(null)
-    try {
-      const resp = await api.restartContainer(name)
-      setActionMsg({ type: 'ok', text: `${name} restarted` })
-      setTimeout(fetchHealth, 2000)
-    } catch (e) {
-      setActionMsg({ type: 'error', text: `Failed to restart ${name}: ${e.message}` })
-    } finally {
-      setRestarting(null)
-    }
-  }
-
   const viewLogs = async (name) => {
     try {
       const data = await api.getContainerLogs(name)
-      setLogs({ name, lines: data.lines || [] })
+      setLogs({ name, lines: data.lines || [], source: data.source || '' })
     } catch (e) {
-      setLogs({ name, lines: [`Error: ${e.message}`] })
-    }
-  }
-
-  const restartAll = async () => {
-    setRestarting('ALL')
-    setActionMsg(null)
-    try {
-      const resp = await api.restartAllContainers()
-      setActionMsg({ type: 'ok', text: 'All containers restarting...' })
-      setTimeout(fetchHealth, 5000)
-    } catch (e) {
-      setActionMsg({ type: 'error', text: `Failed: ${e.message}` })
-    } finally {
-      setRestarting(null)
+      setLogs({ name, lines: [`Error: ${e.message}`], source: '' })
     }
   }
 
   // Summary counts
-  const running = containers.filter(c => c.status === 'running').length
-  const unhealthy = containers.filter(c => c.status === 'running' && !c.healthy).length
-  const stopped = containers.filter(c => c.status !== 'running').length
   const gatewaysUp = gateways.filter(g => g.healthy).length
   const gatewaysDown = gateways.filter(g => !g.healthy).length
+  const servicesUp = services.filter(s => s.healthy).length
+  const servicesDown = services.filter(s => !s.healthy).length
+  const secPassed = security ? security.passed : 0
+  const secFailed = security ? security.failed : 0
 
   return (
     <div className="system-view">
       {/* Summary bar */}
       <div className="system-summary">
         <div className="summary-card">
-          <span className="summary-num">{running}</span>
-          <span className="summary-label">Containers Running</span>
+          <span className="summary-num" style={{ color: secFailed > 0 ? 'var(--error)' : 'var(--accent)' }}>{secPassed}</span>
+          <span className="summary-label">Enforcement Checks Passed</span>
+        </div>
+        <div className="summary-card">
+          <span className="summary-num" style={{ color: secFailed > 0 ? 'var(--error)' : 'var(--text-dim)' }}>{secFailed}</span>
+          <span className="summary-label">Enforcement Checks Failed</span>
         </div>
         <div className="summary-card">
           <span className="summary-num" style={{ color: gatewaysDown > 0 ? 'var(--warn)' : 'var(--accent)' }}>{gatewaysUp}</span>
@@ -95,10 +75,6 @@ export default function SystemDashboard() {
           <span className="summary-num" style={{ color: gatewaysDown > 0 ? 'var(--error)' : 'var(--text-dim)' }}>{gatewaysDown}</span>
           <span className="summary-label">Gateways Down</span>
         </div>
-        <div className="summary-card">
-          <span className="summary-num" style={{ color: stopped > 0 ? 'var(--error)' : 'var(--text-dim)' }}>{stopped}</span>
-          <span className="summary-label">Containers Stopped</span>
-        </div>
         <button
           className="action-btn"
           onClick={() => setAutoRefresh(!autoRefresh)}
@@ -106,19 +82,53 @@ export default function SystemDashboard() {
         >
           {autoRefresh ? 'Auto-refresh ON (5s)' : 'Auto-refresh OFF'}
         </button>
-        <button
-          className="action-btn danger"
-          onClick={restartAll}
-          disabled={restarting === 'ALL'}
-        >
-          {restarting === 'ALL' ? 'Restarting...' : 'Restart All'}
-        </button>
       </div>
 
       {actionMsg && (
         <div className={`action-msg ${actionMsg.type}`}>
           {actionMsg.text}
         </div>
+      )}
+
+      {/* Enforcement Audit Panel */}
+      {security && (
+        <>
+          <div className="section-header" style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <span>ENFORCEMENT AUDIT</span>
+            <span style={{
+              fontSize: '12px', fontWeight: 'bold', padding: '2px 10px', borderRadius: '4px',
+              background: security.enforcement_intact ? 'rgba(0,255,136,0.15)' : 'rgba(255,60,60,0.15)',
+              color: security.enforcement_intact ? 'var(--accent)' : 'var(--error)',
+              border: `1px solid ${security.enforcement_intact ? 'rgba(0,255,136,0.3)' : 'rgba(255,60,60,0.3)'}`,
+            }}>
+              {security.enforcement_intact ? '◆ CONTAINMENT INTACT' : '✕ CONTAINMENT BREACHED'}
+            </span>
+          </div>
+          <div className="container-list">
+            {security.checks.map((c, i) => (
+              <div key={i} className={`container-card ${c.passed ? 'healthy' : 'unhealthy'}`}
+                   style={{ minHeight: 'auto', padding: '6px 12px' }}>
+                <div className="container-card-header" style={{ padding: '0' }}>
+                  <span className={`status-dot ${c.passed ? 'ok' : 'down'}`}></span>
+                  <span className="container-name" style={{ fontSize: '13px' }}>{c.name}</span>
+                  <span className="container-status" style={{
+                    fontSize: '11px', color: c.passed ? 'var(--accent)' : 'var(--error)',
+                    marginLeft: 'auto', fontFamily: 'monospace'
+                  }}>
+                    {c.passed ? 'PASS' : 'FAIL'}
+                  </span>
+                </div>
+                <div className="container-meta" style={{ padding: '0' }}>
+                  <span className="meta-item" style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-dim)' }}>
+                    {c.detail}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Internal gateways */}
@@ -137,53 +147,21 @@ export default function SystemDashboard() {
                   <span className="meta-item">Port: {g.port}</span>
                   <span className="meta-item">Model: {g.model}</span>
                 </div>
+                <div className="container-actions">
+                  <button
+                    className="action-btn"
+                    onClick={() => viewLogs(g.name)}
+                  >
+                    Logs
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {/* Docker containers */}
-      <div className="section-header">DOCKER CONTAINERS</div>
-      {loading ? (
-        <p className="loading-text">Loading...</p>
-      ) : containers.length === 0 ? (
-        <p className="loading-text">No containers found. Is Docker running?</p>
-      ) : (
-        <div className="container-list">
-          {containers.map((c, i) => (
-            <div key={i} className={`container-card ${c.status === 'running' ? (c.healthy ? 'healthy' : 'unhealthy') : 'stopped'}`}>
-              <div className="container-card-header">
-                <span className="container-name">{c.name}</span>
-                <span className={`status-dot ${c.status === 'running' ? (c.healthy ? 'ok' : 'warn') : 'down'}`}></span>
-                <span className="container-status">{c.status}{c.health ? ` / ${c.health}` : ''}</span>
-              </div>
-              <div className="container-meta">
-                {c.image && <span className="meta-item">Image: {c.image}</span>}
-                {c.uptime && <span className="meta-item">Up: {c.uptime}</span>}
-                {c.ports && <span className="meta-item">Ports: {c.ports}</span>}
-              </div>
-              <div className="container-actions">
-                <button
-                  className="action-btn"
-                  onClick={() => restartContainer(c.name)}
-                  disabled={restarting === c.name}
-                >
-                  {restarting === c.name ? 'Restarting...' : 'Restart'}
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={() => viewLogs(c.name)}
-                >
-                  Logs
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Services (non-Docker) */}
+      {/* Services (SQLite, ChromaDB, llama-servers) */}
       {services.length > 0 && (
         <>
           <div className="section-header">SERVICES</div>
@@ -205,6 +183,8 @@ export default function SystemDashboard() {
         </>
       )}
 
+      {loading && <p className="loading-text">Loading...</p>}
+
       {/* Log viewer modal */}
       {logs && (
         <div className="log-modal-overlay" onClick={() => setLogs(null)}>
@@ -213,6 +193,11 @@ export default function SystemDashboard() {
               <span>Logs: {logs.name}</span>
               <button className="action-btn" onClick={() => setLogs(null)}>Close</button>
             </div>
+            {logs.source && (
+              <div style={{ fontSize: '11px', color: 'var(--text-dim)', padding: '4px 8px' }}>
+                Source: {logs.source}
+              </div>
+            )}
             <pre className="log-content">
               {logs.lines.map((line, i) => (
                 <div key={i} className="log-line">{line}</div>
