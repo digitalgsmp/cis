@@ -77,7 +77,7 @@ export default function PipelineLive({ runId, onRunIdChange }) {
   }
 
   // Group gates by phase
-  const gatesByPhase = (gates || []).reduce((acc, g) => {
+  const gatesByPhase = (feed?.gates || []).reduce((acc, g) => {
     const key = `${g.phase}/${g.role}`
     if (!acc[key]) acc[key] = []
     acc[key].push(g)
