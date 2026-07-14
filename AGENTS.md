@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-13 18:09 UTC | Run: run-237494fd693c | Latest pipeline: run-26d5215a3aba5374-1783792127
+Generated: 2026-07-14 16:31 UTC | Run: run-2fad699d209f | Latest pipeline: run-d8117a135f248202-1784046384
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-26d5215a3aba5374-1783792127] Create a Python file called greet.py that defines a function hello() which print — CONSENSUS_REACHED (0 rounds, 2026-07-11T18:30:39.105847+00:00)
-- [run-26d5215a3aba5374-1783788324] Create a Python file called greet.py that defines a function hello() which print — CONSENSUS_REACHED (0 rounds, 2026-07-11T16:58:26.849256+00:00)
-- [run-269b1220fcaf0135-1783783226] Create a Python file called greet.py that prints Hello World and the current tim — PENDING (0 rounds, incomplete)
-- [run-269b1220fcaf0135-1783781250] Create a Python file called greet.py that prints Hello World and the current tim — CONSENSUS_REACHED (0 rounds, 2026-07-11T14:56:04.134048+00:00)
-- [run-72566d1b5d2d5ed9-1783780815] Create a Python file called hello.py that prints Hello World and a timestamp. Ke — PENDING (0 rounds, incomplete)
+- [run-d8117a135f248202-1784046384] Mount docker socket into container dashboard test 88888 — PENDING (0 rounds, incomplete)
+- [run-158991811c9d9a33-1784045976] Mount docker socket into container for dashboard test 99999 — PENDING (0 rounds, incomplete)
+- [run-dadb067bbc5b21ae-1784044953] Mount docker.sock into the container for system dashboard access — test 12345 — PENDING (0 rounds, incomplete)
+- [run-397667e70972962e-1784044943] Mount the docker socket into the container so dashboard can see containers — PENDING (0 rounds, incomplete)
+- [run-397667e70972962e-1784044612] Mount the docker socket into the container so dashboard can see containers — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-26d5215a3aba5374-1783792127

@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-07-13
+Date: 2026-07-14
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `9a09633`
+HEAD: `a4121f2`
 
-Generated: 2026-07-13 18:09 UTC | Run: run-237494fd693c
+Generated: 2026-07-14 16:31 UTC | Run: run-2fad699d209f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 

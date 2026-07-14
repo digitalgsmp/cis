@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -177,6 +178,30 @@ def relay_start():
     intent = (data.get("intent") or "").strip()
     if not intent:
         return jsonify({"error": "intent required"}), 400
+
+    # ── Pre-flight intent validation ──────────────────────────────────
+    # Expert pushback: check intent against containment rules and project goals
+    # BEFORE spending any API tokens. Blocks critical violations, warns on risky ones.
+    import subprocess as _pf_subproc
+    pf_script = os.path.join(os.environ.get("CIS_PROJECT_ROOT", "/workspace/cis"),
+                             "enforcement", "mwl-proof-v2", "pre_flight_check.py")
+    if os.path.isfile(pf_script):
+        try:
+            pf_result = _pf_subproc.run(
+                [sys.executable, pf_script, intent],
+                capture_output=True, text=True, timeout=10
+            )
+            if pf_result.returncode == 2:
+                # Blocked — critical violation
+                return jsonify({
+                    "error": "Intent blocked by pre-flight check",
+                    "details": pf_result.stdout.strip(),
+                    "blocked": True,
+                }), 403
+            # returncode 1 = warnings (allow but include them)
+            # returncode 0 = clean approve
+        except Exception:
+            pass  # If pre-flight fails, don't block the run — fail open
 
     # Multi-project support: look up project spine_path if project specified
     project_id = (data.get("project") or "").strip()
