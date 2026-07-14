@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-14 16:31 UTC | Run: run-2fad699d209f | Latest pipeline: run-d8117a135f248202-1784046384
+Generated: 2026-07-14 19:03 UTC | Run: run-d2e42e92c9d6 | Latest pipeline: run-90ce852696047acb-1784055823
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-90ce852696047acb-1784055823] create a file called greet.py that prints hello world — PENDING (0 rounds, incomplete)
 - [run-d8117a135f248202-1784046384] Mount docker socket into container dashboard test 88888 — PENDING (0 rounds, incomplete)
 - [run-158991811c9d9a33-1784045976] Mount docker socket into container for dashboard test 99999 — PENDING (0 rounds, incomplete)
 - [run-dadb067bbc5b21ae-1784044953] Mount docker.sock into the container for system dashboard access — test 12345 — PENDING (0 rounds, incomplete)
 - [run-397667e70972962e-1784044943] Mount the docker socket into the container so dashboard can see containers — PENDING (0 rounds, incomplete)
-- [run-397667e70972962e-1784044612] Mount the docker socket into the container so dashboard can see containers — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-26d5215a3aba5374-1783792127

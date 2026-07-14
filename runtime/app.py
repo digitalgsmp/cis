@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """
-app.py — CIS Dashboard entry point.
-Initialises Flask, registers all API blueprints, serves the frontend.
+DEPRECATED — DO NOT RUN. This file was the pre-container host-side Flask app.
+It shadows the Docker container's port 5000 mapping (127.0.0.1:5000 beats
+0.0.0.0:5000 on Linux), causing all container API requests to be intercepted
+by this process instead of the container. Use the container instead:
 
-Usage:
-    python3 /mnt/projects/cis/runtime/app.py
+    cd /mnt/projects/cis/enforcement/mwl-proof-v2
+    ./run_container.sh -d
 
-Access:
-    http://localhost:5000
+If you need to run this for debugging, bind to a different port:
+    python3 runtime/app.py  # DO NOT — use port 5001 instead, edit below
+
+This file is preserved for reference only. The production entry point is
+container_app.py inside the cis-hermes:pipeline Docker container.
 """
+import sys
+print("ERROR: runtime/app.py is deprecated. Use the Docker container instead.", file=sys.stderr)
+print("  cd /mnt/projects/cis/enforcement/mwl-proof-v2 && ./run_container.sh -d", file=sys.stderr)
+sys.exit(1)
 
 # TODO: Legacy inline pipeline relay code at lines 794-917 (PIPELINE_RUNS dict,
 # portal_pipeline_start, portal_pipeline_status) should be consolidated into
