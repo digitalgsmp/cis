@@ -1,11 +1,11 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-07-14
+Date: 2026-07-15
 Authority: Eric (Architect)
 Status: Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Claude Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 
-Generated: 2026-07-14 19:03 UTC | Run: run-d2e42e92c9d6
+Generated: 2026-07-15 01:24 UTC | Run: run-7853d7ac2d17
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Claude Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).**
 
-**HEAD:** `85c014f`.
+**HEAD:** `1fd27d7`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -408,7 +408,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 | Table | Rows |
 |-------|------|
 | workflow_runs | 67 |
-| deliberation_rounds | 210 |
+| deliberation_rounds | 215 |
 | project_decisions | 16 |
 | open_questions | 14 |
 | next_actions | 20 |

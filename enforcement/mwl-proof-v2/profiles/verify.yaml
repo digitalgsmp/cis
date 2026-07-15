@@ -4,6 +4,7 @@ model:
   provider: openrouter
   default: z-ai/glm-5.2
   context_length: 131072
+  max_tokens: 2000
 agent:
   max_turns: 90
   gateway_timeout: 1800

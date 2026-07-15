@@ -5,6 +5,7 @@ model:
   base_url: https://api.deepseek.com/v1
   default: deepseek-v4-pro
   context_length: 131072
+  max_tokens: 6000
 agent:
   reasoning_effort: xhigh
   max_turns: 90
