@@ -1,7 +1,63 @@
 # Files Changed Recently
-Generated: 2026-07-16 13:22 UTC | Run: run-3874df5ea28a
+Generated: 2026-07-16 13:26 UTC | Run: run-96cd98db580a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 722099b fix: container side-issue fixes — Telegram wiring, token caps, economy directives, objections_json persistence
+
+## .gitignore 
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## enforcement/mwl-proof-v2/entrypoint.sh 
+
+## enforcement/mwl-proof-v2/profiles/brain.yaml 
+
+## enforcement/mwl-proof-v2/profiles/draft.yaml 
+
+## enforcement/mwl-proof-v2/profiles/menter.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review1.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review2.yaml 
+
+## enforcement/mwl-proof-v2/profiles/verify.yaml 
+
+## enforcement/mwl-proof-v2/run_container.sh 
+
+## gate_runner_payload.jsonl 
+
+## hook_payload.jsonl 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## ba8277a feat: add output token caps per pipeline phase
 
@@ -638,51 +694,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/DEV-PIVOT_STATUS.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 13a43d4 fix: system dashboard health check — internal gateways + self-restart + log fix
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/HANDOFF_2026_07_12_SYSTEM_DASHBOARD.md 
-
-## runtime/api/relay.py 
-
-## runtime/container_app.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/ui/package.json 
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/SystemDashboard.jsx 
-
-## runtime/ui/src/api.js 
-
-## runtime/ui/src/index.css 

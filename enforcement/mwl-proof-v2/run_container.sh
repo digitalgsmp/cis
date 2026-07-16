@@ -98,6 +98,14 @@ case "${1:-start}" in
         -e CIS_REVIEW2_API_KEY=cis-glm-reviewer-gateway-key-2026 \
         -e CIS_MENTER_API_KEY=cis-implementer-gateway-key-2026 \
         -e CIS_VERIFY_API_KEY=cis-verifier-gateway-key-2026 \
+        -e CIS_TG_BRAIN_TOKEN \
+        -e CIS_TG_DRAFT_TOKEN \
+        -e CIS_TG_REVIEW1_TOKEN \
+        -e CIS_TG_REVIEW2_TOKEN \
+        -e CIS_TG_MENTER_TOKEN \
+        -e CIS_TG_VERIFY_TOKEN \
+        -e CIS_TG_HOME_CHANNEL \
+        --restart unless-stopped \
         $IMAGE"
 
     if [ -n "$DETACH_FLAG" ]; then
