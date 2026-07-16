@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-15 01:24 UTC | Run: run-7853d7ac2d17 | Latest pipeline: run-90ce852696047acb-1784055823
+Generated: 2026-07-16 13:22 UTC | Run: run-3874df5ea28a | Latest pipeline: run-4a5cacf96fd9aa5d-1784182710
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-90ce852696047acb-1784055823] create a file called greet.py that prints hello world — PENDING (0 rounds, incomplete)
-- [run-d8117a135f248202-1784046384] Mount docker socket into container dashboard test 88888 — PENDING (0 rounds, incomplete)
-- [run-158991811c9d9a33-1784045976] Mount docker socket into container for dashboard test 99999 — PENDING (0 rounds, incomplete)
-- [run-dadb067bbc5b21ae-1784044953] Mount docker.sock into the container for system dashboard access — test 12345 — PENDING (0 rounds, incomplete)
-- [run-397667e70972962e-1784044943] Mount the docker socket into the container so dashboard can see containers — PENDING (0 rounds, incomplete)
+- [run-4a5cacf96fd9aa5d-1784182710] Add a /api/relay/system/stats endpoint to runtime/container_app.py that returns: — PENDING (0 rounds, 2026-07-16 06:33:51)
+- [run-9f86d081884c7d65-1784182591] test — PENDING (0 rounds, 2026-07-16 06:18:30)
+- [run-90ce852696047acb-1784055823] create a file called greet.py that prints hello world — PENDING (0 rounds, 2026-07-16 06:17:44)
+- [run-d8117a135f248202-1784046384] Mount docker socket into container dashboard test 88888 — PENDING (0 rounds, 2026-07-16 06:17:44)
+- [run-158991811c9d9a33-1784045976] Mount docker socket into container for dashboard test 99999 — PENDING (0 rounds, 2026-07-16 06:17:44)
 
 ## 9. Eric Gate Status
 - Workflow run: run-26d5215a3aba5374-1783792127

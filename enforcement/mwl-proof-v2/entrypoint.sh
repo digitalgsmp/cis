@@ -60,6 +60,10 @@ done
 # ── Create .env files with API_SERVER_KEY for each profile ────────────
 # Hermes reads API_SERVER_KEY from ~/.hermes-<profile>/.env, not from
 # config.yaml's api_key field. Each profile needs its own .env.
+#
+# Telegram tokens are PER-PROFILE — each bot has its own token.
+# They're passed via env vars from run_container.sh (not in secrets.env
+# because that's shared and we need one token per profile).
 GATEWAY_KEYS=(
     "cis-brainstorm-gateway-key-2026"
     "cis-drafter-gateway-key-2026"
@@ -69,10 +73,22 @@ GATEWAY_KEYS=(
     "cis-verifier-gateway-key-2026"
 )
 
+# Per-profile Telegram tokens (env vars from run_container.sh)
+# Empty = no Telegram for that profile (API-server-only)
+TG_TOKENS=(
+    "${CIS_TG_BRAIN_TOKEN:-}"
+    "${CIS_TG_DRAFT_TOKEN:-}"
+    "${CIS_TG_REVIEW1_TOKEN:-}"
+    "${CIS_TG_REVIEW2_TOKEN:-}"
+    "${CIS_TG_MENTER_TOKEN:-}"
+    "${CIS_TG_VERIFY_TOKEN:-}"
+)
+
 for i in "${!PROFILES[@]}"; do
     profile="${PROFILES[$i]}"
     home_dir="/home/worker/.hermes-$profile"
     key="${GATEWAY_KEYS[$i]}"
+    tg_token="${TG_TOKENS[$i]}"
 
     # Build .env with gateway API key + model provider keys
     {
@@ -80,7 +96,18 @@ for i in "${!PROFILES[@]}"; do
         # Model provider keys (inherited from secrets.env, but also in .env for Hermes)
         [ -n "$DEEPSEEK_API_KEY" ] && echo "DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY"
         [ -n "$OPENROUTER_API_KEY" ] && echo "OPENROUTER_API_KEY=$OPENROUTER_API_KEY"
+
+        # Telegram config (only for profiles with a bot token)
+        if [ -n "$tg_token" ]; then
+            echo "TELEGRAM_BOT_TOKEN=${tg_token}"
+            echo "TELEGRAM_HOME_CHANNEL=${CIS_TG_HOME_CHANNEL:--5563618057}"
+            echo "TELEGRAM_ALLOWED_USERS=6511416750"
+            echo "GATEWAY_ALLOW_ALL_USERS=true"
+        fi
     } > "$home_dir/.env"
+
+    # Log Telegram config (outside .env redirect!)
+    [ -n "$tg_token" ] && echo "[entrypoint]   + Telegram config for $profile"
     chown worker:worker "$home_dir/.env"
     chmod 600 "$home_dir/.env"
 done

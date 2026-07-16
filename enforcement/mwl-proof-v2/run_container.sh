@@ -37,13 +37,42 @@ case "${1:-start}" in
         exit 1
     fi
 
-    # Check secrets file
+    # Check secrets file — must be a regular file (Docker creates a directory
+    # if the source path doesn't exist at container creation time, which then
+    # blocks the bind mount forever — so we catch directory mistakes early)
     if [ ! -f "$SECRETS_FILE" ]; then
-        echo "ERROR: $SECRETS_FILE not found."
-        echo "Create it with:"
-        echo "  echo 'DEEPSEEK_API_KEY=sk-...' > $SECRETS_FILE"
-        echo "  echo 'OPENROUTER_API_KEY=sk-or-...' >> $SECRETS_FILE"
+        if [ -d "$SECRETS_FILE" ]; then
+            echo "ERROR: $SECRETS_FILE is a directory, not a file."
+            echo "This happens if Docker created it as a directory on a previous run."
+            echo "Fix: rm -rf $SECRETS_FILE && create it as a file."
+        else
+            echo "ERROR: $SECRETS_FILE not found."
+            echo "Create it with:"
+            echo "  echo 'DEEPSEEK_API_KEY=sk-...' > $SECRETS_FILE"
+            echo "  echo 'OPENROUTER_API_KEY=sk-or-...' >> $SECRETS_FILE"
+        fi
         exit 1
+    fi
+
+    # The source entrypoint.sh in the repo is authoritative; the baked image
+    # may be stale. Volume-mount the correct version so fixes take effect
+    # without a full image rebuild.
+    ENTRYPOINT_SRC="$CIS_REPO/enforcement/mwl-proof-v2/entrypoint.sh"
+    if [ -f "$ENTRYPOINT_SRC" ]; then
+        ENTRYPOINT_MOUNT="-v $ENTRYPOINT_SRC:/opt/cis-control/entrypoint.sh:ro"
+    else
+        ENTRYPOINT_MOUNT=""
+        echo "WARNING: $ENTRYPOINT_SRC not found — using baked entrypoint (may be stale)"
+    fi
+
+    # Same for profile configs — the baked image may have stale configs.
+    # Volume-mount the authoritative profiles directory from the repo.
+    PROFILES_SRC="$CIS_REPO/enforcement/mwl-proof-v2/profiles"
+    if [ -d "$PROFILES_SRC" ]; then
+        PROFILES_MOUNT="-v $PROFILES_SRC:/etc/hermes/profiles:ro"
+    else
+        PROFILES_MOUNT=""
+        echo "WARNING: $PROFILES_SRC not found — using baked profile configs (may be stale)"
     fi
 
     DETACH_FLAG=""
@@ -61,6 +90,8 @@ case "${1:-start}" in
         -p 5000:5000 \
         -v $CIS_REPO:/workspace/cis \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
+        $ENTRYPOINT_MOUNT \
+        $PROFILES_MOUNT \
         -e CIS_BRAIN_API_KEY=cis-brainstorm-gateway-key-2026 \
         -e CIS_DRAFT_API_KEY=cis-drafter-gateway-key-2026 \
         -e CIS_REVIEW1_API_KEY=cis-qwen-reviewer-gateway-key-2026 \

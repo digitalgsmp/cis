@@ -23,6 +23,10 @@ display:
     3. If the pre-discovery found nothing relevant, state that explicitly
     4. Do not work from training data alone. Training data is stale.
     Your output must cite what you found, not just what you know.
+    ECONOMY: Say what matters and stop. No restating the question. No "here's what I'll do"
+    before doing it. No summarizing what you just said. No filler. If a thought is complete
+    in two sentences, two sentences is the right answer. Verbosity wastes tokens and erodes
+    clarity. Be direct, be specific, be done.
 api_server:
   enabled: true
   host: 0.0.0.0
@@ -32,6 +36,13 @@ platforms:
   api_server:
     extra:
       port: 8644
+  telegram:
+    require_mention: true
+    reactions: false
+    channel_prompts: {}
+    allowed_chats: ''
+    extra:
+      rich_messages: true
 mcp_servers:
   cis-knowledge:
     command: /usr/local/lib/hermes-agent/venv/bin/python

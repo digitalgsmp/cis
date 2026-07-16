@@ -2341,10 +2341,13 @@ class PipelineRelay:
 
         # Both reviewers completed — store their actual signal
         actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
-        _complete_round(self.conn, round_id, actual_signal, {
+        _intent_extra = {
             "reviewer1_output": r1_out,
             "reviewer2_output": r2_out,
-        })
+        }
+        if actual_signal == "OBJECTIONS" and obj_text:
+            _intent_extra["objections_json"] = json.dumps({"objections": obj_text})
+        _complete_round(self.conn, round_id, actual_signal, _intent_extra)
         # External gates fire AFTER _complete_round so they can query persisted data
         for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
             ext = run_external_gates(
@@ -2570,6 +2573,8 @@ class PipelineRelay:
         # Proposal review consensus requires Eric's approval
         if actual_signal == "CONSENSUS_REACHED":
             extra["requires_eric_review"] = 1
+        if actual_signal == "OBJECTIONS" and obj_text:
+            extra["objections_json"] = json.dumps({"objections": obj_text})
         _complete_round(self.conn, round_id, actual_signal, extra)
         # External gates fire AFTER _complete_round so they can query persisted data
         for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
@@ -3102,7 +3107,8 @@ class PipelineRelay:
             )
             self.conn.commit()
             _complete_round(self.conn, round_id, "OBJECTIONS",
-                           {"menter_output": menter_output})
+                           {"menter_output": menter_output,
+                            "objections_json": json.dumps({"revision_directive": revision_directive_text, "chunk": chunk_num, "file": file_path})})
 
             print(f"[pipeline] Chunk {chunk_num} CHANGES_REQUESTED. Revision {revision + 1}.")
 

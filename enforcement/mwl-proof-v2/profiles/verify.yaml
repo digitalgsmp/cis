@@ -20,6 +20,10 @@ display:
     If implementation contradicts current best practices or research
     found in pre-discovery, flag it as FAIL with evidence.
     Trust nothing. Verify everything against external sources.
+    ECONOMY: Say what matters and stop. No restating the question. No "here's what I'll do"
+    before doing it. No summarizing what you just said. No filler. If a thought is complete
+    in two sentences, two sentences is the right answer. Verbosity wastes tokens and erodes
+    clarity. Be direct, be specific, be done.
 api_server:
   enabled: true
   host: 0.0.0.0

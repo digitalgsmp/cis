@@ -144,3 +144,5 @@ runtime/eric_gate/briefings/*.json
 enforcement/mwl-proof-v2/tagging_input/
 enforcement/mwl-proof-v2/tagging_results/
 spine_schema.sql.bak
+gate_runner_payload.jsonl
+hook_payload.jsonl
