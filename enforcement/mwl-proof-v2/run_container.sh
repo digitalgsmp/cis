@@ -10,7 +10,7 @@
 #
 # Prerequisites:
 #   - Docker image cis-hermes:pipeline built
-#   - /tmp/cis-secrets.env with DEEPSEEK_API_KEY and OPENROUTER_API_KEY
+#   - /mnt/projects/cis/secrets.env with DEEPSEEK_API_KEY and OPENROUTER_API_KEY
 #   - CIS repo at /mnt/projects/cis
 #
 # The container mounts:
@@ -25,7 +25,7 @@ set -e
 IMAGE="cis-hermes:pipeline"
 CONTAINER_NAME="cis-pipeline"
 CIS_REPO="/mnt/projects/cis"
-SECRETS_FILE="/tmp/cis-secrets.env"
+SECRETS_FILE="/mnt/projects/cis/secrets.env"
 
 case "${1:-start}" in
 
@@ -89,6 +89,12 @@ case "${1:-start}" in
         --name $CONTAINER_NAME \
         -p 5000:5000 \
         -v $CIS_REPO:/workspace/cis \
+        -v cis-claude-creds:/home/worker/.claude \
+        -v /mnt/projects/swa-app:/workspace/swa-app:rw \
+        -v /mnt/projects/swa:/workspace/swa:rw \
+        -v /mnt/projects/secure-note-app:/workspace/swa-repos/secure-note-app:ro \
+        -v /mnt/projects/hippa-case-management:/workspace/swa-repos/hippa-case-management:ro \
+        -v /mnt/projects/cis-v1:/workspace/swa-repos/cis-v1:ro \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
         $ENTRYPOINT_MOUNT \
         $PROFILES_MOUNT \

@@ -12,7 +12,7 @@ Usage (inside container):
     python -c "from runtime.container_app import app; app.run(host='0.0.0.0', port=5000)"
 """
 
-from flask import Flask, jsonify, send_from_directory, make_response, redirect
+from flask import Flask, jsonify, send_from_directory, make_response, redirect, request
 import os, sys
 
 # Ensure runtime dir is in path
@@ -26,8 +26,72 @@ app = Flask(__name__, static_folder=None)
 from api.relay import relay_bp
 app.register_blueprint(relay_bp)
 
+# ── Run start (lean, unconditional) ──────────────────────────────────────────
+# Lean counterpart to POST /api/relay/start (api/relay.py:167): no mwl-proof-v2
+# pre-flight, no 1-hour idempotency window. Every call creates a fresh
+# workflow_runs row via PipelineRelay.start_sync and spawns the async pipeline
+# in a background thread. Reuses api.relay's auth check, background runner,
+# and _active_runs tracking — no duplication of those primitives.
+import threading as _thread_mod
+import time as _time_mod
+from api.relay import _check_auth, _run_pipeline_background, _active_runs
+
+@app.route("/api/relay/run", methods=["POST"])
+def relay_run_start():
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
+    data = request.get_json(silent=True) or {}
+    intent = (data.get("intent") or "").strip()
+    if not intent:
+        return jsonify({"error": "intent required"}), 400
+
+    abstraction_dir = os.path.join(RUNTIME_DIR, "abstraction")
+    if abstraction_dir not in sys.path:
+        sys.path.insert(0, abstraction_dir)
+    from pipeline_relay import PipelineRelay
+
+    relay = PipelineRelay()
+    try:
+        run_id = relay.start_sync(intent)
+        if not isinstance(run_id, str) or not run_id:
+            raise RuntimeError(f"start_sync returned invalid run_id: {run_id!r}")
+    except Exception as e:
+        return jsonify({"error": f"Failed to create run: {e}"}), 500
+    finally:
+        relay.close()
+
+    thread = _thread_mod.Thread(
+        target=_run_pipeline_background,
+        args=(run_id, intent),
+        daemon=True,
+    )
+    _active_runs[run_id] = {"thread": thread, "started_at": _time_mod.time()}
+    thread.start()
+
+    return jsonify({
+        "run_id": run_id,
+        "status": "BRAIN_PHASE",
+        "message": "Pipeline started. Poll GET /api/relay/<run_id> for status.",
+    })
+
+@app.route("/api/relay/ping", methods=["GET"])
+def relay_ping():
+    """Liveness probe: no auth, no DB, no gateway sweep. Returns exactly {"status": "ok"}."""
+    return jsonify({"status": "ok"})
+
 # ── React SPA (built to ui/dist/) ───────────────────────────────────────────────
 UI_DIR = os.path.join(RUNTIME_DIR, "ui", "dist")
+
+@app.route("/dashboard/")
+def container_dashboard():
+    """CIS Container Architecture Dashboard — standalone HTML page."""
+    dash_path = os.path.join(RUNTIME_DIR, "ui", "public", "cis-container-dashboard.html")
+    if os.path.isfile(dash_path):
+        with open(dash_path, encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return jsonify({"error": "Dashboard not found"}), 404
 
 @app.route("/ui/")
 @app.route("/ui/<path:filename>")

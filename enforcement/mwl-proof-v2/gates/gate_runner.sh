@@ -123,6 +123,48 @@ else
     SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
 fi
 
+# ── Gate 9: Card validity (configured via env) ──────────────────────
+# Set GATE_CARD_PATH to the card file; optional GATE_CARD_DOCS for a
+# directory of approved source docs (quote verification fallback).
+
+if [ -n "${GATE_CARD_PATH:-}" ]; then
+    run_gate "gate_card_valid" "${SCRIPT_DIR}/gate_card_valid.sh" \
+        "$GATE_CARD_PATH" "${GATE_CARD_DOCS:-}" || exit $FAILED
+else
+    echo ""
+    echo "━━━ GATE: gate_card_valid ━━━"
+    echo "   SKIP: GATE_CARD_PATH not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+fi
+
+# ── Gate 10: No docs-only diff (configured via env) ─────────────────
+# Set GATE_BUILD_DIR to the app build directory. A build run whose
+# output is only .md files FAILS — documents are not deliverables.
+
+if [ -n "${GATE_BUILD_DIR:-}" ]; then
+    run_gate "gate_no_docs_only_diff" "${SCRIPT_DIR}/gate_no_docs_only_diff.sh" \
+        "$GATE_BUILD_DIR" || exit $FAILED
+else
+    echo ""
+    echo "━━━ GATE: gate_no_docs_only_diff ━━━"
+    echo "   SKIP: GATE_BUILD_DIR not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+fi
+
+# ── Gate 11: Smoke script (configured via env) ──────────────────────
+# Set GATE_SMOKE_SCRIPT to the script holding the card's EVIDENCE
+# commands. Its exit code is the verdict — no model judgment.
+
+if [ -n "${GATE_SMOKE_SCRIPT:-}" ]; then
+    run_gate "gate_smoke" "${SCRIPT_DIR}/gate_smoke.sh" \
+        "$GATE_SMOKE_SCRIPT" || exit $FAILED
+else
+    echo ""
+    echo "━━━ GATE: gate_smoke ━━━"
+    echo "   SKIP: GATE_SMOKE_SCRIPT not set"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+fi
+
 # ── All gates passed ────────────────────────────────────────────────
 
 echo ""

@@ -1,5 +1,5 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-07-16 13:26 UTC | Run: run-96cd98db580a
+Generated: 2026-08-24 23:58 UTC | Run: run-04a9848322f4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 

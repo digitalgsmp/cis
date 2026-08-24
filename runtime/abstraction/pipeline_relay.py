@@ -2030,6 +2030,60 @@ class PipelineRelay:
         branch = f"cis/run-{run_id[:20]}"
         return f"gh pr create --title \"{topic[:80]}\" --body \"Pipeline run: {run_id}\" --head {branch}"
 
+    def _card_context(self, run_id: str, topic: str) -> dict:
+        """Extract card context from the run topic if it's a BUILD CARD.
+
+        Returns a dict with keys: card_path, build_dir, smoke_script.
+        If the topic is not a card, returns empty strings for all keys.
+        """
+        result = {"card_path": "", "build_dir": "", "smoke_script": ""}
+        if not topic or not topic.strip().startswith("CARD "):
+            return result
+
+        # Save the card text to a file so gate_card_valid.sh can read it
+        import tempfile, re
+        card_dir = f"/tmp/cis-cards"
+        os.makedirs(card_dir, exist_ok=True)
+        card_path = os.path.join(card_dir, f"{run_id}.card.md")
+        with open(card_path, "w") as f:
+            f.write(topic)
+        result["card_path"] = card_path
+
+        # Extract build dir from BUILD section (look for /workspace/ paths)
+        build_match = re.search(r'/workspace/[a-z\-]+', topic)
+        if build_match:
+            result["build_dir"] = build_match.group(0)
+
+        # Extract EVIDENCE commands and build a smoke script
+        evidence_lines = []
+        in_evidence = False
+        for line in topic.splitlines():
+            stripped = line.strip()
+            if stripped.upper().startswith("EVIDENCE"):
+                in_evidence = True
+                continue
+            if in_evidence:
+                if stripped.upper().startswith("NOT IN THIS CARD"):
+                    break
+                if stripped.startswith("- "):
+                    cmd = stripped[2:].strip()
+                    if cmd:
+                        evidence_lines.append(cmd)
+
+        if evidence_lines:
+            smoke_path = os.path.join(card_dir, f"{run_id}.smoke.sh")
+            with open(smoke_path, "w") as f:
+                f.write("#!/bin/bash\n")
+                f.write("# Auto-generated smoke script from card EVIDENCE section\n")
+                f.write(f"# Card: {card_path}\n\n")
+                for cmd in evidence_lines:
+                    f.write(f"{cmd}\n")
+            os.chmod(smoke_path, 0o755)
+            result["smoke_script"] = smoke_path
+
+        print(f"[pipeline] Card context: card={card_path}, build_dir={result['build_dir']}, smoke={'yes' if result['smoke_script'] else 'no'}")
+        return result
+
     async def start(self, intent_text: str) -> str:
         """Create a new pipeline run and begin processing."""
         run_id = _create_run(self.conn, intent_text)
@@ -2373,6 +2427,7 @@ class PipelineRelay:
                           round_num: int = 1) -> None:
         """Draft phase: produce structured proposal from Brain's understanding."""
         print(f"[pipeline] DRAFT phase (round {round_num}) for {run_id}")
+        card_ctx = self._card_context(run_id, intent)
 
         cur = self.conn.execute(
             "SELECT brain_output FROM deliberation_rounds "
@@ -2431,6 +2486,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="draft", role="draft", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -2454,6 +2510,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="draft", role="draft", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -2474,6 +2531,7 @@ class PipelineRelay:
         ext_report = run_external_gates(
             phase="draft", role="draft", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
         )
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3138,6 +3196,7 @@ class PipelineRelay:
     async def _execution(self, run_id: str, intent: str) -> None:
         """Execution phase: Menter builds per approved FINAL_DIRECTIVE."""
         print(f"[pipeline] EXECUTION phase for {run_id}")
+        card_ctx = self._card_context(run_id, intent)
 
         # Capture pre-execution git state for L1 diff
         import subprocess
@@ -3227,6 +3286,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="menter", role="menter", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3250,6 +3310,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="menter", role="menter", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3270,6 +3331,7 @@ class PipelineRelay:
         ext_report = run_external_gates(
             phase="menter", role="menter", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
         )
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3288,6 +3350,7 @@ class PipelineRelay:
         Results are fed to the verify agent as evidence. The agent does
         L2 semantic verification on top of the L1 evidence.
         """
+        card_ctx = self._card_context(run_id, intent)
         print(f"[pipeline] VERIFICATION phase for {run_id}")
 
         # Get the directive (Draft's proposal) — NOT Menter's self-report
@@ -3368,6 +3431,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="verify", role="verify", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3392,6 +3456,7 @@ class PipelineRelay:
             ext_report = run_external_gates(
                 phase="verify", role="verify", agent_output=output,
                 run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
             )
             print(ext_report.summary)
             record_gate_outcomes(self.conn, run_id, ext_report)
@@ -3428,6 +3493,7 @@ class PipelineRelay:
         ext_report = run_external_gates(
             phase="verify", role="verify", agent_output=output,
             run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
         )
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)

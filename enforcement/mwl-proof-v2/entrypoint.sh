@@ -51,8 +51,8 @@ for i in "${!PROFILES[@]}"; do
     home_dir="/home/worker/.hermes-$profile"
     profile_config="/etc/hermes/profiles/${profile}.yaml"
 
-    # Profile directory + sealed plugin pre-created at build time (Dockerfile)
-    # Just copy the profile config
+    # Create profile directory (Dockerfile may not pre-create per-profile dirs)
+    mkdir -p "$home_dir"
     cp "$profile_config" "$home_dir/config.yaml"
     chown worker:worker "$home_dir/config.yaml"
 done
@@ -160,6 +160,9 @@ echo "Gateways healthy: $HEALTHY/${#PROFILES[@]}"
 if [ "$HEALTHY" -lt "${#PROFILES[@]}" ]; then
     echo "[entrypoint] WARNING: not all gateways are up — pipeline may fail"
 fi
+
+# ── Install Flask if missing (container image may not include it) ──────
+/usr/local/lib/hermes-agent/venv/bin/pip install flask -q 2>/dev/null || true
 
 # ── Start the Flask pipeline API ──────────────────────────────────────
 echo ""

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-07-16 13:26 UTC | Run: run-96cd98db580a | Latest pipeline: run-4a5cacf96fd9aa5d-1784182710
+Generated: 2026-08-24 23:58 UTC | Run: run-04a9848322f4 | Latest pipeline: run-68ef184da2933837-1787603143
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,17 +79,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
-- [run-4a5cacf96fd9aa5d-1784182710] Add a /api/relay/system/stats endpoint to runtime/container_app.py that returns: — PENDING (0 rounds, 2026-07-16 06:33:51)
-- [run-9f86d081884c7d65-1784182591] test — PENDING (0 rounds, 2026-07-16 13:25:51)
-- [run-90ce852696047acb-1784055823] create a file called greet.py that prints hello world — PENDING (0 rounds, 2026-07-16 06:17:44)
-- [run-d8117a135f248202-1784046384] Mount docker socket into container dashboard test 88888 — PENDING (0 rounds, 2026-07-16 06:17:44)
-- [run-158991811c9d9a33-1784045976] Mount docker socket into container for dashboard test 99999 — PENDING (0 rounds, 2026-07-16 06:17:44)
+- [run-68ef184da2933837-1787603143] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — VERIFY_FAILED (0 rounds, 2026-08-24T21:44:31.219651+00:00)
+- [run-68ef184da2933837-1787601944] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — PENDING (0 rounds, incomplete)
+- [run-9f86d081884c7d65-1787601827] test — PENDING (0 rounds, incomplete)
+- [run-052acb5eb8904c01-1787601154] Add a health check endpoint at GET /api/relay/ping returning {"status":"ok"} to  — PENDING (0 rounds, incomplete)
+- [run-bb3ec986af31ccda-1787419216] auth test correct key — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-26d5215a3aba5374-1783792127
+- Workflow run: run-68ef184da2933837-1787603143
 - Status: APPROVE
-- Decided at: 2026-07-11T18:22:32.830127+00:00
-- Goal: Create a Python file called greet.py that defines a function hello() which prints Hello from CIS
+- Decided at: 2026-08-24T21:32:17.209154+00:00
+- Goal: Add a health check endpoint at GET /api/relay/ping returning status ok to runtime/container_app.py
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

@@ -1113,7 +1113,10 @@ import subprocess as _subprocess
 import shutil as _shutil
 from pathlib import Path as _Path
 
-GATES_DIR = _Path(__file__).resolve().parents[2] / "tools" / "gates"
+# Gate scripts: prefer baked /opt/cis-gates/ (root-owned, RO), fall back to repo tools/gates/
+_OPT_GATES = _Path("/opt/cis-gates")
+_REPO_GATES = _Path(__file__).resolve().parents[2] / "tools" / "gates"
+GATES_DIR = _OPT_GATES if _OPT_GATES.is_dir() else _REPO_GATES
 
 
 def _run_gate_script(
@@ -1219,6 +1222,8 @@ PHASE_GATE_MAP = {
     "draft": [
         # After draft: proposal schema valid
         {"script": "gate_proposal_schema_valid.sh", "mode": "ADVISORY", "needs_run_id": True},
+        # Card validation: if the topic is a card, validate it mechanically
+        {"script": "gate_card_valid.sh", "mode": "BLOCK", "needs_card": True},
     ],
     "review": [
         # After each review round: validate signals
@@ -1236,6 +1241,8 @@ PHASE_GATE_MAP = {
         # After Menter: file exists + implementation artifact
         {"script": "gate_file_exists.sh", "mode": "ADVISORY", "from_output": True},
         {"script": "gate_implementation_artifact_present.sh", "mode": "ADVISORY", "needs_run_id": True},
+        # Docs-only diff: FAIL if Menter only produced .md files
+        {"script": "gate_no_docs_only_diff.sh", "mode": "BLOCK", "needs_card": True},
     ],
     "verify": [
         # In verification: service health + endpoint + DB state + build coherence
@@ -1251,6 +1258,8 @@ PHASE_GATE_MAP = {
         {"script": "gate_escalation_packet.py", "mode": "ADVISORY", "needs_run_id": True},
         # Intent verification: does the pipeline output match what Eric asked for?
         {"script": "gate_intent_verification.py", "mode": "ADVISORY", "needs_run_id": True},
+        # Smoke script: run the card's EVIDENCE commands — exit code is the verdict
+        {"script": "gate_smoke.sh", "mode": "BLOCK", "needs_card": True},
     ],
     "closeout": [
         # At closeout: export agreement + closeout artifact + closeout complete
@@ -1291,6 +1300,9 @@ def run_external_gates(
     run_id: str = "",
     proposal_file: str = "",
     project_root: str = "/mnt/projects/cis",
+    card_path: str = "",
+    build_dir: str = "",
+    smoke_script: str = "",
 ) -> GuardrailReport:
     """Run external deterministic gate scripts for a pipeline phase.
     
@@ -1359,6 +1371,33 @@ def run_external_gates(
                     evidence="Looking for: Created/Modified: /path/to/file.py",
                 ))
                 continue
+        
+        # Card-aware gates: skip if no card context, otherwise set args/env
+        if gate.get("needs_card"):
+            if not card_path:
+                report.results.append(GuardrailResult(
+                    name=f"ext_{script.rsplit('.', 1)[0]}",
+                    verdict="SKIP",
+                    mode="ADVISORY",
+                    summary="No card context for this run (not a card-driven run)",
+                    evidence="Card gates only fire when the topic is a BUILD CARD.",
+                ))
+                continue
+            if script == "gate_card_valid.sh":
+                args = [card_path]
+            elif script == "gate_no_docs_only_diff.sh":
+                args = [build_dir or "/workspace/swa-app"]
+            elif script == "gate_smoke.sh":
+                if not smoke_script:
+                    report.results.append(GuardrailResult(
+                        name="ext_gate_smoke",
+                        verdict="SKIP",
+                        mode="ADVISORY",
+                        summary="No smoke script path provided for this card",
+                        evidence="Smoke script is extracted from the card's EVIDENCE section.",
+                    ))
+                    continue
+                args = [smoke_script]
         
         result = _run_gate_script(script, args=args, env=env, mode=mode)
         report.results.append(result)

@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-07-16
+Date: 2026-08-24
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `722099b`
+HEAD: `3ae7f15`
 
-Generated: 2026-07-16 13:26 UTC | Run: run-96cd98db580a
+Generated: 2026-08-24 23:58 UTC | Run: run-04a9848322f4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-26d5215a3aba5374-1783792127
-- Decided at: 2026-07-11T18:22:32.830127+00:00
-- Goal reference: Create a Python file called greet.py that defines a function hello() which prints Hello from CIS
-- Briefing hash: 35369d44eaf04f27d61a5129ea05e86267a8de277fb4ffae4efd5ca9dd68b2fa
+- Workflow run: run-68ef184da2933837-1787603143
+- Decided at: 2026-08-24T21:32:17.209154+00:00
+- Goal reference: Add a health check endpoint at GET /api/relay/ping returning status ok to runtime/container_app.py
+- Briefing hash: c4e0c658b59b6a0b6a1b35fa034079c27452bc86d84fd5f7aaa00d0519bbb588

@@ -1,0 +1,745 @@
+╭─── Claude Code v2.1.215 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Utgar!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ Note: You have launche… │
+│                      ▝▜█████▛▘                     │ ─────────────────────── │
+│                        ▘▘ ▝▝                       │ What's new              │
+│                                                    │ Claude no longer runs … │
+│   Fable 5 · Claude Pro · digitalgsmp@gmail.com's   │ Fixed single-segment `… │
+│   Organization                                     │ Fixed a permission-che… │
+│                     /home/eric                     │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+ ▎ Extended through July 19
+ ▎ We're extending Claude Fable 5 access on all paid plans, as well as keeping Claude Code’s weekly rate limits 50% higher, through July 19.
+ ▎
+ ▎ As before, you can use up to half of your weekly usage limit on Fable 5. After that, you can keep using Fable 5 with usage credits, or switch to another model to keep working within your remaining limits.
+ ▎
+ ▎ More details here: https://support.claude.com/en/articles/15424964-claude-fable-5-promotional-access
+   +1 more · /status
+
+❯ /model                                                                        
+  ⎿  Set model to Fable 5 and saved as your default for new sessions
+
+❯ Read /mnt/projects/cis/fable_prompt.md and follow the instructions in it.     
+
+● I'll load the claude-api skill first (the prompt references "fable"), then
+  read the file.
+
+● Skill(claude-api)
+  ⎿  Initializing…
+  ⎿  Interrupted · What should Claude do instead?
+
+✻ Churned for 6m 58s
+
+❯ # Fable — The Real Question                                                   
+                                                                                
+  ## The Problem                                                                
+                                                                                
+  I am Eric. I am a non-coding creator. I have been trying to get AI models to  
+  build software for me for months. I keep saying what I want. The models keep  
+  not understanding. This conversation has been happening over and over:        
+                                                                                
+  1. I say what I want                                                          
+  2. A model interprets it through enterprise software development patterns     
+  3. The model builds documentation, governance, architecture docs — anything   
+  except working software                                                       
+  4. I try to correct it                                                        
+  5. The correction gets reinterpreted too                                      
+  6. Months pass. Nothing billable gets built.                                  
+                                                                                
+  I built CIS (Creative Intelligence System) to fix this. A Docker container    
+  with enforced AI agents that are constrained to my working methods. The idea: 
+  models can't drift into enterprise patterns because the container walls       
+  prevent it.                                                                   
+                                                                                
+  But CIS itself became the thing I was trying to escape. Months of building    
+  infrastructure, enforcement, gates, tiers, ADRs — all governance theater. The 
+  contained models built the same enterprise patterns I was trying to prevent,  
+  just inside a container.                                                      
+                                                                                
+  ## What I Need From You                                                       
+                                                                                
+  I need you to read my actual words — the file at                              
+  `/workspace/cis/FABLE_CONTEXT_eric_voice.md` contains everything I've said    
+  across months of sessions, extracted from the database. Not model             
+  interpretations. My words.                                                    
+                                                                                
+  Read that file. Read the codebase. Then tell me:                              
+                                                                                
+  **How do I use CIS to communicate what I want in a way that models actually   
+  build it?**                                                                   
+                                                                                
+  Not "evaluate CIS." Not "assess the architecture." Not "produce a roadmap."   
+  Tell me the practical answer to: this man has been saying the same thing for  
+  months and no model understands him. He has a container with enforced agents. 
+  How does he use that container so the agents finally build what he's asking   
+  for instead of their own interpretation of it?                                
+                                                                                
+  ## What I'm Actually Trying to Build                                          
+                                                                                
+  Two applications:                                                             
+                                                                                
+  1. **SWA (Social Work App)** — Case management for social workers. I need     
+  this to bill my employer. Deadline: July 19 (tomorrow).                       
+                                                                                
+  2. **WIASW** — A creative production workflow system                          
+  (Word/Image/Action/Sound/Web). Pre-AI project management tool I'm converting  
+  to LLM-powered workflow.                                                      
+                                                                                
+  I have repos for both at `/workspace/swa-repos/secure-note-app` and           
+  `/workspace/swa-repos/hippa-case-management`. Look at them. See what exists.  
+  See what I was trying to build. Tell me why the models couldn't just build    
+  it.                                                                           
+                                                                                
+  ## Constraints                                                                
+                                                                                
+  - I have a Claude subscription with a half-weekly usage cap. Write the report 
+  first, then explore. Don't burn the whole session reading files.              
+  - I cannot review code. I need it to either work or not work.                 
+  - The CIS container runs enforced Hermes agents (Brain, Draft, Review1,       
+  Review2, Menter, Verify) with deterministic gates. They can't modify their    
+  own enforcement. They can write to the project directory. They can search the 
+  knowledge base. They can run terminal commands (checked by gates).            
+  - The models keep defaulting to enterprise patterns. That's the core failure. 
+                                                                                
+  ## Output                                                                     
+                                                                                
+  Write your analysis to `/workspace/cis/FABLE_RECOMMENDATION_REPORT.md`.       
+                                                                                
+  Start with the answer to: **How does Eric use CIS to make models build what   
+  he actually wants?**                                                          
+                                                                                
+  Then tell me what's actually buildable from the existing repos, and what the  
+  shortest path to billable software is.                                        
+                                                                                
+  Be honest. If CIS is the wrong approach, say so. If the answer is "just use   
+  Claude Code directly and skip the pipeline," say that. I don't need           
+  infrastructure. I need working software.                                      
+
+  Listed 1 directory (ctrl+o to expand)
+
+✻ Churned for 2m 11s
+
+❯ 3                                                                             
+
+● That "3" looks like it was meant for a permission prompt but landed as a
+  message — and my last two tool calls were rejected, so I'm pausing rather than
+  retrying blindly.
+
+  Here's what I was about to do, so you can tell me how you'd like to proceed:
+
+  1. Locate the files — your prompt references /workspace/cis/... but the file
+  you pointed me at lives under /mnt/projects/cis/, so I need one ls to find the
+  real paths for the voice file and the two SWA repos.
+  2. Read FABLE_CONTEXT_eric_voice.md and take a quick, targeted look at the two
+  repos (not an exhaustive crawl — I'll respect your usage cap).
+  3. Write FABLE_RECOMMENDATION_REPORT.md answering your actual question: how to
+  use CIS (or not) to get working, billable software, starting with the SWA
+  deadline.
+
+  If the rejections were intentional and you want me to skip straight to
+  something — e.g., write the report from your prompt alone without exploring —
+  say so. Otherwise, just let the next tool calls through and I'll get moving.
+
+✻ Cogitated for 13s
+
+❯ I gave you the wrong version file. follow this prompt.# Fable — The Real      
+  Question                                                                      
+                                                                                
+  ## The Problem                                                                
+                                                                                
+  I am Eric. I am a non-coding creator. I have been trying to get AI models to  
+  build software for me for months. I keep saying what I want. The models keep  
+  not understanding. This conversation has been happening over and over:        
+                                                                                
+  1. I say what I want                                                          
+  2. A model interprets it through enterprise software development patterns     
+  3. The model builds documentation, governance, architecture docs — anything   
+  except working software                                                       
+  4. I try to correct it                                                        
+  5. The correction gets reinterpreted too                                      
+  6. Months pass. Nothing billable gets built.                                  
+                                                                                
+  I built CIS (Creative Intelligence System) to fix this. A Docker container    
+  with enforced AI agents that are constrained to my working methods. The idea: 
+  models can't drift into enterprise patterns because the container walls       
+  prevent it.                                                                   
+                                                                                
+  But CIS itself became the thing I was trying to escape. Months of building    
+  infrastructure, enforcement, gates, tiers, ADRs — all governance theater. The 
+  contained models built the same enterprise patterns I was trying to prevent,  
+  just inside a container.                                                      
+                                                                                
+  ## What I Need From You                                                       
+                                                                                
+  I need you to read my actual words — the file at                              
+  `/mnt/projects/cis/FABLE_CONTEXT_eric_voice.md` contains everything I've said 
+  across months of sessions, extracted from the database. Not model             
+  interpretations. My words.                                                    
+                                                                                
+  Read that file. Read the codebase. Then tell me:                              
+                                                                                
+  **How do I use CIS to communicate what I want in a way that models actually   
+  build it?**                                                                   
+                                                                                
+  Not "evaluate CIS." Not "assess the architecture." Not "produce a roadmap."   
+  Tell me the practical answer to: this man has been saying the same thing for  
+  months and no model understands him. He has a container with enforced agents. 
+  How does he use that container so the agents finally build what he's asking   
+  for instead of their own interpretation of it?                                
+                                                                                
+  ## What I'm Actually Trying to Build                                          
+                                                                                
+  Two applications:                                                             
+                                                                                
+  1. **SWA (Social Work App)** — Case management for social workers. I need     
+  this to bill my employer. Deadline: July 19 (tomorrow).                       
+                                                                                
+  2. **WIASW** — A creative production workflow system                          
+  (Word/Image/Action/Sound/Web). Pre-AI project management tool I'm converting  
+  to LLM-powered workflow.                                                      
+                                                                                
+  I have repos for both at `/mnt/projects/secure-note-app` and                  
+  `/mnt/projects/hippa-case-management`. Look at them. See what exists. See     
+  what I was trying to build. Tell me why the models couldn't just build it.    
+                                                                                
+  ## Constraints                                                                
+                                                                                
+  - I have a Claude subscription with a half-weekly usage cap. Write the report 
+  first, then explore. Don't burn the whole session reading files.              
+  - I cannot review code. I need it to either work or not work.                 
+  - The CIS container runs enforced Hermes agents (Brain, Draft, Review1,       
+  Review2, Menter, Verify) with deterministic gates. They can't modify their    
+  own enforcement. They can write to the project directory. They can search the 
+  knowledge base. They can run terminal commands (checked by gates).            
+  - The models keep defaulting to enterprise patterns. That's the core failure. 
+                                                                                
+  ## Output                                                                     
+                                                                                
+  Write your analysis to `/mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.md`.    
+                                                                                
+  Start with the answer to: **How does Eric use CIS to make cheap contained     
+  models build what he actually wants?**                                        
+                                                                                
+  Then tell me:                                                                 
+  1. What's actually buildable from the existing SWA repos                      
+  2. What specific changes to the pipeline would make the cheap models produce  
+  working code instead of governance theater                                    
+  3. The shortest path to billable software using only the resources Eric has   
+                                                                                
+  Be honest. If the pipeline can't do it in its current form, say exactly       
+  what's broken and what the minimum fix is. Eric doesn't have money or time to 
+  waste. He needs this to work.                                                 
+
+● Got it — new paths, same mission. I'll read your voice file and scan the
+  repos, then write the report.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+✻ Sautéed for 48s
+
+❯ i GOT CONFUSED, WHAT ARE YOU ASKING ME                                        
+
+● I'm not asking you a question — your terminal is. Every time I try to read a
+  file or run a command, Claude Code pops up a permission box asking you to
+  approve it. The numbered options you're seeing (1, 2, 3...) are that box: 1 or
+  Enter = let me do it, 3/Esc = block it. When you typed "3" earlier and hit
+  Esc just now, that told the system "don't let Claude do that."
+
+  Nothing is wrong. I'm just trying to read your files:
+
+  - FABLE_CONTEXT_eric_voice.md — your words
+  - the two SWA repos — to see what exists
+  - a bit of the CIS code — to see what the pipeline does
+
+  Then I write the report you asked for. That's the whole plan.
+
+  What to do: when the permission box appears, press Enter (or 1) to approve. If
+  you don't want to approve each one, you can turn the prompts off for this
+  session: press Shift+Tab until the bottom of the screen says accept edits or
+  bypass permissions, and I'll run without asking.
+
+  Ready when you are — I'll try reading the voice file again now; just approve
+  it when the box shows up.
+
+✻ Churned for 10s
+
+❯ go ahead and I'll approve the prompts                                         
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+✻ Crunched for 34s
+
+❯ no that code is from months ago, I need you to access the container           
+  quardrails and try to understand my intentions that I directly expressed to   
+  claude opus, gemini and chatgtp but could not get them to be my experts to    
+  create the app. So I have been 6 months accidently building my way to a gated 
+  containerized hermes system in order to control the LLMs well enough to make  
+  them understand what I am trying to build and not do all the bad traing data  
+  behaviors to be my software engineers. will this work, how do I get the LLMs  
+  to just do what I ask them to do. I am trying to use fable while I have this  
+  one day and opportunity to make a break through so I can use the              
+  guardrailed, containerized tool to develop the two apps in the prompt.        
+
+● Understood — skipping the old app code. I'll look at the container guardrails
+  themselves (enforcement, gates, agent contracts), then write the report
+  answering: will this work, and how do you use it to get the apps built.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+✻ Brewed for 1m 5s
+
+❯ I need you to look into the docker container that is were the production evn  
+  is built                                                                      
+
+  Ran 4 shell commands (ctrl+o to expand)
+● I have the full picture now. Writing the report.
+
+● Write(/mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.md)
+  ⎿  User rejected write to ../../mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.m
+                            d
+      1 # FABLE RECOMMENDATION REPORT
+      2 **Written by Claude Fable 5 — 2026-07-19**
+      3 **Sources: FABLE_CONTEXT_eric_voice.md, the live `cis-pipeline` c
+        ontainer (mounts, entrypoint, all six role profiles), your sessio
+        n history in the voice file.**
+      4 
+      5 ---
+      6 
+      7 ## THE ANSWER FIRST
+      8 
+      9 **How does Eric use CIS to make cheap contained models build what
+         he actually wants?**
+     … +103 lines
+
+✻ Baked for 6m 27s
+
+❯ I read the recommendation and apprectiate the input but your are slightly     
+  misinterpretting what you are looking at because I can't afford for you to    
+  dig into the knowledgebase. I have months of me in sessions with frontier     
+  models with verbetim discriptions of what I was/am trying to do. I don't know 
+  how to make the cards you are describing and stopp the interpretations from   
+  happening. I need a fable level model to actually go through what I said and  
+  help me develop the counter part description cards to the guardrails.         
+  Everything I have should you are samples of work product and sessions. I need 
+  you to evaluate the intentions before you reach the fifty percent of my       
+  subscription account so I can have insights to move forward with the models I 
+  am able to afford.                                                            
+
+  Read 1 file, listed 1 directory, ran 5 shell commands (ctrl+o to expand)
+
+● Write(/mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.md)
+  ⎿  User rejected write to ../../mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.m
+                            d
+      1 # FABLE RECOMMENDATION REPORT — Intent Evaluation + Description C
+        ards
+      2 **Claude Fable 5 — 2026-07-19**
+      3 **Sources: FABLE_CONTEXT_eric_voice.md · spine DB (data/cis_memor
+        y.db, 4,395 human messages queried by FTS, not crawled) · the liv
+        e cis-pipeline container (mounts, entrypoint, all 6 role profiles
+        ) · /mnt/projects/swa_audit/reports/ (the May 20 audit of your 80
+        %-complete app)**
+      4 
+      5 ---
+      6 
+      7 # PART 1 — WHAT YOU ACTUALLY ASKED FOR (the intent evaluation)
+      8 
+      9 I pulled your verbatim words from the spine. You have been consis
+        tent for six months. Here is what you said, and what it means:
+     … +232 lines
+
+✻ Cooked for 12m 1s
+
+❯ I understand this and will do it but I am not a coder, I don't have the       
+  stamina to go through everything I have described and partially worked out in 
+  detail. How can I get the pipeline or a numebr of agents to go through all    
+  of my documentation of the paste few months and have them create these cards. 
+  I tried topological extractions and intention extractions but the models      
+  keep interpreting in the unusable enterprise training data pattern. When I    
+  ask a model to explain what they think my intention is they explain it        
+  exactly as I mean. I hoped they would do as you suggest and create these      
+  cards to crank out the work I am asking for. so if you acn add to your        
+  recommentdation prompts of script to have them deterministically generate     
+  cards off of my direct asks, I can pull out months of work into crystalized   
+  instructions to build off of. I know you said for me to do it but I can't.    
+  its a very complex set of applications I want and the ability is sitting      
+  there in the models to execute if I just know how to direct them to do it. so 
+  is there anything you can add to the recommendation that I can have them      
+  literally build into cis so that they build the projects. I already have the  
+  spec created to have the coordinator create project folders with there own    
+  spines and session histories. I am heading down this path as of two weeks     
+  ago, but the circular logic continues to where I have the container built but 
+  can                                                                           
+
+● Write(/mnt/projects/cis/tools/mine_asks.py)
+  ⎿  Wrote 72 lines to ../../mnt/projects/cis/tools/mine_asks.py
+       1 #!/usr/bin/env python3
+       2 """mine_asks.py — deterministically extract Eric's candidate 'di
+       3 
+       4 No LLM involved. Reads knowledge_messages (role=human), filters 
+         terminal-paste noise,
+       6 
+       7 Usage:
+       8   python3 tools/mine_asks.py --db data/cis_memory.db --project s
+       9 """
+      10 import argparse
+     … +79 lines (ctrl+o to expand)
+
+❯ cant get the workbech set up                                                  
+
+● Write(/mnt/projects/cis/tools/card_gate.py)
+  ⎿  Wrote 163 lines to ../../mnt/projects/cis/tools/card_gate.py
+       1 #!/usr/bin/env python3
+         0 = pass, 1 = fail.
+       3 
+       5   1. All sections present, in order:
+       6      CARD, SOURCE, INTENT, BUILD, DONE WHEN, EVIDENCE, NOT IN TH
+       7   2. Every quoted string (>= 15 chars) in INTENT exists verbatim
+          in the spine
+         docs.
+       9      This is what makes interpretation mechanically detectable: 
+      10      invented quote fails here, automatically.
+     … +178 lines (ctrl+o to expand)
+● Write(/mnt/projects/cis/cards/GENERATOR_PROMPT.txt)
+  ⎿  Wrote 43 lines to ../../mnt/projects/cis/cards/GENERATOR_PROMPT.txt
+      1 You are the CARD GENERATOR for CIS.
+      3 Input: one JSON line containing a message Eric wrote, with fields
+         "id", "date",
+      4 "project", and "text" (his verbatim words, possibly mixed with pa
+      5 
+      6 Your only job: if the message contains a DIRECT ASK — something E
+      7 changed, or produced — convert it into ONE build card in the exac
+        t format below.
+      8 If the message contains no direct ask (it is a question, a log pa
+      9 output exactly this single line and nothing else: NO_CARD
+     … +54 lines (ctrl+o to expand)
+
+● Now testing both tools on your real data before I hand them to you.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Write(/mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.md)
+  ⎿  Wrote 230 lines to
+     ../../mnt/projects/cis/FABLE_RECOMMENDATION_REPORT.md
+      1 # FABLE RECOMMENDATION REPORT — Intent Evaluation, Description Ca
+      2 **Claude Fable 5 — 2026-07-19**
+      3 **Sources: FABLE_CONTEXT_eric_voice.md · spine DB (data/cis_memor
+        y.db — 4,395 human messages, queried by FTS, not crawled) · the l
+        es) · /mnt/projects/swa_audit/reports/ (the May 20 audit of your 
+        80%-complete app)**
+      5 **Built and tested this session (already in the repo, working):**
+      6 - `tools/mine_asks.py` — deterministic extractor of your direct a
+        sks from the spine (no LLM). Tested: pulled 140 SWA candidates.
+        sses a real card, rejects 
+     … +420 lines (ctrl+o to expand)
+
+  Searched memories, wrote 1 memory (ctrl+o to expand)
+
+● Done. Everything is written and tested. Here's where you stand:
+
+  What now exists in /mnt/projects/cis (built and verified this session):
+  - FABLE_RECOMMENDATION_REPORT.md — the full report: your intent evaluation,
+  the card factory, 6 ready-to-run SWA starter cards, and the operating rules.
+  - tools/mine_asks.py — pulls your direct asks out of the spine database. No
+  LLM, pure query. Already run: 140 SWA asks are sitting in 
+  cards/asks_swa.jsonl.
+  - tools/card_gate.py — the mechanical judge. I tested it: a real card with
+  your verbatim quote passed; a fake enterprise-pattern card failed with 11 
+  printed reasons, including catching an invented quote. This is the piece you
+  were missing — interpretation is now rejected by a script, not argued about
+  for 146 rounds.
+  - cards/GENERATOR_PROMPT.txt — the prompt that turns one of your asks into one
+  card.
+
+  The two findings that explain your six months:
+  1. Inside your running container, the app repos are mounted read-only and only
+  the CIS repo is writable — your agents physically could not build SWA no
+  matter how well they understood you. One mount line fixes it.
+  2. Your extractions failed because they asked for unfalsifiable outputs
+  (topologies, summaries) — no script can fail a roadmap. Cards are falsifiable,
+  so drift dies at the gate.
+
+  About the workbench you can't get set up: you don't need it. The card factory
+  reads the existing spine and writes to cards/ — which is inside the one
+  directory your container can already write to today. Anything that must be
+  finished "before" the first card is the trap again. Skip it.
+
+  Your next three moves, in order:
+  1. Give the pipeline the factory loop from Part 2 of the report (one Draft
+  call per ask → card_gate.py → inbox). Your part: read the DONE WHEN bullets of
+  each surviving card, keep or drop. ~Half an hour.
+  2. Add the writable app mount and copy Sharon's four workflow docs (exact
+  commands in Part 3 setup).
+  3. Run CARD SWA-1 as a pipeline run — or paste it into a Claude Code session
+  if you want the dashboard on screen today. SWA-1 through SWA-3 are a same-day
+  build; SWA-6 is where it starts earning.
+
+✻ Worked for 5m 4s
+
+※ recap: Goal: get your CIS pipeline building SWA instead of governance docs. The card system (miner, gate, 140 mined asks, 6 starter cards, full report) is built and tested in /mnt/projects/cis. Next: run the card factory loop, then CARD SWA-1. (disable recaps in /config)
+
+❯ /copy                                                                         
+  ⎿  Copied to clipboard (2162 characters, 18 lines)
+     Also written to /tmp/claude-1000/response.md
+
+❯ /export                                                                       
+  ⎿  Conversation exported to: /home/eric/2026-07-19-022530-local-command-caveat
+     caveat-the-messages-below.txt
+
+❯ Now I will try to use the rest of the session you have left to give to try to 
+  figure out how to build the wiasw workflow/project management and digital     
+  assestt management application. THe file prefixed X_m in this folder /mnt/pro 
+  jects/cis/docs/_archive/CIS_Creative_Intelligence_System_LegacyBuildFiles     
+  became blurred from a creative work flow to a very abstracted interpretation  
+  of an application. looking at the wias exel worksheet and looking at the      
+  files, I can't even figure out how I imagined a user doing any work in the    
+  application. there may be better eplainations in other files as well but can  
+  you deilver any guidance on how to build this tool I envision being very      
+  helpful but I can figure out how it should work. Are you able to make any     
+  recommendations on this.                                                      
+
+● I can help with this. Plan: look at the legacy folder and the WIAS spreadsheet
+  itself (the source schema you named), skim one of the blurred X_m files just
+  enough to see where the abstraction crept in, pull your verbatim WIAS
+  descriptions from the spine, and then give you a concrete "how a user works in
+  it" recommendation plus a v0.1 card stack.
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+● Write(/mnt/projects/cis/WIASW_BUILD_GUIDE.md)
+  ⎿  User rejected write to ../../mnt/projects/cis/WIASW_BUILD_GUIDE.md
+      1 # WIASW BUILD GUIDE — How the app works, recovered from your own 
+        workbook
+      2 **Claude Fable 5 — 2026-07-19**
+      3 **Sources: `data/drive_imports/architecture_atlas_prompt_WIAS Pro
+        ject Manager (version 1).xlsb.xlsx` (all 47 sheets read) · `docs/
+        _archive/.../X_00A WORKING METHOD` · `X_00_OPERATOR_MODEL.md` · y
+        our verbatim spine messages**
+      4 
+      5 ---
+      6 
+      7 ## PART 1 — THE ANSWER: how a user does work in WIASW
+      8 
+      9 You said you can't figure out how you imagined a user working in 
+        the application. You did imagine it — it's in the workbook, and h
+        ere is the recovered loop. The key that unblurs everything:
+     … +167 lines
+
+✻ Cogitated for 6m 59s
+
+❯ Your insight clarifies a lot, but I did begin imagining LLM's could do either 
+  the initial setup work in some applications or even some heavy lifting        
+  through ai intergrations that are being developed for these programs.So I did 
+  think that after the brain work woas done setting up a project in the         
+  project management side the programs could be opened, templates saved to a    
+  folder, even concepts turned into 3d animations, videos or music. there have  
+  been a lot of people trying these things with ai. any ideas ho I would build  
+  some creative prodiction functionality into this project brain app?           
+
+● Write(/mnt/projects/cis/WIASW_BUILD_GUIDE.md)
+  ⎿  Wrote 278 lines to ../../mnt/projects/cis/WIASW_BUILD_GUIDE.md
+      1 # WIASW BUILD GUIDE — How the app works, recovered from your own 
+      2 **Claude Fable 5 — 2026-07-19**
+      3 **Sources: `data/drive_imports/architecture_atlas_prompt_WIAS Pro
+        _archive/.../X_00A WORKING METHOD` · `X_00_OPERATOR_MODEL.md` · y
+        our verbatim spine messages**
+      5 ---
+      6 
+      8 
+      9 You said you can't figure out how you imagined a user working in 
+        ere is the recovered loop. The key that unblurs everything:
+     … +463 lines (ctrl+o to expand)
+  Wrote 1 memory (ctrl+o to expand)
+
+● Written: /mnt/projects/cis/WIASW_BUILD_GUIDE.md — now with the production
+  layer you asked about as Part 4. Here's the short version of the answer:
+
+  How WIASW works (recovered from your own workbook): The core app is the brain
+  between work sessions — four screens: Idea shelf → Project chains → Step page 
+  → One calendar. Your status sheet was never a dropdown; it's the production
+  pipeline in order, and the project goal sheet defines where each project's
+  chain stops (a drawing stops early, a film goes the distance). That's your
+  "how far am I from the end" answer, built in. The X_ docs blurred because
+  models restated this loop as abstract streams and layers; the workbook itself
+  never blurred.
+
+  How to build the AI production functionality: as recipes attached to steps. A
+  recipe is a small script with a fixed contract — inputs from your project
+  objects, one external tool, outputs filed into the project's folders and
+  registered as assets, plus an evidence command. The LLM only fills creative
+  parameters (the prompt, the shot list); the tool execution is deterministic
+  script. Same principle as card_gate.py: models fill fields, scripts do
+  actions. Concretely:
+
+  - W-7 — project scaffold: folder tree + templates copied in. No AI. This
+  proves the recipe system and is literally your sentence "templates saved to a
+  folder."
+  - W-8 — concept art via the ComfyUI API (a saved workflow JSON + an
+  LLM-drafted prompt you edit before running).
+  - W-9 — animatic assembly via ffmpeg (boards + durations → mp4).
+  - W-10 — headless Blender scene bootstrap (blender --background --python):
+  camera, lights, your boards as reference planes, ready to open. Resolve,
+  Houdini, and Unreal all have Python APIs for later recipes; music stays a
+  future slot since local audio generation is the weakest link.
+
+  Two rules keep this from becoming the X_-docs trap again: recipes produce
+  drafts filed into the project, never auto-advanced steps (your own
+  Wait→…→Automate leash), and the manual loop ships first — recipes are
+  accelerators bolted on one card at a time, never prerequisites.
+
+  Everything from today is now on disk: FABLE_RECOMMENDATION_REPORT.md (SWA plan
+  + card factory), tools/mine_asks.py + tools/card_gate.py (tested),
+  cards/asks_swa.jsonl (140 mined asks), cards/GENERATOR_PROMPT.txt, and
+  WIASW_BUILD_GUIDE.md. Build order: SWA-1 through SWA-6 to get billable, then
+  W-1, and W-7 only after you've lived in the loop for a week.
+
+✻ Churned for 2m 6s
+
+❯ I don't know if you answered this already in the documents you have given me  
+  but looking at the current structure for how cis is build, do you have any    
+  recommendations for how to instruct the pipeline agents to integrate the      
+  deterministic scripts into the pipeline?                                      
+
+● Good question — the reports say what to add but not how to hand it to the 
+  agents. Let me take one quick look at how gates are actually wired in the
+  current pipeline so the instructions match reality instead of guessing.
+
+  Ran 5 shell commands (ctrl+o to expand)
+
+● Update(/mnt/projects/cis/enforcement/mwl-proof-v2/gates/gate_runner.sh)
+  ⎿  Added 42 lines
+      123      SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+      124  fi
+      125  
+      126 +# ── Gate 9: Card validity (configured via env) ──────────────
+          +────────                                                      
+      127 +# Set GATE_CARD_PATH to the card file; optional GATE_CARD_DOCS
+          + for a                                                        
+      128 +# directory of approved source docs (quote verification fallba
+          +ck).                                                          
+      129 +                                                              
+      130 +if [ -n "${GATE_CARD_PATH:-}" ]; then                         
+      131 +    run_gate "gate_card_valid" "${SCRIPT_DIR}/gate_card_valid.
+          +sh" \                                                         
+      132 +        "$GATE_CARD_PATH" "${GATE_CARD_DOCS:-}" || exit $FAILE
+          +D                                                             
+      133 +else                                                          
+      134 +    echo ""                                                   
+      135 +    echo "━━━ GATE: gate_card_valid ━━━"                      
+      136 +    echo "   SKIP: GATE_CARD_PATH not set"                    
+      137 +    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))                      
+      138 +fi                                                            
+      139 +                                                              
+      140 +# ── Gate 10: No docs-only diff (configured via env) ─────────
+          +────────                                                      
+      141 +# Set GATE_BUILD_DIR to the app build directory. A build run w
+          +hose                                                          
+      142 +# output is only .md files FAILS — documents are not deliverab
+          +les.                                                          
+      143 +                                                              
+      144 +if [ -n "${GATE_BUILD_DIR:-}" ]; then                         
+      145 +    run_gate "gate_no_docs_only_diff" "${SCRIPT_DIR}/gate_no_d
+          +ocs_only_diff.sh" \                                           
+      146 +        "$GATE_BUILD_DIR" || exit $FAILED                     
+      147 +else                                                          
+      148 +    echo ""                                                   
+      149 +    echo "━━━ GATE: gate_no_docs_only_diff ━━━"               
+      150 +    echo "   SKIP: GATE_BUILD_DIR not set"                    
+      151 +    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))                      
+      152 +fi                                                            
+      153 +                                                              
+      154 +# ── Gate 11: Smoke script (configured via env) ──────────────
+          +────────                                                      
+      155 +# Set GATE_SMOKE_SCRIPT to the script holding the card's EVIDE
+          +NCE                                                           
+      156 +# commands. Its exit code is the verdict — no model judgment. 
+      157 +                                                              
+      158 +if [ -n "${GATE_SMOKE_SCRIPT:-}" ]; then                      
+      159 +    run_gate "gate_smoke" "${SCRIPT_DIR}/gate_smoke.sh" \     
+      160 +        "$GATE_SMOKE_SCRIPT" || exit $FAILED                  
+      161 +else                                                          
+      162 +    echo ""                                                   
+      163 +    echo "━━━ GATE: gate_smoke ━━━"                           
+      164 +    echo "   SKIP: GATE_SMOKE_SCRIPT not set"                 
+      165 +    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))                      
+      166 +fi                                                            
+      167 +                                                              
+      168  # ── All gates passed ────────────────────────────────────────
+           ────────
+      169  
+      170  echo ""
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Done and tested. Here's the answer to your question in two parts — what's
+  already integrated as of now, and how to instruct the agents for the rest.
+
+  What I just integrated myself (it was smaller than a pipeline run): Your
+  gate_runner.sh already had the perfect socket — gates are tiny scripts,
+  configured by env vars, skipped when unset, first failure stops the run. So
+  the three deterministic checks now exist in that exact convention, in both
+  enforcement/mwl-proof-v2/gates/ and tools/gates/, wired into the runner as
+  Gates 9–11 and all tested just now:
+
+  - Gate 9 gate_card_valid — runs card_gate.py on the file named in
+  GATE_CARD_PATH (verified: your good card passes).
+  - Gate 10 gate_no_docs_only_diff — fails any build whose output in
+  GATE_BUILD_DIR is only .md files (verified both directions).
+  - Gate 11 gate_smoke — runs the script named in GATE_SMOKE_SCRIPT; its exit
+  code is the verdict (verified pass and fail).
+
+  Nothing is broken if the vars aren't set — the gates just SKIP, like your
+  existing ones, so today's pipeline behavior is unchanged until a run opts in.
+
+  The one wiring job left for the agents — the orchestrator has to set those env
+  vars per run type. That's a real code change in runtime/orchestrator.py, so
+  give it to the pipeline as a card:
+
+  CARD CIS-gate-wiring: Orchestrator sets gate env vars per run type
+  SOURCE: gate_runner.sh Gates 9-11 (already installed and tested 2026-07-19)
+  INTENT (Eric, verbatim): "I need checks and balance... I need a worker
+  constrained to
+  my working methods"
+  BUILD: When the orchestrator invokes gate_runner.sh it exports: for a
+  card-factory run,
+  GATE_CARD_PATH=<the generated card file>; for a build run, GATE_BUILD_DIR=<the
+  app dir>
+  and GATE_SMOKE_SCRIPT=<the card's smoke script>. Nothing else about the runner
+  changes.
+  DONE WHEN:
+    - a factory run's gate output shows gate_card_valid PASS/FAIL instead of
+  SKIP
+    - a build run's gate output shows gate_no_docs_only_diff and gate_smoke
+  firing
+  EVIDENCE:
+    - grep -q GATE_CARD_PATH /workspace/cis/runtime/orchestrator.py
+    - bash /workspace/cis/enforcement/mwl-proof-v2/gates/gate_runner.sh 2>&1 |
+  grep -q gate_smoke
+  NOT IN THIS CARD: no new gates, no runner refactor, no changes to existing
+  gates 1-8,
+  no config system.
+
+  The general recipe for any future deterministic script (this is the reusable
+  answer): never ask agents to "integrate" anything open-endedly — that invites
+  architecture. Instead, every integration instruction has the same three fixed
+  points, and the card names all of them:
+
+  1. Where the script lives: tools/ (callable) or tools/gates/gate_<name>.sh (a
+  verdict).
+  2. The convention it must follow: exit 0 = pass, prints its reasons, env-var
+  configured, SKIP when unset — "match gate_service_health.sh" is the whole
+  spec.
+  3. Who calls it: a numbered gate block in gate_runner.sh (verdicts) or an
+  orchestrator call site (tools) — named by file and function, never "wherever
+  appropriate."
+
+  One honest caveat to fix eventually, not today: the gates directory lives
+  inside /mnt/projects/cis, which is mounted read-write in the container — so
+  the constrained agents can currently edit their own gates. When you next
+  rebuild the container, mount enforcement/mwl-proof-v2/gates read-only the way
+  you already mount the profiles and entrypoint. That closes the loop on your
+  own trust-root rule: the constrained agent cannot author its own contract.
+
+✻ Brewed for 2m 16s

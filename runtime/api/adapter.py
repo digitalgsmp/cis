@@ -238,10 +238,15 @@ def adapter_chat():
     }).encode("utf-8")
 
     try:
+        import os as _os
+        _key = _os.environ.get("CIS_" + role.upper() + "_API_KEY", "")
+        _hdrs = {"Content-Type": "application/json"}
+        if _key:
+            _hdrs["Authorization"] = "Bearer " + _key
         req = urllib.request.Request(
             gateway_url,
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers=_hdrs,
         )
         resp = urllib.request.urlopen(req, timeout=300)
         body = json.loads(resp.read().decode("utf-8"))

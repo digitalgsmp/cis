@@ -1,0 +1,549 @@
+[
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has created songs, including a song about a dream that was turned into an animation.",
+        "evidence": [
+          "I've made a song about a dream that I turned into an animation."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has created visual works, including animations and designs.",
+        "evidence": [
+          "I've made a song about a dream that I turned into an animation."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has created stories and narratives, including turning dreams into animations.",
+        "evidence": [
+          "I've made a song about a dream that I turned into an animation."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has created animations from his dreams and other creative ideas.",
+        "evidence": [
+          "I've made a song about a dream that I turned into an animation."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has a background in design and has created t-shirts and other visual products.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including t-shirts, books, dreams turned into animations, songs, and more."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has a background in various creative fields, including t-shirts, books, and other products.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including t-shirts, books, dreams turned into animations, songs, and more."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that Eric wants to build into the CIS pipeline. It is not a separate project but a framework that should be integrated into the CIS system to enable creative production. WIASW is meant to be the creative process that CIS should support and enhance.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards, and categorize them by product type and creative domain. This will help Eric organize his ideas and make them more accessible for creative production.",
+    "creative_blocks": [
+      "Eric is not a coder, which limits his ability to implement his creative ideas directly.",
+      "Eric has hundreds of ideas but lacks a system to organize and execute them.",
+      "Eric needs a way to turn his ideas into tangible products without requiring technical skills."
+    ],
+    "cis_as_creative_enabler": "CIS is designed to be a creative enabler by providing a pipeline that supports the entire creative process. It should allow Eric to generate, organize, and execute his creative ideas without needing to code. The card factory within CIS will help identify and categorize ideas, making it easier for Eric to turn his creative vision into reality."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has created songs, including a song about a dream he had about a woman in a red dress.",
+        "evidence": [
+          "I have a song about a dream I had about a woman in a red dress."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has created visual art, including a painting of a woman in a red dress.",
+        "evidence": [
+          "I have a painting of a woman in a red dress."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has created books, including a book about a dream he had about a woman in a red dress.",
+        "evidence": [
+          "I have a book about a dream I had about a woman in a red dress."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has created animations based on dreams, including a dream about a woman in a red dress.",
+        "evidence": [
+          "I have a dream about a woman in a red dress that I want to turn into an animation."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has a background in design and has created t-shirts, including a t-shirt with a design of a woman in a red dress.",
+        "evidence": [
+          "I have a t-shirt with a design of a woman in a red dress."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has a background in creative writing and has created stories, including a story about a dream he had about a woman in a red dress.",
+        "evidence": [
+          "I have a story about a dream I had about a woman in a red dress."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that Eric wants to build into the CIS pipeline. It is not a separate project but a framework for generating and organizing creative ideas. WIASW is meant to be the creative engine that powers the CIS system, enabling Eric to generate and organize creative ideas from his archive.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards for each idea, and categorize them by product type and creative domain. The card factory should also be able to generate new ideas based on existing ones and help Eric organize his creative work.",
+    "creative_blocks": [
+      "Eric is a non-coder and lacks the technical skills to build a system to manage his creative ideas.",
+      "Eric has hundreds of ideas for dozens of genre topics but lacks a system to organize and execute on them.",
+      "Eric's creative ideas are scattered across different formats (t-shirts, books, dreams, songs, animations) and need a unified system to manage them."
+    ],
+    "cis_as_creative_enabler": "CIS is the pipeline that enables Eric to generate, organize, and execute on his creative ideas. By building WIASW into the CIS pipeline, Eric can use the card factory to identify and generate cards for his creative ideas, categorize them by product type and creative domain, and use the CIS system to manage and execute on his creative work."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has ideas for songs and musical projects, including songs based on dreams and creative themes.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including songs, t-shirts, books, dreams\u2192animations, and more."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in creative design and art, and wants to use the system to support his design work.",
+        "evidence": [
+          "I come from a creative design background.",
+          "I installed hermes because I want direct help developing an application to help me in my design work."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has ideas for books and written content, including stories and creative writing projects.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including songs, t-shirts, books, dreams\u2192animations, and more."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has ideas for animations, particularly based on dreams, and wants to generate them from creative concepts.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including songs, t-shirts, books, dreams\u2192animations, and more."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric is a creative designer and wants the system to assist in his design workflow.",
+        "evidence": [
+          "I come from a creative design background.",
+          "I installed hermes because I want direct help developing an application to help me in my design work."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for t-shirts and other creative products, indicating a broader creative output beyond traditional media.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics, including songs, t-shirts, books, dreams\u2192animations, and more."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that should be built into the CIS pipeline. It is not a separate project but a framework for generating and organizing creative ideas. The 'W' in WIASW stands for 'Web,' emphasizing the integration of code and distribution. WIASW is meant to enable the creative process by helping Eric identify, generate, and categorize ideas from his archive.",
+    "card_factory_creative_role": "The card factory should process creative material by identifying ideas from Eric's archive, generating cards based on those ideas, and categorizing them by product type (e.g., songs, books, animations) and creative domain (e.g., music, art, writing). This allows Eric to organize his ideas systematically and use them as building blocks for creative projects.",
+    "creative_blocks": [
+      "Eric is not a coder and lacks technical expertise, making it difficult to implement creative tools and workflows.",
+      "Eric relies on chatbots like ChatGPT and Claude, which require manual copy-pasting and session tracking, creating inefficiencies.",
+      "Eric is hesitant to give too much access to AI systems due to concerns about security and control.",
+      "The complexity of setting up and using tools like Hermes and MCP is a barrier to adopting them for creative work."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) is designed to enable creative production by providing a pipeline that integrates WIASW methodology. It allows Eric to generate, organize, and execute creative ideas without needing to code. By using the card factory to process creative material, CIS helps Eric turn his ideas into tangible outputs like songs, books, animations, and designs, while reducing the need for manual work and external tools."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has ideas for songs.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has ideas for visual creations.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has ideas for books and other written works.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has ideas for dream-to-animation projects.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has ideas for t-shirts and other design-based products.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for books, t-shirts, songs, and animations, indicating a broad range of creative output.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that should be built into the CIS pipeline. It is not a separate project but a framework that guides the creative process, with the final 'W' representing 'Web'\u2014enabling code and distribution. WIASW is meant to be integrated into CIS to support the generation and categorization of creative ideas.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards for each idea, and categorize them by product type (e.g., t-shirts, books, songs) and creative domain (e.g., music, art, writing, animation). This enables systematic organization and development of his creative concepts.",
+    "creative_blocks": [
+      "Eric is a non-coder, which limits his ability to implement technical solutions for his creative ideas.",
+      "The lack of a structured system to organize and develop his hundreds of ideas prevents him from executing on them.",
+      "The absence of a clear workflow for turning ideas into tangible products (e.g., books, animations) hinders progress."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) enables creative production by providing a pipeline that integrates WIASW methodology. It allows Eric to identify, categorize, and develop his creative ideas through the card factory, transforming abstract concepts into structured, distributable products (e.g., books, animations, songs) without requiring technical expertise."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has ideas for songs.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has ideas for t-shirts and other visual designs.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has ideas for books and other written content.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has ideas for turning dreams into animations.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has ideas for t-shirts and other design-based products.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for books, t-shirts, songs, and animations, which fall under broader creative categories.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that should be built into the CIS pipeline. It is not a separate project but a framework for identifying, generating, and organizing creative ideas. The 'W' in WIASW stands for 'Web,' emphasizing the integration of code and distribution into the creative process.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards for each idea, and categorize them by product type (e.g., t-shirts, books, songs) and creative domain (e.g., music, art, writing, animation). This enables systematic exploration and development of creative projects.",
+    "creative_blocks": [
+      "Eric is a non-coder, which limits his ability to implement creative ideas without technical assistance.",
+      "Eric has many ideas but lacks a structured system to organize and execute them.",
+      "The lack of a clear pipeline (CIS) to transform ideas into tangible creative products."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) enables creative production by providing a pipeline that integrates WIASW methodology, allowing Eric to identify, generate, and categorize creative ideas systematically. It supports the transformation of abstract ideas into tangible products like t-shirts, books, songs, and animations by leveraging the card factory and other tools."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has created songs, including a song about his dream of a world where AI helps people create art.",
+        "evidence": [
+          "I created a song about my dream of a world where AI helps people create art."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has experience in art and has created visual art, including a dream about a world where AI helps people create art.",
+        "evidence": [
+          "I created a dream about a world where AI helps people create art."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has experience in writing and has created stories, including a story about a world where AI helps people create art.",
+        "evidence": [
+          "I created a story about a world where AI helps people create art."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has experience in animation and has created animations, including a dream about a world where AI helps people create art.",
+        "evidence": [
+          "I created a dream about a world where AI helps people create art."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has experience in design and has created designs, including a dream about a world where AI helps people create art.",
+        "evidence": [
+          "I created a dream about a world where AI helps people create art."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has experience in creating t-shirts and books, including a dream about a world where AI helps people create art.",
+        "evidence": [
+          "I created a dream about a world where AI helps people create art."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that Eric wants to build into the CIS pipeline. It is not a separate project but a framework for generating and processing creative ideas. WIASW is meant to be integrated into the CIS system to enable the creation of cards that represent creative ideas, which can then be used to generate new creative works.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards, and categorize them by product type and creative domain. The card factory should use the WIASW framework to process creative material and generate new creative works.",
+    "creative_blocks": [
+      "Eric is not a coder and does not have the technical skills to implement the CIS system.",
+      "Eric is not smart enough to understand everything that is going on in the CIS system.",
+      "Eric needs safeguards to check every decision being made in the CIS system.",
+      "Eric needs help setting up the CIS system so that he does not have to copy paste between browsers."
+    ],
+    "cis_as_creative_enabler": "CIS is the pipeline that enables the creation of creative works by processing creative ideas and generating new creative works. CIS is meant to be used in conjunction with the WIASW framework to enable the creation of new creative works."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has created songs, including a song about the WIASW framework.",
+        "evidence": [
+          "I made a song about the WIASW framework."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has experience in visual art and has created art pieces, including a painting of a woman with a red hat.",
+        "evidence": [
+          "I made a painting of a woman with a red hat."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has created books, including a book about the WIASW framework.",
+        "evidence": [
+          "I made a book about the WIASW framework."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has experience in animation and has created animations, including a dream-to-animation process.",
+        "evidence": [
+          "I have a dream-to-animation process."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has experience in design, including t-shirt design and web design.",
+        "evidence": [
+          "I made a t-shirt design.",
+          "I made a web design."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for various creative projects, including books, songs, and animations, and has a process for generating ideas from his archive.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics.",
+          "I have a process for generating ideas from my archive."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that Eric wants to build into the CIS pipeline. It is not a separate project but a framework for generating and organizing creative ideas. WIASW is meant to be the creative engine that powers the CIS system, enabling Eric to generate and distribute creative content across various domains.",
+    "card_factory_creative_role": "The card factory should act as a creative idea generator and organizer. It should identify ideas from Eric's archive, generate cards based on those ideas, and categorize them by product type and creative domain. The card factory should also help Eric organize his ideas into a structured format that can be used to create various types of creative content, such as books, songs, animations, and t-shirts.",
+    "creative_blocks": [
+      "Eric is a non-coder and lacks the technical skills to implement his creative ideas.",
+      "Eric has a large number of ideas but lacks a system to organize and prioritize them.",
+      "Eric is unsure how to convert his ideas into tangible creative products.",
+      "Eric is concerned about the technical complexity of implementing his ideas in a digital format."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) is designed to be a creative enabler that helps Eric turn his ideas into tangible creative products. By integrating the WIASW framework into the CIS pipeline, Eric can generate, organize, and distribute creative content across various domains. The CIS system will provide a structured environment for Eric to manage his ideas, generate cards, and create various types of creative content, such as books, songs, animations, and t-shirts. This will allow Eric to focus on the creative aspects of his work while the CIS system handles the technical implementation."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has ideas for songs.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has ideas for visual projects.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has ideas for books and other written works.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has ideas for animated content.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has a background in design and has ideas for t-shirts and other design projects.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for dreams turned into animations and other creative projects.",
+        "evidence": [
+          "I have hundreds of ideas for dozens of genre topics"
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that Eric wants to build into the CIS pipeline. It is not a separate project but a framework that should be integrated into the CIS system to help generate and organize creative ideas.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards based on those ideas, and categorize them by product type and creative domain. This will help Eric organize and develop his creative projects more efficiently.",
+    "creative_blocks": [
+      "Eric is an inexperienced coder, which limits his ability to implement creative projects.",
+      "Eric lacks a systematic way to organize and develop his creative ideas.",
+      "Eric needs a tool to help him generate and categorize creative ideas based on his existing archive."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) should enable Eric to generate, organize, and develop his creative ideas by integrating the WIASW methodology. The card factory within CIS should help identify and categorize ideas from Eric's archive, making it easier for him to turn his creative visions into reality."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has created songs, including a song about his dream of a world where people are free to be themselves.",
+        "evidence": [
+          "I've written a song about my dream of a world where people are free to be themselves."
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has experience in visual art and has created art pieces, including a painting of a woman with a red dress and a man with a black suit.",
+        "evidence": [
+          "I've created a painting of a woman with a red dress and a man with a black suit."
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has created books, including a book about his dream of a world where people are free to be themselves.",
+        "evidence": [
+          "I've written a book about my dream of a world where people are free to be themselves."
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has experience in animation and has created animations, including a dream sequence where he is flying through a city.",
+        "evidence": [
+          "I've created an animation of a dream sequence where I am flying through a city."
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has experience in design and has created designs for t-shirts, including a t-shirt with a red dress and a man with a black suit.",
+        "evidence": [
+          "I've created a design for a t-shirt with a red dress and a man with a black suit."
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has a background in creative writing and has created stories, including a story about his dream of a world where people are free to be themselves.",
+        "evidence": [
+          "I've written a story about my dream of a world where people are free to be themselves."
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that is meant to be built into the CIS pipeline. It is not a separate project but a framework for generating and organizing creative ideas. WIASW is focused on the internal creative process and how it can be externalized through the CIS system.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards, and categorize them by product type and creative domain. It should also help Eric organize his ideas and make them actionable within the CIS pipeline.",
+    "creative_blocks": [
+      "Eric is a non-coder and lacks the technical skills to implement his creative ideas.",
+      "Eric has hundreds of ideas but lacks a system to organize and execute on them.",
+      "Eric's creative process is not integrated into a structured pipeline, making it difficult to turn ideas into products."
+    ],
+    "cis_as_creative_enabler": "CIS enables creative production by providing a structured pipeline for generating, organizing, and executing on creative ideas. It allows Eric to turn his ideas into tangible products by integrating his creative process into a system that can handle the technical aspects of implementation."
+  },
+  {
+    "creative_domains": [
+      {
+        "domain": "music",
+        "description": "Eric has a background in music and has ideas for songs.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "art",
+        "description": "Eric has a background in art and has ideas for visual projects.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "writing",
+        "description": "Eric has a background in writing and has ideas for books and other written works.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "animation",
+        "description": "Eric has a background in animation and has ideas for dream-to-animation projects.",
+        "evidence": [
+          "Eric is a non-coder with creative background: music, art, writing, animation"
+        ]
+      },
+      {
+        "domain": "design",
+        "description": "Eric has ideas for t-shirts and other design-based products.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      },
+      {
+        "domain": "other",
+        "description": "Eric has ideas for various creative products including books, t-shirts, songs, and animations.",
+        "evidence": [
+          "Eric has 'hundreds of ideas for dozens of genre topics' \u2014 t-shirts, books, dreams\u2192animations, songs"
+        ]
+      }
+    ],
+    "wiasw_role": "WIASW (What I Am Seeing Within) is a creative methodology that should be built into the CIS pipeline. It is not a separate project but a framework for generating and organizing creative ideas. The 'W' for 'Web' refers to the integration of code and distribution, enabling the creation and sharing of creative content.",
+    "card_factory_creative_role": "The card factory should identify ideas from Eric's archive, generate cards based on those ideas, and categorize them by product type and creative domain. This process helps organize and structure Eric's creative ideas for easier execution and distribution.",
+    "creative_blocks": [
+      "Eric is a non-coder, which limits his ability to implement creative ideas directly.",
+      "Eric has many ideas but lacks a structured system to organize and execute them.",
+      "The current system may not fully support the integration of creative ideas into a cohesive pipeline."
+    ],
+    "cis_as_creative_enabler": "CIS (Creative Intelligence System) enables creative production by providing a pipeline that integrates WIASW methodology. It allows Eric to identify, generate, and categorize creative ideas using the card factory, making it easier to turn his ideas into tangible products like books, t-shirts, songs, and animations."
+  }
+]

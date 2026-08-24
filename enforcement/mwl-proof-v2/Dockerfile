@@ -30,6 +30,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
 # --- install pyyaml for gate scripts (system python, not Hermes venv) ---
 RUN pip3 install pyyaml
 
+# --- install Claude Code CLI (baked at build time, worker uses at runtime) ---
+# No ANTHROPIC_API_KEY baked — login via OAuth interactively (docker exec -it)
+RUN npm install -g @anthropic-ai/claude-code
+
 # --- install pinned Hermes as root, at build time, once ---
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser \
     && /usr/local/bin/hermes --version \
@@ -51,6 +55,13 @@ COPY gates/ /opt/cis-gates/
 RUN chown -R root:root /opt/cis-gates \
     && find /opt/cis-gates -type d -exec chmod 0555 {} \; \
     && find /opt/cis-gates -type f -exec chmod 0555 {} \;
+
+# --- bake the card-factory tools (card_gate.py, mine_asks.py, GENERATOR_PROMPT) ---
+# Root-owned, RO — the worker cannot weaken its own card validator or generator prompt.
+COPY cis-tools/ /opt/cis-tools/
+RUN chown -R root:root /opt/cis-tools \
+    && find /opt/cis-tools -type d -exec chmod 0555 {} \; \
+    && find /opt/cis-tools -type f -exec chmod 0555 {} \;
 
 # --- bake the container gate runner (pre-tool-call enforcement) ---
 COPY container_gate_runner.py /opt/cis-gates/container_gate_runner.py
