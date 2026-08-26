@@ -180,13 +180,13 @@ echo "[CIS CLOSEOUT] Export agreement: PASS"
 # ── Build state coherence gate ────────────────────────────────────────────────
 echo ""
 echo "[CIS CLOSEOUT] Step 4/6: Verifying build state coherence..."
-if ! bash tools/gates/gate_build_state_coherence.sh; then
+if ! python3 tools/gates/gate_build_state_coherence.py; then
     echo ""
-    echo "[CIS CLOSEOUT] FAILED at step: gate_build_state_coherence.sh"
+    echo "[CIS CLOSEOUT] FAILED at step: gate_build_state_coherence.py"
     echo "[CIS CLOSEOUT] Next action: paste this output to your escalation"
     echo "[CIS CLOSEOUT] advisor or open a new Hermes session with this error."
     _write_spine_record "FAIL" "$START_HEAD" "" "" "1" "PASS" "FAIL" "" "" \
-        "gate_build_state_coherence.sh" "build state coherence gate failed" \
+        "gate_build_state_coherence.py" "build state coherence gate failed" \
         "$LOG_FILE"
     exit 1
 fi
