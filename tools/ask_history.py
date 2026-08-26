@@ -10,7 +10,7 @@ k = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 c = ChromaClient()
 e = c._embedding.embed_single(q)
 coll = c._client.get_collection("knowledge_messages")
-SRC = ["claude_export","chatgpt_export","claude_transcripts"]
+SRC = ["claude_export","chatgpt_export","claude_transcripts","hermes_session"]
 r = coll.query(query_embeddings=[e], n_results=k, where={"source":{"$in":SRC}}, include=["documents"])
 for d in r["documents"][0]:
     print(d[:900]); print("===")
