@@ -149,3 +149,6 @@ hook_payload.jsonl
 
 # SKILL.md split backups (recoverable safety-net, not source — 2026-08-25)
 enforcement/mwl-proof-v2/skill-backups-*/
+
+# CLAUDE.md backups (recoverable safety-net, not source — 2026-08-26)
+CLAUDE.md.bak.*
