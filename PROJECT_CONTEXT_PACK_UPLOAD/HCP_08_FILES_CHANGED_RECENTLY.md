@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-08-26 05:45 UTC | Run: run-32640032e366
+Generated: 2026-08-26 06:19 UTC | Run: run-07c5d32776d4
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 261b11d fix(ask_history): include hermes_session in source filter — session content was invisible to semantic search
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/ask_history.py 
 
 ## 3da5023 Regenerate context after session closeout
 
@@ -1366,157 +1396,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/ui/src/SystemDashboard.jsx 
 
 ## runtime/ui/src/api.js 
-
-## b68cb97 fix: bake docker CLI + skills into Dockerfile, mount docker socket, add ops reference docs
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/CONTAINER_OPERATIONS.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UI_BUILD_CYCLE.md 
-
-## enforcement/mwl-proof-v2/Dockerfile 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/SKILL.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/agent_call_retry_pattern.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/brain_chat_backchannel_pattern.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/code_review_gate_design.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/container-architecture.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/container_output_contract_enforcement.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/container_transition_gaps.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/control_plane_build_complete.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/control_plane_build_spec.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/data_integrity_patterns.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/default_to_success_antipattern.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/deterministic_guardrail_gap.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/development-timeline.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/eric_gate_provenance_system.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/failure_mode_taxonomy.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/flask_async_integration.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/gate_scripts_analysis.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/gateway_api_key_discovery.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/gateway_stale_process.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/governance_vs_direct_action.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/guardrail_evaluation_pruning.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/guardrail_pipeline_test_results.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/harness_engineering_rsi.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/intent_provenance_drift.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/intent_submission_guidelines.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/knowledge_base_evolution_gap.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/knowledge_base_schema_gaps.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/local_glm_drift_detection.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/local_llm_inference_setup.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/matm_research_findings.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/penpot_visual_design_setup.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/phase_a_build_evidence.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/pipeline_revision_feedback_gap.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/pipeline_testing_commands.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/pitfalls-and-solutions.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/production_spec_summary.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/remote_access_sunshine_moonlight.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/reviewer_degradation_escalation_notification.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/session_ingestion_pattern.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/session_recovery_technique.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/spine_schema_constraints.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/tier1_guardrail_implementation.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/tier2_guardrail_implementation.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/tier3_guardrail_implementation.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/tier4_guardrail_implementation.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/tier5_external_gate_wiring.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/ui_build_deploy_cycle.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/ui_clean_slate_rebuild.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/unwired_gate_scripts.md 
-
-## enforcement/mwl-proof-v2/cis-pipeline-architecture/references/verification_phase_gate_fixes.md 
-
-## enforcement/mwl-proof-v2/cis-soul/SKILL.md 
-
-## enforcement/mwl-proof-v2/cis-soul/references/cis-profile-map-and-orientation.md 
-
-## enforcement/mwl-proof-v2/cis-soul/references/docker-container-audit.md 
-
-## enforcement/mwl-proof-v2/cis-soul/references/gateway-diagnostics.md 
-
-## enforcement/mwl-proof-v2/cis-soul/references/model-agnostic-naming.md 
-
-## enforcement/mwl-proof-v2/run_container.sh 
-
-## gate_runner_payload.jsonl 
-
-## hook_payload.jsonl 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
