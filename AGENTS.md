@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-24 23:58 UTC | Run: run-04a9848322f4 | Latest pipeline: run-68ef184da2933837-1787603143
+Generated: 2026-08-26 03:45 UTC | Run: run-49c456fdafb0 | Latest pipeline: run-5c80ece4fdd0122d-1787703333
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-5c80ece4fdd0122d-1787703333] Verify the SKILL.md split: confirm each agent can write to its references/pitfal — PENDING (0 rounds, incomplete)
+- [run-1a53c843b1e4d4ca-1787616060] In runtime/abstraction/pipeline_relay.py the verify phase cannot tell which chan — PENDING (0 rounds, incomplete)
 - [run-68ef184da2933837-1787603143] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — VERIFY_FAILED (0 rounds, 2026-08-24T21:44:31.219651+00:00)
 - [run-68ef184da2933837-1787601944] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — PENDING (0 rounds, incomplete)
 - [run-9f86d081884c7d65-1787601827] test — PENDING (0 rounds, incomplete)
-- [run-052acb5eb8904c01-1787601154] Add a health check endpoint at GET /api/relay/ping returning {"status":"ok"} to  — PENDING (0 rounds, incomplete)
-- [run-bb3ec986af31ccda-1787419216] auth test correct key — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-68ef184da2933837-1787603143

@@ -146,3 +146,6 @@ enforcement/mwl-proof-v2/tagging_results/
 spine_schema.sql.bak
 gate_runner_payload.jsonl
 hook_payload.jsonl
+
+# SKILL.md split backups (recoverable safety-net, not source — 2026-08-25)
+enforcement/mwl-proof-v2/skill-backups-*/
