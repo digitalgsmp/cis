@@ -99,6 +99,7 @@ ALLOWED_DIRTY=(
     "runtime/manifests/EXPORT_MANIFEST.json"
     "cis_kernel/source/SESSION_LOG.md"
     "runtime/memory/current_context.json"
+    "docs/DEV-PIVOT_STATUS.md"
 )
 
 echo "[CIS CLOSEOUT] Step 1/6: Checking for unexpected dirty files..."
