@@ -37,13 +37,20 @@ PROJECT_ROOT = os.environ.get("CIS_PROJECT_ROOT", os.path.dirname(os.path.dirnam
 BASE_URL = "http://127.0.0.1"
 AGENT_TIMEOUT = 180  # seconds per agent call (default)
 # Per-role timeout overrides (verify/menter use tools and need more time)
+# Raised 2026-08-28: verify timed out twice at 600s on the first code-path run
+# and produced nothing, after code review and implementation had both succeeded.
+# It was working, not stuck — evidence commands against a real diff take longer
+# than the no-file case (1.8 min). A longer limit is only safe alongside the
+# heartbeat below, which distinguishes slow from hung.
 AGENT_TIMEOUTS = {
-    "verify": 600,   # 10 min — runs evidence commands
-    "menter": 600,   # 10 min — builds code
+    "verify": 1500,  # 25 min — runs evidence commands against a real diff
+    "menter": 1200,  # 20 min — builds code
     "brain": 300,    # 5 min — xhigh reasoning
     "draft": 300,    # 5 min — xhigh reasoning
 }
 REVIEWER_RETRY_TIMEOUT = 180
+HEARTBEAT_SECONDS = 60      # how often a working agent reports in
+STALL_SECONDS = 300         # gateway log silent this long = probably hung
 CIRCUIT_BREAKER_THRESHOLD = 3
 CIRCUIT_BREAKER_COOLDOWN = 300  # 5 minutes
 HUMAN_QUESTION_TIMEOUT = 72 * 3600  # 72 hours
@@ -1389,6 +1396,67 @@ def _resolve_api_key(role: str) -> str:
     return ""
 
 
+def _ensure_progress_table(conn) -> None:
+    conn.execute("""CREATE TABLE IF NOT EXISTS run_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT NOT NULL, phase TEXT, role TEXT,
+        elapsed_s INTEGER, idle_s INTEGER, note TEXT,
+        at TEXT DEFAULT (datetime('now')))""")
+    conn.commit()
+
+
+def _gateway_idle_seconds(role: str) -> Optional[int]:
+    """Seconds since this agent's gateway last wrote to its log.
+
+    The gateway appends as the agent works — tool calls, warnings — so the log
+    mtime is a liveness signal that costs nothing to read. It is a proxy, not
+    proof: a genuinely busy model between tool calls looks briefly idle too.
+    """
+    path = f"/tmp/cis-logs/{role}.log"
+    try:
+        return int(time.time() - os.path.getmtime(path))
+    except OSError:
+        return None
+
+
+async def _heartbeat(run_id: str, phase: str, role: str, db_path: str) -> None:
+    """Record that an agent is still working, and whether it looks stalled.
+
+    A long timeout without this is indistinguishable from a hang: the first
+    code-path run sat 19.5 minutes in verification with no way to tell whether
+    it was checking files or wedged. Raising the limit is only safe if someone
+    can see the difference. (2026-08-28)
+    """
+    started = time.time()
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path, timeout=10)
+        _ensure_progress_table(conn)
+        while True:
+            await asyncio.sleep(HEARTBEAT_SECONDS)
+            elapsed = int(time.time() - started)
+            idle = _gateway_idle_seconds(role)
+            if idle is not None and idle > STALL_SECONDS:
+                note = (f"no gateway activity for {idle}s — may be stalled")
+            else:
+                note = "working"
+            try:
+                conn.execute(
+                    "INSERT INTO run_progress "
+                    "(run_id, phase, role, elapsed_s, idle_s, note) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (run_id, phase, role, elapsed, idle, note))
+                conn.commit()
+            except sqlite3.Error:
+                pass
+            print(f"[pipeline] {role} still working — {elapsed}s elapsed, {note}")
+    except asyncio.CancelledError:
+        pass
+    finally:
+        if conn:
+            conn.close()
+
+
 async def _call_agent(role: str, prompt: str, run_id: str) -> str:
     """Dispatch a call to a Hermes gateway agent.
 
@@ -1436,9 +1504,13 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
         headers["Authorization"] = f"Bearer {api_key}"
 
     timeout = AGENT_TIMEOUTS.get(role, AGENT_TIMEOUT)
+    # Report in while the call is outstanding, so a long agent and a hung one
+    # can be told apart from outside. Cancelled the moment the call returns.
+    beat = asyncio.create_task(_heartbeat(run_id, role, role, DB_PATH))
     # Retry once on transient failures (Component 11 — Error Recovery)
     last_error = None
-    for attempt in range(2):
+    try:
+      for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(gateway_url, json=payload, headers=headers)
@@ -1455,6 +1527,8 @@ async def _call_agent(role: str, prompt: str, run_id: str) -> str:
                 raise ConnectionError(
                     f"Gateway {role} (port {port}) failed after retry: {e}"
                 )
+    finally:
+        beat.cancel()
 
     choices = data.get("choices", [])
     if not choices:

@@ -276,6 +276,25 @@ def relay_start():
     })
 
 
+def _get_progress(conn: sqlite3.Connection, run_id: str) -> Optional[dict]:
+    """Latest heartbeat — is an agent still working, and does it look stalled?
+
+    Without this a long-running phase and a hung one are indistinguishable from
+    outside, which is what made the 25-minute verify timeout unsafe to raise.
+    """
+    try:
+        row = conn.execute(
+            "SELECT role, phase, elapsed_s, idle_s, note, at FROM run_progress "
+            "WHERE run_id = ? ORDER BY id DESC LIMIT 1", (run_id,)).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    if not row:
+        return None
+    return {"role": row["role"], "phase": row["phase"],
+            "working_for_s": row["elapsed_s"], "idle_for_s": row["idle_s"],
+            "note": row["note"], "at": row["at"]}
+
+
 def _get_stop_reason(conn: sqlite3.Connection, run_id: str) -> Optional[dict]:
     """The phase that halted the run and why. None if it did not halt."""
     try:
@@ -331,6 +350,7 @@ def relay_status(run_id: str):
         rounds = _get_rounds(conn, run_id)
         trajectories = _get_trajectories(conn, run_id)
         stopped_by = _get_stop_reason(conn, run_id)
+        progress = _get_progress(conn, run_id)
         failed_checks = _get_failed_checks(conn, run_id)
 
         # Build latest outputs — search across all rounds for latest non-empty value
@@ -376,6 +396,7 @@ def relay_status(run_id: str):
             # Why a run stopped, and which check stopped it. Both were already
             # recorded in the spine and neither was reachable without querying
             # SQLite by hand, so a non-coder had no way to see why work halted.
+            "progress": progress,
             "stopped_by": stopped_by,
             "failed_checks": failed_checks,
             "background": {

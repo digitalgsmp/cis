@@ -1,37 +1,44 @@
 # Pattern Catalog
 
-Generated: 2026-08-28T01:10:14.600812+00:00
+Generated: 2026-08-28T18:12:02.399481+00:00
 
-Ground truth re-checked live this run (read-only): six stat tuples and six md5sums match the spec's evidence table exactly; all six parent dirs carry the 2026-08-27 16:17:19 rebuild mtime; zero symlinks under each profile home; RESULTS/ holds exactly 6 files, long-form Menter report present (12463 bytes), target filename free.
+Ground truth re-verified live this run (read-only): all six inode/link tuples and md5s match the directive's evidence table exactly; zero symlinks; RESULTS/ inventory matches; target filename is collision-free. Catalog follows.
 
-PATTERN CATALOG
+PATTERN CATALOG — Brain, run-e1e6daa1c63d (read-only; no writes this run)
 
 1. LANGUAGE AND TOOLCHAIN
-Read-only POSIX shell evidence loops (stat -c "%i %h %s %y", md5sum, find -type l | wc -l) executed over the existing Python/bash pipeline substrate. No new runtime, no new dependencies, no new code — the deliverable is a markdown report, not software. Pitfall learned this run: stat -c takes the path as the file operand after the format string; embedding the path inside the format produces "stat: missing operand". Always format-then-operand, never path-inside-format.
+Python is the dominant language (3443 .py), with pipeline orchestration in tools/pipeline/ (Python + 33 bash .sh scripts). Markdown is the artifact format (2839 .md) — verification records, specs, and confirmations are all .md, never code. Evidence collection is done with coreutils (stat -c, md5sum, find), not custom tooling. The repo carries legacy noise (2316 .js, 756 .docx, 473 .map) but none of it is in the write path for this task.
 
-2. ARCHITECTURAL PATTERNS
-Evidence-backed write discipline: self-report is not truth; every claim in a RESULTS/ report must be a verbatim quote of live tool output re-gathered at write time. If fresh output differs from the spec's table, fresh values win. Verdict-first structure: CONFIRMED at the top, evidence table under it, honest nuance after that. Long-form proof + short confirmation split: the long Menter report is the underlying proof; the short report references it by filename and run ID and never duplicates its 209 lines. Per-role HERMES_HOME separation under /home/worker/.hermes-{role} is the thing being verified. READ_ONLY_STANDING_BY with a single explicitly directed exception. One deliverable per run; pre-existing RESULTS/ files are an immutable evidence archive.
+2. ARCHITECTURAL PATTERNS FOUND
+- Evidence-backed recording: every claim in a record is anchored to live filesystem output (inode, link count, hash) captured at write time — self-report is not truth. This is the governing pattern.
+- Single-purpose artifact: one file per verification question; the question is "are the six pitfalls.md separate?" and the answer is one RESULTS/ file.
+- Read-only standing by: observation runs (Brain/Drafter) verify and specify without modifying; only the Implementer creates, and only the one spec'd file.
+- Collision-aware naming: new record names are chosen against the live RESULTS/ inventory, never assumed free.
+- Two-fact honesty: records state both the favorable fact (6/6 separate files) and the caveat (3 of 6 byte-identical) rather than flattening to a yes.
 
 3. CONVENTION RULES
-Naming: lowercase, underscores, <topic>_<scope>_YYYYMMDD.md inside enforcement/mwl-proof-v2/RESULTS/. Header block: Run ID, Written date, scope line. Evidence as pipe-separated tables quoted verbatim from live output. Honest nuance is mandatory, not optional: the review1/menter/verify identical-bytes trio must be stated plainly (same size 48099, same md5 371ad49ae97f4384740e96cfb33d5019) with the separation-holds justification (distinct inodes, links=1), because content divergence is not Eric's criterion. Every report ends with a statement that it is the only write of its run. No new verification specs, no fix proposals, no governance language.
+- Naming: snake_case, descriptive, YYYYMMDD date suffix; sequence terms in name (third_confirmation, fourth_confirmation) not "final" — "final" asserts future state that cannot be verified.
+- File org: verification evidence lives in enforcement/mwl-proof-v2/RESULTS/; per-agent material lives under enforcement/mwl-proof-v2/cis-skills-per-role/<agent>/references/pitfalls.md. Agent names follow the directories: brain, draft, review1, review2, menter, verify (menter = Implementer).
+- Error handling pattern: verify before write — confirm the target path does not exist and that recorded hashes match a fresh run before creating.
+- Ownership: records are worker-owned regular files (0644/0600 per prior siblings), matching existing RESULTS/ entries.
 
 4. TEST CONVENTION
-No unit tests exist or are needed. Verification is the test: the reviewers re-run the exact stat/md5/symlink loop and diff live output against the report's table character for character. File count check: RESULTS/ goes from 6 to 7 and nothing else changes (ls -la before/after identical apart from the one new file). A report whose table cannot be reproduced live is not done.
+There is no unit-test layer for records; the RESULTS/ files themselves are the tests. Proof files (build_proof_20260703.txt, run_v6.txt, run_v7.txt, standing_container_block_proof.txt) demonstrate the convention: raw command output preserved as evidence. Verification = stat/md5sum re-run at implementation time and compared against the values inside the record.
 
-5. COMPLETION CRITERIA PER PATTERN (WHAT DONE LOOKS LIKE)
-Evidence-loop pattern: six tuples quoted verbatim, one per role, each showing a distinct inode (13781319/13781391/13781541/13781616/13781463/13781687), links=1, size, and mtime. A missing tuple or an unquoted claim is not done.
-Symlink pattern: count 0 quoted per profile home, all six, not a summary "none".
-Rebuild-survival pattern: file mtimes 2026-08-26 (pre-rebuild) stated alongside the six parent-dir mtimes 2026-08-27 16:17:19 (rebuild), and the interpretation stated: dirs recreated, split files persisted.
-Nuance pattern: the identical md5 trio named explicitly with the separate-file-object justification.
-Cross-reference pattern: long-form filename and run ID (MENTER-PITFALLS-SEP-20260828T000331Z) cited in both the header scope line and the body.
-Single-write pattern: exactly one new file created, zero modified, zero deleted; RESULTS/ count 6 to 7 verified by listing.
+5. COMPLETION CRITERIA PER PATTERN
+- Evidence-backed recording — done when: file contains command provenance, a per-agent table (agent, relative path, present, inode, md5-prefix), and both facts stated without flattening.
+- Single-purpose artifact — done when: exactly one new file exists and nothing else changed (no edits to pitfalls.md, SKILL.md, code, gates, or the three prior confirmations).
+- Collision-aware naming — done when: stat of the new path returns a regular file, links=1, and no pre-existing RESULTS/ entry shares the name.
+- Two-fact honesty — done when: the record says 6/6 separate files AND 4/6 unique content, naming review1/menter/verify as currently byte-identical (371ad49a...).
+- Prior-record + repetition note — done when: the three existing confirmations are listed, this file identified as fourth, and the repetition pattern (fourth identical request in ~1 day, the Phase 0 loop-breaker signature) recorded as an observation, not acted on.
 
 6. FILES MENTER WILL CREATE OR MODIFY
-Create exactly one:
-/workspace/cis/enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_short_confirmation_20260828.md
-Modify: none. Menter re-runs the one-line stat/md5 loop immediately before writing and quotes fresh output if it differs from the spec table.
+Create (exactly one):
+- /workspace/cis/enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_fourth_confirmation_20260828.md
 
-Bias check: this is a one-file evidence write with shell checks — the anti-over-engineering pattern is the single-write discipline itself. No committees,No committees, no approval chains beyond the existing pipeline roles, no schema, no CI — none of that belongs in this run.
+Modify: none. Deletion, code, gate, and pipeline changes are all out of scope.
 
-FINAL_JSON:
-{"role":"brain","status":"READY","summary":"Pattern catalog for a single-file evidence write. Toolchain: read-only POSIX stat/md5sum/find loops, no new runtime. Ground truth re-checked live this run: six distinct inodes, links=1, zero symlinks, 2026-08-26 file mtimes under 2026-08-27 16:17:19 rebuild dir mtimes, RESULTS/ holds 6 files. Done = one new short confirmation report quoting live evidence verbatim, identical-content trio stated plainly, long-form proof cross-referenced, RESULTS/ 6 to 7, nothing else touched.","files_planned":["/workspace/cis/enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_short_confirmation_20260828.md"]}
+Flags: no enterprise drift — no governance, no committees, no pipeline over-engineering; this is a pure evidence artifact. The only pattern worth watching is the repetition itself: three prior confirmations exist (post_rebuild_verification_20260827, short_confirmation_20260828 01:11, third_confirmation_20260828 14:35) and the two most recent pipeline runs reached CONSENSUS_REACHED with 0 rounds on the identical topic. Fourth occurrence in one day. If it recurs again, the loop-breaker observation should escalate — but for this run the scope stays strictly one file.
+
+FINAL_JSON
+{"role":"brain","status":"READY","summary":"Pattern catalog for the fourth pitfall-separation confirmation. Ground truth re-verified live (read-only): 6/6 agents have separate references/pitfalls.md (six distinct inodes 12061253/12061312/12061515/12061386/12061455/12061672, links=1, zero symlinks); 4/6 unique md5s with review1/menter/verify byte-identical (371ad49a). Governing patterns: evidence-backed recording (hashes/inodes over bare yes), single-purpose artifact (one file, nothing else), collision-aware naming, two-fact honesty. Completion criteria: new file exists with per-agent table, both facts, prior-record list, and repetition observation; nothing else changed. Menter creates exactly one file; zero modifications.","files_planned":["/workspace/cis/enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_fourth_confirmation_20260828.md"]}
