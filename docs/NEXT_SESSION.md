@@ -11,35 +11,55 @@ Container clock is UTC, host is local. Never run python from data/drive_imports.
 Gate scripts: edit tools/gates (a symlink to enforcement/mwl-proof-v2/gates).
 Gate changes need a container image rebuild; runtime/ changes are mounted and live.
 
-## State — the pipeline completes runs now
-run-04fae760bd681306 finished CONSENSUS_REACHED through all six phases
-(2026-08-27). Verification and code review both execute. Container rebuilt from
-enforcement/mwl-proof-v2/Dockerfile; six gateways healthy on 8643-8648.
+## State — the pipeline carries real work end to end
+run-7207d316ce5a50a5-1787932828 finished CONSENSUS_REACHED across eleven rounds
+(2026-08-28): proposal review objected once, code review objected three times,
+the implementer wrote the planned file, verification confirmed it against the
+filesystem. That is the adversarial loop working on real work, not a smoke test.
+Six gateways healthy on 8643-8648.
+
+Agents now report in every 60s while working (run_progress table, `progress`
+field on /api/relay/<run_id>), so a slow phase and a hung one look different.
+Verify timeout 1500s, menter 1200s.
 
 ## Queue
-1. Confirm the code path completes. The verification path finishes; the code
-   path (a run that plans a file, so it goes through CODE_REVIEW then EXECUTION)
-   has reached round 7 but not yet finished. Two false-positive guardrails that
-   blocked it are fixed but unproven in a run.
-2. Export gate warns "expected 12 artifacts, found 13" on every commit.
+1. Ingest sessions into the KB. Persistent memory is the single most recurring
+   blocker in the corpus (2,308 records, more than double anything else) and the
+   reason every session starts by re-explaining the project. This was deferred
+   because an unreviewed KB write could not be trusted — that condition has
+   lifted now the pipeline completes runs, so route the change through it.
+2. Stream agent completions instead of blocking on one call. Gateways already
+   support it (verified on 8648); token cost is zero, the same completion
+   delivered in pieces. Replaces the heartbeat's weak liveness proxy with
+   observed output, and gives the UI live visibility into every model.
+   Known weakness it fixes: menter reported elapsed 180s / idle 180s, meaning
+   its gateway log is never written during a call, so the proxy may measure
+   nothing for that role.
+3. Export gate warns "expected 12 artifacts, found 13" on every commit.
    tools/gates/gate_export_agreement.sh, EXPECTED_COUNT.
-3. data/ is gitignored, so data/container_sessions/ (2,759 agent messages
+4. data/ is gitignored, so data/container_sessions/ (2,759 agent messages
    extracted 2026-08-27) is on disk but not in version control. Decide whether
    that matters.
-4. Container agent history still does not reach the KB. ingest_sessions.py reads
+5. Container agent history still does not reach the KB. ingest_sessions.py reads
    host paths and expects sessions/*.json; the container agents keep history in
    state.db under /home/worker/.hermes-*. Extraction exists, ingestion does not.
-5. gateway_status_qwen (project_state id=101) stale — claims Qwen is 2nd reviewer
+6. gateway_status_qwen (project_state id=101) stale — claims Qwen is 2nd reviewer
    on 8644. Container reviewers are review1 8643, review2 8647.
-6. CLAUDE.md says the spine is runtime/spine.db; that file is 0 bytes. Spine and
+7. CLAUDE.md says the spine is runtime/spine.db; that file is 0 bytes. Spine and
    KB are both data/cis_memory.db.
-7. Retention policy for data/backups/ — 4.8GB per spine write, 72GB free.
-8. Deferred until the pipeline can review it: Claude Code sessions produce
+8. Retention policy for data/backups/ — 4.8GB per spine write, 72GB free.
+9. Deferred until the pipeline can review it: Claude Code sessions produce
    nothing for the KB. Raw transcripts exist at ~/.claude/projects/.
    tools/mine_asks_claude_code.py extracts asks from them; nothing ingests them.
-9. 601 asks are mined and sitting in cards/*.jsonl; only 32 cards were ever
+10. 601 asks are mined and sitting in cards/*.jsonl; only 32 cards were ever
    generated. cards/asks_ranked.jsonl orders them by corpus weight. Running
    generate_cards.py over them is hours of GPU and yields roughly 8%.
+
+## Gate status (2026-08-28)
+gate_research_before_conclusion is BLOCK on brain and draft. 18 firings today:
+16 PASS, 2 FAIL — both in one run, both false positives from subject parsing,
+both fixed, 6 clean firings since. It has never caught a real unresearched
+claim from a pipeline agent, so it is proven harmless, not yet proven useful.
 
 ## Method (learned the hard way 2026-08-27)
 Absence is not defect. Four things were reported as gaps that the record already
