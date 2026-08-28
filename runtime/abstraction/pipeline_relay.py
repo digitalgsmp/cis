@@ -22,6 +22,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -77,7 +78,8 @@ Self-check against these rules BEFORE submitting your chunk for review.
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
-from guardrails import run_guardrails, run_external_gates, record_gate_outcomes  # noqa: E402
+from guardrails import (run_guardrails, run_external_gates,  # noqa: E402
+                        record_gate_outcomes, GATES_DIR as _GATES_DIR)
 
 # ── State Machine ─────────────────────────────────────────────────────
 
@@ -573,6 +575,30 @@ def _load_role_overlays() -> dict:
     return _ROLE_OVERLAYS
 
 
+def _prior_dispositions(intent: str, timeout: int = 20) -> str:
+    """Ask the research gate what the record already settled about this intent.
+
+    Calls the gate's own --advise-on mode rather than reimplementing the lookup,
+    so the briefing an agent receives and the check it is judged against can
+    never drift apart. Best effort: any failure returns empty and the phase
+    proceeds — this informs, it does not gate.
+    """
+    if not intent:
+        return ""
+    gate = os.path.join(str(_GATES_DIR), "gate_research_before_conclusion.py")
+    if not os.path.exists(gate):
+        return ""
+    try:
+        proc = subprocess.run(
+            ["python3", gate, "--advise-on", intent[:600],
+             "--db", DB_PATH],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
 def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
                          run_id: str, db_path: str = None) -> str:
     """Build the soul document for an agent dispatch.
@@ -661,6 +687,15 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
         parts.append(f"\n[KB_CONTEXT]\n{kb_context[:1500]}")
     else:
         parts.append("\n[KB_CONTEXT]\n(No knowledge base hits for this intent)")
+
+    # PRIOR_DISPOSITIONS — what the record already decided about this intent.
+    # Produced by the same gate that will judge the output, so an agent is only
+    # ever failed on something it was shown first. Blocking is cheap to run but
+    # expensive to trigger (a failure costs a whole model round trip), so the
+    # way to keep a hard gate affordable is to make it rarely fire.
+    dispositions = _prior_dispositions(intent)
+    if dispositions:
+        parts.append(f"\n{dispositions[:1200]}")
 
     # RECENT_RUNS
     if recent_runs:

@@ -60,6 +60,15 @@ ABSENCE = re.compile(
     r"|lacks?\s+(?:any|a|an)\b"
     r")", re.I)
 
+# A statement that a path or file is not on disk is an observation, not a claim
+# about what was decided — and reporting it is exactly what a verifying agent is
+# supposed to do. Only claims about things having never been built or wired need
+# the record. Without this the gate blocked a brain phase for saying
+# "hermes/profiles (that path does not exist)" (2026-08-28).
+FILESYSTEM_FACT = re.compile(
+    r"(/\w|\.\w{1,6}\b|\bpath\b|\bfile\b|\bdirectory\b|\bfolder\b|\binode\b|"
+    r"\bsymlink\b|\bmount\b)", re.I)
+
 # Words that mean "the record already ruled on this".
 DISPOSITION = ("rejected", "deferred", "superseded", "set aside", "decided",
                "abandoned", "on purpose", "deliberate", "intentional",
@@ -272,6 +281,8 @@ def main():
 
     unresearched = []
     for sentence, start, end in claims:
+        if FILESYSTEM_FACT.search(sentence):
+            continue  # an observation about disk, not a claim about decisions
         context = text[max(0, start - 100): end + 260]
         if CITED.search(context):
             continue  # the agent engaged the record around this claim

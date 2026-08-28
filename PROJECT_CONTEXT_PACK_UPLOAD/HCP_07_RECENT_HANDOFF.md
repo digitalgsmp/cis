@@ -2,9 +2,9 @@
 Date: 2026-08-28
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `2fe2069`
+HEAD: `0365a18`
 
-Generated: 2026-08-28 00:51 UTC | Run: run-8ef4aaf7c78b
+Generated: 2026-08-28 13:49 UTC | Run: run-e1e6daa1c63d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-2fa88cd4da3312c7-1787874644
-- Decided at: 2026-08-27T23:59:04.438107+00:00
-- Goal reference: Confirm each of the six pipeline agents has its own separate references/pitfalls.md and that no two share a file. Read-only: report findings, change nothing.
-- Briefing hash: 7467fe0605a593907d45a1d1322c87d0b08271e28aa2fd47591207dfa383b707
+- Workflow run: run-7d3983da111d600c-1787878898
+- Decided at: 2026-08-28T01:08:58.535672+00:00
+- Goal reference: Write a short report to enforcement/mwl-proof-v2/RESULTS/ confirming whether each of the six pipeline agents has its own separate references/pitfalls.md file after the 2026-08-27 rebuild. One file onl
+- Briefing hash: 8074c96e4be50ad462ff6ca12865fb5c98c0cc5e46e85abb7471d287829353b8

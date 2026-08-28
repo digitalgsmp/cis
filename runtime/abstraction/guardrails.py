@@ -172,6 +172,42 @@ def _extract_claimed_functions(text: str) -> List[str]:
 # GUARDRAIL 1: Claim-Action Verifier (§1.2)
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _find_by_basename(project_root: str, claimed: str) -> str:
+    """Locate a file the agent named without a path.
+
+    Agents routinely write "created report_20260828.md" rather than the full
+    path. Checking only <root>/name and <root>/runtime/name reports any file
+    written into a subdirectory as fabricated — accusing an honest agent of the
+    exact failure this guardrail exists to catch. Seen on
+    run-7d3983da111d600c-1787878898 (2026-08-28), where the implementer really
+    did write the file, into enforcement/mwl-proof-v2/RESULTS/.
+
+    Git first because it is fast and covers tracked and untracked alike; a
+    bounded walk as fallback so this can never become the slow step.
+    """
+    base = os.path.basename(claimed.strip())
+    if not base or base in (".", "/"):
+        return ""
+    try:
+        out, _ = _run_cmd(["git", "ls-files", "--cached", "--others",
+                           "--exclude-standard"], cwd=project_root, timeout=10)
+        for line in out.splitlines():
+            if os.path.basename(line.strip()) == base:
+                return line.strip()
+    except Exception:
+        pass
+    seen = 0
+    for root, dirs, files in os.walk(project_root):
+        dirs[:] = [d for d in dirs if d not in
+                   (".git", "node_modules", "__pycache__", ".venv", "venv")]
+        if base in files:
+            return os.path.join(root, base)
+        seen += len(files)
+        if seen > 40000:  # bounded: never the slow step
+            break
+    return ""
+
+
 def guardrail_claim_action(
     agent_output: str,
     role: str,
@@ -210,6 +246,8 @@ def guardrail_claim_action(
             # Also check if it's relative to the runtime dir
             alt_path = os.path.join(project_root, "runtime", f)
             if os.path.exists(alt_path):
+                existing_files.append(f)
+            elif _find_by_basename(project_root, f):
                 existing_files.append(f)
             else:
                 missing_files.append(f)

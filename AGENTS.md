@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-28 00:51 UTC | Run: run-8ef4aaf7c78b | Latest pipeline: run-2fa88cd4da3312c7-1787874644
+Generated: 2026-08-28 13:49 UTC | Run: run-e1e6daa1c63d | Latest pipeline: run-7207d316ce5a50a5-1787924769
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,17 +79,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-7207d316ce5a50a5-1787924769] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
+- [run-7207d316ce5a50a5-1787923184] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
+- [run-7d3983da111d600c-1787878898] Write a short report to enforcement/mwl-proof-v2/RESULTS/ confirming whether eac — PENDING (0 rounds, incomplete)
 - [run-2fa88cd4da3312c7-1787874644] Confirm each of the six pipeline agents has its own separate references/pitfalls — PENDING (0 rounds, incomplete)
 - [run-04fae760bd681306-1787862361] Confirm the six pipeline agents each have their own separate references/pitfalls — CONSENSUS_REACHED (0 rounds, 2026-08-27T20:33:21.642240+00:00)
-- [run-d54d9036f9286848-1787857411] Confirm each of the six pipeline agents has its own separate references/pitfalls — CONSENSUS_REACHED (0 rounds, 2026-08-27T19:16:03.271531+00:00)
-- [run-a631ee48865b59ed-1787855920] Verify that all six pipeline agents still have their own separate references/pit — PENDING (0 rounds, incomplete)
-- [run-5c80ece4fdd0122d-1787703333] Verify the SKILL.md split: confirm each agent can write to its references/pitfal — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-2fa88cd4da3312c7-1787874644
+- Workflow run: run-7d3983da111d600c-1787878898
 - Status: APPROVE
-- Decided at: 2026-08-27T23:59:04.438107+00:00
-- Goal: Confirm each of the six pipeline agents has its own separate references/pitfalls.md and that no two share a file. Read-only: report findings, change nothing.
+- Decided at: 2026-08-28T01:08:58.535672+00:00
+- Goal: Write a short report to enforcement/mwl-proof-v2/RESULTS/ confirming whether each of the six pipeline agents has its own separate references/pitfalls.md file after the 2026-08-27 rebuild. One file onl
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

@@ -276,6 +276,45 @@ def relay_start():
     })
 
 
+def _get_stop_reason(conn: sqlite3.Connection, run_id: str) -> Optional[dict]:
+    """The phase that halted the run and why. None if it did not halt."""
+    try:
+        row = conn.execute(
+            "SELECT phase, error_message, failed_at FROM dead_letter_queue "
+            "WHERE run_id = ? ORDER BY id DESC LIMIT 1", (run_id,)).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    if not row:
+        return None
+    return {"phase": row["phase"], "reason": row["error_message"],
+            "at": row["failed_at"]}
+
+
+def _get_failed_checks(conn: sqlite3.Connection, run_id: str) -> list:
+    """Checks that failed, blocking ones first — the answer to 'why did it stop'.
+
+    `blocking` is what actually halts a run; an advisory failure is a warning
+    the run continued past. Evidence is included because a summary alone
+    ("1 claimed file does not exist") does not say which file.
+    """
+    try:
+        rows = conn.execute(
+            "SELECT guardrail_name, mode, summary, evidence, phase, role "
+            "FROM gate_outcomes WHERE run_id = ? AND verdict = 'FAIL' "
+            "ORDER BY CASE mode WHEN 'BLOCK' THEN 0 ELSE 1 END, id",
+            (run_id,)).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [{
+        "check": r["guardrail_name"],
+        "blocking": r["mode"] == "BLOCK",
+        "phase": r["phase"],
+        "role": r["role"],
+        "summary": r["summary"],
+        "evidence": (r["evidence"] or "")[:1200],
+    } for r in rows]
+
+
 @relay_bp.route("/api/relay/<run_id>", methods=["GET"])
 def relay_status(run_id: str):
     """Get current state, latest outputs, and trajectory history."""
@@ -291,6 +330,8 @@ def relay_status(run_id: str):
 
         rounds = _get_rounds(conn, run_id)
         trajectories = _get_trajectories(conn, run_id)
+        stopped_by = _get_stop_reason(conn, run_id)
+        failed_checks = _get_failed_checks(conn, run_id)
 
         # Build latest outputs — search across all rounds for latest non-empty value
         latest = rounds[-1] if rounds else {}
@@ -332,6 +373,11 @@ def relay_status(run_id: str):
                 for r in rounds
             ],
             "trajectories": trajectories,
+            # Why a run stopped, and which check stopped it. Both were already
+            # recorded in the spine and neither was reachable without querying
+            # SQLite by hand, so a non-coder had no way to see why work halted.
+            "stopped_by": stopped_by,
+            "failed_checks": failed_checks,
             "background": {
                 "active": run_id in _active_runs
                 and "finished_at" not in active,
