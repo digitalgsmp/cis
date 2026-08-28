@@ -13,7 +13,18 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Deriving the repo root from the script's own location breaks once the gate is
+# baked into the sealed /opt/cis-gates: ../.. resolves to "/" and the manifest
+# path becomes "//runtime/manifests/...". CIS_REPO is the convention the
+# pipeline already exports to every gate. (2026-08-27)
+if [ -n "${CIS_REPO:-}" ] && [ -d "$CIS_REPO" ]; then
+    REPO_ROOT="$CIS_REPO"
+else
+    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    for _c in /workspace/cis /mnt/projects/cis; do
+        [ "$REPO_ROOT" = "/" ] && [ -d "$_c" ] && REPO_ROOT="$_c" && break
+    done
+fi
 
 # ── Determine manifest path ────────────────────────────────────────────────
 

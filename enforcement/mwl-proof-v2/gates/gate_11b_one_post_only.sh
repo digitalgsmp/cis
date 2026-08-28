@@ -3,7 +3,7 @@
 set -euo pipefail
 echo "=== 11B: One POST endpoint ==="
 
-API_FILE="/mnt/projects/cis/runtime/api/dashboard_api.py"
+API_FILE="${CIS_REPO:-/mnt/projects/cis}/runtime/api/dashboard_api.py"
 
 # Count POST methods
 POST_COUNT=$(grep -c "methods.*POST\|methods=\[\"POST\"\]\|methods=\['POST'\]" "$API_FILE" || true)

@@ -8,8 +8,8 @@ set -euo pipefail
 echo "=== Tier 10 Acceptance Tests ==="
 echo ""
 
-TESTS_DIR="/mnt/projects/cis/tests/ui"
-PROJECT_ROOT="/mnt/projects/cis"
+TESTS_DIR="${CIS_REPO:-/mnt/projects/cis}/tests/ui"
+PROJECT_ROOT="${CIS_REPO:-/mnt/projects/cis}"
 FAILURES=0
 
 # ── A1-A8: Unit tests (endpoint existence, security) ─────────────────────

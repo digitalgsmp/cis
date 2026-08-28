@@ -8,7 +8,7 @@ Exit 0 = PASS (no bypass), exit 1 = FAIL (bypass imports found).
 import sys
 import os
 
-BLUEPRINT = "/mnt/projects/cis/runtime/api/pipeline_views.py"
+BLUEPRINT = os.environ.get("CIS_REPO", "/mnt/projects/cis") + "/runtime/api/pipeline_views.py"
 
 FORBIDDEN = [
     "process_manager",

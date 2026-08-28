@@ -19,7 +19,18 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# CIS_REPO is exported to every gate by the pipeline. Deriving the root from the
+# script's own path breaks once the gate is baked into the sealed /opt/cis-gates,
+# where ../.. resolves to "/". (2026-08-27)
+if [ -n "${CIS_REPO:-}" ] && [ -d "$CIS_REPO" ]; then
+    REPO_ROOT_RESOLVED="$CIS_REPO"
+else
+    REPO_ROOT_RESOLVED="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")"/../.. && pwd)"
+    for _c in /workspace/cis /mnt/projects/cis; do
+        [ "$REPO_ROOT_RESOLVED" = "/" ] && [ -d "$_c" ] && REPO_ROOT_RESOLVED="$_c" && break
+    done
+fi
+REPO="$REPO_ROOT_RESOLVED"
 RECONCILE_SCRIPT="$REPO/tools/pipeline/reviewer_reconcile.py"
 
 # Load runtime environment (API keys, paths)

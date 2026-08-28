@@ -82,3 +82,24 @@ tell whether it worked.
 - Do not modify runtime/abstraction/pipeline_relay.py without asking first.
 - Do not start pipeline runs without asking first.
 - If a task grows beyond what you were asked, stop and say so.
+
+### How to talk to me
+- Lead with what it means, not what you ran. One or two plain sentences
+  first: what you found, whether it's a problem, what it affects.
+- Then the evidence. Tables and command output go after the meaning,
+  never instead of it.
+- Say why a finding matters to the project, not just what it is.
+  "Four gateways aren't listening, which would break dual review" beats
+  a list of ports.
+- I am not a coder. Don't explain what a command does; explain what the
+  result tells us. Skip PIDs, hex, and internals unless they change the
+  answer.
+- One question at a time, and make it answerable without reading code.
+- When you don't know something, say what you'd need to find out and
+  what it would cost. Don't list every unknown.
+
+### Two separate agent sets
+- Host agents live in /home/eric/.hermes-* on the VM.
+- Container agents live in /home/worker/.hermes-* inside cis-pipeline.
+- These are different agents, not copies of each other. Different naming
+  is expected. Check the right set for the question you're asking.

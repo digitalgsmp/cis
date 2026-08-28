@@ -13,7 +13,7 @@ PAGES=(
   "/ideas" "/projects" "/schedule" "/dam" "/learn" "/review"
   "/ingest" "/spines" "/infra" "/chat" "/advisor-chat"
   "/pipeline" "/eric-gate" "/archive/search" "/archive/sessions"
-  "/decisions"
+  "/decisions" "/relay" "/roadmap"
 )
 
 for path in "${PAGES[@]}"; do

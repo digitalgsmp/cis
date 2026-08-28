@@ -17,6 +17,7 @@ Usage:
 
 import asyncio
 import hashlib
+import inspect
 import json
 import os
 import re
@@ -200,12 +201,25 @@ def _db_retry(fn, max_attempts=3, base_delay=1.0):
 
 
 def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
-                    extra: Optional[Dict] = None) -> None:
+                    extra: Optional[Dict] = None,
+                    reason: Optional[str] = None) -> None:
     """Atomically update run status. Raises if run not found.
 
     If status is a terminal failure (ESCALATED, ERROR, VERIFY_FAILED),
     fires a Telegram notification so Eric knows without manually polling.
+
+    The dead letter row previously recorded only "Run escalated with status:
+    ESCALATED" — no phase, no cause — so a reader of the DB could tell that a
+    run died but nothing about why (dead_letter_queue id=25, 2026-08-26). The
+    calling function is captured automatically so every escalation site records
+    where it came from without each one having to remember to say so; `reason`
+    adds detail where the caller knows it.
     """
+    caller = ''
+    try:
+        caller = inspect.stack()[1].function.lstrip('_') or ''
+    except Exception:
+        pass
     cur = conn.execute(
         "UPDATE workflow_runs SET status = ?, updated_at = ? WHERE id = ?",
         (status, datetime.now(timezone.utc).isoformat(), run_id)
@@ -225,7 +239,10 @@ def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
             conn.execute(
                 """INSERT INTO dead_letter_queue (run_id, error_message, phase, status)
                    VALUES (?, ?, ?, 'pending')""",
-                (run_id, f"Run escalated with status: {status}", status)
+                (run_id,
+                 reason or (f"{status} raised in {caller}()" if caller
+                            else f"Run escalated with status: {status}"),
+                 caller or status)
             )
             conn.commit()
         except Exception:
@@ -2306,6 +2323,19 @@ class PipelineRelay:
         print(ext_report.summary)
         record_gate_outcomes(self.conn, run_id, ext_report)
 
+        # A BLOCK-mode gate has to actually block. This was the one success path
+        # in the pipeline where external gate results were recorded and then
+        # ignored, so a gate marked BLOCK on the brain phase only ever wrote a
+        # note while the run carried on. Draft, execution and verification
+        # already do this; brain did not. (2026-08-27)
+        if ext_report.any_blocked:
+            _complete_round(self.conn, round_id, "ESCALATE",
+                            {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED",
+                            reason="BRAIN blocked by external gate")
+            print("[pipeline] BRAIN blocked by external gate — ESCALATE.")
+            return
+
         # Proceed to intent review
         _set_run_status(self.conn, run_id, "INTENT_REVIEW")
         await self._intent_review(run_id, intent)
@@ -2664,7 +2694,10 @@ class PipelineRelay:
         """
         print(f"[pipeline] PATTERN_CATALOG phase for {run_id}")
 
-        project_dir = DB_PATH.rsplit("/", 1)[0]
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
         codebase_overview = _read_codebase_overview(project_dir)
 
         round_id = _start_round(self.conn, run_id, "pattern_catalog", 1)
@@ -2819,7 +2852,10 @@ class PipelineRelay:
         """
         print(f"[pipeline] CODE_REVIEW_GATE phase for {run_id}")
 
-        project_dir = DB_PATH.rsplit("/", 1)[0]
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
         files_planned = getattr(self, "_files_planned", [])
 
         if not files_planned:
@@ -2837,8 +2873,17 @@ class PipelineRelay:
                     files_planned = parsed.get("files_planned", [])
 
         if not files_planned:
-            print(f"[pipeline] No files planned — cannot proceed. ESCALATE.")
-            _set_run_status(self.conn, run_id, "ESCALATED")
+            # Planning no files is a legitimate outcome, not a failure. A run
+            # whose correct answer is "verify this" or "decide this" produces a
+            # judgement rather than an artifact, and code review has nothing to
+            # review. Skip straight to verification, which checks the outcome
+            # against its evidence — that check does not require a diff.
+            # Escalating here made every non-code task indistinguishable from a
+            # broken run (run-5c80ece4fdd0122d-1787703333, 2026-08-26).
+            print("[pipeline] No files planned — nothing to code review. "
+                  "Proceeding to VERIFICATION.")
+            _set_run_status(self.conn, run_id, "VERIFICATION")
+            await self._verification(run_id, intent)
             return
 
         # Get directive
@@ -3371,7 +3416,10 @@ class PipelineRelay:
         menter_output = row[0] if (row := cur.fetchone()) else ""
 
         # Run L1 deterministic checks with clean-checkout isolation
-        project_dir = DB_PATH.rsplit("/", 1)[0]
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
         pre_head = getattr(self, "_pre_exec_head", "")
         l1_evidence = _run_isolated_l1(project_dir, pre_head)
         print(f"[pipeline] L1 isolated checks complete ({len(l1_evidence)} chars)")

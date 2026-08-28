@@ -119,6 +119,12 @@ RUN mkdir -p /home/worker/.hermes/plugins \
 # cis-pipeline-architecture: pipeline architecture reference
 COPY cis-soul/ /tmp/cis-skills/cis-soul/
 COPY cis-pipeline-architecture/ /tmp/cis-skills/cis-pipeline-architecture/
+# Per-role variants of cis-pipeline-architecture. The 2026-08-25 split gave each
+# profile its own SKILL.md and references/pitfalls.md so an agent can record a
+# lesson without touching the other five. Baking the single shared copy into all
+# six homes silently undid that split on every rebuild; these seed the split
+# version instead, and the shared copy above remains the fallback.
+COPY cis-skills-per-role/ /tmp/cis-skills-per-role/
 
 # Pre-create all 6 profile home directories with sealed enforcement plugin
 RUN for profile in brain draft review1 review2 menter verify; do \
@@ -126,7 +132,11 @@ RUN for profile in brain draft review1 review2 menter verify; do \
         mkdir -p /home/worker/.hermes-$profile/skills/software-development; \
         cp -a /opt/cis-policy/plugin /home/worker/.hermes-$profile/plugins/mwl-proof; \
         cp -a /tmp/cis-skills/cis-soul /home/worker/.hermes-$profile/skills/software-development/cis-soul; \
-        cp -a /tmp/cis-skills/cis-pipeline-architecture /home/worker/.hermes-$profile/skills/software-development/cis-pipeline-architecture; \
+        if [ -d /tmp/cis-skills-per-role/$profile ]; then \
+            cp -a /tmp/cis-skills-per-role/$profile /home/worker/.hermes-$profile/skills/software-development/cis-pipeline-architecture; \
+        else \
+            cp -a /tmp/cis-skills/cis-pipeline-architecture /home/worker/.hermes-$profile/skills/software-development/cis-pipeline-architecture; \
+        fi; \
         chown -R root:root /home/worker/.hermes-$profile/plugins/mwl-proof; \
         find /home/worker/.hermes-$profile/plugins/mwl-proof -type d -exec chmod 0555 {} \; ; \
         find /home/worker/.hermes-$profile/plugins/mwl-proof -type f -exec chmod 0444 {} \; ; \

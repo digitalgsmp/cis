@@ -3,8 +3,8 @@
 # Usage: bash tools/gates/gate_reviewer_closeout.sh --run-id WORKFLOW_RUN_ID
 set -euo pipefail
 
-DB="/mnt/projects/cis/data/cis_memory.db"
-REPO="/mnt/projects/cis"
+DB="${CIS_DB_PATH:-/mnt/projects/cis/data/cis_memory.db}"
+REPO="${CIS_REPO:-/mnt/projects/cis}"
 RUN_ID=""
 FAILS=0
 

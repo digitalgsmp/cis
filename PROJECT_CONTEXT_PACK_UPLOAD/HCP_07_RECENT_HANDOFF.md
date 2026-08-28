@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-08-26
+Date: 2026-08-28
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `f3e8610`
+HEAD: `2fe2069`
 
-Generated: 2026-08-26 15:03 UTC | Run: run-27630c6ca350
+Generated: 2026-08-28 00:51 UTC | Run: run-8ef4aaf7c78b
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-68ef184da2933837-1787603143
-- Decided at: 2026-08-24T21:32:17.209154+00:00
-- Goal reference: Add a health check endpoint at GET /api/relay/ping returning status ok to runtime/container_app.py
-- Briefing hash: c4e0c658b59b6a0b6a1b35fa034079c27452bc86d84fd5f7aaa00d0519bbb588
+- Workflow run: run-2fa88cd4da3312c7-1787874644
+- Decided at: 2026-08-27T23:59:04.438107+00:00
+- Goal reference: Confirm each of the six pipeline agents has its own separate references/pitfalls.md and that no two share a file. Read-only: report findings, change nothing.
+- Briefing hash: 7467fe0605a593907d45a1d1322c87d0b08271e28aa2fd47591207dfa383b707

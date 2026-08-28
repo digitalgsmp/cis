@@ -3,7 +3,7 @@
 # Scans new Tier 10 JSX files for hardcoded secret patterns.
 # Exit 0 = PASS, exit 1 = FAIL.
 
-PAGES_DIR="/mnt/projects/cis/runtime/ui/src/pages"
+PAGES_DIR="${CIS_REPO:-/mnt/projects/cis}/runtime/ui/src/pages"
 NEW_FILES=("PipelinePage.jsx" "EricGatePage.jsx" "ArchiveSearchPage.jsx" "SessionArchivePage.jsx" "DecisionsPage.jsx")
 
 # Common secret patterns

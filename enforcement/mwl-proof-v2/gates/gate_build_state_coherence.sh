@@ -15,7 +15,18 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+# CIS_REPO is exported to every gate by the pipeline. Deriving the root from the
+# script's own path breaks once the gate is baked into the sealed /opt/cis-gates,
+# where ../.. resolves to "/". (2026-08-27)
+if [ -n "${CIS_REPO:-}" ] && [ -d "$CIS_REPO" ]; then
+    REPO_ROOT_RESOLVED="$CIS_REPO"
+else
+    REPO_ROOT_RESOLVED="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")"/../.. && pwd)"
+    for _c in /workspace/cis /mnt/projects/cis; do
+        [ "$REPO_ROOT_RESOLVED" = "/" ] && [ -d "$_c" ] && REPO_ROOT_RESOLVED="$_c" && break
+    done
+fi
+REPO_ROOT="$REPO_ROOT_RESOLVED"
 DB_PATH="${1:-$REPO_ROOT/data/cis_memory.db}"
 AGENTS_MD="${2:-$REPO_ROOT/AGENTS.md}"
 HCP_01="${3:-$REPO_ROOT/PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md}"

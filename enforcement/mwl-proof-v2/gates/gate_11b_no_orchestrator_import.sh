@@ -3,7 +3,7 @@
 set -euo pipefail
 echo "=== 11B: No orchestrator imports ==="
 
-API_FILE="/mnt/projects/cis/runtime/api/dashboard_api.py"
+API_FILE="${CIS_REPO:-/mnt/projects/cis}/runtime/api/dashboard_api.py"
 
 # Check for prohibited imports
 if grep -qE "from.*orchestrat|import.*orchestrat|process_manager|approval_gate|dispatch|classifier" "$API_FILE"; then

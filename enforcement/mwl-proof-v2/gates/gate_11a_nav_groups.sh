@@ -4,7 +4,7 @@ set -euo pipefail
 
 echo "=== 11A: Nav Groups ==="
 
-APP="/mnt/projects/cis/runtime/ui/src/App.jsx"
+APP="${CIS_REPO:-/mnt/projects/cis}/runtime/ui/src/App.jsx"
 
 # Verify NAV_GROUPS constant exists
 if ! grep -q "NAV_GROUPS" "$APP"; then

@@ -18,13 +18,14 @@ Exit 1: FAIL — query returned wrong value/count or NULL
 Exit 2: ERROR — usage, config, DB, or allowlist error
 """
 
+import os
 import sys
 import sqlite3
 import argparse
 from pathlib import Path
 
 
-DEFAULT_DB = "/mnt/projects/cis/data/cis_memory.db"
+DEFAULT_DB = os.environ.get("CIS_DB_PATH", "/mnt/projects/cis/data/cis_memory.db")
 
 ALLOWED_TABLES = {
     "workflow_runs",

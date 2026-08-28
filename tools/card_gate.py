@@ -5,9 +5,11 @@ No model judgment anywhere. A card passes only if:
   1. All sections present, in order:
      CARD, SOURCE, INTENT, BUILD, DONE WHEN, EVIDENCE, NOT IN THIS CARD.
   2. Every quoted string (>= 15 chars) in INTENT exists verbatim in the spine
-     (knowledge_messages FTS phrase match) or in a file under --docs.
+     (knowledge_messages FTS phrase match) or in a file under --docs, AND is
+     not found solely in rows a model authored (MODEL_ROLES).
      This is what makes interpretation mechanically detectable: an altered or
-     invented quote fails here, automatically.
+     invented quote fails here, and so does a generator quoting an assistant's
+     own words back as if they were Eric's ask.
   3. BUILD and DONE WHEN contain no enterprise vocabulary (BANNED list).
   4. Every EVIDENCE bullet starts with a whitelisted runnable command.
   5. Card is <= 60 lines.
@@ -35,6 +37,10 @@ BANNED = ['architecture', 'framework', 'governance', 'roadmap', 'phase', 'tier',
 CMD_OK = ('cd ', 'curl ', 'sqlite3 ', 'python3 ', 'pytest', 'grep ', 'test ',
           'ls ', 'cat ', 'pkill ', 'sleep ', 'bash ', 'sh ', '[ ', '( ')
 MAX_LINES = 60
+# knowledge_messages.role values written by a model, never by Eric. A quote
+# found only in these rows is model output, not an ask.
+MODEL_ROLES = {'assistant', 'brain', 'draft', 'review1', 'review2', 'menter',
+               'verify', 'review1_consensus', 'revision_directive'}
 
 
 def norm(s):
@@ -57,18 +63,31 @@ def section_spans(lines):
     return spans
 
 
-def quote_in_spine(con, quote):
+def quote_authorship(con, quote):
+    """Where does this quote come from? 'eric' | 'model_only' | 'absent'.
+
+    A quote that exists ONLY in rows a model authored is not evidence of Eric's
+    intent — it is the generator quoting an assistant back as if it were the ask.
+    That is the fabrication rule 2 exists to catch, so it is reported separately
+    from a quote that simply is not there.
+    """
     toks = re.findall(r"[A-Za-z0-9']+", quote.lower())
     if len(toks) < 3:
-        return True  # too short to phrase-match meaningfully
+        return 'eric'  # too short to phrase-match meaningfully
     phrase = ' '.join(t.replace("'", '') for t in toks[:8])
     try:
-        n = con.execute(
-            "SELECT count(*) FROM knowledge_messages_fts "
-            "WHERE knowledge_messages_fts MATCH ?", (f'"{phrase}"',)).fetchone()[0]
+        rows = con.execute(
+            "SELECT m.role, count(*) FROM knowledge_messages_fts f "
+            "JOIN knowledge_messages m ON m.id = f.rowid "
+            "WHERE knowledge_messages_fts MATCH ? GROUP BY m.role",
+            (f'"{phrase}"',)).fetchall()
     except sqlite3.OperationalError:
-        n = 0
-    return n > 0
+        return 'absent'
+    if not rows:
+        return 'absent'
+    if any(role not in MODEL_ROLES for role, _ in rows):
+        return 'eric'
+    return 'model_only'
 
 
 def quote_in_docs(docs_dir, quote):
@@ -129,7 +148,13 @@ def main():
     if not quotes:
         errors.append('INTENT has no verbatim quote of 15+ chars')
     for q in quotes:
-        if not (quote_in_spine(con, q) or quote_in_docs(a.docs, q)):
+        origin = quote_authorship(con, q)
+        if origin == 'eric':
+            continue
+        if origin == 'model_only':
+            errors.append(
+                f'quote is model output, not Eric\'s words: "{q[:60]}..."')
+        elif not quote_in_docs(a.docs, q):
             errors.append(f'quote not found verbatim in spine or docs: "{q[:60]}..."')
 
     # 3. banned vocabulary

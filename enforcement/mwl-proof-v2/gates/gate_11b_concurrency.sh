@@ -3,7 +3,7 @@
 set -euo pipefail
 echo "=== 11B: Concurrency protection ==="
 
-API_FILE="/mnt/projects/cis/runtime/api/dashboard_api.py"
+API_FILE="${CIS_REPO:-/mnt/projects/cis}/runtime/api/dashboard_api.py"
 
 # Verify the code handles IntegrityError (UNIQUE constraint)
 if ! grep -q "IntegrityError\|integrity" "$API_FILE"; then

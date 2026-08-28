@@ -3,7 +3,7 @@
 # Usage: bash tools/gates/gate_drafter_closeout.sh --run-id WORKFLOW_RUN_ID
 set -euo pipefail
 
-DB="/mnt/projects/cis/data/cis_memory.db"
+DB="${CIS_DB_PATH:-/mnt/projects/cis/data/cis_memory.db}"
 RUN_ID=""
 FAILS=0
 
@@ -72,10 +72,11 @@ else
 fi
 
 # --- 6. No scope creep ---
+CIS_REPO_VAL="${CIS_REPO:-/mnt/projects/cis}"
 SCOPE_OK=0
-for script in /mnt/projects/cis/tools/pipeline/drafter_start.py \
-              /mnt/projects/cis/tools/pipeline/drafter_session_init.py \
-              /mnt/projects/cis/tools/pipeline/drafter_closeout.py; do
+for script in "${CIS_REPO_VAL}/tools/pipeline/drafter_start.py" \
+              "${CIS_REPO_VAL}/tools/pipeline/drafter_session_init.py" \
+              "${CIS_REPO_VAL}/tools/pipeline/drafter_closeout.py"; do
     if grep -qE 'from.*tier7r|import.*tier7r|from.*router|import.*router|process_manager|classifier|WorkIntent' "$script" 2>/dev/null; then
         echo "6. No scope creep: FAIL — prohibited import in $(basename "$script")"
         grep -nE 'from.*tier7r|import.*tier7r|from.*router|import.*router|process_manager|classifier|WorkIntent' "$script"
@@ -89,7 +90,7 @@ else
 fi
 
 # --- 7. Git clean (no untracked files) ---
-UNTRACKED=$(cd /mnt/projects/cis && git status --porcelain 2>/dev/null | grep '^??' || true)
+UNTRACKED=$(cd "${CIS_REPO:-/mnt/projects/cis}" && git status --porcelain 2>/dev/null | grep '^??' || true)
 if [[ -z "$UNTRACKED" ]]; then
     echo "7. Git clean (no untracked files): PASS"
 else

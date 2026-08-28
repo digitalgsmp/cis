@@ -23,7 +23,23 @@ from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+import os as _os  # noqa: E402
+# CIS_REPO is exported by the pipeline; parents[2] resolves to "/" once this
+# gate is baked into the sealed /opt/cis-gates. (2026-08-27)
+def _repo_root():
+    env = _os.environ.get("CIS_REPO")
+    if env and Path(env).is_dir():
+        return Path(env)
+    cand = Path(__file__).resolve().parents[2]
+    if (cand / "data").is_dir():
+        return cand
+    for c in ("/workspace/cis", "/mnt/projects/cis"):
+        if Path(c).is_dir():
+            return Path(c)
+    return cand
+
+
+REPO_ROOT = _repo_root()
 DEFAULT_DB = REPO_ROOT / "data" / "cis_memory.db"
 DEFAULT_CONFIG = REPO_ROOT / "config" / "agents_static.yaml"
 

@@ -152,3 +152,7 @@ enforcement/mwl-proof-v2/skill-backups-*/
 
 # CLAUDE.md backups (recoverable safety-net, not source — 2026-08-26)
 CLAUDE.md.bak.*
+
+# Working backups taken before edits (recoverable safety-net, not source)
+*.bak.2*
+*.bak2.2*

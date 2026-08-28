@@ -4,9 +4,9 @@ set -euo pipefail
 
 echo "=== 11A: Layout / HomePage Archive ==="
 
-OLD="/mnt/projects/cis/runtime/ui/src/pages/HomePage.jsx"
-ARCHIVE="/mnt/projects/cis/runtime/ui_archive/HomePage.jsx"
-NEW="/mnt/projects/cis/runtime/ui/src/pages/DashboardPage.jsx"
+OLD="${CIS_REPO:-/mnt/projects/cis}/runtime/ui/src/pages/HomePage.jsx"
+ARCHIVE="${CIS_REPO:-/mnt/projects/cis}/runtime/ui_archive/HomePage.jsx"
+NEW="${CIS_REPO:-/mnt/projects/cis}/runtime/ui/src/pages/DashboardPage.jsx"
 
 if [ -f "$OLD" ]; then
   echo "FAIL: HomePage.jsx still in pages/ (not archived)"

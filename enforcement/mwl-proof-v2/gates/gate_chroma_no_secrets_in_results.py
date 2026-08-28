@@ -14,7 +14,7 @@ import os
 import re
 import sys
 
-sys.path.insert(0, "/mnt/projects/cis/runtime")
+sys.path.insert(0, os.environ.get("CIS_REPO", "/mnt/projects/cis") + "/runtime")
 
 # Secret patterns (same as chroma_index.py)
 SECRET_PATTERNS = [
@@ -30,7 +30,7 @@ def main():
     # Use test index or production
     chroma_path = os.environ.get(
         "CIS_CHROMA_PATH",
-        "/mnt/projects/cis/data/chroma_data_test",
+        os.environ.get("CIS_REPO", "/mnt/projects/cis") + "/data/chroma_data_test",
     )
 
     try:

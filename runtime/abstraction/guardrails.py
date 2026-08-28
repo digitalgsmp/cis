@@ -1218,10 +1218,18 @@ PHASE_GATE_MAP = {
         # staleness gate removed — requires --proposal-file which pipeline doesn't use
         # After brain: research artifact present
         {"script": "gate_research_artifact_present.sh", "mode": "ADVISORY", "needs_run_id": True},
+        # Absence is not the same as defect: the record may already explain it.
+        # BLOCK, deliberately. A model guessing and presenting the guess as fact
+        # is the failure this whole project exists to stop, so an unresearched
+        # claim must halt the run rather than annotate it. Verified clean against
+        # every completed run as of 2026-08-27, and it fails closed: an
+        # unreachable spine exits SKIP rather than waving the claim through.
+        {"script": "gate_research_before_conclusion.py", "mode": "BLOCK", "needs_run_id": True},
     ],
     "draft": [
         # After draft: proposal schema valid
         {"script": "gate_proposal_schema_valid.sh", "mode": "ADVISORY", "needs_run_id": True},
+        {"script": "gate_research_before_conclusion.py", "mode": "BLOCK", "needs_run_id": True},
         # Card validation: if the topic is a card, validate it mechanically
         {"script": "gate_card_valid.sh", "mode": "BLOCK", "needs_card": True},
     ],
@@ -2969,6 +2977,21 @@ _CAPABILITY_VERBS = [
 ]
 
 
+# "I created and modified zero files" is a denial, not a claim. The extractor
+# captured everything after the verb, so a read-only agent reporting that it
+# touched nothing was blocked for an unverifiable creation claim — the exact
+# opposite of the behaviour this guardrail rewards. Seen on
+# run-a631ee48865b59ed-1787855920 (2026-08-27), the first run ever to reach
+# the verification phase. Quantifier negations only: "not" is excluded because
+# "created the file but did not test it" is still a real creation claim.
+_NEGATED_CLAIM = re.compile(r'\b(?:zero|none|nothing|no)\s+\w+', re.IGNORECASE)
+
+
+def _is_negated_claim(claim_text: str) -> bool:
+    """True if the claim denies the action rather than asserting it."""
+    return bool(_NEGATED_CLAIM.search(claim_text[:60]))
+
+
 def guardrail_capability_claim_verifier(
     agent_output: str,
     project_root: str,
@@ -2996,12 +3019,16 @@ def guardrail_capability_claim_verifier(
         # Don't stop at periods (they appear in file paths like .py)
         for m in re.finditer(rf'\b(?:I|I\'ve|I have)\s+{re.escape(verb)}\s+([^\n]{{5,200}})', output_text, re.IGNORECASE):
             claim_text = m.group(1).strip().rstrip('.')
+            if _is_negated_claim(claim_text):
+                continue
             claims.append((verb, claim_text))
     
     # Also check for passive claims: "The file was created", "The function was implemented"
     for verb in _CAPABILITY_VERBS:
         for m in re.finditer(rf'\b(?:was|were|has been|have been)\s+{re.escape(verb)}\s+([^\n]{{5,200}})', output_text, re.IGNORECASE):
             claim_text = m.group(1).strip().rstrip('.')
+            if _is_negated_claim(claim_text):
+                continue
             claims.append((verb, f"({claim_text})"))
     
     if not claims:

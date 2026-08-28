@@ -3,7 +3,7 @@
 # Confirms all new pipeline endpoints reject non-GET methods via grep on blueprint.
 # Exit 0 = PASS, exit 1 = FAIL.
 
-BLUEPRINT="/mnt/projects/cis/runtime/api/pipeline_views.py"
+BLUEPRINT="${CIS_REPO:-/mnt/projects/cis}/runtime/api/pipeline_views.py"
 
 if [[ ! -f "$BLUEPRINT" ]]; then
     echo "FAIL: $BLUEPRINT not found"

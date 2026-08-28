@@ -17,6 +17,7 @@ Exit 1: FAIL
 Exit 2: ERROR
 """
 
+import os
 import sys
 import hashlib
 import argparse
@@ -25,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime"))
 from db.database import init_db, get_packet
 
-DEFAULT_DB = "/mnt/projects/cis/data/cis_memory.db"
+DEFAULT_DB = os.environ.get("CIS_DB_PATH", "/mnt/projects/cis/data/cis_memory.db")
 
 SECTION_HEADERS = ["P0 — Header", "P1 — Project position", "P2 — Spine state excerpt",
                    "P3 — Provenance and lifecycle records", "P4 — The exact question",

@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-26 15:03 UTC | Run: run-27630c6ca350 | Latest pipeline: run-5c80ece4fdd0122d-1787703333
+Generated: 2026-08-28 00:51 UTC | Run: run-8ef4aaf7c78b | Latest pipeline: run-2fa88cd4da3312c7-1787874644
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,17 +79,17 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-2fa88cd4da3312c7-1787874644] Confirm each of the six pipeline agents has its own separate references/pitfalls — PENDING (0 rounds, incomplete)
+- [run-04fae760bd681306-1787862361] Confirm the six pipeline agents each have their own separate references/pitfalls — CONSENSUS_REACHED (0 rounds, 2026-08-27T20:33:21.642240+00:00)
+- [run-d54d9036f9286848-1787857411] Confirm each of the six pipeline agents has its own separate references/pitfalls — CONSENSUS_REACHED (0 rounds, 2026-08-27T19:16:03.271531+00:00)
+- [run-a631ee48865b59ed-1787855920] Verify that all six pipeline agents still have their own separate references/pit — PENDING (0 rounds, incomplete)
 - [run-5c80ece4fdd0122d-1787703333] Verify the SKILL.md split: confirm each agent can write to its references/pitfal — PENDING (0 rounds, incomplete)
-- [run-1a53c843b1e4d4ca-1787616060] In runtime/abstraction/pipeline_relay.py the verify phase cannot tell which chan — PENDING (0 rounds, incomplete)
-- [run-68ef184da2933837-1787603143] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — VERIFY_FAILED (0 rounds, 2026-08-24T21:44:31.219651+00:00)
-- [run-68ef184da2933837-1787601944] Add a health check endpoint at GET /api/relay/ping returning status ok to runtim — PENDING (0 rounds, incomplete)
-- [run-9f86d081884c7d65-1787601827] test — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-68ef184da2933837-1787603143
+- Workflow run: run-2fa88cd4da3312c7-1787874644
 - Status: APPROVE
-- Decided at: 2026-08-24T21:32:17.209154+00:00
-- Goal: Add a health check endpoint at GET /api/relay/ping returning status ok to runtime/container_app.py
+- Decided at: 2026-08-27T23:59:04.438107+00:00
+- Goal: Confirm each of the six pipeline agents has its own separate references/pitfalls.md and that no two share a file. Read-only: report findings, change nothing.
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.

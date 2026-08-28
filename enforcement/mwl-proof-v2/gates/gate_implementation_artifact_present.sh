@@ -3,7 +3,7 @@
 # Stage: IMPLEMENT — validates implementation evidence in workflow_run_artifacts
 # Usage: gate_implementation_artifact_present.sh [--run-id <id>]
 # Exit 0: PASS — artifact_type='implementation' row exists with commit hash
-#               or Created:/Modified: /mnt/projects/cis/ evidence
+#               or Created:/Modified: file change evidence
 # Exit 1: FAIL — no implementation artifact or evidence insufficient
 # Exit 2: ERROR — no run ID or DB unavailable
 #
@@ -16,11 +16,13 @@ source "$SCRIPT_DIR/_gate_common.sh"
 
 resolve_run_id "$@"
 
+CIS_REPO_VAL="${CIS_REPO:-/mnt/projects/cis}"
+
 query_spine "SELECT content FROM workflow_run_artifacts
              WHERE run_id = '$RUN_ID'
              AND artifact_type = 'implementation'
-             ORDER BY created_at DESC LIMIT 1;" | python3 -c "
-import sys, re
+             ORDER BY created_at DESC LIMIT 1;" | CIS_REPO_VAL="$CIS_REPO_VAL" python3 -c "
+import sys, re, os
 
 content = sys.stdin.read().strip()
 
@@ -36,13 +38,14 @@ if commit_pattern.search(content):
     print('PASS: Implementation artifact present with commit hash evidence')
     sys.exit(0)
 
-# Check for file change evidence
-file_pattern = re.compile(r'(Created|Modified):\s*/mnt/projects/cis/')
+# Check for file change evidence — match CIS_REPO or fallback to /mnt/projects/cis
+repo = os.environ.get('CIS_REPO_VAL', '/mnt/projects/cis')
+file_pattern = re.compile(r'(Created|Modified):\s*(' + re.escape(repo) + '|/mnt/projects/cis)/')
 if file_pattern.search(content):
     print('PASS: Implementation artifact present with file change evidence')
     sys.exit(0)
 
 print('FAIL: implementation artifact exists but contains no commit hash '
-      'or Created:/Modified: /mnt/projects/cis/ evidence')
+      'or Created:/Modified: file change evidence')
 sys.exit(1)
 "

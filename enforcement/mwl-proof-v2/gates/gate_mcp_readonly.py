@@ -10,10 +10,33 @@ Exit 1: FAIL — write SQL found
 Exit 2: ERROR — path not found
 """
 import re
+import os
 import sys
 from pathlib import Path
 
-BRIDGE_DIR = Path(__file__).resolve().parents[2] / "runtime" / "mcp_bridge"
+def _bridge_dir() -> Path:
+    """Locate runtime/mcp_bridge without assuming where this file lives.
+
+    Deriving the repo root from __file__ breaks whenever the gate is copied
+    outside the repo: the container runs the copy at /opt/cis-gates/, two levels
+    below root, so parents[2] resolved to "/" and the gate reported
+    "/runtime/mcp_bridge not found" and exited 2 on every run (2026-08-26).
+    CIS_REPO is the convention the other gates already use.
+    """
+    candidates = []
+    env = os.environ.get("CIS_REPO")
+    if env:
+        candidates.append(Path(env))
+    candidates.append(Path(__file__).resolve().parents[2])
+    candidates += [Path("/workspace/cis"), Path("/mnt/projects/cis")]
+    for base in candidates:
+        d = base / "runtime" / "mcp_bridge"
+        if d.is_dir():
+            return d
+    return (candidates[0] if candidates else Path(".")) / "runtime" / "mcp_bridge"
+
+
+BRIDGE_DIR = _bridge_dir()
 
 WRITE_PATTERNS = [
     (r'\.execute\s*\(\s*["\']\s*INSERT\b', "INSERT via .execute()"),

@@ -1,5 +1,5 @@
 # DEV-PIVOT Document Status
-Generated: 2026-08-26 15:03 UTC | Run: run-c583537343b8
+Generated: 2026-08-27 20:33 UTC | Run: run-a2488e9570f5
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
