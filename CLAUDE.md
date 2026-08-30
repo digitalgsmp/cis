@@ -110,6 +110,12 @@ tell whether it worked.
 - I am not a coder. Don't explain what a command does; explain what the
   result tells us. Skip PIDs, hex, and internals unless they change the
   answer.
+- SHORT. Eric, 2026-08-30: "the other format is overwhelming and I can't
+  comprehend it because it's too much." Lead with one sentence that answers the
+  question. Then only what changes my decision. A long answer is not thorough,
+  it is unread — and an unread answer is the same as no answer.
+- Options as a table, never as paragraphs. One line per option: what it gets me,
+  what it costs. Detail goes below, or nowhere.
 - NEVER hand me a bare technical question. I am not a coder and cannot answer
   most of them. If I have to decide, give me options — each with what it means
   in plain language, the evidence behind it, what goes right, and what goes

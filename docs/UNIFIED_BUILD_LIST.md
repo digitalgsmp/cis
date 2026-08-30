@@ -635,12 +635,33 @@ The name he gave it is the right one. **A spell checker runs before the text is
 sent, not after the reader finds the typo.** The check belongs inside the
 producing step.
 
+**(f) Too much of it.** Eric, 2026-08-30: *"I like the one sentence response,
+the other format is overwhelming and I can't comprehend it because it's too
+much. Limit the verbiage. Explain things directly to the point with relevant
+information, options and consequences."*
+
+Length is not thoroughness. An answer he cannot get through is the same as no
+answer, and it fails the same way (a) does — he is left guessing, this time
+because the answer was buried rather than absent. Volume also flattens
+emphasis: when everything is stated at equal weight, nothing is.
+
+**The rule:** one sentence answering the question, first. Then only what changes
+the decision. Options as a table — one row each, what it gets him, what it
+costs — never as paragraphs. Everything else goes below, or nowhere.
+
 **Checkable form:** before any output that asks Eric something, the question
-must survive three tests — (1) is it answerable from the code, the disk or the
+must survive four tests — (1) is it answerable from the code, the disk or the
 record? then answer it instead; (2) is it settled by analysis already done? then
 state the decision, not the menu; (3) do the options and their consequences sit
 adjacent to the question, with a criterion for choosing? An earlier table does
-not count. Only a question passing all three reaches him.
+not count; (4) does it fit the word budget, with the answer before the evidence
+and options as rows rather than prose? Only a question passing all four reaches
+him.
+
+Test (4) is the deterministic part he asked for and needs no judgement: word
+count, sentence count, answer-before-evidence ordering, and options-as-rows are
+all countable by a script. That is what makes it a gate rather than a style
+note.
 
 This is the gate 1.8 has to become, and it applies to assistants in these
 sessions before it ever applies to a container agent — the failures logged here
