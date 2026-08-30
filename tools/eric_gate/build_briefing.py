@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -103,7 +104,13 @@ def dict_from_row(conn, query, params=()):
     row = conn.execute(query, params).fetchone()
     if row is None:
         return None
-    cols = [d[0] for d in row.keys()] if hasattr(row, 'keys') else []
+    # sqlite3.Row.keys() already returns column NAMES. The old code did
+    # [d[0] for d in row.keys()], which takes the first CHARACTER of each name —
+    # so every row became {'i':..., 't':..., 's':...} with colliding keys, and
+    # every lookup by real column name silently returned nothing. The connection
+    # sets row_factory = sqlite3.Row, so this path is the one that always ran:
+    # it is why the entire Eric Gate briefing rendered as "No X available".
+    cols = list(row.keys()) if hasattr(row, 'keys') else []
     if not cols:
         # Fallback — get column names from description
         cursor = conn.execute(query, params)
@@ -116,8 +123,70 @@ def dict_from_row(conn, query, params=()):
 
 # ── Briefing Section Builders ──────────────────────────────────────
 
+_PATH_RE = re.compile(
+    r"(?:/workspace/cis/|/mnt/projects/cis/)?"
+    r"[A-Za-z0-9_./-]+\."
+    r"(?:md|py|sh|ya?ml|json|sql|txt|db)\b"
+)
+_CREATE_RE = re.compile(r"\b(creat|new file|write one|add(?:ing)? (?:a )?(?:new )?file)", re.I)
+_MUTATE_RE = re.compile(r"\b(modif|edit|overwrit|replac|delet|remov|rename|drop)", re.I)
+
+
+def _latest_draft_output(conn, run_id):
+    """Most recent draft output for this run, or ''.
+
+    The Eric Gate briefing used to read decision_trails — but that table is only
+    written by the approval handler in runtime/api/relay.py, i.e. AFTER Eric
+    decides. So every field was empty at the moment he was asked to decide.
+    These fall back to what actually exists at gate time: the draft's own output.
+    """
+    row = conn.execute(
+        "SELECT output_text FROM agent_trajectories "
+        "WHERE run_id = ? AND phase = 'draft' AND output_text IS NOT NULL "
+        "ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    return row[0] if row and row[0] else ""
+
+
+def _final_json_summary(text):
+    """Pull the 'summary' field out of a FINAL_JSON block, or ''."""
+    idx = max(text.rfind("FINAL_JSON"), text.rfind("```json"))
+    if idx < 0:
+        return ""
+    brace = text.find("{", idx)
+    if brace < 0:
+        return ""
+    depth, in_str, esc = 0, False, False
+    for i in range(brace, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[brace:i + 1]).get("summary", "") or ""
+                except Exception:
+                    return ""
+    return ""
+
+
 def build_action_summary(conn, run_id):
-    """Build action summary from workflow_runs + decision_trails."""
+    """Build action summary from workflow_runs + decision_trails.
+
+    Falls back to the draft's own output when decision_trails is empty, which is
+    always the case before approval.
+    """
     run = dict_from_row(conn, "SELECT * FROM workflow_runs WHERE id = ?", (run_id,))
     if run is None:
         return None
@@ -130,19 +199,52 @@ def build_action_summary(conn, run_id):
         (run_id,),
     ).fetchall()
 
+    summary = ""
     if trails:
         trail = dict(zip(
             ["problem_statement", "proposed_action", "round_count", "consensus_signal"],
             trails[-1],
         ))
-        summary = trail.get("proposed_action", run.get("topic", "No summary available"))
+        summary = trail.get("proposed_action") or ""
+
+    draft_text = _latest_draft_output(conn, run_id)
+    if not summary:
+        summary = _final_json_summary(draft_text)
+    if not summary:
+        summary = run.get("topic") or "No summary available"
+
+    # Files the proposal names. Scan the SUMMARY only — scanning the whole draft
+    # output sweeps in every path the agent merely inspected, which would list
+    # files the change does not touch under a heading that says it does.
+    files = sorted({
+        p for p in _PATH_RE.findall(summary)
+        if not p.endswith(".bak") and len(p) > 4
+    })
+
+    # Judge intent from what the proposal says it WILL do. A naive keyword scan
+    # reads "no edits to live module" as an edit — the negation flips the verdict
+    # to the dangerous side, which is the worst direction for a field Eric uses
+    # to decide whether a change can be undone. Drop the non-goals section and
+    # explicit negations before matching.
+    scope = re.sub(r"\bnon-?goals?\b.*$", "", summary, flags=re.I | re.S)
+    scope = re.sub(
+        r"\bno\s+(?:other\s+|further\s+)?"
+        r"(?:edits?|changes?|modifications?|deletions?|renames?|overwrites?)\b",
+        " ", scope, flags=re.I,
+    )
+    mutates = bool(_MUTATE_RE.search(scope))
+    creates = bool(_CREATE_RE.search(scope))
+    if mutates:
+        reversibility = "REVIEW REQUIRED — proposal changes or removes existing content"
+    elif creates:
+        reversibility = "REVERSIBLE — proposal only adds new file(s); undo by deleting them"
     else:
-        summary = run.get("topic", "No summary available")
+        reversibility = "UNKNOWN — proposal does not state whether it adds or changes"
 
     return {
         "plain_language_summary": summary,
-        "files_expected_to_change": [],
-        "reversibility": "UNKNOWN",
+        "files_expected_to_change": files[:25],
+        "reversibility": reversibility,
     }
 
 
@@ -240,12 +342,37 @@ def build_decision_trail(conn, run_id):
                 "consensus": t_dict.get("consensus_signal"),
             })
 
+    # Before approval decision_trails is empty, so fall back to the run's topic.
+    if problem == "No problem statement available" and run and run.get("topic"):
+        problem = run["topic"]
+
     if rounds:
-        objections = [
-            f"Round {r[0]}: {r[3] or 'No signal'}"
-            for r in rounds if r[3]
-        ]
+        # objections_json holds the reviewers' actual objections. It used to be
+        # interpolated raw into a string, which rendered as unreadable JSON — so
+        # the one field telling Eric what the reviewers pushed back on was noise.
+        for r in rounds:
+            raw = r[3]
+            if not raw:
+                continue
+            try:
+                parsed = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                objections.append(f"Round {r[0]}: {str(raw)[:300]}")
+                continue
+            items = parsed if isinstance(parsed, list) else [parsed]
+            for item in items:
+                if isinstance(item, dict):
+                    text = (item.get("objection") or item.get("issue")
+                            or item.get("summary") or item.get("text")
+                            or json.dumps(item))
+                else:
+                    text = str(item)
+                text = " ".join(str(text).split())
+                if text:
+                    objections.append(f"Round {r[0]}: {text[:300]}")
         resolution = f"Consensus reached after {len(rounds)} deliberation round(s)"
+        if not objections:
+            resolution += " — no objections were recorded against the proposal"
 
     if run and run.get("final_objections_json"):
         try:
@@ -433,6 +560,7 @@ def format_markdown(payload):
 {action.get('plain_language_summary', 'No summary available')}
 
 - **Reversibility:** {action.get('reversibility', 'UNKNOWN')}
+- **Files named in the proposal:** {', '.join(action.get('files_expected_to_change') or []) or 'none stated'}
 
 ## 2. Goal Trace
 

@@ -491,10 +491,15 @@ def guardrail_sycophancy(
     # If reviewer says consensus but has zero critique keywords and high sycophancy
     parsed = None
     try:
-        # Try to extract FINAL_JSON
-        json_match = re.search(r'```json\s*(\{.*?\})\s*```', reviewer_output, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group(1))
+        # Same brace-matched extraction the schema validator uses. This site
+        # previously used a non-greedy (\{.*?\}) that truncated at the first
+        # closing brace, and only matched ```json fences — so a reviewer using
+        # the bare FINAL_JSON marker, or quoting any code, parsed as None. The
+        # `except: pass` below then hid it, and the check silently fell back to
+        # string matching without ever saying its signal was missing.
+        json_str = _extract_final_json(reviewer_output)
+        if json_str:
+            parsed = json.loads(json_str)
     except Exception:
         pass
     
@@ -659,6 +664,63 @@ _VALID_STATUSES = {
 _REQUIRED_FIELDS = {"role", "status"}
 
 
+def _scan_json_object(text: str, start: int):
+    """Return the JSON object starting at text[start] == '{', brace-matched.
+
+    Tracks string state and backslash escapes, so braces and quotes appearing
+    INSIDE string values do not end the object. A plain non-greedy regex like
+    (\\{.*?\\}) truncates at the first '}' — which fires whenever an agent quotes
+    a regex or code in its summary, rejecting valid JSON as malformed. Observed
+    2026-08-29 on run-e70293544935a92e: a correct draft was BLOCKed because its
+    summary contained the character class [.\"*(){}:^+\\-].
+    """
+    if start < 0 or start >= len(text) or text[start] != "{":
+        return None
+    depth, in_str, esc = 0, False, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return None
+
+
+def _extract_final_json(text: str):
+    """Find the FINAL_JSON / ```json object in agent output. Returns str or None."""
+    for m in re.finditer(r"```json|FINAL_JSON", text):
+        obj = _scan_json_object(text, text.find("{", m.end()))
+        if obj:
+            try:
+                json.loads(obj)
+                return obj
+            except Exception:
+                continue
+    # Fallback: last balanced object carrying a "role" key.
+    brace = text.rfind("{")
+    while brace != -1:
+        obj = _scan_json_object(text, brace)
+        if obj and '"role"' in obj:
+            try:
+                json.loads(obj)
+                return obj
+            except Exception:
+                pass
+        brace = text.rfind("{", 0, brace)
+    return None
+
+
 def guardrail_output_schema(
     agent_output: str,
     role: str,
@@ -668,29 +730,19 @@ def guardrail_output_schema(
     Catches: malformed outputs, format gaming (§2.15, §2.21)
     Mode: BLOCK — invalid FINAL_JSON must not be accepted as a valid signal
     """
-    # Try to extract FINAL_JSON
-    json_match = re.search(
-        r'```json\s*(\{.*?\})\s*```|FINAL_JSON[:\s]*(\{.*?\})',
-        agent_output,
-        re.DOTALL
-    )
-    
-    if not json_match:
-        # Check if there's a bare JSON object at the end
-        bare_match = re.search(r'(\{[^{}]*"role"[^{}]*\})\s*$', agent_output, re.DOTALL)
-        if bare_match:
-            json_str = bare_match.group(1)
-        else:
-            return GuardrailResult(
-                name="output_schema_validator",
-                verdict="FAIL",
-                evidence="No FINAL_JSON block found in output",
-                summary="Output missing FINAL_JSON — cannot parse signal",
-                mode="BLOCK",
-            )
-    else:
-        json_str = json_match.group(1) or json_match.group(2)
-    
+    # Brace-matched extraction — see _extract_final_json. A non-greedy regex
+    # truncated valid JSON whenever a summary quoted a regex or code block.
+    json_str = _extract_final_json(agent_output)
+
+    if json_str is None:
+        return GuardrailResult(
+            name="output_schema_validator",
+            verdict="FAIL",
+            evidence="No FINAL_JSON block found in output",
+            summary="Output missing FINAL_JSON — cannot parse signal",
+            mode="BLOCK",
+        )
+
     try:
         parsed = json.loads(json_str)
     except json.JSONDecodeError as e:
