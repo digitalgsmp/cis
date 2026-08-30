@@ -776,21 +776,31 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
     # chromadb + sentence-transformers and CIS_CHROMA_PATH is set.
     try:
         from mcp_bridge.chroma_index import ChromaClient
-        _cc = ChromaClient()
-        _coll = _cc._client.get_collection("knowledge_messages")
-        _res = _coll.query(
-            query_embeddings=[_cc._embedding.embed_single(intent)],
-            n_results=8,
-            include=["documents", "metadatas"],
-        )
-        _kept = 0
-        for _d, _m in zip(_res["documents"][0], _res["metadatas"][0]):
-            if not _d or len(_d) < 200:      # headings and stubs, not answers
-                continue
-            _add_hit((_m or {}).get("source", "?"), _d)
-            _kept += 1
-            if _kept >= 3:
-                break
+        from mcp_bridge.chroma_lock import chroma_read
+        # Chroma is not safe for concurrent access: a host ingest running during
+        # this query produced "Error deserializing pickle file: trailing bytes
+        # found" on 2026-08-29. Take the shared lock, and if a writer holds it,
+        # skip semantic rather than stall the run — keyword covers 100% of the
+        # corpus, so the degraded path is still a real search. (BUILD LIST 0.3)
+        with chroma_read() as _got_lock:
+            if not _got_lock:
+                kb_notes.append("semantic search skipped (KB ingest in progress)")
+            else:
+                _cc = ChromaClient()
+                _coll = _cc._client.get_collection("knowledge_messages")
+                _res = _coll.query(
+                    query_embeddings=[_cc._embedding.embed_single(intent)],
+                    n_results=8,
+                    include=["documents", "metadatas"],
+                )
+                _kept = 0
+                for _d, _m in zip(_res["documents"][0], _res["metadatas"][0]):
+                    if not _d or len(_d) < 200:   # headings and stubs, not answers
+                        continue
+                    _add_hit((_m or {}).get("source", "?"), _d)
+                    _kept += 1
+                    if _kept >= 3:
+                        break
     except ImportError:
         kb_notes.append("semantic search unavailable (chromadb not installed)")
     except Exception as e:

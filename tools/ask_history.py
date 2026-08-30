@@ -5,11 +5,13 @@
 import sys, os
 sys.path.insert(0, "/mnt/projects/cis/runtime")
 from mcp_bridge.chroma_index import ChromaClient, redact_secrets
+from mcp_bridge.chroma_lock import chroma_read
 q = sys.argv[1]
 k = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 c = ChromaClient()
+# Embedding the question touches only the local model, not the store, so it
+# happens outside the lock — no reason to hold the store while the GPU works.
 e = c._embedding.embed_single(q)
-coll = c._client.get_collection("knowledge_messages")
 # No source filter. The old filter reached 4.7% of the KB (14,011 of 299,514):
 # it hid the archive, cis_docs, swa_project, every pipeline run and agent session,
 # and one of its four names ("hermes_session") was a source_key prefix that matched
@@ -24,8 +26,19 @@ coll = c._client.get_collection("knowledge_messages")
 MIN_CHARS = 200      # below this it is a heading or a stub, not an answer
 PER_SOURCE = 2       # so one source cannot crowd out the rest
 
-r = coll.query(query_embeddings=[e], n_results=max(k * 10, 50),
-               include=["documents", "metadatas"])
+# Shared lock: an ingest writing the store while this reads it corrupts the read.
+# Reporting nothing beats reporting garbage, and unlike the pipeline this has no
+# keyword fallback to degrade to. (UNIFIED BUILD LIST 0.3)
+with chroma_read() as got_lock:
+    if not got_lock:
+        print("KB ingest in progress — the store is being written.")
+        print("Search would read a half-written index. Retry when it finishes.")
+        sys.exit(2)
+    # Opening the collection reads the store too, so it belongs inside the lock,
+    # not just the query.
+    coll = c._client.get_collection("knowledge_messages")
+    r = coll.query(query_embeddings=[e], n_results=max(k * 10, 50),
+                   include=["documents", "metadatas"])
 
 picked, seen = [], {}
 for d, m in zip(r["documents"][0], r["metadatas"][0]):

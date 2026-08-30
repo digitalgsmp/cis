@@ -77,50 +77,56 @@ def main():
 
     sys.path.insert(0, "/mnt/projects/cis/runtime")
     from mcp_bridge.chroma_index import ChromaClient, filter_for_index
+    from mcp_bridge.chroma_lock import chroma_write
     client = ChromaClient()
 
-    print("\ndropping the old collection...")
-    try:
-        client._client.delete_collection(COLLECTION)
-    except Exception as e:
-        print(f"  (delete_collection: {e})")
-    coll = client._client.create_collection(COLLECTION)
+    # The lock spans the WHOLE rebuild, not each add. This drops the collection
+    # before refilling it, so a reader let in partway through would not see a
+    # stale index — it would see an empty or half-built one and report nothing
+    # found. Held from the drop to the final flush. (UNIFIED BUILD LIST 0.3)
+    with chroma_write(what="rebuild_vector_index"):
+        print("\ndropping the old collection...")
+        try:
+            client._client.delete_collection(COLLECTION)
+        except Exception as e:
+            print(f"  (delete_collection: {e})")
+        coll = client._client.create_collection(COLLECTION)
 
-    print("rebuilding...")
-    started = time.time()
-    done = 0
-    ids, docs, metas = [], [], []
-
-    def flush():
-        nonlocal ids, docs, metas, done
-        if not ids:
-            return
-        # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
-        ids, docs, metas, _dropped = filter_for_index(ids, docs, metas)
-        if not ids:
-            return
-        coll.add(ids=ids, documents=docs, metadatas=metas,
-                 embeddings=client._embedding.embed(docs))
-        done += len(ids)
-        rate = done / max(time.time() - started, 1)
-        eta = (total - done) / rate / 60 if rate else 0
-        print(f"  {done:,}/{total:,}  ({rate:.0f}/s, ~{eta:.1f} min left)",
-              flush=True)
+        print("rebuilding...")
+        started = time.time()
+        done = 0
         ids, docs, metas = [], [], []
 
-    for rid, content, source, role, skey in conn.execute(
-        f"SELECT id, content, source, role, source_key FROM knowledge_messages "
-        f"WHERE {where} ORDER BY id", params
-    ):
-        if not content:
-            continue
-        ids.append(f"km_{rid}")
-        docs.append(content)
-        metas.append({"source": source or "", "role": role or "",
-                      "source_key": skey or ""})
-        if len(ids) >= ADD_MAX:
-            flush()
-    flush()
+        def flush():
+            nonlocal ids, docs, metas, done
+            if not ids:
+                return
+            # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+            ids, docs, metas, _dropped = filter_for_index(ids, docs, metas)
+            if not ids:
+                return
+            coll.add(ids=ids, documents=docs, metadatas=metas,
+                     embeddings=client._embedding.embed(docs))
+            done += len(ids)
+            rate = done / max(time.time() - started, 1)
+            eta = (total - done) / rate / 60 if rate else 0
+            print(f"  {done:,}/{total:,}  ({rate:.0f}/s, ~{eta:.1f} min left)",
+                  flush=True)
+            ids, docs, metas = [], [], []
+
+        for rid, content, source, role, skey in conn.execute(
+            f"SELECT id, content, source, role, source_key FROM knowledge_messages "
+            f"WHERE {where} ORDER BY id", params
+        ):
+            if not content:
+                continue
+            ids.append(f"km_{rid}")
+            docs.append(content)
+            metas.append({"source": source or "", "role": role or "",
+                          "source_key": skey or ""})
+            if len(ids) >= ADD_MAX:
+                flush()
+        flush()
 
     print(f"\nDone. {done:,} vectors in '{COLLECTION}'.")
     print("The chroma.sqlite3 file will NOT shrink on its own — SQLite keeps the")

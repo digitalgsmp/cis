@@ -25,6 +25,7 @@ Usage:
   python3.12 tools/rechunk_for_embedding.py --source-like 'hermes_%' --no-embed
 """
 import argparse
+import contextlib
 import os
 import re
 import sqlite3
@@ -108,68 +109,76 @@ def main():
     if not args.no_embed:
         sys.path.insert(0, "/mnt/projects/cis/runtime")
         from mcp_bridge.chroma_index import ChromaClient, filter_for_index
+        from mcp_bridge.chroma_lock import chroma_write
         client = ChromaClient()
         coll = client._client.get_collection("knowledge_messages")
 
     done = made = 0
     started = time.time()
-    for i in range(0, len(rows), args.batch):
-        batch = rows[i:i + args.batch]
-        new_ids, new_docs, new_meta, drop_ids = [], [], [], []
+    # Exclusive across every batch. This deletes each old row and adds its
+    # replacements, so a reader let in between batches sees rows that have gone
+    # and rows that have not arrived. With --no-embed nothing touches Chroma and
+    # no lock is taken. (UNIFIED BUILD LIST 0.3)
+    _guard = (chroma_write(what="rechunk_for_embedding")
+              if coll is not None else contextlib.nullcontext())
+    with _guard:
+        for i in range(0, len(rows), args.batch):
+            batch = rows[i:i + args.batch]
+            new_ids, new_docs, new_meta, drop_ids = [], [], [], []
 
-        for old_id, content, source, role, skey in batch:
-            parts = split_text(content, args.max)
-            for n, part in enumerate(parts):
-                cur = conn.execute(
-                    "INSERT INTO knowledge_messages (content, source, role, source_key) "
-                    "VALUES (?, ?, ?, ?)",
-                    (part, source, role, f"{skey}#r{n}" if skey else None),
-                )
-                new_ids.append(f"km_{cur.lastrowid}")
-                new_docs.append(part)
-                new_meta.append({"source": source, "role": role,
-                                 "source_key": f"{skey}#r{n}" if skey else ""})
-            conn.execute("DELETE FROM knowledge_messages WHERE id = ?", (old_id,))
-            drop_ids.append(f"km_{old_id}")
-            made += len(parts)
+            for old_id, content, source, role, skey in batch:
+                parts = split_text(content, args.max)
+                for n, part in enumerate(parts):
+                    cur = conn.execute(
+                        "INSERT INTO knowledge_messages (content, source, role, source_key) "
+                        "VALUES (?, ?, ?, ?)",
+                        (part, source, role, f"{skey}#r{n}" if skey else None),
+                    )
+                    new_ids.append(f"km_{cur.lastrowid}")
+                    new_docs.append(part)
+                    new_meta.append({"source": source, "role": role,
+                                     "source_key": f"{skey}#r{n}" if skey else ""})
+                conn.execute("DELETE FROM knowledge_messages WHERE id = ?", (old_id,))
+                drop_ids.append(f"km_{old_id}")
+                made += len(parts)
 
-        conn.commit()
+            conn.commit()
 
-        if coll is not None:
-            try:
-                coll.delete(ids=drop_ids)
-            except Exception:
-                pass                      # id may predate the km_ convention
-            # Batch the encode. embed_single() calls encode([one]) — a batch of
-            # one — paying full per-call overhead per chunk. Measured 2026-08-29
-            # on the RTX 4090: 258/s one-at-a-time vs 1,820/s batched, 7.1x. The
-            # model was already on the GPU; the device was never the bottleneck.
-            #
-            # Chroma caps a single add() at 5,461 records. One row can explode
-            # into many chunks (archive rows average ~16), so the row batch is a
-            # poor proxy for the add size — a 300-row batch produced 7,196 chunks
-            # and the add threw. SQLite had already been committed by then, which
-            # left those rows with no embedding. Sub-batch the add on its own
-            # terms so row batching and Chroma limits stay independent.
-            # Secrets never enter the store. Filtered BEFORE the encode so the
-            # id/doc/meta/embedding lists stay index-aligned through the
-            # sub-batching below. (UNIFIED BUILD LIST 0.2)
-            new_ids, new_docs, new_meta, _dropped = filter_for_index(
-                new_ids, new_docs, new_meta)
-            embs = client._embedding.embed(new_docs) if new_docs else []
-            for j in range(0, len(new_ids), CHROMA_ADD_MAX):
-                coll.add(
-                    ids=new_ids[j:j + CHROMA_ADD_MAX],
-                    documents=new_docs[j:j + CHROMA_ADD_MAX],
-                    metadatas=new_meta[j:j + CHROMA_ADD_MAX],
-                    embeddings=embs[j:j + CHROMA_ADD_MAX],
-                )
+            if coll is not None:
+                try:
+                    coll.delete(ids=drop_ids)
+                except Exception:
+                    pass                      # id may predate the km_ convention
+                # Batch the encode. embed_single() calls encode([one]) — a batch of
+                # one — paying full per-call overhead per chunk. Measured 2026-08-29
+                # on the RTX 4090: 258/s one-at-a-time vs 1,820/s batched, 7.1x. The
+                # model was already on the GPU; the device was never the bottleneck.
+                #
+                # Chroma caps a single add() at 5,461 records. One row can explode
+                # into many chunks (archive rows average ~16), so the row batch is a
+                # poor proxy for the add size — a 300-row batch produced 7,196 chunks
+                # and the add threw. SQLite had already been committed by then, which
+                # left those rows with no embedding. Sub-batch the add on its own
+                # terms so row batching and Chroma limits stay independent.
+                # Secrets never enter the store. Filtered BEFORE the encode so the
+                # id/doc/meta/embedding lists stay index-aligned through the
+                # sub-batching below. (UNIFIED BUILD LIST 0.2)
+                new_ids, new_docs, new_meta, _dropped = filter_for_index(
+                    new_ids, new_docs, new_meta)
+                embs = client._embedding.embed(new_docs) if new_docs else []
+                for j in range(0, len(new_ids), CHROMA_ADD_MAX):
+                    coll.add(
+                        ids=new_ids[j:j + CHROMA_ADD_MAX],
+                        documents=new_docs[j:j + CHROMA_ADD_MAX],
+                        metadatas=new_meta[j:j + CHROMA_ADD_MAX],
+                        embeddings=embs[j:j + CHROMA_ADD_MAX],
+                    )
 
-        done += len(batch)
-        rate = done / max(time.time() - started, 1)
-        eta = (len(rows) - done) / rate / 60 if rate else 0
-        print(f"  {done:,}/{len(rows):,} rows -> {made:,} chunks "
-              f"({rate:.1f} rows/s, ~{eta:.0f} min left)", flush=True)
+            done += len(batch)
+            rate = done / max(time.time() - started, 1)
+            eta = (len(rows) - done) / rate / 60 if rate else 0
+            print(f"  {done:,}/{len(rows):,} rows -> {made:,} chunks "
+                  f"({rate:.1f} rows/s, ~{eta:.0f} min left)", flush=True)
 
     print("rebuilding FTS5 index...")
     conn.execute("INSERT INTO knowledge_messages_fts(knowledge_messages_fts) "

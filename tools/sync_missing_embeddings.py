@@ -70,28 +70,31 @@ def main():
 
     sys.path.insert(0, "/mnt/projects/cis/runtime")
     from mcp_bridge.chroma_index import ChromaClient, filter_for_index
+    from mcp_bridge.chroma_lock import chroma_write
     client = ChromaClient()
-    coll = client._client.get_collection("knowledge_messages")
 
-    done = 0
-    for i in range(0, len(rows), ADD_MAX):
-        batch = rows[i:i + ADD_MAX]
-        docs = [r[1] for r in batch]
-        # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
-        _ids, docs, _metas, _dropped = filter_for_index(
-            [f"km_{r[0]}" for r in batch], docs,
-            [{"source": r[2], "role": r[3] or "",
-              "source_key": r[4] or ""} for r in batch])
-        if not _ids:
-            continue
-        coll.add(
-            ids=_ids,
-            documents=docs,
-            metadatas=_metas,
-            embeddings=client._embedding.embed(docs),
-        )
-        done += len(batch)
-        print(f"  {done:,}/{len(rows):,}", flush=True)
+    # Exclusive for the whole sync. (UNIFIED BUILD LIST 0.3)
+    with chroma_write(what="sync_missing_embeddings"):
+        coll = client._client.get_collection("knowledge_messages")
+        done = 0
+        for i in range(0, len(rows), ADD_MAX):
+            batch = rows[i:i + ADD_MAX]
+            docs = [r[1] for r in batch]
+            # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+            _ids, docs, _metas, _dropped = filter_for_index(
+                [f"km_{r[0]}" for r in batch], docs,
+                [{"source": r[2], "role": r[3] or "",
+                  "source_key": r[4] or ""} for r in batch])
+            if not _ids:
+                continue
+            coll.add(
+                ids=_ids,
+                documents=docs,
+                metadatas=_metas,
+                embeddings=client._embedding.embed(docs),
+            )
+            done += len(batch)
+            print(f"  {done:,}/{len(rows):,}", flush=True)
 
     print(f"\nDone. {done:,} embedded.")
     return 0

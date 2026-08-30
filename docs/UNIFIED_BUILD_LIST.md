@@ -130,6 +130,40 @@ run corrupts the read — proven: *"Error deserializing pickle file: trailing
 bytes found"*. Needs a lock, a maintenance window, or ingest moved inside.
 **Blocks:** every item that runs an ingest.
 
+**DONE 2026-08-30 — a lock, in `runtime/mcp_bridge/chroma_lock.py`.**
+
+Not a maintenance window: that is a rule someone has to remember, and it has to
+hold when nobody is watching. Not ingest-moved-inside: an image rebuild and a
+larger change than the problem needs. A file lock is enforced by the kernel.
+
+**It works across the container boundary, verified rather than assumed.** The
+repo is bind-mounted and host and container share one kernel, so an `flock` on
+the mounted file is the same lock on both sides. The lock sits beside the store
+and is named from `CIS_CHROMA_PATH`, which the container sets and the host
+defaults — both resolve to the same file.
+
+**Asymmetric by design.** Readers take a SHARED lock, wait 5s, then **give up
+rather than hang** — a run must never stall because an ingest started, so
+`pipeline_relay` degrades to keyword search, which covers 100% of the corpus,
+and says why. Writers take an EXCLUSIVE lock and **raise rather than proceed**:
+an ingest that cannot get the lock must not write, because proceeding is what
+corrupts a live read.
+
+Wired: `pipeline_relay` semantic branch and `ask_history` as readers;
+`rebuild_vector_index`, `rechunk_for_embedding`, `sync_missing_embeddings`,
+`ingest_claude_code_sessions`, `ingest_hermes_sessions_v2` as writers. Each
+writer holds the lock across its **whole** run, not per batch — rebuild drops
+the collection before refilling it, and rechunk deletes each row before adding
+its replacements, so a reader admitted between batches would see a half-built
+index rather than a stale one.
+
+Tested end to end with the container live: host reader refuses with exit 2 during
+a write; container reader correctly kept out; the pipeline's own brief builder
+returned in 5.2s instead of hanging, still produced keyword hits, and carried
+the note *"semantic search skipped (KB ingest in progress)"*; a writer blocked by
+a live reader refused with a plain-language message; two readers hold at once;
+everything works normally once released.
+
 ---
 
 # TIER 1 — blocks a run completing end to end

@@ -26,6 +26,7 @@ Usage:
   python3.12 tools/ingest_hermes_sessions_v2.py --replace
 """
 import argparse
+import contextlib
 import glob
 import json
 import os
@@ -149,51 +150,60 @@ def main():
     if not args.no_embed:
         sys.path.insert(0, "/mnt/projects/cis/runtime")
         from mcp_bridge.chroma_index import ChromaClient, filter_for_index
+        from mcp_bridge.chroma_lock import chroma_write
         client = ChromaClient()
         coll = client._client.get_collection("knowledge_messages")
     else:
         client = coll = None
 
-    for profile, (nfiles, rows) in sorted(plan.items()):
-        source = f"hermes_{profile}"
-        old_ids = [r[0] for r in conn.execute(
-            "SELECT id FROM knowledge_messages WHERE source = ?", (source,))]
+    # Exclusive across every profile, not per profile: this both adds and
+    # deletes, and a reader let in between the two sees a store that has the new
+    # rows and the superseded ones at the same time. With --no-embed nothing
+    # touches Chroma, so no lock is taken. (UNIFIED BUILD LIST 0.3)
+    _guard = (chroma_write(what="ingest_hermes_sessions_v2")
+              if coll is not None else contextlib.nullcontext())
 
-        new_ids, docs, metas = [], [], []
-        for content, src, role, skey in rows:
-            cur = conn.execute(
-                "INSERT INTO knowledge_messages (content, source, role, source_key) "
-                "VALUES (?, ?, ?, ?)", (content, src, role, skey))
-            new_ids.append(f"km_{cur.lastrowid}")
-            docs.append(content)
-            metas.append({"source": src, "role": role, "source_key": skey})
-        conn.commit()
+    with _guard:
+        for profile, (nfiles, rows) in sorted(plan.items()):
+            source = f"hermes_{profile}"
+            old_ids = [r[0] for r in conn.execute(
+                "SELECT id FROM knowledge_messages WHERE source = ?", (source,))]
 
-        if coll is not None:
-            for i in range(0, len(new_ids), 200):
-                # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
-                _i, _d, _m, _dropped = filter_for_index(
-                    new_ids[i:i + 200], docs[i:i + 200], metas[i:i + 200])
-                if not _i:
-                    continue
-                # Batched encode — 7x faster than per-text embed_single.
-                coll.add(ids=_i, documents=_d, metadatas=_m,
-                         embeddings=client._embedding.embed(_d))
-
-        removed = 0
-        if args.replace and old_ids:
-            conn.executemany("DELETE FROM knowledge_messages WHERE id = ?",
-                             [(i,) for i in old_ids])
+            new_ids, docs, metas = [], [], []
+            for content, src, role, skey in rows:
+                cur = conn.execute(
+                    "INSERT INTO knowledge_messages (content, source, role, source_key) "
+                    "VALUES (?, ?, ?, ?)", (content, src, role, skey))
+                new_ids.append(f"km_{cur.lastrowid}")
+                docs.append(content)
+                metas.append({"source": src, "role": role, "source_key": skey})
             conn.commit()
-            removed = len(old_ids)
+
             if coll is not None:
-                stale = [f"km_{i}" for i in old_ids]
-                for i in range(0, len(stale), 200):
-                    try:
-                        coll.delete(ids=stale[i:i + 200])
-                    except Exception:
-                        pass
-        print(f"  {source:22} +{len(rows):,} new, -{removed:,} old", flush=True)
+                for i in range(0, len(new_ids), 200):
+                    # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+                    _i, _d, _m, _dropped = filter_for_index(
+                        new_ids[i:i + 200], docs[i:i + 200], metas[i:i + 200])
+                    if not _i:
+                        continue
+                    # Batched encode — 7x faster than per-text embed_single.
+                    coll.add(ids=_i, documents=_d, metadatas=_m,
+                             embeddings=client._embedding.embed(_d))
+
+            removed = 0
+            if args.replace and old_ids:
+                conn.executemany("DELETE FROM knowledge_messages WHERE id = ?",
+                                 [(i,) for i in old_ids])
+                conn.commit()
+                removed = len(old_ids)
+                if coll is not None:
+                    stale = [f"km_{i}" for i in old_ids]
+                    for i in range(0, len(stale), 200):
+                        try:
+                            coll.delete(ids=stale[i:i + 200])
+                        except Exception:
+                            pass
+            print(f"  {source:22} +{len(rows):,} new, -{removed:,} old", flush=True)
 
     print("rebuilding FTS5 index...")
     conn.execute("INSERT INTO knowledge_messages_fts(knowledge_messages_fts) "
