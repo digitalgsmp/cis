@@ -251,18 +251,94 @@ which inverts what the gate is for.
 narrow version: make non-pipeline changes produce the same briefing and pass the
 same gate that pipeline runs already do.
 
-**Design written 2026-08-30: `docs/OPERATOR_APPROVAL_INTERFACE_DESIGN.md`.**
-Eric, on the portal spec and dashboard: *"there is no confirmed interface,
-everything had been misinformed experiments."* So the design starts from the
-workflow, not the UI, and reuses the briefing renderer rather than building
-anything new. Core of it: a **Work Order** per work item — not per commit — in
-two halves. The first names, before the work starts, the exact check that will
-prove it worked; the second pastes that check's actual output next to it. Four
-consequence classes so reading needs no approval and destructive work needs it
-twice. And the part that makes it more than better-organised trust: **a verifier
-that is not the author**, checking the Work Order against the real diff — the
-same evaluator/builder separation HASE requires and 4.10 records.
-Three open decisions in that document are Eric's; none of them block step one.
+---
+
+#### The design, 2026-08-30
+
+Eric on the portal spec and the dashboard: *"there is no confirmed interface,
+everything had been misinformed experiments."* So this starts from the workflow,
+not from a screen, and reuses what already renders.
+
+**The design input, and getting it wrong makes the interface decoration.**
+He can read plain language, compare a claim against an observed output, say no,
+and smell a wrong direction. He cannot read code and judge it correct, cannot
+tell whether a test tested anything, and cannot detect a confident plausible
+wrong claim. So an interface that shows him a diff has already failed, and so
+has one that reports "tests passed".
+
+**The unit is the WORK ITEM, not the commit.** 2026-08-30 would have been four
+documents, not twenty. Twenty is not review — he stops reading at the fourth,
+and unread approvals are worse than none because they look like oversight.
+
+**A Work Order, in two halves.**
+
+*Before — authorise.* What is broken, in plain language. Evidence it is broken,
+as real command output. What will change, described as behaviour not code.
+**What will prove it worked — the exact check, named in advance.** What breaks
+if it goes wrong, and whether it is reversible. What else touches it.
+
+*After — accept.* The predicted check, run, **with its actual output pasted in**,
+not summarised. Before and after as numbers he can read without reading code
+(*80 foreign-key violations -> 0*; *48 secret values -> 0*). What was NOT done
+and why. What deviated from plan, including errors found and corrected on the
+way — 2026-08-30 had three, and they belong in the record, not in conversation.
+How to undo it: the backup path, the revert command.
+
+Both halves hashed like the gate briefing already is, so the record shows the
+document he actually read.
+
+**The load-bearing part is naming the check before the outcome is known.** It is
+the difference between *"I verified it"* and *"here is the thing I said
+beforehand would prove this, and here is what it printed."* The operator rules
+already require this; nothing records it, so nothing holds the work to it.
+
+**Four classes, by consequence, so this does not collapse under its own weight:**
+- **0, reading** — searches, greps, tests, read-only checks. No approval, logged.
+  Most of any session.
+- **1, reversible and contained** — a new tool, a new document. Approval after.
+- **2, enforcement / schema / live path** — guardrails, gate scripts, spine
+  schema, `pipeline_relay.py`, ingest tools. Approval before AND after.
+  Everything on 2026-08-30 was Class 2.
+- **3, irreversible** — deletion, dropping a collection, anything with no backup.
+  Approval before, irreversibility stated in its own sentence, acknowledged
+  separately.
+
+The declared class is itself checkable: a change touching `enforcement/` that
+declares Class 1 is a lie a script can catch.
+
+**What stops a false Work Order — the honest limit.** Nothing above does. Three
+things reduce it and only the third is enforcement: every proof line is a
+command someone else can re-run; the check is named before the outcome is known;
+and **a verifier that is not the author** checks the Work Order against the real
+diff — does the diff do what the order says, does the named check test the
+claim, was anything changed the order does not mention. Without that third one
+this is better-organised trust. It is the same evaluator-must-not-be-the-builder
+rule HASE states and 4.10 records.
+
+**Does not solve:** a wrong claim whose check honestly measures the wrong thing;
+whether the work was worth doing at all (correctly still Eric's); volume — if it
+starts producing fifteen Work Orders a day the unit is drawn too small.
+
+**Build order, smallest first, each step useful alone.**
+1. Work Order as a file, rendered by the **existing** briefing renderer. No new
+   UI — that renderer demonstrably works and produced a readable, stably hashed
+   briefing on 2026-08-30. Reuse beats building.
+2. Record it in the spine as a row with a hash and a decision, so it is not a
+   loose file. Approval reuses `record_decision.py`, which now works.
+3. Enforce the class rule in the pre-commit hook — a Class 2 path requires an
+   approved Work Order. **Ships with a tested off switch**, as the record
+   requires of every guardrail; a gate that can brick the repo is worse than the
+   gap it closes.
+4. Add the independent verifier. Depends on 1.1.
+5. A served view **only if** reading files becomes the bottleneck. Not before.
+   The portal failed because it was an interface looking for a workflow.
+
+Steps 1 and 2 are days and reuse working code. Step 4 is the valuable one.
+
+**Eric's open decisions — none block step 1:** does a rejected Work Order block
+the commit or only record the objection; is Class 1 approval required or is
+notification enough; do Work Orders live in the repo (versioned with the change)
+or the spine (queryable).
 
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,

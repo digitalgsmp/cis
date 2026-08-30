@@ -79,6 +79,13 @@ tell whether it worked.
   is ALLOWED_DIRTY in tools/closeout.sh; do not keep a second copy here.
   (This line said "two" until 2026-08-30, while closeout allowed six — the
   primer/runtime divergence of queue item 2.12, in the instructions themselves.)
+- DO NOT WRITE NEW SPEC DOCUMENTS. Eric, 2026-08-30: "I don't want to start
+  generating random specs again. Everything should be added to this list as the
+  source of truth." Design work goes INTO the relevant queue item, however long
+  that makes it. The repo already holds 210 specification documents, 132 of them
+  invisible to a filename search and almost none implemented — a satellite doc
+  is how that pile grew, one reasonable-seeming document at a time. If a design
+  will not fit in the item, the item is drawn wrong.
 - docs/UNIFIED_BUILD_LIST.md is the task queue. It is the only one.
   Work it in tier order. Confirm an item is still not in the code before
   building it, and record build/adapt/drop with the reason.
