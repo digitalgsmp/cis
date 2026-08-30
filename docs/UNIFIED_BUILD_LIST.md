@@ -252,10 +252,38 @@ trade-offs a reasonable person could weigh differently, not one good answer
 padded with alternatives. Eliminated options are stated as eliminated, never
 offered.
 
-**Checkable form for all three:** an output containing a question or a reversal
-offer must have, adjacent to it, enumerated options each carrying a consequence,
-and a stated criterion for choosing between them. Adjacency is part of the
-check — a table earlier in the document does not satisfy it.
+**(e) Outsourcing the check.** Asking Eric to confirm something determinable
+from the disk. Observed 2026-08-30, immediately after (a) through (d) were
+recorded: *"the one thing worth your confirmation — whether drive_imports is SWA
+material."* It was answerable in two commands, and was answered in two commands
+once he pushed back. Dressing it as a courtesy does not change what it is.
+
+**THE PATTERN UNDER ALL FIVE, and this is the one that matters.** Eric,
+2026-08-30: *"you are working on me correcting. spell check."*
+
+Every variant above shares one shape: **the output is emitted unchecked, and
+Eric is the check.** That is not a communication defect, it is the system's
+original failure reappearing at the top of the stack — the record already names
+it, *"the system appeared to function, but only because the operator was
+silently bridging the gaps."* The pipeline exists to stop him being the
+integration layer. An assistant that ships an unverified question and waits for
+him to catch it has rebuilt exactly that dependency, one level up, and burns his
+day doing it.
+
+The name he gave it is the right one. **A spell checker runs before the text is
+sent, not after the reader finds the typo.** The check belongs inside the
+producing step.
+
+**Checkable form:** before any output that asks Eric something, the question
+must survive three tests — (1) is it answerable from the code, the disk or the
+record? then answer it instead; (2) is it settled by analysis already done? then
+state the decision, not the menu; (3) do the options and their consequences sit
+adjacent to the question, with a criterion for choosing? An earlier table does
+not count. Only a question passing all three reaches him.
+
+This is the gate 1.8 has to become, and it applies to assistants in these
+sessions before it ever applies to a container agent — the failures logged here
+are all from the session that wrote the item.
 
 # TIER 2 — blocks trusting what a run produces
 

@@ -117,6 +117,13 @@ tell whether it worked.
 - Check the record before asking. If it is already settled there, act on it and
   tell me what it said. Re-opening a settled question is guessing pointed the
   other way, and it costs me the day.
+- RUN THE CHECK BEFORE YOU SEND, NOT AFTER I CATCH IT. A spell checker runs
+  before the text goes out. If you are relying on me to spot the flaw, I am the
+  integration layer again — the exact thing this system exists to remove.
+  Before any question reaches me it must pass three tests: can I answer it from
+  the code, the disk or the record (then answer it); have I already settled it
+  by analysis (then state the decision, not a menu); are the options and
+  consequences right next to the question with a criterion for choosing.
 - One question at a time, and make it answerable without reading code.
 - When you don't know something, say what you'd need to find out and
   what it would cost. Don't list every unknown.
