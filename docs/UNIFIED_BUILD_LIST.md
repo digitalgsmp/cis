@@ -97,6 +97,33 @@ chunks were indexed without it, and the container was then wired to query them.
 **Two fixes needed:** filter at query time before results enter an agent prompt,
 and filter at index time in the ingest tools.
 
+**DONE 2026-08-30.** Both halves. `redact_secrets()` on the read side at three
+choke points — `pipeline_relay._add_hit` (covers both KB_CONTEXT branches),
+`pipeline_relay._pre_discovery` (the single join of everything it found), and
+`tools/ask_history.py`. `filter_for_index()` on the write side, before every
+`coll.add()` in all five ingest tools.
+
+**Read redacts, write excludes** — deliberate, not an oversight. 112 KB rows
+carry a PRIVATE KEY header and 111 are agents *discussing* key handling with no
+key in them. Applying the index-time exclude rule at read time would drop all
+112, so asking the pipeline how to handle secrets safely would return nothing.
+Refusing to display an already-stored row protects nothing that masking does not.
+
+Measured before and after on the same 100 live keyword results: **48 secret
+values present before, 0 after.** Both gates in 2.15 fired for the first time
+and PASS. `_redact_secrets` fails closed — if the filter cannot be imported the
+KB material is withheld with the reason stated, never passed through.
+
+Nothing found was a live credential: placeholders, documentation, and one
+deliberately-corrupted RSA test fixture from the archive. The defect was that
+nothing stood in the way.
+
+Two defects found by testing the fix rather than trusting it, both now closed: a
+PEM header is only the first *line* of a secret, so redacting the matched span
+left the key body underneath it; and a block pattern requiring 16+ base64
+characters per line leaked a key whose final line was 12 — chunking splits keys
+mid-block, so the truncated case is the common one.
+
 ### 0.3 Chroma concurrency arbitration
 **In code:** nothing. The container queries Chroma live; a host ingest during a
 run corrupts the read — proven: *"Error deserializing pickle file: trailing
