@@ -209,6 +209,69 @@ def _db_retry(fn, max_attempts=3, base_delay=1.0):
             raise
 
 
+_FTS_STOPWORDS = {
+    "the", "a", "an", "and", "or", "for", "to", "of", "in", "on", "is", "be",
+    "that", "this", "with", "from", "it", "as", "at", "by", "should", "whether",
+    "one", "do", "does", "make", "if", "into", "not", "are", "was", "can",
+}
+
+
+def _fts_query(text: str, max_terms: int = 10) -> str:
+    """Build a safe, recall-friendly FTS5 query from free text.
+
+    Two rules, both learned the hard way on 2026-08-29:
+
+    1. Strip everything that is not alphanumeric, then quote each term. FTS5
+       treats "/" ":" "^" and friends as syntax; the old sanitizer missed "/",
+       so any intent naming a path raised 'fts5: syntax error near "/"' and was
+       reported to the agent as "(KB search unavailable)" for 99 calls.
+
+    2. Join with OR, not implicit AND. Bare terms in FTS5 are ANDed, so an
+       8-word intent demanded all 8 words in one chunk — 2 of 3 realistic
+       intents returned zero hits, and it got worse when chunks were shrunk to
+       900 chars for the embedding window. OR plus ORDER BY rank keeps recall
+       and lets bm25 do the ordering. Stopwords are dropped so ranking is not
+       dominated by "the".
+    """
+    words = [
+        w for w in re.sub(r"[^A-Za-z0-9_ ]", " ", text).split()
+        if len(w) > 2 and w.lower() not in _FTS_STOPWORDS
+    ]
+    return " OR ".join('"%s"' % w for w in words[:max_terms])
+
+
+def _seed_gate_provenance(conn: sqlite3.Connection, run_id: str,
+                          intent: str) -> None:
+    """Create the goal_reference a run needs BEFORE Eric is asked to approve it.
+
+    This row was previously created inside the approval handler in
+    runtime/api/relay.py — that is, as a RESULT of approval. But
+    tools/eric_gate/build_briefing.py reads it to build the briefing Eric is
+    meant to read BEFORE deciding, and tools/eric_gate/record_decision.py
+    requires --goal-reference-id to record the decision at all. So the gate
+    asked for a decision it could not describe, and then refused to accept one.
+    Seeding at gate entry breaks that circle. The approval handler already does
+    a find-or-create, so it will now find this row instead of adding a second.
+    """
+    try:
+        existing = conn.execute(
+            "SELECT id FROM goal_references WHERE workflow_run_id = ? LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        if existing:
+            return
+        conn.execute(
+            "INSERT INTO goal_references "
+            "(workflow_run_id, goal_label, dependency_node, tier_advanced, "
+            "advancement_type, authored_by) VALUES (?, ?, ?, ?, ?, ?)",
+            (run_id, (intent or "")[:200], "", "", "PIPELINE_RUN", "ERIC_GATE"),
+        )
+        conn.commit()
+    except Exception as e:
+        # Never block reaching the gate on provenance bookkeeping.
+        print(f"[pipeline] warning: could not seed gate provenance: {e}")
+
+
 def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
                     extra: Optional[Dict] = None,
                     reason: Optional[str] = None) -> None:
@@ -630,27 +693,74 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
     except Exception:
         project_brief = "(AGENTS.md not found)"
 
-    # KB_CONTEXT — top 3 KB hits (reuse pre-discovery logic but standalone)
-    kb_context = ""
+    # KB_CONTEXT — keyword AND semantic hits.
+    #
+    # Two indexes over the same corpus, and they fail differently. FTS5 covers
+    # 100% of the text and nails exact names (gate_export_agreement.sh) but
+    # misses a paraphrase. The vector index catches meaning and fumbles literal
+    # identifiers. Querying one and calling it "the KB" throws away half the
+    # corpus's usefulness, so query both and merge.
+    #
+    # Chroma is optional on purpose: if the libraries are absent this degrades to
+    # keyword-only rather than failing. It reports WHICH half ran, because the
+    # previous version answered every failure with "(KB search unavailable)" —
+    # a malformed query, a missing library and an empty corpus all looked
+    # identical, and a broken FTS5 query went unnoticed across 99 agent calls.
+    kb_lines, kb_notes = [], []
+    seen_previews = set()
+
+    def _add_hit(source, content):
+        preview = (content[:300] + "...") if len(content) > 300 else content
+        key = preview[:120]
+        if key in seen_previews:
+            return
+        seen_previews.add(key)
+        kb_lines.append(f"- [{source}] {preview}")
+
+    # 1. Keyword (FTS5) — always available, no third-party dependency.
     try:
-        keywords = " ".join(intent.split()[:8])
-        import re as _re
-        keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords).strip()
+        keywords = _fts_query(intent)
         if keywords:
-            cur = conn.execute(
+            for content, source in conn.execute(
                 "SELECT content, source FROM knowledge_messages_fts "
                 "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 3",
-                (keywords,)
-            )
-            hits = cur.fetchall()
-            if hits:
-                kb_lines = []
-                for content, source in hits:
-                    preview = (content[:300] + "...") if len(content) > 300 else content
-                    kb_lines.append(f"- [{source}] {preview}")
-                kb_context = "\n".join(kb_lines)
-    except Exception:
-        kb_context = "(KB search unavailable)"
+                (keywords,),
+            ):
+                _add_hit(source, content)
+    except Exception as e:
+        kb_notes.append(f"keyword search failed: {type(e).__name__}: {e}")
+
+    # 2. Semantic (Chroma). Absent in the container until the image ships
+    # chromadb + sentence-transformers and CIS_CHROMA_PATH is set.
+    try:
+        from mcp_bridge.chroma_index import ChromaClient
+        _cc = ChromaClient()
+        _coll = _cc._client.get_collection("knowledge_messages")
+        _res = _coll.query(
+            query_embeddings=[_cc._embedding.embed_single(intent)],
+            n_results=8,
+            include=["documents", "metadatas"],
+        )
+        _kept = 0
+        for _d, _m in zip(_res["documents"][0], _res["metadatas"][0]):
+            if not _d or len(_d) < 200:      # headings and stubs, not answers
+                continue
+            _add_hit((_m or {}).get("source", "?"), _d)
+            _kept += 1
+            if _kept >= 3:
+                break
+    except ImportError:
+        kb_notes.append("semantic search unavailable (chromadb not installed)")
+    except Exception as e:
+        kb_notes.append(f"semantic search failed: {type(e).__name__}: {e}")
+
+    if kb_lines:
+        kb_context = "\n".join(kb_lines)
+        if kb_notes:
+            kb_context += "\n(" + "; ".join(kb_notes) + ")"
+    else:
+        kb_context = ("(no KB hits" +
+                      ("; " + "; ".join(kb_notes) if kb_notes else "") + ")")
 
     # RECENT_RUNS — last 3 completed runs
     recent_runs = ""
@@ -1076,14 +1186,8 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
     Also injects any unconsumed Eric interjections (backchannel).
     Returns a formatted string to prepend to the agent's prompt.
     """
-    keywords = " ".join(intent.split()[:10])
-    # Sanitize FTS5 special chars: . " * ( ) : ^ { } +
-    # These cause "fts5: syntax error near X" if unescaped
-    import re as _re
-    keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords)
-    keywords = keywords.strip()
-    if not keywords:
-        keywords = "CIS pipeline"
+    # Same builder as KB_CONTEXT — sanitised, stopworded, OR-joined for recall.
+    keywords = _fts_query(intent) or '"CIS" OR "pipeline"'
     results = []
 
     # 1. Spine FTS5 search
@@ -2791,6 +2895,7 @@ class PipelineRelay:
             _set_run_status(self.conn, run_id, "ESCALATED")
         else:
             print(f"[pipeline] Proposal review consensus — ERIC GATE")
+            _seed_gate_provenance(self.conn, run_id, intent)
             _set_run_status(self.conn, run_id, "ERIC_GATE")
             print(f"[pipeline] Run {run_id} waiting at ERIC GATE for approval")
 

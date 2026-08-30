@@ -108,8 +108,18 @@ class SecretFilterPipeline:
 class EmbeddingPipeline:
     """Local sentence-transformers embedding model."""
 
-    def __init__(self, model_name="all-MiniLM-L6-v2"):
+    def __init__(self, model_name=None):
         from sentence_transformers import SentenceTransformer
+        # CIS_EMBED_MODEL lets the container name the model by ABSOLUTE PATH
+        # instead of by repo id. Resolving a repo id means going through the
+        # HuggingFace cache lookup, which failed inside the container even with
+        # the cache mounted, HF_HOME set and the files provably readable —
+        # sentence-transformers passes its own cache_dir and the layers disagree
+        # about which directory is the cache root. A path removes the guesswork:
+        # the exact weights are named, nothing is resolved, nothing can download
+        # a different revision later. The host still uses the repo id.
+        model_name = model_name or os.environ.get(
+            "CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
         logger.info("Loading embedding model: %s", model_name)
         self.model = SentenceTransformer(model_name)
         self.model_name = model_name
