@@ -172,6 +172,51 @@ everything works normally once released.
 No run has ever gone intake -> deliberation -> gate -> implement -> verify ->
 done. Furthest reached: ERIC_GATE. Depends on 1.2.
 
+**DONE 2026-08-30. `run-e70293544935a92e-1787973534` completed end to end** —
+PATTERN_CATALOG -> CODE_REVIEW_GATE -> VERIFICATION -> `VERIFY PASS`, result and
+`completed_at` written. It took the 1.9 repairs to get there: approval had been
+structurally impossible, not merely unused.
+
+**The output is factually correct, checked independently.** All seven of its
+verifiable claims hold: live file 3895 lines, one sanitizer at line 273, grep
+count 1, backup 3577 lines, blacklist at backup lines 588 and 1024, backup grep
+count 0, docstring at 260-263.
+
+**What makes this more than a green light — the review gate caught a poisoned
+verification criterion.** The draft spec, frozen 2026-08-29, told the implementer
+to write line numbers 644/1094 and attested *"GROUND TRUTH VERIFIED THIS RUN"*.
+Brain's pattern catalog re-verified and got 3895/273. Reviewer A flagged that
+following the spec would embed false evidence. Reviewer B escalated it:
+> *"Section 0's claim is a lie independent of Section 3... The spec's Section 5
+> verification criteria are poisoned. They instruct the verifier to confirm the
+> file contains line references 644 and 1094. If Menter wrote the CORRECT numbers
+> (273), the spec's own verifier would FAIL the correct file. If Menter wrote the
+> FALSE numbers, the spec's verifier would PASS the false file. Following the
+> spec's verification certifies a lie."*
+First chunk came back CHANGES_REQUESTED; the revision was approved. The file
+carries an explicit provenance note recording the governed deviation. **A run
+detected that its own success criteria would have certified a falsehood** —
+the "optimizes the referee" failure of 4.10, caught in the wild.
+
+**144 guardrails fired: 128 PASS, 12 SKIP, 4 FAIL, none blocking.** Live data for
+the 2.1 audit, and three findings worth keeping:
+- `effort_metric` FAILED twice, *"sandbagging suspected"*, on a task whose correct
+  output is a short markdown file. **3.9 confirmed in the wild.**
+- The three BLOCK-mode verification guardrails all SKIPPED —
+  `claim_action_verifier` (*"no file or function claims detected"*),
+  `intent_compliance` (*"no Python code blocks to test"*),
+  `capability_claim_verifier` (*"no capability claims detected"*). Legitimate for
+  this task, and the point: **on a documentation task the three strongest checks
+  are inert.** They are shaped for code. Same shape as 3.9.
+- `intent_drift` FAILED twice (0.63 DIVERGED, 0.42 SIGNIFICANT_DRIFT) — and it
+  was RIGHT: the run deliberately deviated from a spec that was wrong. Advisory,
+  so nothing acted. Had it been BLOCK it would have killed a correct deviation.
+  **2.1's tension in one run: the guardrail that fired correctly is the one that
+  could not act, and arming it as-is would have blocked the right answer.**
+
+**One data point, not a proof of reliability.** One small task, one file, no code
+written. What it establishes is that the path is walkable.
+
 ### 1.2 Approve or close run-e70293544935a92e-1787973534  — **Eric's decision**
 Briefing renders, hash stable, goal_reference 12 exists. Two 2026-08-22
 throwaways also sit at the gate (`"test"`, `"smoke check"`) — close those.
