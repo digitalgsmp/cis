@@ -202,6 +202,55 @@ Failure mode 11 — a silent gate failure, inside the gate. An operator followin
 the written instructions gets a success message and a run that never moves, with
 nothing anywhere saying why.
 
+### 1.10 Assistant work reaches the code without ever passing a gate
+**Eric, 2026-08-30, after a full day of repairs he could not independently
+check:** *"How would I have been able to approve or check into any of what you
+just did? Is there a solution to how the user will work in these situations?
+Have I designed an interface where everything is explained and qualified for me
+to give approval?"*
+
+**Answer, checked: yes he designed it, and it was never built.**
+`docs/CIS_PIPELINE_VISIBLE_PORTAL_SPEC.md`, 2026-06-23, written by
+deepseek-v4-pro after Eric's design direction. Core principle, verbatim:
+*"The user does not leave the conversation. The pipeline does not run in a black
+box... Nothing executes without Eric seeing it. The panels ARE the pipeline."*
+It specifies a mandatory clarification stage before anything fires, then live
+panels for route, drafter, reviewers and each gate's PASS/FAIL, with an
+interject box at every stage. `runtime/cis_dashboard.html` is 3,194 lines, last
+modified 2026-05-04, never committed since. The 13 `gate_11a_*`/`gate_11b_*`
+scripts were written to guard that approval UI and are among the 33 in 2.15 that
+have never fired.
+
+**But the portal would not have covered today, and that is the larger gap.**
+The portal governs PIPELINE runs. On 2026-08-30 an assistant made ~20 commits to
+the spine, the relay, the gate tooling and the ingest tools with no gate, no
+reviewer, no verification and no approval. Eric had the assistant's own
+descriptions and nothing else: the assistant chose the checks, ran them, and
+reported the results. Three self-caught errors that day were self-caught —
+nothing structural would have caught them otherwise. This is the failure Eric
+named the same day as *"you are working on me correcting."*
+
+**The artifact already exists.** The Eric Gate briefing renders action summary,
+reversibility, files touched, goal trace, decision trail, objections and drift,
+in plain markdown, with a hash that fixes it between reading and approving.
+Nothing routes assistant work through it.
+
+**Design constraint, to be settled before building:** the unit of approval must
+be the WORK ITEM, not the commit. Per-commit briefings would have meant twenty
+approvals in one day, and he would have stopped reading at the fourth. Four
+briefings — one each for 0.1, 0.2, 0.3 and the gate repairs — is a load a person
+sustains. Each answering: what was broken, what changed, what proves it, what
+happens if it is wrong.
+
+**Relationship to 4.10:** this is that idea's missing front half. A pipeline
+that recommends and an API that implements still needs Eric in between, reading
+something he can judge. Without it the loop is automated and he is outside it,
+which inverts what the gate is for.
+
+**Not the portal.** Tier 10/11 UI work is a bigger, later job. This is the
+narrow version: make non-pipeline changes produce the same briefing and pass the
+same gate that pipeline runs already do.
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
