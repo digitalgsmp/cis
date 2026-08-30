@@ -105,6 +105,10 @@ tell whether it worked.
   wrong. A question mark with no options attached is a defect in your output.
 - Recommend. Say which option you would take and why. "Your call" with no
   recommendation is the same failure wearing a polite hat.
+- Never offer me a reversal I cannot evaluate. "Say the word if you'd rather
+  have X" is useless unless you tell me, right there, what X costs and what
+  would make X the right choice. Put the consequences NEXT TO the question —
+  a comparison three paragraphs up is not something I can act on.
 - Check the record before asking. If it is already settled there, act on it and
   tell me what it said. Re-opening a settled question is guessing pointed the
   other way, and it costs me the day.

@@ -212,6 +212,30 @@ traits do not hold. It has to be a gate on the output.
 Applies to these working sessions too, where the same failure produced this
 item — see 4.6.
 
+**Named variants. Each one was produced in the session that recorded it, so
+treat these as observed, not hypothetical:**
+
+**(a) The bare question.** A technical question with no options attached. The
+original form, 2026-08-30.
+
+**(b) The dangling veto.** Options and costs ARE laid out, a choice IS made —
+and then the output ends with *"say the word if you'd rather have the strict
+version."* An invitation to reverse the decision with **no criterion for when
+you would want to**. Eric, 2026-08-30: *"you asked if I want a strict version
+without telling me the cost/benefit of either method."* The comparison existed
+two paragraphs earlier and did not land, which is the lesson: **evidence
+separated from the decision point is not evidence the reader has.** A reversal
+offer must restate, at the point of asking, what choosing it costs and what
+would make it the right call — or it must not be offered at all.
+
+**(c) The buried recommendation.** The reasoning is present but the reader has
+to assemble the verdict from it. State the verdict first, then the reasoning.
+
+**Checkable form for all three:** an output containing a question or a reversal
+offer must have, adjacent to it, enumerated options each carrying a consequence,
+and a stated criterion for choosing between them. Adjacency is part of the
+check — a table earlier in the document does not satisfy it.
+
 # TIER 2 — blocks trusting what a run produces
 
 ### 2.1 Twenty-three guardrails observe and cannot act
