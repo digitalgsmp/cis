@@ -150,6 +150,41 @@ token cost is zero.
 
 ---
 
+### 1.8 The pipeline asks Eric questions he cannot answer — NOT IN CODE
+**Eric, 2026-08-30, stating the requirement:**
+
+> *"The container agents must always recognize that I am not a coder and I don't
+> have the experience to answer most of these technical questions. It must
+> provide context and options to choose from along with the positive and
+> negative consequences of the choices made based on evidence and good coding
+> practices. The container cannot keep posing these scenarios — it's creating
+> situations where I have to guess."*
+
+**Why this is Tier 1, not a nicety:** the Eric Gate is on the critical path of
+every run, and no run has ever passed it. A gate that presents a question the
+operator cannot evaluate does not produce a decision — it produces a guess, or a
+stall. Both are indistinguishable from the pipeline working. This is failure
+mode 3 (rubber-stamp review) with the human on the receiving end: approval given
+without the ability to evaluate is exactly the rubber stamp the gate exists to
+prevent.
+
+**The rule, stated so it can be checked:** any output that asks Eric to decide
+must carry, for each option, (a) what it means in plain language, (b) the
+evidence behind it, (c) what goes right if chosen, (d) what goes wrong. An open
+technical question with no options is a defect, not a request.
+
+**Where it lands:** the Eric Gate briefing first — that is the one surface where
+a decision is mandatory and cannot be automated (see Decisions to Protect). Then
+the role overlays, which currently say nothing about who the reader is.
+
+**Checkable, in the same shape as the other gates:** a briefing whose decision
+section contains a question mark but no enumerated options with consequences
+fails. This is not a prompt instruction — a longer overlay is still a trait, and
+traits do not hold. It has to be a gate on the output.
+
+Applies to these working sessions too, where the same failure produced this
+item — see 4.6.
+
 # TIER 2 — blocks trusting what a run produces
 
 ### 2.1 Twenty-three guardrails observe and cannot act
@@ -304,6 +339,23 @@ one column in one INSERT, plus a decision on whether to backfill ids for the 26
 existing rows. Note the supersede path has never actually been exercised: no run
 has more than one approval, so nothing is currently mis-linked.
 
+### 2.18 Placeholders are not marked as placeholders — gate candidate
+**Carried from NEXT_SESSION.md F15, 2026-08-30. This was missed when the list
+was built; the coverage audit found it.**
+
+The mechanism behind most of this list. `route_task.py` described and never
+built. `push_cis_live()` with no caller. `workflow_run_id` NULL on all 30
+`build_plan_nodes` rows. `needs_review` named in the record and existing
+nowhere. The Eric Gate briefing rendering empty fields. **Each one looked
+finished. Nothing announced the gap.**
+
+Item 2.17 is the newest instance: a primary key column that is NULL on every
+row, in a table whose whole purpose is an immutable audit record.
+
+**The gate:** anything declared in a spec should be checkable against whether it
+exists. That is the difference between this list and the documents in the
+reference table — those describe; nothing verifies.
+
 ### 2.14 Operator routes execute runtime scripts directly
 Failure mode 9 in CLAUDE.md. **Verify current state before building** — a 2026-05-01
 build manifest records this as eliminated, so the recognition may be stale.
@@ -359,6 +411,12 @@ build manifest records this as eliminated, so the recognition may be stale.
 - **4.7** Role theory into the agents. **Sequencing decision on the record:**
   agents come after deterministic workflows are stable.
 - **4.8** Archive processing — prose vs software split, Troy's drive excluded.
+- **4.9** The documentation-gap loop, named in the record and still running:
+  *"Undocumented configuration -> failure -> recovery -> no documentation ->
+  future failure (negative loop)."* This list is itself evidence — an earlier
+  session did the same archaeology for the same reason. 2.18 is its enforcement
+  handle. **Carried from NEXT_SESSION.md F20; missed when this list was built,
+  found by the coverage audit on 2026-08-30.**
 
 ---
 

@@ -75,8 +75,13 @@ tell whether it worked.
 ### Repo
 - Closeout: bash tools/closeout.sh (--check first, it is read-only)
 - Two status docs re-dirty after every commit by design. That is the hook.
-- docs/NEXT_SESSION.md is the session queue. Rewrite it, never append.
-  Keep it under 15 lines.
+- docs/UNIFIED_BUILD_LIST.md is the task queue. It is the only one.
+  Work it in tier order. Confirm an item is still not in the code before
+  building it, and record build/adapt/drop with the reason.
+- docs/NEXT_SESSION.md is standing context only — how to work here, the goal,
+  decisions to protect. No tasks, no priorities, no status. Rewrite it, never
+  append, and never let a task list grow back in it. Two queues drift, and
+  that failure is itself queue item 2.12.
 
 ### Scope
 - Do not modify runtime/abstraction/pipeline_relay.py without asking first.
@@ -94,6 +99,15 @@ tell whether it worked.
 - I am not a coder. Don't explain what a command does; explain what the
   result tells us. Skip PIDs, hex, and internals unless they change the
   answer.
+- NEVER hand me a bare technical question. I am not a coder and cannot answer
+  most of them. If I have to decide, give me options — each with what it means
+  in plain language, the evidence behind it, what goes right, and what goes
+  wrong. A question mark with no options attached is a defect in your output.
+- Recommend. Say which option you would take and why. "Your call" with no
+  recommendation is the same failure wearing a polite hat.
+- Check the record before asking. If it is already settled there, act on it and
+  tell me what it said. Re-opening a settled question is guessing pointed the
+  other way, and it costs me the day.
 - One question at a time, and make it answerable without reading code.
 - When you don't know something, say what you'd need to find out and
   what it would cost. Don't list every unknown.

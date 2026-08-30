@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-08-30 13:52 UTC | Run: run-b0600ef96d01
+Generated: 2026-08-30 14:13 UTC | Run: run-d13a2bb622bf
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## fe8f843 Turn foreign keys on, after repairing what would have broken
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/abstraction/pipeline_relay.py 
+
+## runtime/api/relay.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/repair_fk_definitions.py 
+
+## tools/repair_fk_orphans.py 
 
 ## b226dfd Mine the record for what it already knew, and build the unified list
 
@@ -1372,35 +1410,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## docs/DEV-PIVOT_STATUS.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## b59eceb add docs/NEXT_SESSION.md — session handoff queue, rewritten each session
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/NEXT_SESSION.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
