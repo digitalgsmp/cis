@@ -47,6 +47,29 @@ RUN /usr/local/lib/hermes-agent/venv/bin/python -m ensurepip --upgrade \
 # --- install Flask + httpx for the pipeline API and relay ---
 RUN /usr/local/lib/hermes-agent/venv/bin/python -m pip install flask httpx pyyaml
 
+# --- semantic KB search inside the container (2026-08-29) ---
+# Until now the pipeline could only do FTS5 keyword search: chromadb and
+# sentence-transformers were absent and pipeline_relay.py never touched Chroma.
+# The container cannot replace the host pipeline while it can only match words.
+# CPU-only torch on purpose: embedding one short query takes milliseconds on CPU,
+# and the CUDA build is ~2.5GB against a 6.3GB image and 70GB free.
+# Versions are PINNED TO THE HOST. The host wrote every vector in the store; if
+# the container embeds a query with a different sentence-transformers major
+# version, its queries and those vectors are not guaranteed to be the same
+# geometry. Unpinned, pip installed sentence-transformers 6.0.0 against the
+# host's 5.5.0 — and the newer huggingface_hub could not even resolve the
+# mounted cache, so the model load failed outright. That is failure mode 6
+# (version drift) in the layer that decides what the agents can find.
+# If these are bumped, re-embed the corpus on the same versions or verify the
+# vectors still match.
+RUN /usr/local/lib/hermes-agent/venv/bin/python -m pip install \
+        --index-url https://download.pytorch.org/whl/cpu torch \
+    && /usr/local/lib/hermes-agent/venv/bin/python -m pip install \
+        'chromadb==1.5.9' \
+        'sentence-transformers==5.5.0' \
+        'transformers==5.8.1' \
+        'huggingface_hub==1.14.0'
+
 # --- patch loop-breaker: vendor 0.17.0 lacks _success_repeat_counts (NA-SEED-018) ---
 COPY tool_guardrails.py /usr/local/lib/hermes-agent/agent/tool_guardrails.py
 
@@ -162,7 +185,32 @@ ENV CIS_SPINE_PATH=/workspace/cis/data/cis_memory.db \
     CIS_PROJECT_ROOT=/workspace/cis \
     CIS_REPO=/workspace/cis \
     CIS_DB_PATH=/workspace/cis/data/cis_memory.db \
-    PYTHONPATH=/workspace/cis/runtime
+    PYTHONPATH=/workspace/cis/runtime \
+    CIS_CHROMA_PATH=/workspace/cis/data/chroma_data \
+    HF_HOME=/opt/models/huggingface \
+    HF_HUB_OFFLINE=1 \
+    CIS_EMBED_MODEL=/opt/models/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+
+# CIS_CHROMA_PATH was simply never set. chroma_index.py falls back to the HOST
+# path /mnt/projects/cis/data/chroma_data, which does not exist in here, so the
+# store was unreachable even once the libraries were present. CIS_SPINE_PATH was
+# set correctly; this one was missed.
+#
+# HF_HUB_OFFLINE=1 is deliberate. The container has network, so the model WOULD
+# download — and then the embedding model could silently change between rebuilds
+# while the vectors already in the store stayed put. That is version drift
+# (failure mode 6) in the layer that decides what the agents can find. The model
+# is mounted read-only from /mnt/models/huggingface by run_container.sh instead,
+# so every rebuild loads the identical weights or fails loudly.
+#
+# CIS_EMBED_MODEL names the snapshot by ABSOLUTE PATH rather than by repo id.
+# Repo-id resolution goes through the HuggingFace cache lookup, which failed in
+# here even with the cache mounted, HF_HOME set, versions pinned to the host and
+# the files provably readable by the worker user. A path skips that entirely.
+# The snapshot hash in the path is the model pin, made visible: changing the
+# model means editing this line on purpose, and the 460k vectors already in the
+# store were written by exactly these weights. Verified in-container:
+# dim 384, max_seq_length 256, identical to the host.
 
 # Prove at build time the worker can READ the sealed managed config + plugin,
 # and that managed scope is resolved (doctor reports the managed dir).

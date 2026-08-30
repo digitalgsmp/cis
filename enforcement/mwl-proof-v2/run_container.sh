@@ -96,6 +96,13 @@ case "${1:-start}" in
         -v /mnt/projects/hippa-case-management:/workspace/swa-repos/hippa-case-management:ro \
         -v /mnt/projects/cis-v1:/workspace/swa-repos/cis-v1:ro \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
+        -v /mnt/models/huggingface:/opt/models/huggingface:ro \
+        -v cis-agent-brain:/home/worker/.hermes-brain \
+        -v cis-agent-draft:/home/worker/.hermes-draft \
+        -v cis-agent-review1:/home/worker/.hermes-review1 \
+        -v cis-agent-review2:/home/worker/.hermes-review2 \
+        -v cis-agent-menter:/home/worker/.hermes-menter \
+        -v cis-agent-verify:/home/worker/.hermes-verify \
         $ENTRYPOINT_MOUNT \
         $PROFILES_MOUNT \
         -e CIS_BRAIN_API_KEY=cis-brainstorm-gateway-key-2026 \
