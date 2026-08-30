@@ -385,6 +385,50 @@ the commit or only record the objection; is Class 1 approval required or is
 notification enough; do Work Orders live in the repo (versioned with the change)
 or the spine (queryable).
 
+### 1.11 An API refusal is reported as the model misbehaving
+**Found 2026-08-30 by `run-4bbeea78056e2607-1788121167`, the first code-writing
+run.** It escalated with:
+
+> *"Review incomplete: Review1 (ambiguous output (no FINAL_JSON, no text-scan
+> signal)), Review2 (ambiguous output ...) — ESCALATE"*
+
+That diagnosis is wrong. Both reviewers returned exactly 152 characters:
+
+> *"HTTP 402: This request would exceed your available credits given your current
+> in-flight requests. Retry after in-flight requests settle, or add credits."*
+
+**The OpenRouter account was out of credits.** Consistent with the provider
+split — brain (DeepSeek) succeeded on the same run; review1 and review2
+(OpenRouter) both failed.
+
+**The mechanism:** the Hermes gateway returned **HTTP 200** with the billing
+error as the assistant's message content. `_call_agent` calls
+`raise_for_status()` and so never saw an error status; from the relay's side an
+agent successfully returned a short message. The relay then tried to parse a
+review out of it, found no FINAL_JSON, **retried twice**, and escalated blaming
+the model.
+
+**Three distinct defects, and the third is the expensive one:**
+1. An infrastructure refusal is stored in `agent_trajectories.output_text` as if
+   it were model output. The trajectory record is now false.
+2. It is retried. A 402 is not transient; retrying cannot succeed and each
+   attempt is another request.
+3. **The operator is told the wrong thing.** Eric reads "ambiguous output, no
+   FINAL_JSON" and reasonably concludes the model or the parser is broken. The
+   actual fix is "top up the account". Nothing anywhere on the run says so.
+   Failure mode 11 — and worse than silence, because it points at the wrong
+   component.
+
+**Not fixable by string-matching "HTTP 402".** The real repair is that the
+gateway must not launder an upstream error into a 200 completion. Until then the
+relay can at least classify a short output that parses as an API error as
+INFRASTRUCTURE_FAILURE, refuse to retry it, and escalate with the actual reason.
+
+**Blocks further pipeline runs** until credits are added — every run that needs
+a reviewer or the verifier will fail this way.
+*Related:* 1.3 (no failure routing), 1.4 (retry policy retries the
+non-retryable), 2.10 (silent-by-design).
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and

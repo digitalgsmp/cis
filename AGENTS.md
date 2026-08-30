@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-30 18:14 UTC | Run: run-aa2fbe35e422 | Latest pipeline: run-e70293544935a92e-1787973534
+Generated: 2026-08-30 20:43 UTC | Run: run-b2419d7b1ba3 | Latest pipeline: run-4bbeea78056e2607-1788122307
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-4bbeea78056e2607-1788122307] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788121167] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
 - [run-e70293544935a92e-1787973534] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — CONSENSUS_REACHED (0 rounds, 2026-08-30T17:53:39.841076+00:00)
 - [run-e70293544935a92e-1787972762] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
 - [run-7207d316ce5a50a5-1787932828] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — CONSENSUS_REACHED (0 rounds, 2026-08-28T18:23:38.298022+00:00)
-- [run-7207d316ce5a50a5-1787927000] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
-- [run-7207d316ce5a50a5-1787924769] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-e70293544935a92e-1787973534
