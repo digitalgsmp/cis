@@ -467,6 +467,42 @@ reached consensus, so agreement is indistinguishable from silence. A reviewer
 that agreed *and said why* should not render identically to one that said
 nothing. *Related:* 1.8, 2.9, and 1.1's record of what the reviewers caught.
 
+### 1.13 A timed-out agent reports no cause, and no warning precedes it
+**Found 2026-08-30 by `run-4bbeea78056e2607-1788122307`**, which died as:
+
+> *"DRAFT failed: Gateway draft (port 8645) failed after retry: "*
+
+Nothing after the colon. **`str()` on an httpx timeout is the empty string** —
+verified for `ReadTimeout`, `ConnectTimeout` and `ConnectError`. The relay
+formats `f"...failed after retry: {e}"`, so the operator is told neither the
+cause nor even which *kind* of failure it was. A connect timeout, a read timeout
+and a refused connection are indistinguishable in the record. The gateway was
+healthy on the next check, so the message also implies the wrong culprit.
+
+**No warning precedes it.** The heartbeat reported `note='working'` at
+`elapsed=600s`, with `idle=278s` against a `STALL_SECONDS` of 300 — 22 seconds
+short of saying anything. There is no countdown against the timeout itself, so
+"working normally" and "about to be killed" render identically. Compare 1.7:
+liveness is inferred from gateway log activity, not from the call.
+
+**And the budget looks wrong for the work.** `AGENT_TIMEOUTS` gives verify 1500s
+and menter 1200s — both raised after they timed out doing real work, with a
+comment recording why — while draft is still at 300s. This was the first task
+asking draft to reason about modifying existing code under six constraints and
+four non-goals. It exceeded 300s twice.
+
+**Three separate fixes:**
+1. Format exceptions as `{type(e).__name__}: {e}` and include the timeout that
+   was hit. An empty message is worse than none — it reads like truncation.
+2. Warn as a deadline approaches, not only when a log goes quiet. The heartbeat
+   knows `elapsed`; it does not know the limit.
+3. Decide draft's budget deliberately. Either raise it with a comment recording
+   the evidence, as verify's was, or treat >300s as a signal the task is too
+   large and should be split — but decide, rather than leaving it at a default
+   that was never chosen for this.
+
+*Related:* 1.11 (a failure reported as the wrong thing), 1.7, 1.4.
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
