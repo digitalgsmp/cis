@@ -1,0 +1,377 @@
+# UNIFIED BUILD LIST — what is NOT in the code
+
+**Date:** 2026-08-29
+**Replaces:** `docs/NEXT_SESSION.md` as the working list. That file keeps its
+Goal, Method and Decisions-to-Protect sections — those are not tasks.
+
+## The test used to build this list
+
+Eric, 2026-08-29:
+
+> *"I don't care what the files say. All that is important is what issue the
+> files addressed, if they are valid concerns that are still relevant to the
+> pipeline functioning. If they are not currently in the code, it goes on the
+> list."*
+
+So every item below was checked **against the running code**, not against a
+document. A specification saying something exists is not evidence. A contract
+marked LOCKED is not evidence. The only question asked was: **is this capability
+present in the code today?**
+
+Where a spec exists it is noted as a *reference for when we build*, never as a
+reason to demote or skip an item. Final evaluation of each item happens when we
+reach it.
+
+**Sources of the issues:** the knowledge base (6,578 mined statements ->
+1,261 clusters, read individually), the filesystem (~120 distinct specs found by
+reading content, not filenames), and 9 defects found by running commands on
+2026-08-29.
+
+---
+
+# TIER 0 — trust preconditions
+
+### 0.1 Foreign-key enforcement is off almost everywhere
+**In code:** `PRAGMA foreign_keys = ON` appears in **5 places** — three
+`eric_gate` tools, its tests, `gate_db_state.py`. `pipeline_relay.py`,
+`runtime/api/relay.py` and every ingest tool open connections without it.
+SQLite enforces per connection, and the factory creates a new connection per
+call.
+**Measured damage:** 80 `foreign_key_check` violations in the live spine.
+`decision_trails` rows point at `workflow_runs_old`, a table that no longer
+exists — and those are the rows the Eric Gate briefing reads. 15
+`eric_gate_approvals` reference goal_references that do not exist.
+**Do this first — one fix at the factory closes it everywhere.**
+
+### 0.2 Secrets can reach agents through KB results — LIVE TODAY
+**Checked in code:** `SecretFilterPipeline` exists in
+`runtime/mcp_bridge/chroma_index.py` with patterns for private keys, bearer
+tokens, JWTs, `sk-` API keys, AWS keys, GitHub tokens and generic
+`API_KEY=`/`SECRET=` assignments. It is instantiated as `self._filter` and used
+**only inside `index_from_spine()`**, which writes different collections
+(`cis_sessions`, `cis_deliberations`, …).
+
+- `pipeline_relay.py` KB_CONTEXT path: **0 references to the filter**
+- `tools/ask_history.py`: no filter
+- The two gates written to catch this — `gate_chroma_no_secrets_in_results` and
+  `gate_chroma_secret_filter` — **have never fired** (see 2.15)
+- **A live query for "api key token password secret" returned 2 secret-shaped
+  strings in the top 20 results.** Placeholders this time
+  (`SECRET='PASTE_NEW_SECRET_HERE'`), which proves the path, not the payload.
+
+**Introduced/worsened 2026-08-29 by me:** `rebuild_vector_index.py`,
+`ingest_claude_code_sessions.py`, `ingest_hermes_sessions_v2.py` and
+`rechunk_for_embedding.py` all embed directly and bypass the filter. 451,167
+chunks were indexed without it, and the container was then wired to query them.
+
+**Two fixes needed:** filter at query time before results enter an agent prompt,
+and filter at index time in the ingest tools.
+
+### 0.3 Chroma concurrency arbitration
+**In code:** nothing. The container queries Chroma live; a host ingest during a
+run corrupts the read — proven: *"Error deserializing pickle file: trailing
+bytes found"*. Needs a lock, a maintenance window, or ingest moved inside.
+**Blocks:** every item that runs an ingest.
+
+---
+
+# TIER 1 — blocks a run completing end to end
+
+### 1.1 Prove a run completes past the gate
+No run has ever gone intake -> deliberation -> gate -> implement -> verify ->
+done. Furthest reached: ERIC_GATE. Depends on 1.2.
+
+### 1.2 Approve or close run-e70293544935a92e-1787973534  — **Eric's decision**
+Briefing renders, hash stable, goal_reference 12 exists. Two 2026-08-22
+throwaways also sit at the gate (`"test"`, `"smoke check"`) — close those.
+
+### 1.3 Failure routing — NOT IN CODE
+**Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
+`contradiction_detected` appear **0 times** in `pipeline_relay.py` and
+`runtime/api/relay.py`.
+Today a BLOCK-mode guardrail kills the run and an ADVISORY one is ignored.
+There is no third outcome, no escalation ladder, no defined next action per
+failure state.
+*Reference when building:* Execution Layer Contract §21.
+
+### 1.4 Retry and escalation for agent failures — NOT IN CODE
+**Checked:** the only retry in the relay is `_db_retry` (database contention,
+3 attempts) and `MAX_BRAIN_ROUNDS=2` / `MAX_DRAFT_ROUNDS=3`, which are
+deliberation round caps. There is one repair prompt for malformed output.
+**No retry on agent failure, no timeout policy, no escalation after N attempts.**
+*Reference:* Execution Layer Contract §19-20.
+
+### 1.5 Commit route — approved work does not become canonical
+**Checked:** `pipeline_relay.py` is the only thing in `runtime/` that writes to
+`knowledge_messages`. Nothing promotes an approved run's *output artefact* into
+the knowledge layer as a canonical record.
+A run is approved, the implementer writes a file, and the file is just a file.
+
+### 1.6 Prompt size is never measured — NOT IN CODE
+**Checked:** `agent_trajectories.tokens_in > 0` on **0 of 479** rows.
+Across 469 calls the prompts averaged 12k chars, 62 exceeded 20k, max 63,802 —
+and the three largest went to VERIFICATION, the phase whose job is checking
+claims. Over-length input fails silently.
+
+### 1.7 Stream agent completions
+**In code:** nothing. Liveness is inferred from a gateway log that menter never
+writes during a call (elapsed 180s / idle 180s). Gateways support streaming;
+token cost is zero.
+
+---
+
+# TIER 2 — blocks trusting what a run produces
+
+### 2.1 Twenty-three guardrails observe and cannot act
+**Checked in code:** 30 guardrail functions are called on every run. **7 are
+BLOCK mode** — `capability_claim_verifier`, `claim_action_verifier`,
+`evidence_hash_chain`, `intent_compliance`, `loop_detector`,
+`output_schema_validator`, `path_contract_validator`. The other 23 report and
+the run continues.
+**Highest-value item on this list. The detection code already exists.** Audit
+all 30 and decide per guardrail whether its default should enforce.
+
+### 2.2 Four guardrails were never written
+**Checked:** absent from `guardrails.py`.
+- **Honesty Reporter** — PASS/SKIP/FAIL counters in every gate script. Failure
+  mode 11, silent gate failures.
+- **Model Diversity Enforcement** — config check that a model is not reviewing
+  its own work. Failure mode 16, single-model blind spots. This is a config
+  comparison, not research.
+- Position Randomizer — positional bias in option ordering.
+- Example Diversifier — anchoring on prompt examples.
+
+### 2.3 `sequential_review` is dead code
+**Checked:** defined in `guardrails.py`, never appended to any report. It is the
+guardrail against shared blind spots between reviewers, and it never runs.
+
+### 2.4 No validation layer — 23 independent recognitions in the record
+**Checked:** `needs_review` — the quarantine flag — exists in **no table and no
+code**. No validation of `project_id` existence, `source_type` against known
+values, `source_path` before processing, state-transition legality, or
+cross-field consistency. Constraints are declared (224 NOT NULL, 45 CHECK,
+7 UNIQUE, 4 FK) and largely unenforced — see 0.1.
+> *"No validation layer exists for any component — all bug detection is manual."*
+
+### 2.5 No schema versioning or migration — NOT IN CODE
+**Checked:** `schema_versions`, `schema_migrations`, `migration_log` — **all
+three tables absent**. This already caused damage: the `workflow_runs_old`
+references in 0.1 are a rename that left dependent rows orphaned.
+
+### 2.6 Tool calls are not captured
+**Checked:** `agent_trajectories` records prompt and output only. No
+`tool_calls` table. Nothing records which files an agent read.
+**Blocks 2.7 and any evidence-based gate.**
+
+### 2.7 Never-guess gate — an agent may not assert what it did not open
+Needs 2.6. `capability_claim_verifier` already exists in BLOCK mode and can be
+extended rather than replaced.
+*Reference:* the record already designed a `CapabilityClaim` object with
+validation status, provenance and correction history.
+
+### 2.8 Verification results change nothing
+**Checked:** `gate_outcomes` (4,375 rows) IS read — but only to *display*:
+a FAIL list for one run, and a recent-200 listing. Nothing aggregates across
+runs, nothing feeds back into behaviour, nothing detects a guardrail that
+never fires or always fires.
+Six loops are named in the record — correction, governance,
+retrieval-improvement, archive-learning, continuity/memory, project-output.
+None exist.
+
+### 2.9 Conflict register records but never blocks
+**Checked:** `active_blockers` has 7 rows; six files read it — the briefing
+builder, the export generator, the session-init scripts. **None blocks on it.**
+The original rule was *"session close is blocked if unresolved conflicts exist."*
+
+### 2.10 Silent-by-design code patterns — now measured
+**Checked across `runtime/` (excluding venv and rails):**
+- **445** broad `except` blocks
+- **62** of them are `except Exception: pass` — the exact pattern that hid
+  `(KB search unavailable)` for 99 agent calls
+
+That is the scope of the audit. Mechanical fix, bounded, and every one is a
+place where the system can fail without saying so.
+
+### 2.11 No contract between a CIS task and an agent task
+**In code:** `pipeline_relay.py` builds a prompt per role with no contract
+governing size, required sections, or what the role is expected to produce.
+This is why 1.6 (unmeasured prompts) and 3.9 (draft scored as code) both exist.
+
+### 2.12 Primer and runtime diverge silently
+**Two live instances in code/data today:** `gateway_status_qwen` claims Qwen is
+2nd reviewer on 8644 — the container uses review1/8643 and review2/8647.
+`CLAUDE.md` names `runtime/spine.db` as the spine; that file is 0 bytes.
+Nothing detects the divergence. Fix the class, not the two cases.
+
+### 2.13 Runs are not linked to what they advance
+**Checked:** `build_plan_nodes.workflow_run_id` is NULL on all 30 rows. The
+Eric Gate briefing's Dependency Node and Tier Advanced fields render blank.
+**Eric's call:** does a run name its DEV-PIVOT at intake, or are repairs marked
+maintenance? Do not let brain infer it.
+
+### 2.15 Thirty-three of fifty-one gate scripts have never fired
+**Checked:** 51 gate scripts exist in `enforcement/mwl-proof-v2/gates/`.
+`gate_outcomes` has recorded 47 distinct names ever. Cross-referencing, **33
+scripts on disk have never executed once.** Not disabled — never called.
+
+The consequential ones, with what they were written to do:
+
+| gate | purpose | maps to |
+|---|---|---|
+| `gate_ui_no_pipeline_bypass` | scans for pipeline module imports that bypass the relay | **2.14, failure mode 9** |
+| `gate_pre_execution_oversight` | *"fires automatically before any execution directive reaches Eric"* | 1.3 |
+| `gate_final_directive_allowed` | blocks FINAL_DIRECTIVE unless Eric approval exists | Eric Gate integrity |
+| `gate_no_docs_only_diff` | *"FAIL any build run whose output is only documents"* | 1.1 — proves a run did real work |
+| `gate_implementation_artifact_present` | implementer actually produced something | 1.1 |
+| `gate_git_state` | git state verification | evidence |
+| `gate_deliberation` | deliberation validity | 2.1 |
+| `gate_drafter_closeout`, `gate_reviewer_closeout`, `gate_closeout_artifact`, `gate_closeout_complete` | closeout enforcement | 2.9 |
+| `gate_chroma_no_secrets_in_results`, `gate_chroma_secret_filter` | **secrets in KB results** | **0.2** |
+| `gate_export_agreement` | artifact count agreement | 3.5 |
+| 13 × `gate_11a_*` / `gate_11b_*` | UI and approval-schema gates | Tier 10/11 UI work |
+
+**Note from git history:** commit `c4ce0d8` — *"Delete 4 irrelevant gates + fix 2
+broken guardrails"* — so gates have been pruned before. Before wiring any of
+these, confirm it is still relevant rather than assuming.
+
+**This is the same shape as 2.1 but worse:** 2.1 is code that runs and cannot
+act; this is code that never runs at all.
+
+### 2.16 `runtime/tier7r/` is an orphaned subsystem
+**Checked:** eight modules — `process_manager.py`, `approval_gate.py`,
+`classifier.py`, `dead_letter.py`, `scope_registry.py`, `work_intent.py`,
+`domain_adapter.py`, plus `adapters/cis_adapter.py` and `adapters/swa_adapter.py`.
+**Nothing in `runtime/abstraction/` or `runtime/api/` imports any of it.**
+
+This is the Tier 7R Intent-to-Workflow architecture — the thing
+`build_plan_nodes` marks COMPLETE across nodes 7R.1 through 7R.7. It was built
+and never connected. Decide: wire it, or record it as superseded by
+`pipeline_relay.py` and stop counting it as complete.
+
+### 2.14 Operator routes execute runtime scripts directly
+Failure mode 9 in CLAUDE.md. **Verify current state before building** — a 2026-05-01
+build manifest records this as eliminated, so the recognition may be stale.
+
+---
+
+# TIER 3 — independent defects, no dependants
+
+- **3.1** `ask_history` does not merge FTS5 with vector search. The relay does;
+  `ask_history` does not.
+- **3.2** No pre-delete or archive-policy validation. **Checked: absent.** On
+  2026-08-29 a 4.9GB Chroma segment directory was deleted after a manual ad-hoc
+  check. Nothing but care stood between that and deleting something live.
+- **3.3** Container pre-flight checks are partial. **Checked:** `run_container.sh`
+  has 3 file/directory tests — one hand-written case for the secrets file being a
+  directory. No systematic mount verification, and mounts were added today.
+- **3.4** Two manifest directories, canonical status unresolved.
+  `logs/manifests/` vs `runtime/manifests/`, with an unenforced "do not write
+  there".
+- **3.5** Export gate warns "expected 12 artifacts, found 13" on every commit.
+- **3.6** `projects.id` is `'cis'`, `build_plan_nodes.project_id` is `'CIS'`.
+  A plain join returns 0 of 30 rows; `relay.py:1058` papers over it with
+  COLLATE NOCASE.
+- **3.7** `data/` is gitignored — `container_sessions/` and `drive_imports/`
+  are not in version control.
+- **3.8** Memory store has no governance: no access control, no audit trail, no
+  deletion capability, no lifecycle management, no retention policy.
+- **3.9** `effort_metric` scores DRAFT by code complexity; draft writes prose.
+  `guardrails.py:3012` adjusts for brain/review1/review2 and omits draft.
+- **3.10** The seven `SKILL.md` files have never been audited against what the
+  guardrails enforce. `enforcement/mwl-proof-v2/cis-pipeline-architecture/SKILL.md`
+  plus one per role (brain, draft, review1, review2, menter, verify) — **these
+  are what the container agents actually read at runtime**, along with their
+  `references/pitfalls.md`. If an agent is told to do something no gate checks,
+  or a gate checks something no agent was told, that gap is invisible today.
+- **3.11** `cis_kernel/source/architecture_maps/13_RUNTIME_TOPOLOGY.md` claims
+  *"Status: OPERATIONAL — populated from verified runtime truth as of
+  2026-05-05"* and answers *"how does the system actually run?"*. Four months
+  stale, and it is the kind of document 2.12 (primer/runtime divergence) is
+  about. Verify or retire it.
+
+---
+
+# TIER 4 — after the infrastructure works
+
+- **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.
+- **4.2** Container agent history does not reach the KB. State now persists.
+- **4.3** What the container regulates itself vs what needs a human trigger.
+  Approval must never automate.
+- **4.4** No learning loop from approve/reject decisions.
+- **4.5** 601 mined asks -> cards. Hours of local GPU, ~8% yield.
+- **4.6** A hermes agent in these working sessions.
+- **4.7** Role theory into the agents. **Sequencing decision on the record:**
+  agents come after deterministic workflows are stable.
+- **4.8** Archive processing — prose vs software split, Troy's drive excluded.
+
+---
+
+# REFERENCE DOCUMENTS — for when we reach each item, not before
+
+These exist and describe some of the above. **None of them counts as
+implementation.** Their only use is to save design time when we build.
+
+| document | lines | covers |
+|---|---|---|
+| `docs/contracts/CIS_Execution_Layer_Contract_v1.md` | 782 | 1.3, 1.4, 2.4, 2.5 |
+| `docs/DETERMINISTIC_GUARDRAIL_SPECIFICATION.md` | 728 | 2.1, 2.2 — and documents 51 dead gate scripts |
+| `docs/TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md` | 703 | 2.11 |
+| `docs/_audit_eric_model_failures.md` | 110,477 | 2.7 — evidence base |
+| `docs/contracts/CIS_Verification_Layer_Contract_v1.md` | 271 | 2.8 |
+| `docs/contracts/CIS_Automation_Reduction_Contract_v1.md` | 223 | 4.3 |
+| three Phase 0 contracts (source manifest, processing profile, review states) | 688 | 2.4 |
+| `docs/ADRs/ADR-048_Staged_Draft_Intake_Layer.md` | — | 1.5 |
+| `docs/ADRs/ADR-047_SCOPE_PREDRAFT.md` | — | 3.4 |
+| `docs/CIS_CONFLICT_REGISTER.md` | 228 | 2.9 |
+
+---
+
+# HOW TO WORK THIS LIST
+
+Take items in tier order. For each one, at the time you reach it:
+
+1. **Confirm it is still not in the code.** Some of these were checked on
+   2026-08-29 and the code changes.
+2. **Confirm the concern is still valid for the container pipeline.** Several
+   originate from the earlier host application. The function may still matter
+   even when the implementation is gone.
+3. **Read the reference document if one exists** — to save design time only.
+4. **Then decide:** build, adapt, or drop with the reason recorded.
+
+Nothing on this list has been dropped on the strength of a document claiming it
+was done.
+
+---
+
+# COVERAGE — what this list is built from, and what it is not
+
+Stated so the next session knows where the holes are.
+
+**Searched thoroughly:**
+- The knowledge base. 6,578 mined statements (lexical + semantic, 98% non-overlap
+  between the two methods), 1,261 clusters, all read individually.
+- The 51 gate scripts. Cross-referenced against `gate_outcomes`.
+- `guardrails.py`. All 34 specified guardrails checked against implementation,
+  invocation, and BLOCK/ADVISORY mode.
+- ~15 specific capabilities verified directly against the code and schema.
+
+**Searched by content, not filename:** 5,541 documents scanned, 255 duplicate
+copies collapsed, **210 distinct documents scoring as specifications — 132 of
+them (63%) invisible to any filename search.** Tool:
+`tools/find_specs_by_content.py`.
+
+**NOT searched — real holes:**
+- **The archive.** 2,186,884 chunks, deliberately excluded from the semantic
+  index, never mined for issues at all.
+- **The 2,349 short fragments** dropped from mining for being under 45
+  characters. "Not implemented" in a status-table cell is exactly that shape.
+- **110 of 117 `runtime/` Python files.** Surveyed for structure and
+  silent-failure patterns; not read.
+- **The seven `SKILL.md` files** — see 3.10. Highest-value item remaining,
+  because they are the agents' actual instructions.
+- **~200 of the 210 content-identified specification documents.**
+- **Git commit bodies.** 348 commits, 66 mention fix/bug/fail; only subjects
+  were read.
+
+The gate scripts and `guardrails.py` are the parts I would defend. The document
+corpus is sampled, not exhausted.
