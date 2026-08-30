@@ -58,13 +58,27 @@ _PEM_BLOCK = re.compile(
 )
 
 
+# Three or more consecutive lines of nothing but base64 characters. That is what
+# actual key material looks like and what prose never looks like — the test
+# separated the single row carrying a real key body from the 111 rows merely
+# discussing key handling, across all 112 PEM-bearing rows in the KB.
+#
+# It exists so that a row holding real key material is withheld whole, WITHOUT
+# depending on the redaction substitution being correct. That dependency is not
+# hypothetical: the substitution was wrong twice on 2026-08-30 before it was
+# right — first masking only the PEM header and leaving the body beneath it,
+# then leaking a key whose final line was too short for the pattern. A second
+# check that does not share the first one's logic is the point.
+_KEY_BODY = re.compile(r'(?:^[A-Za-z0-9+/=]{20,}[ \t]*$\r?\n?){3,}', re.M)
+
+
 class SecretFilterPipeline:
     """Pre-indexing secret detection and redaction."""
 
     def __init__(self, patterns=None):
         self.patterns = patterns or SECRET_PATTERNS
         self.stats = {"excluded": 0, "redacted": 0, "replaced": 0, "clean": 0}
-        self.display_stats = {"redacted": 0}
+        self.display_stats = {"redacted": 0, "withheld": 0}
 
     def filter_text(self, text):
         """
@@ -125,6 +139,12 @@ class SecretFilterPipeline:
         """
         if not text:
             return text
+        # Withhold the whole record when it carries real key material. Two
+        # independent checks: this one does not rely on the substitutions below
+        # being correct, so a redaction bug cannot expose a key on its own.
+        if _KEY_BODY.search(text):
+            self.display_stats["withheld"] += 1
+            return "(record withheld — contains key material)"
         # Whole-block secrets first: a span replacement on the header alone
         # would leave the key body sitting in the text underneath it.
         if _PEM_BLOCK.search(text):

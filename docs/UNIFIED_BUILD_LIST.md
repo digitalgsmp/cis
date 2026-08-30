@@ -231,6 +231,27 @@ would make it the right call — or it must not be offered at all.
 **(c) The buried recommendation.** The reasoning is present but the reader has
 to assemble the verdict from it. State the verdict first, then the reasoning.
 
+**(d) The false menu.** Options presented as a live choice when one is already
+ruled out by the presenter's own analysis. Observed 2026-08-30: three options
+offered for the secret filter, with *"I would not take this one"* written beside
+the second and a recommendation attached to the third. Eric: *"it seems to me
+there is no choice and I don't know why you are asking — this is another
+dangling option to choose an option that exposes me to a weakened system, blind
+agents and opportunity to miss something anyway."*
+
+Two costs, and the second is the serious one. It spends the reader's attention
+on evaluating something already decided. And it puts a **known-worse option in
+front of someone who cannot independently rank them** — if he picks it, he has
+been walked into a weaker system by the party who knew better. An option the
+analysis has already eliminated is not a choice; it is background, and belongs
+in the reasoning at most.
+
+**The rule:** if the evidence settles it, decide and say why. Only surface a
+choice where two options are genuinely live after the analysis — different
+trade-offs a reasonable person could weigh differently, not one good answer
+padded with alternatives. Eliminated options are stated as eliminated, never
+offered.
+
 **Checkable form for all three:** an output containing a question or a reversal
 offer must have, adjacent to it, enumerated options each carrying a consequence,
 and a stated criterion for choosing between them. Adjacency is part of the

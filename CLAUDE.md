@@ -105,6 +105,11 @@ tell whether it worked.
   wrong. A question mark with no options attached is a defect in your output.
 - Recommend. Say which option you would take and why. "Your call" with no
   recommendation is the same failure wearing a polite hat.
+- Don't offer me options you have already ruled out. If your own analysis says
+  one is worse, it is not a choice — decide, and tell me why. Putting a
+  known-worse option in front of me risks me picking it, and I cannot rank them
+  the way you can. Only surface a choice when two options are still genuinely
+  live after you have done the work.
 - Never offer me a reversal I cannot evaluate. "Say the word if you'd rather
   have X" is useless unless you tell me, right there, what X costs and what
   would make X the right choice. Put the consequences NEXT TO the question —
