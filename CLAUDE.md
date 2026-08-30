@@ -74,7 +74,11 @@ tell whether it worked.
 
 ### Repo
 - Closeout: bash tools/closeout.sh (--check first, it is read-only)
-- Two status docs re-dirty after every commit by design. That is the hook.
+- Six files re-dirty after a commit by design — the pre-commit hook regenerates
+  them. That is the hook working, not a problem to fix. The authoritative list
+  is ALLOWED_DIRTY in tools/closeout.sh; do not keep a second copy here.
+  (This line said "two" until 2026-08-30, while closeout allowed six — the
+  primer/runtime divergence of queue item 2.12, in the instructions themselves.)
 - docs/UNIFIED_BUILD_LIST.md is the task queue. It is the only one.
   Work it in tier order. Confirm an item is still not in the code before
   building it, and record build/adapt/drop with the reason.

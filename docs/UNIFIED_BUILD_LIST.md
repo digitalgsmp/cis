@@ -561,6 +561,64 @@ build manifest records this as eliminated, so the recognition may be stale.
 - **4.7** Role theory into the agents. **Sequencing decision on the record:**
   agents come after deterministic workflows are stable.
 - **4.8** Archive processing — prose vs software split, Troy's drive excluded.
+- **4.10 THE HARNESS SELF-IMPROVEMENT LOOP — Eric's design, 2026-08-30.**
+  *"The pipeline should go through its code and make recommendations for
+  improvements. The pipeline won't be able to modify its own files but it can
+  recommend. Those recommendations are saved in a folder that triggers the
+  Claude API to assess the recommendation and implement it if feasible."*
+
+  **This is already in the record, with sources.** Session
+  `hermes_session/glm-verifier/session_20260709_154626_907a1a`, 9 July 2026:
+  - Lilian Weng, *"Harness Engineering for Self-Improvement"*, 4 July 2026. The
+    RSI roadmap: instruction prompts -> structured context -> workflow ->
+    harness code -> optimizer code.
+  - **HASE**, arXiv:2607.03935, *"Harness-Aware Self-Evolving: Co-Evolving Model
+    Weights, Harness, and Task Solutions"* — Luo et al., HKU / Jiutian Research.
+    Headline: Qwen3-8B with an evolved harness matches GPT-OSS-120B.
+  - The assessment already concluded **CIS is a harness** in Weng's sense — the
+    relay, the six agents, the deliberation protocol, the gates, the spine.
+
+  **Eric's design already answers the two hazards the record raised**, which is
+  why it is worth building rather than re-litigating:
+  - *"Having the pipeline change its own code while it's the thing being trusted
+    to check work is a genuine circularity."* Recommend-only removes it.
+  - HASE's own rule: **the evaluator must be separate from the builder,
+    otherwise it optimizes the referee instead of the game.** A separate
+    implementer via the Claude API is that separation.
+
+  **THE CONSTRAINT THAT MUST BE BUILT IN, from HASE.** Split the harness in two
+  and treat them differently:
+  - **Guidance** — agent prompts, overlays, retrieval, memory. Safe to
+    recommend against freely; it cannot make a wrong answer right.
+  - **Evaluation** — guardrails, gate scripts, the verifier, the Eric Gate.
+    **Off limits to self-recommendation.** A system that can propose edits to
+    its own scorer will eventually propose the edit that makes it score well.
+  CIS currently conflates the two, so the boundary has to be drawn before the
+  loop can safely exist.
+
+  **PREREQUISITE, and it is the real gate: 1.1.** The loop runs on evidence from
+  completed runs — HASE's mismatch set is *proxy said good, oracle said bad*,
+  which here is *Menter said done, Verify said fail*. **No run has ever gone end
+  to end**, so today the loop would have nothing to reason from and would
+  recommend from the code's appearance rather than its behaviour. That is
+  guessing with extra steps.
+
+  **Cheapest first step, and the record calls it out as highest value / lowest
+  cost:** prompts are hardcoded in `pipeline_relay.py`. Move them to versioned
+  files, add `prompt_version` and a run-outcome record, and the mismatch data of
+  2.8 starts accumulating on its own. That work is useful whether or not the
+  full loop is ever built.
+
+  **Related and already listed:** 2.8 (verification results change nothing — the
+  mismatch set is exactly this), 4.4 (no learning loop from approve/reject),
+  2.11 (no CIS-task-to-agent-task contract), 1.6 (prompt size unmeasured).
+  **Sequencing already on the record:** agents and self-evolution come after the
+  deterministic layer is stable — see Decisions to Protect.
+
+  Not applicable from HASE, checked rather than assumed: RL weight training
+  (GRPO/PPO, 8×H20) and evolutionary search over hundreds of candidate harnesses
+  per phase. Both need infrastructure CIS does not have.
+
 - **4.9** The documentation-gap loop, named in the record and still running:
   *"Undocumented configuration -> failure -> recovery -> no documentation ->
   future failure (negative loop)."* This list is itself evidence — an earlier
