@@ -46,7 +46,16 @@ AGENT_TIMEOUTS = {
     "verify": 1500,  # 25 min — runs evidence commands against a real diff
     "menter": 1200,  # 20 min — builds code
     "brain": 300,    # 5 min — xhigh reasoning
-    "draft": 300,    # 5 min — xhigh reasoning
+    # Raised 2026-08-30 from 300 to 900: draft timed out twice on
+    # run-4bbeea78056e2607-1788122307, the first task asking it to spec a change
+    # to existing code under six constraints and four non-goals. Brain finished
+    # the same intent in ~180s; draft has the harder half, because it must
+    # produce something implementable rather than an understanding. verify and
+    # menter were raised past this ceiling for the same reason and are recorded
+    # above. 300 was a default nobody chose for this kind of work.
+    # If draft exceeds 900 the task is too large and should be split — that is a
+    # signal about scope, not a reason to raise it again. (BUILD LIST 1.13)
+    "draft": 900,    # 15 min — specs a change against real code
 }
 REVIEWER_RETRY_TIMEOUT = 180
 HEARTBEAT_SECONDS = 60      # how often a working agent reports in
