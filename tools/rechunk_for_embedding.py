@@ -107,7 +107,7 @@ def main():
     client = coll = None
     if not args.no_embed:
         sys.path.insert(0, "/mnt/projects/cis/runtime")
-        from mcp_bridge.chroma_index import ChromaClient
+        from mcp_bridge.chroma_index import ChromaClient, filter_for_index
         client = ChromaClient()
         coll = client._client.get_collection("knowledge_messages")
 
@@ -151,7 +151,12 @@ def main():
             # and the add threw. SQLite had already been committed by then, which
             # left those rows with no embedding. Sub-batch the add on its own
             # terms so row batching and Chroma limits stay independent.
-            embs = client._embedding.embed(new_docs)
+            # Secrets never enter the store. Filtered BEFORE the encode so the
+            # id/doc/meta/embedding lists stay index-aligned through the
+            # sub-batching below. (UNIFIED BUILD LIST 0.2)
+            new_ids, new_docs, new_meta, _dropped = filter_for_index(
+                new_ids, new_docs, new_meta)
+            embs = client._embedding.embed(new_docs) if new_docs else []
             for j in range(0, len(new_ids), CHROMA_ADD_MAX):
                 coll.add(
                     ids=new_ids[j:j + CHROMA_ADD_MAX],

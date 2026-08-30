@@ -240,7 +240,7 @@ def main():
 
     # Chroma — the store ask_history actually queries.
     sys.path.insert(0, "/mnt/projects/cis/runtime")
-    from mcp_bridge.chroma_index import ChromaClient
+    from mcp_bridge.chroma_index import ChromaClient, filter_for_index
 
     print("embedding into Chroma (local model, no network)...")
     client = ChromaClient()
@@ -251,15 +251,19 @@ def main():
         batch = rows[i:i + 1000]
         ids = row_ids[i:i + 1000]
         texts = [r[0] for r in batch]
+        # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+        _ids, texts, _metas, _dropped = filter_for_index(
+            [f"km_{rid}" for rid in ids], texts,
+            [{"source": SOURCE, "role": r[2], "source_key": r[3]} for r in batch])
         # Batched encode — 7x faster than embed_single per text (see
         # tools/rechunk_for_embedding.py for the measurement).
-        coll.add(
-            ids=[f"km_{rid}" for rid in ids],
-            documents=texts,
-            embeddings=client._embedding.embed(texts),
-            metadatas=[{"source": SOURCE, "role": r[2], "source_key": r[3]}
-                       for r in batch],
-        )
+        if _ids:
+            coll.add(
+                ids=_ids,
+                documents=texts,
+                embeddings=client._embedding.embed(texts),
+                metadatas=_metas,
+            )
         added += len(batch)
         print(f"  {added}/{len(rows)}")
 

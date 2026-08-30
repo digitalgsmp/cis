@@ -40,12 +40,31 @@ SECRET_PATTERNS = [
 ]
 
 
+# A PEM header is only the first LINE of the secret; the key itself is the body
+# below it. Index-time filtering drops the whole row so that never mattered, but
+# a read-time span replacement on the header alone leaves the key material in
+# place — caught by testing the redaction on 2026-08-30 rather than trusting it.
+# Matches to the END marker where there is one, otherwise across the base64 body.
+# The no-END branch consumes whole LINES made only of base64 characters. A first
+# attempt required 16+ chars per line and leaked the tail of a key whose last
+# line was 12 — chunking splits keys mid-block, so the truncated case is the
+# common one, not the exotic one. Requiring the line to END after the base64 run
+# is what keeps prose out: a sentence contains spaces and cannot match.
+_PEM_BLOCK = re.compile(
+    r'-----BEGIN[^-\n]*-----'
+    r'(?:.*?-----END[^-\n]*-----'
+    r'|(?:[ \t]*\r?\n[A-Za-z0-9+/=]+(?=\r?\n|$))+)',
+    re.DOTALL,
+)
+
+
 class SecretFilterPipeline:
     """Pre-indexing secret detection and redaction."""
 
     def __init__(self, patterns=None):
         self.patterns = patterns or SECRET_PATTERNS
         self.stats = {"excluded": 0, "redacted": 0, "replaced": 0, "clean": 0}
+        self.display_stats = {"redacted": 0}
 
     def filter_text(self, text):
         """
@@ -87,6 +106,39 @@ class SecretFilterPipeline:
         self.stats["clean"] += 1
         return text, "clean"
 
+    def redact_for_display(self, text):
+        """Mask secrets in text that is about to be SHOWN, never stored.
+
+        filter_text() is the index-time filter: its "exclude" patterns drop the
+        whole row so a secret never enters the store. That is right for a write
+        and wrong for a read. At query time the row is already stored — refusing
+        to display it protects nothing that masking would not, and it costs the
+        reader the surrounding material.
+
+        Measured 2026-08-30: 112 rows in the KB carry a PRIVATE KEY header and
+        111 of them are agents DISCUSSING key handling, with no key body. Under
+        the exclude rule those 112 vanish from every search result, so asking
+        the pipeline how to handle secrets safely would return nothing.
+
+        So: every pattern redacts here, none excludes. Always returns a string.
+        Stats are kept separately so index-time counters stay meaningful.
+        """
+        if not text:
+            return text
+        # Whole-block secrets first: a span replacement on the header alone
+        # would leave the key body sitting in the text underneath it.
+        if _PEM_BLOCK.search(text):
+            text = _PEM_BLOCK.sub("[REDACTED KEY BLOCK]", text)
+            self.display_stats["redacted"] += 1
+        for pattern, _action, _label in self.patterns:
+            if pattern.search(text):
+                # \1 is the key name in the generic KEY=VALUE pattern; the other
+                # patterns have no groups, so a plain marker is used for them.
+                repl = r"\1=[REDACTED]" if pattern.groups else "[REDACTED]"
+                text = pattern.sub(repl, text)
+                self.display_stats["redacted"] += 1
+        return text
+
     def filter_batch(self, texts):
         """
         Filter a batch of text strings. Returns list of (index, filtered_text,
@@ -101,6 +153,57 @@ class SecretFilterPipeline:
     def reset_stats(self):
         """Reset statistics counters."""
         self.stats = {"excluded": 0, "redacted": 0, "replaced": 0, "clean": 0}
+
+
+# Shared instance for read paths. Deliberately at module level and dependency-
+# free: everything above this line uses only the standard library, and chromadb
+# is imported lazily inside ChromaClient, so a caller with no chromadb (the
+# container, until the image ships it) can still import and use this.
+_DISPLAY_FILTER = SecretFilterPipeline()
+
+
+def filter_for_index(ids, documents, metadatas=None):
+    """Apply the index-time filter to a batch about to be embedded and stored.
+
+    The write-side counterpart to redact_secrets(). Excluded rows are DROPPED
+    here rather than masked — at index time the choice is whether to store the
+    material at all, and a private key has no business in the store in any form.
+    Redact/replace rows are kept with the secret masked.
+
+    Every ingest tool must call this before coll.add(). index_from_spine() has
+    filtered since Tier 9, but the tools that wrote the corpus never went
+    through it: rebuild_vector_index, ingest_claude_code_sessions,
+    ingest_hermes_sessions_v2, rechunk_for_embedding and sync_missing_embeddings
+    all embed directly, and the 451,167 chunks indexed on 2026-08-29 went in
+    unfiltered. (UNIFIED BUILD LIST 0.2)
+
+    Returns (ids, documents, metadatas, dropped_count) with the three lists
+    still index-aligned, so embeddings computed from the returned documents
+    still line up.
+    """
+    keep_ids, keep_docs, keep_metas = [], [], []
+    dropped = 0
+    for i, doc in enumerate(documents):
+        filtered, action = _DISPLAY_FILTER.filter_text(doc)
+        if action == "excluded":
+            dropped += 1
+            continue
+        keep_ids.append(ids[i])
+        keep_docs.append(filtered)
+        if metadatas is not None:
+            keep_metas.append(metadatas[i])
+    return keep_ids, keep_docs, (keep_metas if metadatas is not None else None), dropped
+
+
+def redact_secrets(text):
+    """Mask secret-shaped strings in text about to be shown to an agent or Eric.
+
+    The one call every read path uses. Until 2026-08-30 the filter existed but
+    ran only at index time, so nothing stood between a stored secret and an
+    agent prompt: 11 of 100 live keyword results carried secret-shaped strings
+    and the two gates written to catch it had never fired.
+    """
+    return _DISPLAY_FILTER.redact_for_display(text)
 
 
 # ── 2. EmbeddingPipeline ──────────────────────────────────────────

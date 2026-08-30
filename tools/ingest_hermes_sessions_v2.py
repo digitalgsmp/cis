@@ -148,7 +148,7 @@ def main():
 
     if not args.no_embed:
         sys.path.insert(0, "/mnt/projects/cis/runtime")
-        from mcp_bridge.chroma_index import ChromaClient
+        from mcp_bridge.chroma_index import ChromaClient, filter_for_index
         client = ChromaClient()
         coll = client._client.get_collection("knowledge_messages")
     else:
@@ -171,10 +171,14 @@ def main():
 
         if coll is not None:
             for i in range(0, len(new_ids), 200):
+                # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+                _i, _d, _m, _dropped = filter_for_index(
+                    new_ids[i:i + 200], docs[i:i + 200], metas[i:i + 200])
+                if not _i:
+                    continue
                 # Batched encode — 7x faster than per-text embed_single.
-                coll.add(ids=new_ids[i:i + 200], documents=docs[i:i + 200],
-                         metadatas=metas[i:i + 200],
-                         embeddings=client._embedding.embed(docs[i:i + 200]))
+                coll.add(ids=_i, documents=_d, metadatas=_m,
+                         embeddings=client._embedding.embed(_d))
 
         removed = 0
         if args.replace and old_ids:

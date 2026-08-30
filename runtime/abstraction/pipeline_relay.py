@@ -181,6 +181,35 @@ def _breaker_is_tripped(role: str) -> bool:
     return True
 
 
+# ── Secret Filtering on Read ───────────────────────────────────────────
+
+def _redact_secrets(text: str) -> str:
+    """Mask secret-shaped strings before KB material enters an agent prompt.
+
+    SecretFilterPipeline has existed since Tier 9 but ran only at index time,
+    inside index_from_spine(). Nothing filtered on the way OUT, so a secret
+    stored by any other route reached agents unchanged — and the 451,167 chunks
+    embedded on 2026-08-29 went in through tools that bypassed the filter too.
+    Measured 2026-08-30: 11 of 100 live keyword results carried secret-shaped
+    strings. (UNIFIED BUILD LIST 0.2)
+
+    Imported lazily, matching how ChromaClient is imported below: mcp_bridge is
+    on the path at run time but not necessarily at import time. chroma_index
+    itself needs only the standard library — chromadb is imported inside
+    ChromaClient — so this works in the container whether or not chromadb ships.
+
+    FAILS CLOSED. If the filter cannot be loaded the text is withheld rather
+    than passed through, and the reason is stated in its place. Passing it
+    through would be exactly the silent failure this item exists to close.
+    """
+    try:
+        from mcp_bridge.chroma_index import redact_secrets
+    except Exception as e:
+        return (f"(KB content withheld — secret filter unavailable: "
+                f"{type(e).__name__})")
+    return redact_secrets(text)
+
+
 # ── Database Helpers ──────────────────────────────────────────────────
 
 def _db_connect(db_path: str = DB_PATH) -> sqlite3.Connection:
@@ -717,6 +746,12 @@ def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
     seen_previews = set()
 
     def _add_hit(source, content):
+        # Mask secrets before anything from the KB enters an agent prompt. Both
+        # the keyword and the semantic branch funnel through here, so this is
+        # the whole KB_CONTEXT path in one place. The filter existed since Tier
+        # 9 but ran only at index time, and the 451,167 chunks indexed on
+        # 2026-08-29 bypassed even that. (UNIFIED BUILD LIST 0.2)
+        content = _redact_secrets(content)
         preview = (content[:300] + "...") if len(content) > 300 else content
         key = preview[:120]
         if key in seen_previews:
@@ -1268,10 +1303,12 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
         except Exception as e:
             results.append(f"\n## Current Research (web)\n(Search error: {e})")
 
+    # Everything pre-discovery found — KB rows, prior trajectories, filesystem,
+    # web — is joined here and nowhere else, so one call covers the whole path.
     return (
         _build_soul_document(conn, role, intent, run_id)
         + "\n\n[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
-        + "\n".join(results)
+        + _redact_secrets("\n".join(results))
         + _consume_interjections(conn, run_id, phase)
         + "\n\n[END PRE-DISCOVERY — now produce your output]"
     )

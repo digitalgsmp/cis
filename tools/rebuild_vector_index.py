@@ -76,7 +76,7 @@ def main():
         return 0
 
     sys.path.insert(0, "/mnt/projects/cis/runtime")
-    from mcp_bridge.chroma_index import ChromaClient
+    from mcp_bridge.chroma_index import ChromaClient, filter_for_index
     client = ChromaClient()
 
     print("\ndropping the old collection...")
@@ -93,6 +93,10 @@ def main():
 
     def flush():
         nonlocal ids, docs, metas, done
+        if not ids:
+            return
+        # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+        ids, docs, metas, _dropped = filter_for_index(ids, docs, metas)
         if not ids:
             return
         coll.add(ids=ids, documents=docs, metadatas=metas,

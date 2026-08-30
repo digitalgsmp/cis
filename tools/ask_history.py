@@ -4,7 +4,7 @@
 # Usage: python3.12 tools/ask_history.py "your question" [top_k]
 import sys, os
 sys.path.insert(0, "/mnt/projects/cis/runtime")
-from mcp_bridge.chroma_index import ChromaClient
+from mcp_bridge.chroma_index import ChromaClient, redact_secrets
 q = sys.argv[1]
 k = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 c = ChromaClient()
@@ -45,6 +45,9 @@ if not picked:
     picked = [((m or {}).get("source", "?"), d)
               for d, m in zip(r["documents"][0], r["metadatas"][0])][:k]
 
+# Mask secrets on the way out. The index-time filter never ran over most of this
+# corpus — the ingest tools bypass it — so the only reliable place to catch a
+# secret is here, between the store and a reader. (UNIFIED BUILD LIST 0.2)
 for src, d in picked:
     print(f"[{src}]")
-    print(d[:900]); print("===")
+    print(redact_secrets(d)[:900]); print("===")

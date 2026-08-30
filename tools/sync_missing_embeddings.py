@@ -69,7 +69,7 @@ def main():
         return 0
 
     sys.path.insert(0, "/mnt/projects/cis/runtime")
-    from mcp_bridge.chroma_index import ChromaClient
+    from mcp_bridge.chroma_index import ChromaClient, filter_for_index
     client = ChromaClient()
     coll = client._client.get_collection("knowledge_messages")
 
@@ -77,11 +77,17 @@ def main():
     for i in range(0, len(rows), ADD_MAX):
         batch = rows[i:i + ADD_MAX]
         docs = [r[1] for r in batch]
+        # Secrets never enter the store. (UNIFIED BUILD LIST 0.2)
+        _ids, docs, _metas, _dropped = filter_for_index(
+            [f"km_{r[0]}" for r in batch], docs,
+            [{"source": r[2], "role": r[3] or "",
+              "source_key": r[4] or ""} for r in batch])
+        if not _ids:
+            continue
         coll.add(
-            ids=[f"km_{r[0]}" for r in batch],
+            ids=_ids,
             documents=docs,
-            metadatas=[{"source": r[2], "role": r[3] or "",
-                        "source_key": r[4] or ""} for r in batch],
+            metadatas=_metas,
             embeddings=client._embedding.embed(docs),
         )
         done += len(batch)
