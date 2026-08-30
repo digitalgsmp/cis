@@ -280,11 +280,16 @@ def main():
         test("8b - Veto row exists with rationale", 
              row is not None and row["rationale"] == "Test veto rationale")
         wf_row = conn.execute(
-            "SELECT eric_approved_at FROM workflow_runs "
+            "SELECT eric_approved_at, status FROM workflow_runs "
             "WHERE id = ?", ("test-consensus-001",),
         ).fetchone()
         test("8c - Veto leaves eric_approved_at NULL",
              wf_row is not None and wf_row["eric_approved_at"] is None)
+        # 8d is 9d's sibling: a veto that leaves status at ERIC_GATE keeps the
+        # run in the gate queue, still looking like it needs a decision.
+        test("8d - Veto moves the run out of the gate queue",
+             wf_row is not None and wf_row["status"] == "ESCALATED",
+             f"(status={wf_row['status'] if wf_row else 'no row'})")
         conn.close()
 
         # Test 9: Valid approval passes

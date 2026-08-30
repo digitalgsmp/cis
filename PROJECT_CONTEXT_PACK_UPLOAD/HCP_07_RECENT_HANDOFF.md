@@ -2,9 +2,9 @@
 Date: 2026-08-30
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `96771c0`
+HEAD: `3760595`
 
-Generated: 2026-08-30 17:20 UTC | Run: run-af6f4f4f186e
+Generated: 2026-08-30 17:35 UTC | Run: run-53cd3cb6a2e6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-7207d316ce5a50a5-1787932828
-- Decided at: 2026-08-28T18:10:44.759766+00:00
-- Goal reference: Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whether each of the six pipeline agents has its own separate references/pitfalls.md file. Create exactly one file.
-- Briefing hash: 34507e940285dfe1d3fc1c4adf0b031098e0ed7e367a43ee96ce2da48e0fdec6
+- Workflow run: run-e70293544935a92e-1787973534
+- Decided at: 2026-08-30T17:35:14Z
+- Goal reference: Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whether runtime/abstraction/pipeline_relay.py still sanitizes FTS5 keywords with a character class that omits the forward s
+- Briefing hash: f1d0a3cc6fbf3c422ac779199a2020987fef9a7e4334d77ce7c39ca9e7402e11

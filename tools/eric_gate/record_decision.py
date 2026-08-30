@@ -106,16 +106,44 @@ def check_1_workflow_run_exists(conn, run_id):
 
 
 def check_2_consensus_reached(conn, run_id):
-    """Workflow run result is CONSENSUS_REACHED."""
+    """The DELIBERATION reached consensus — not that the whole run finished.
+
+    This checked workflow_runs.result == 'CONSENSUS_REACHED' until 2026-08-30,
+    which was a deadlock. That field is written in exactly one place —
+    _verification() in pipeline_relay.py, the LAST phase — and verification only
+    runs after the Eric Gate approves. So the gate demanded an outcome that only
+    exists once the gate has already been passed, and no run could ever be
+    approved through this tool. It is the same circular shape as the briefing
+    bug fixed on 2026-08-28, where the gate read decision_trails and
+    goal_references that only the approval handler created.
+
+    What the gate actually needs to know is whether the agents agreed BEFORE it
+    is asked to decide, and that is recorded per round in
+    deliberation_rounds.reviewer_signal. The post-verification value is still
+    accepted so a completed run can be re-decided. (UNIFIED BUILD LIST 1.9)
+    """
     row = conn.execute(
         "SELECT result FROM workflow_runs WHERE id = ?", (run_id,)
     ).fetchone()
     if row is None:
         return False, "Workflow run not found"
-    result = row[0]
-    if result != "CONSENSUS_REACHED":
+    if row[0] == "CONSENSUS_REACHED":
+        return True, None
+
+    last = conn.execute(
+        "SELECT reviewer_signal FROM deliberation_rounds "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    if last is None:
         return False, (
-            f"Workflow run result is '{result}', expected 'CONSENSUS_REACHED'"
+            f"Workflow run result is '{row[0]}' and no deliberation rounds "
+            f"were recorded — nothing reached consensus"
+        )
+    if last[0] != "CONSENSUS_REACHED":
+        return False, (
+            f"Last deliberation round signalled '{last[0]}', "
+            f"expected 'CONSENSUS_REACHED' (run result is '{row[0]}')"
         )
     return True, None
 
@@ -322,9 +350,20 @@ def record_decision(run_id, decision, briefing_hash, goal_reference_id,
 
     checks = [
         ("Workflow run exists", check_1_workflow_run_exists(conn, run_id)),
-        ("CONSENSUS_REACHED", check_2_consensus_reached(conn, run_id)),
         ("Requires Eric review", check_3_requires_eric_review(conn, run_id)),
     ]
+
+    # Consensus is a precondition for APPROVING, not for refusing. Approving
+    # work the deliberation never agreed on is exactly what this gate exists to
+    # stop. But applying the same bar to VETO made a malformed run immortal:
+    # two 2026-08-22 smoke tests reached ERIC_GATE with result 'PENDING' and
+    # could then be neither approved nor closed, so they sat in the queue for
+    # eight days making it look like real work awaited a decision. A gate that
+    # cannot dispose of what it cannot pass is not a gate, it is a trap.
+    # (UNIFIED BUILD LIST 1.9)
+    if decision == "APPROVE":
+        checks.insert(1, ("CONSENSUS_REACHED",
+                          check_2_consensus_reached(conn, run_id)))
 
     # Check 4: briefing rebuildable
     ok, payload_or_err = check_4_briefing_rebuildable(run_id, db_path)
@@ -437,12 +476,20 @@ def record_decision(run_id, decision, briefing_hash, goal_reference_id,
                 (now, now, run_id),
             )
         else:
+            # Same defect as the APPROVE branch: this cleared the timestamp and
+            # left status at ERIC_GATE, so a vetoed run stayed in the gate queue
+            # looking like it still needed a decision. Mapped to match the API
+            # handler — VETO is its REJECT (ESCALATED), RETURN_TO_DRAFT is its
+            # REVISE (DRAFT_PHASE). (UNIFIED BUILD LIST 1.9)
+            new_status = ("ESCALATED" if decision == "VETO"
+                          else "DRAFT_PHASE")
             conn.execute(
                 """UPDATE workflow_runs SET
+                       status = ?,
                        eric_approved_at = NULL,
                        updated_at = ?
                    WHERE id = ?""",
-                (now, run_id),
+                (new_status, now, run_id),
             )
 
         conn.execute("COMMIT")

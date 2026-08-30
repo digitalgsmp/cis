@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-30 17:20 UTC | Run: run-af6f4f4f186e | Latest pipeline: run-e70293544935a92e-1787973534
+Generated: 2026-08-30 17:35 UTC | Run: run-53cd3cb6a2e6 | Latest pipeline: run-e70293544935a92e-1787973534
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -86,10 +86,10 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [run-7207d316ce5a50a5-1787924769] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
-- Workflow run: run-7207d316ce5a50a5-1787932828
+- Workflow run: run-e70293544935a92e-1787973534
 - Status: APPROVE
-- Decided at: 2026-08-28T18:10:44.759766+00:00
-- Goal: Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whether each of the six pipeline agents has its own separate references/pitfalls.md file. Create exactly one file.
+- Decided at: 2026-08-30T17:35:14Z
+- Goal: Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whether runtime/abstraction/pipeline_relay.py still sanitizes FTS5 keywords with a character class that omits the forward s
 
 ## 10. Verification Hardening Rule
 V4 Implementer self-report is not a source of truth.
