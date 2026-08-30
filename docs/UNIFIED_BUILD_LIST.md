@@ -491,6 +491,22 @@ build manifest records this as eliminated, so the recognition may be stale.
   are what the container agents actually read at runtime**, along with their
   `references/pitfalls.md`. If an agent is told to do something no gate checks,
   or a gate checks something no agent was told, that gap is invisible today.
+- **3.12** `data/drive_imports/` is outside the knowledge base entirely.
+  **Measured 2026-08-30: 11,763 files, 5.8GB, 0 chunks.** Not partial coverage —
+  absent from both the keyword and the semantic index. 3.7 mentions the
+  directory but only about version control; nothing recorded that it is
+  unindexed.
+  **What it is, checked rather than assumed:** a flattened drive dump — one
+  directory, no structure — mixing SWA's Miramont behavioural-health documents
+  (2,130 md, 756 docx, 344 pdf, 229 txt; SWA sources do reference them) with
+  several thousand library files (`ZodError.ts`, `zstd.js`, `zoneinfo.py`,
+  `.map`, `.pyc`). The same shape as the archive's `_4 Action` at 90% source
+  code.
+  **Not a task to index it.** Leaving it out is correct on the archive's own
+  evidence, and it is SWA material, which the record sequences after the
+  container infrastructure. Recorded so the gap is deliberate and visible
+  rather than merely unnoticed — which is 2.18's whole point.
+
 - **3.11** `cis_kernel/source/architecture_maps/13_RUNTIME_TOPOLOGY.md` claims
   *"Status: OPERATIONAL — populated from verified runtime truth as of
   2026-05-05"* and answers *"how does the system actually run?"*. Four months

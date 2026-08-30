@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-08-30 15:08 UTC | Run: run-15664d5fd45c
+Generated: 2026-08-30 15:12 UTC | Run: run-980d914aa946
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 1c2b08e Name the pattern under all five: the check runs before the send
+
+## AGENTS.md 
+
+## CLAUDE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 77420b7 Withhold records holding real key material, and stop offering false choices
 
@@ -504,54 +536,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_fourth_confirmation_20260828.md 
 
 ## enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_third_confirmation_20260828.md 
-
-## runtime/abstraction/pipeline_relay.py 
-
-## runtime/api/relay.py 
-
-## runtime/catalogs/PATTERN_CATALOG.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 6f5b312 Surface why runs stop; stop guardrails accusing honest agents
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/NEXT_SESSION.md 
-
-## docs/NEXT_SESSION.md.bak3.20260828 
-
-## enforcement/mwl-proof-v2/RESULTS/pitfalls_separation_short_confirmation_20260828.md 
-
-## enforcement/mwl-proof-v2/gates/gate_research_before_conclusion.py 
-
-## runtime/abstraction/guardrails.py 
 
 ## runtime/abstraction/pipeline_relay.py 
 
