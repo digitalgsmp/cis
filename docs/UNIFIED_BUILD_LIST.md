@@ -429,6 +429,44 @@ a reviewer or the verifier will fail this way.
 *Related:* 1.3 (no failure routing), 1.4 (retry policy retries the
 non-retryable), 2.10 (silent-by-design).
 
+### 1.12 The gate briefing omits the reviewers entirely
+**Eric, 2026-08-30, while a run was in flight:** *"Will the reviewers deliver an
+explanation of what I am approving?"* Checked: **no.**
+
+**Measured on `run-e70293544935a92e-1787973534`, the run he approved that day:**
+the two reviewers produced **14,608 characters** of analysis before the gate —
+review1 3,037 and review2 4,650 at intent_review, review1 3,693 and review2
+3,228 at proposal_review. **None of it reaches the briefing.**
+
+`build_briefing.py` reads three sources: the drafter's own output (the Action
+Summary), `objections_json`, and `decision_trails`. On that run
+`objections_json` was empty for **every** pre-gate round and `decision_trails`
+had **zero rows** — the trail is written by the approval handler, i.e. after the
+decision — so section 3 fell back to *"Consensus reached after 4 rounds — no
+objections were recorded against the proposal."*
+
+**So what Eric approves is the drafter's account of its own proposal, plus a
+round count.** The independent check ran, produced 14,608 characters, and was
+invisible to the person the check exists to inform. The only round that recorded
+objections (782 chars) was `code_review` — *after* the gate. The sharpest output
+the system produced that day, Reviewer B catching that the spec's own success
+criteria would have certified a falsehood (see 1.1), could not have appeared in
+the briefing even in principle.
+
+**This is the gate's core purpose failing quietly.** Failure mode 3 is the
+rubber-stamp review; a briefing that carries only the proposer's summary
+manufactures exactly that, with the operator as the stamp.
+
+**The fix is small.** The reviewer outputs are already in `agent_trajectories`,
+keyed by run and phase. The briefing needs a section that renders them — what
+each reviewer examined, what it accepted, what it doubted — before section 3's
+resolution line. No new capture, no schema change; the data is sitting there.
+
+**Also worth fixing while in there:** `objections_json` is empty on rounds that
+reached consensus, so agreement is indistinguishable from silence. A reviewer
+that agreed *and said why* should not render identically to one that said
+nothing. *Related:* 1.8, 2.9, and 1.1's record of what the reviewers caught.
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
