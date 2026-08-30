@@ -43,6 +43,36 @@ exists — and those are the rows the Eric Gate briefing reads. 15
 `eric_gate_approvals` reference goal_references that do not exist.
 **Do this first — one fix at the factory closes it everywhere.**
 
+**DONE on the pipeline path, 2026-08-30.** The order mattered: eight tables
+declared their FK against `workflow_runs_old`, and SQLite does not warn about a
+constraint naming a missing table — it refuses the write. Flipping the pragma
+first would have made the next gate approval fail with *"no such table:
+main.workflow_runs_old"*. So the sequence was repair, then enforce:
+
+1. `tools/repair_fk_definitions.py` — repointed 8 constraints across 7 tables
+   at `workflow_runs`, rewriting the CREATE TABLE text in place via
+   `writable_schema` so no table was rebuilt and no data moved. 80 -> 24.
+2. `tools/repair_fk_orphans.py` — 15 July approvals carrying
+   `goal_reference_id = 0` (a stand-in used before `goal_references` existed)
+   were backfilled with a goal row each from their run's own topic, tagged
+   `authored_by = 'BACKFILL_20260830'`; 9 rows of June debris with missing
+   parents were deleted. 24 -> **0**. No approval was deleted.
+3. `PRAGMA foreign_keys = ON` at both live factories —
+   `pipeline_relay._db_connect` and `runtime/api/relay._db` — and `_heartbeat`
+   routed through the factory rather than opening its own connection.
+
+Verified: both factories report `foreign_keys = 1`, an insert naming a
+nonexistent run is rejected with `IntegrityError`, `foreign_key_check` is 0,
+`integrity_check` is ok, and `tests/test_eric_gate.py` passes 28/28.
+
+**Still open — the ingest tools were not touched.** 18 tools under `tools/`
+open the spine with no pragma, including `ingest_claude_code_sessions.py`,
+`ingest_hermes_sessions_v2.py`, `rebuild_vector_index.py` and `state_write.py`.
+The spine is at zero violations now, so any new one has a known source. One
+behaviour change to know about: `INSERT OR IGNORE` does **not** suppress an FK
+violation, so the never-used `/decompose` endpoint's caller-supplied
+`depends_on` would now raise rather than silently no-op.
+
 ### 0.2 Secrets can reach agents through KB results — LIVE TODAY
 **Checked in code:** `SecretFilterPipeline` exists in
 `runtime/mcp_bridge/chroma_index.py` with patterns for private keys, bearer
@@ -247,6 +277,32 @@ This is the Tier 7R Intent-to-Workflow architecture — the thing
 `build_plan_nodes` marks COMPLETE across nodes 7R.1 through 7R.7. It was built
 and never connected. Decide: wire it, or record it as superseded by
 `pipeline_relay.py` and stop counting it as complete.
+
+### 2.17 Every gate approval ever recorded has a NULL primary key
+**Checked 2026-08-30, on the live spine:** `eric_gate_approvals` holds 26 rows.
+**`id IS NULL` on all 26.** Not some — all of them.
+
+**Cause, in code:** the relay's insert at `runtime/api/relay.py:663` omits the
+`id` column entirely. The CLI path at `tools/eric_gate/record_decision.py:407`
+does supply it. The relay is the path the container uses, so every approval on
+record came in without an id. SQLite does not catch this: a `TEXT PRIMARY KEY`
+is not implicitly NOT NULL — only `INTEGER PRIMARY KEY`, the rowid alias, is.
+
+**What it breaks:** `supersedes_approval_id` is the field recording *this
+approval replaces that earlier one*, and it references `eric_gate_approvals(id)`.
+`record_decision.py:397-403` builds that link by selecting the prior row's `id` —
+which returns NULL, so the link is silently stored as "no predecessor."
+Confirmed: `supersedes_approval_id` is set on **0 of 26** rows, and `is_current`
+is 1 on all 26. Revise a decision and the record cannot say what it revised.
+
+Any `WHERE id = ?` against this table matches nothing, and reports no error —
+NULL equals nothing, including itself. Found exactly that way: a repair UPDATE
+keyed on `id` changed 0 rows and returned success.
+
+**Failure mode 11, silent gate failure — inside the gate itself.** The fix is
+one column in one INSERT, plus a decision on whether to backfill ids for the 26
+existing rows. Note the supersede path has never actually been exercised: no run
+has more than one approval, so nothing is currently mis-linked.
 
 ### 2.14 Operator routes execute runtime scripts directly
 Failure mode 9 in CLAUDE.md. **Verify current state before building** — a 2026-05-01

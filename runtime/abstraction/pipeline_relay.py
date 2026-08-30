@@ -193,6 +193,13 @@ def _db_connect(db_path: str = DB_PATH) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA synchronous=NORMAL")
+    # SQLite enforces foreign keys per connection, defaulting to off, and this
+    # factory makes a new connection per call — so without this line the spine's
+    # declared constraints never applied on the pipeline's own path. They were
+    # off long enough to accumulate 80 violations, including decision_trails
+    # rows pointing at a table that had been renamed away. Repaired to zero and
+    # switched on 2026-08-30 (UNIFIED BUILD LIST 0.1).
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -1534,7 +1541,9 @@ async def _heartbeat(run_id: str, phase: str, role: str, db_path: str) -> None:
     started = time.time()
     conn = None
     try:
-        conn = sqlite3.connect(db_path, timeout=10)
+        # Through the factory, not a raw connect: a second connection that
+        # skips the pragmas is how per-connection settings drift back off.
+        conn = _db_connect(db_path)
         _ensure_progress_table(conn)
         while True:
             await asyncio.sleep(HEARTBEAT_SECONDS)

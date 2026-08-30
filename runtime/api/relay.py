@@ -62,6 +62,9 @@ def _db(db_path: str = None) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path or DB_PATH, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
+    # Per connection, and off by default — see the note in pipeline_relay
+    # ._db_connect. This is the path the Eric Gate approval handler runs on.
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
 
