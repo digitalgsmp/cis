@@ -251,6 +251,19 @@ which inverts what the gate is for.
 narrow version: make non-pipeline changes produce the same briefing and pass the
 same gate that pipeline runs already do.
 
+**Design written 2026-08-30: `docs/OPERATOR_APPROVAL_INTERFACE_DESIGN.md`.**
+Eric, on the portal spec and dashboard: *"there is no confirmed interface,
+everything had been misinformed experiments."* So the design starts from the
+workflow, not the UI, and reuses the briefing renderer rather than building
+anything new. Core of it: a **Work Order** per work item — not per commit — in
+two halves. The first names, before the work starts, the exact check that will
+prove it worked; the second pastes that check's actual output next to it. Four
+consequence classes so reading needs no approval and destructive work needs it
+twice. And the part that makes it more than better-organised trust: **a verifier
+that is not the author**, checking the Work Order against the real diff — the
+same evaluator/builder separation HASE requires and 4.10 records.
+Three open decisions in that document are Eric's; none of them block step one.
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
