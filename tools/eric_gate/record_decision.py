@@ -419,8 +419,18 @@ def record_decision(run_id, decision, briefing_hash, goal_reference_id,
         # For APPROVE: set workflow_runs.eric_approved_at
         # For VETO/RETURN_TO_DRAFT: clear it (supersedes prior APPROVE)
         if decision == "APPROVE":
+            # status must advance, not just eric_approved_at. Until 2026-08-30
+            # this set the timestamp and left status at ERIC_GATE, and
+            # PipelineRelay.resume() on an ERIC_GATE run prints "waiting at
+            # ERIC_GATE" and returns — so approving through this path, the one
+            # the session notes documented, parked the run forever while
+            # printing "Decision recorded: APPROVE". Failure mode 11, inside the
+            # gate. PATTERN_CATALOG is the next phase, matching what the API
+            # approval handler in runtime/api/relay.py sets.
+            # (UNIFIED BUILD LIST 1.9)
             conn.execute(
                 """UPDATE workflow_runs SET
+                       status = 'PATTERN_CATALOG',
                        eric_approved_at = ?,
                        updated_at = ?
                    WHERE id = ?""",
@@ -446,6 +456,18 @@ def record_decision(run_id, decision, briefing_hash, goal_reference_id,
             print(f"Superseded: {supersedes_id}")
         if rationale:
             print(f"Rationale: {rationale}")
+        if decision == "APPROVE":
+            # Print the next command rather than spawning a background thread.
+            # The API handler starts one; a one-shot CLI should not, and work
+            # the operator can watch beats work that disappears into a daemon.
+            print()
+            print("Run advanced to PATTERN_CATALOG. It does NOT continue on its")
+            print("own from here — run this to carry it through implement and")
+            print("verify, and watch the output:")
+            print()
+            print("  /usr/local/lib/hermes-agent/venv/bin/python \\")
+            print("    runtime/abstraction/pipeline_relay.py --resume "
+                  f"{run_id}")
         return 0
 
     except Exception as e:

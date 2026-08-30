@@ -317,11 +317,19 @@ def main():
         test("9b - Current row is APPROVE",
              row is not None and row["decision"] == "APPROVE")
         wf_row = conn.execute(
-            "SELECT eric_approved_at FROM workflow_runs "
+            "SELECT eric_approved_at, status FROM workflow_runs "
             "WHERE id = ?", ("test-consensus-001",),
         ).fetchone()
         test("9c - eric_approved_at is set",
              wf_row is not None and wf_row["eric_approved_at"] is not None)
+        # 9d guards the defect of 2026-08-30: approval set the timestamp and
+        # left status at ERIC_GATE, so resume() printed "waiting at ERIC_GATE"
+        # and the run never moved — while the CLI printed "Decision recorded:
+        # APPROVE". Nothing here asserted status, which is why it survived.
+        # An approval that does not advance the run is not an approval.
+        test("9d - approval advances the run past the gate",
+             wf_row is not None and wf_row["status"] == "PATTERN_CATALOG",
+             f"(status={wf_row['status'] if wf_row else 'no row'})")
         conn.close()
 
         # ── Group B: Setter Precondition Tests ────────────────────

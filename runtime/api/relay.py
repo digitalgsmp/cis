@@ -23,6 +23,7 @@ import sqlite3
 import sys
 import threading
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -662,14 +663,20 @@ def relay_gate(run_id: str):
             "WHERE workflow_run_id = ?",
             (run_id,),
         )
+        # id is supplied explicitly. Omitting it wrote NULL into a TEXT PRIMARY
+        # KEY — SQLite does not make those implicitly NOT NULL, only INTEGER
+        # PRIMARY KEY — so all 26 approvals on record have no identity, and the
+        # supersedes_approval_id chain above can never point at one of them.
+        # (UNIFIED BUILD LIST 2.17)
+        approval_id = f"ega-{uuid.uuid4().hex[:16]}"
         conn.execute(
             "INSERT INTO eric_gate_approvals "
-            "(workflow_run_id, decision, rationale, decided_at, "
+            "(id, workflow_run_id, decision, rationale, decided_at, decided_by, "
             "goal_reference_id, briefing_hash, briefing_json, "
             "drift_snapshot_json, decision_trail_snapshot_json, "
             "is_current, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)",
-            (run_id, decision, rationale, now,
+            "VALUES (?, ?, ?, ?, ?, 'Eric', ?, ?, ?, ?, ?, 1, ?)",
+            (approval_id, run_id, decision, rationale, now,
              goal_ref_id, briefing_hash, briefing_json,
              drift_snapshot_json, trail_snapshot_json, now),
         )

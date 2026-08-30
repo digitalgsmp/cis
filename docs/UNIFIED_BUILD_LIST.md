@@ -176,6 +176,32 @@ done. Furthest reached: ERIC_GATE. Depends on 1.2.
 Briefing renders, hash stable, goal_reference 12 exists. Two 2026-08-22
 throwaways also sit at the gate (`"test"`, `"smoke check"`) — close those.
 
+### 1.9 Two approval paths, and the documented one does not continue the run
+**Found 2026-08-30 while trying to action 1.2. This is very likely why 1.1 has
+never happened.**
+
+**`tools/eric_gate/record_decision.py`** — the path NEXT_SESSION.md documented
+as *the* way to approve — records the approval, sets `eric_approved_at`, prints
+*"Decision recorded: APPROVE"*, and **leaves `status` at `ERIC_GATE`**. It never
+advances the run. `PipelineRelay.resume()` on an `ERIC_GATE` run prints
+*"waiting at ERIC_GATE"* and returns. So an approval through the documented
+route parks the run forever and reports success while doing it.
+
+**`runtime/api/relay.py`** — sets `status = 'PATTERN_CATALOG'`, then spawns a
+background thread to carry on. This one works.
+
+**Neither path is complete, and their defects are complementary:**
+- the CLI path writes a proper `id` but does not advance the run
+- the API path advances the run but omits the `id` column entirely — that is
+  2.17, why all 26 approvals have a NULL primary key
+
+**And the working path is not currently usable.** Checked 2026-08-30: no
+`CIS_PIPELINE_API_KEY` in the container and nothing answering on the relay port.
+
+Failure mode 11 — a silent gate failure, inside the gate. An operator following
+the written instructions gets a success message and a run that never moves, with
+nothing anywhere saying why.
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
