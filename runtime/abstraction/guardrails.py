@@ -1314,12 +1314,28 @@ PHASE_GATE_MAP = {
         # claim must halt the run rather than annotate it. Verified clean against
         # every completed run as of 2026-08-27, and it fails closed: an
         # unreachable spine exits SKIP rather than waving the claim through.
-        {"script": "gate_research_before_conclusion.py", "mode": "BLOCK", "needs_run_id": True},
+        #
+        # DEMOTED to ADVISORY 2026-08-30. Three FAIL firings to date, all three
+        # false positives, zero true positives. The third blocked
+        # run-4bbeea78056e2607-1788129615 for claiming two embedding_fulltext_*
+        # tables do not exist — verified against sqlite_master the same day:
+        # they do not. The gate matched the bare subject "exist" and surfaced an
+        # unrelated 2026-07 conversation about generated HCP folders as the
+        # contradicting record.
+        #
+        # The idea is right and the implementation is not: subject extraction
+        # pulls single common words, so almost any absence claim finds something
+        # in a 2.6M-chunk corpus. A gate that has never caught a real
+        # unresearched claim and blocks correct ones is worse than no gate — it
+        # trains everyone to route around it. ADVISORY keeps it firing and
+        # recording while the parsing is fixed; re-arm it when a firing is right.
+        # (BUILD LIST 2.1)
+        {"script": "gate_research_before_conclusion.py", "mode": "ADVISORY", "needs_run_id": True},
     ],
     "draft": [
         # After draft: proposal schema valid
         {"script": "gate_proposal_schema_valid.sh", "mode": "ADVISORY", "needs_run_id": True},
-        {"script": "gate_research_before_conclusion.py", "mode": "BLOCK", "needs_run_id": True},
+        {"script": "gate_research_before_conclusion.py", "mode": "ADVISORY", "needs_run_id": True},
         # Card validation: if the topic is a card, validate it mechanically
         {"script": "gate_card_valid.sh", "mode": "BLOCK", "needs_card": True},
     ],

@@ -133,6 +133,41 @@ def evaluate(tool_name, args):
     if tool_name == "terminal" and "MWL_PROOF_BLOCK_ME" in cmd:
         reasons.append("MWL_PROOF: proof marker blocked by gate runner")
 
+    # 5. Skill writes are deferred during a run — record, do not rewrite.
+    #
+    # Hermes runs a self-improvement review after a turn, and by default it
+    # writes skills freely. On 2026-08-30 brain and draft spent their turn
+    # budgets on it: repeated skill_manage patches to cis-pipeline-architecture
+    # (SKILL.md, references/specs-and-relay.md, spec-review-checklist.md, and a
+    # new kb_dual_index_fts5_chroma.md), refused and retried a second apart, so
+    # both agents hit their timeouts having produced nothing.
+    #
+    # Two reasons this is blocked rather than merely rate-limited:
+    #   - The lesson was not earned yet. That run never reached the gate, let
+    #     alone verification, so it was recording a conclusion it had not
+    #     reached. Landing it would have made an unbuilt design read as settled
+    #     architecture to the next run.
+    #   - cis-pipeline-architecture is not the agent's private notebook. It is
+    #     the shared description of this system that every agent loads, one copy
+    #     each. An agent editing it mid-run rewrites what judges its peers, with
+    #     nothing reviewing the change. (BUILD LIST 4.10 — the evaluator must
+    #     not be the builder; 1.13 — where the turn budget went.)
+    #
+    # Reads stay open: skill_view and skills_list are untouched, so pitfalls.md
+    # and the architecture reference still load. The reason below is returned to
+    # the agent as the block message, which is the point — it is told what to do
+    # instead, so it records the finding and stops retrying.
+    if tool_name == "skill_manage":
+        action = str(args.get("action", "")) if isinstance(args, dict) else ""
+        if action in ("write_file", "patch", "edit", "create",
+                      "delete", "remove_file"):
+            reasons.append(
+                "DEFERRED: skill writes are not permitted during a pipeline "
+                "run. Do not retry. State what you learned in your output "
+                "instead — it is collected from the tool-call log at end of "
+                "day and reviewed before anything is written."
+            )
+
     if reasons:
         return ("block", "; ".join(reasons))
     return ("allow", "")

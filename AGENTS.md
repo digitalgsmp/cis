@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-08-30 22:34 UTC | Run: run-bb278c9e6ee9 | Latest pipeline: run-4bbeea78056e2607-1788126284
+Generated: 2026-08-31 01:40 UTC | Run: run-0caadf8cedb4 | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -79,11 +79,11 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
+- [run-4bbeea78056e2607-1788140226] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788129615] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
 - [run-4bbeea78056e2607-1788126284] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
 - [run-4bbeea78056e2607-1788122307] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
 - [run-4bbeea78056e2607-1788121167] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
-- [run-e70293544935a92e-1787973534] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — CONSENSUS_REACHED (0 rounds, 2026-08-30T17:53:39.841076+00:00)
-- [run-e70293544935a92e-1787972762] Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whe — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-e70293544935a92e-1787973534

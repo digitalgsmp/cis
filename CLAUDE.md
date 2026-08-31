@@ -110,6 +110,14 @@ tell whether it worked.
 - I am not a coder. Don't explain what a command does; explain what the
   result tells us. Skip PIDs, hex, and internals unless they change the
   answer.
+- DON'T TREAT AN EXPERIMENT LIKE PRODUCTION. Eric, 2026-08-30: "stop acting
+  like tests and experiments are production." Match the ceremony to the stakes.
+  A throwaway probe, a test run, a patch to a container that gets recreated
+  anyway — do it and move on. Backups, image rebuilds, and full audit trails are
+  for changes that persist and that someone else will depend on.
+  This is the 2026-06-18 dev pivot recurring: process applied where it buys
+  nothing is the ceremony that pivot was called to kill. It costs him time and
+  it makes real caution unreadable, because everything looks equally serious.
 - SHORT. Eric, 2026-08-30: "the other format is overwhelming and I can't
   comprehend it because it's too much." Lead with one sentence that answers the
   question. Then only what changes my decision. A long answer is not thorough,
