@@ -156,3 +156,6 @@ CLAUDE.md.bak.*
 # Working backups taken before edits (recoverable safety-net, not source)
 *.bak.2*
 *.bak2.2*
+
+# Mining archive — evidence base for UNIFIED_BUILD_LIST, must survive
+!data/mining_archive/

@@ -1,0 +1,3735 @@
+#!/usr/bin/env python3
+"""
+pipeline_relay.py — CIS Production Pipeline Relay (async state machine)
+
+Per SPEC_PRODUCTION_PIPELINE_RELAY.md (REV-2, 2026-07-08).
+Replaces test scaffolding in runtime/orchestrator.py.
+
+Relay: Brain → Review1+2 → Draft → Review1+2 → Eric Gate → Menter → Verify
+Features: mandatory pre-discovery, crash recovery, circuit breaker,
+concurrent run protection, timeout management, saga compensation.
+
+Usage:
+    python3 pipeline_relay.py --intent "build a dark mode toggle"
+    python3 pipeline_relay.py --resume <run_id>
+    python3 pipeline_relay.py --status <run_id>
+"""
+
+import asyncio
+import hashlib
+import inspect
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
+
+# ── Constants ──────────────────────────────────────────────────────────
+
+DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
+# Project root: use CIS_PROJECT_ROOT env, or derive from DB_PATH parent dir
+PROJECT_ROOT = os.environ.get("CIS_PROJECT_ROOT", os.path.dirname(os.path.dirname(DB_PATH)))
+BASE_URL = "http://127.0.0.1"
+AGENT_TIMEOUT = 180  # seconds per agent call (default)
+# Per-role timeout overrides (verify/menter use tools and need more time)
+# Raised 2026-08-28: verify timed out twice at 600s on the first code-path run
+# and produced nothing, after code review and implementation had both succeeded.
+# It was working, not stuck — evidence commands against a real diff take longer
+# than the no-file case (1.8 min). A longer limit is only safe alongside the
+# heartbeat below, which distinguishes slow from hung.
+AGENT_TIMEOUTS = {
+    "verify": 1500,  # 25 min — runs evidence commands against a real diff
+    "menter": 1200,  # 20 min — builds code
+    "brain": 300,    # 5 min — xhigh reasoning
+    "draft": 300,    # 5 min — xhigh reasoning
+}
+REVIEWER_RETRY_TIMEOUT = 180
+HEARTBEAT_SECONDS = 60      # how often a working agent reports in
+STALL_SECONDS = 300         # gateway log silent this long = probably hung
+CIRCUIT_BREAKER_THRESHOLD = 3
+CIRCUIT_BREAKER_COOLDOWN = 300  # 5 minutes
+HUMAN_QUESTION_TIMEOUT = 72 * 3600  # 72 hours
+MAX_BRAIN_ROUNDS = 2
+MAX_DRAFT_ROUNDS = 3
+MAX_CHUNK_REVISIONS = 3
+MAX_CHUNK_LINES = 300
+
+# ── Menter's Universal Rules (baked into prompt) ─────────────────────
+
+MENTER_UNIVERSAL_RULES = """## UNIVERSAL RULES (you must follow these for every line of code you write)
+
+1. DEFAULT TO INCOMPLETE: No function returns success without completing its job.
+   No status field defaults to "success" or "consensus." Unknown states are errors, not passes.
+2. HANDLE ERRORS EXPLICITLY: Every exception path must do something meaningful
+   (log, raise, escalate). Silent `except: pass` is forbidden.
+3. NO SECRETS IN CODE: No hardcoded API keys, passwords, tokens. Use env vars or config files.
+4. NO DEBUG LEFTOVERS: No print() statements, no commented-out code, no TODO without context.
+5. CLAIMS MUST MATCH REALITY: If you say "added function X", function X must exist in
+   the code you wrote. Your self-report is a claim, not evidence.
+6. CLEAN UP AFTER YOURSELF: No orphan temp files, no leftover debug artifacts,
+   no resources opened without being closed.
+7. STATE MUST PERSIST: If your code maintains state (circuit breaker, cache, counter),
+   it must survive a process restart. In-memory only is not acceptable for state that matters.
+8. VALIDATE BEFORE PROCEEDING: If your function calls another function or agent, validate
+   the response before acting on it. Empty or malformed output is an error, not a silent success.
+
+Self-check against these rules BEFORE submitting your chunk for review.
+"""
+
+# Import dispatch map
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from dispatch import PROFILES, check_gateway, get_gateway_url  # noqa: E402
+from guardrails import (run_guardrails, run_external_gates,  # noqa: E402
+                        record_gate_outcomes, GATES_DIR as _GATES_DIR)
+
+# ── State Machine ─────────────────────────────────────────────────────
+
+STATES = {
+    "PENDING", "INTAKE", "BRAIN_PHASE", "ESCALATE",
+    "INTENT_REVIEW", "DRAFT_PHASE", "PROPOSAL_REVIEW",
+    "ERIC_GATE", "PATTERN_CATALOG", "CODE_REVIEW_GATE",
+    "EXECUTION", "VERIFICATION",
+    "WAITING_FOR_HUMAN",
+    "CONSENSUS_REACHED",
+    # Error states
+    "ESCALATED", "VERIFY_FAILED", "STALE", "ERROR",
+}
+
+TERMINAL_STATES = {"CONSENSUS_REACHED", "ESCALATED", "VERIFY_FAILED", "STALE", "ERROR"}
+
+# ── Circuit Breaker ────────────────────────────────────────────────────
+
+# In-memory cache, backed by circuit_breaker_state table for persistence
+_circuit_breaker: Dict[str, dict] = {}  # role -> {failures, last_failure_ts}
+
+
+def _breaker_load(role: str) -> dict:
+    """Load circuit breaker state from DB (persists across restarts)."""
+    try:
+        conn = _db_connect()
+        cur = conn.execute(
+            "SELECT failures, last_failure_ts FROM circuit_breaker_state WHERE role = ?",
+            (role,)
+        )
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            return {"failures": row[0], "last_failure_ts": row[1]}
+    except Exception:
+        pass
+    return {"failures": 0, "last_failure_ts": 0}
+
+
+def _breaker_save(role: str, entry: dict) -> None:
+    """Persist circuit breaker state to DB."""
+    try:
+        conn = _db_connect()
+        conn.execute(
+            """INSERT INTO circuit_breaker_state (role, failures, last_failure_ts, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(role) DO UPDATE SET
+               failures = excluded.failures,
+               last_failure_ts = excluded.last_failure_ts,
+               updated_at = excluded.updated_at""",
+            (role, entry["failures"], entry["last_failure_ts"],
+             datetime.now(timezone.utc).isoformat())
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def _breaker_record_failure(role: str) -> None:
+    """Record a gateway failure for circuit breaker (persisted to DB)."""
+    entry = _circuit_breaker.get(role)
+    if not entry:
+        entry = _breaker_load(role)
+    entry["failures"] += 1
+    entry["last_failure_ts"] = time.time()
+    _circuit_breaker[role] = entry
+    _breaker_save(role, entry)
+
+
+def _breaker_record_success(role: str) -> None:
+    """Reset circuit breaker on success (persisted to DB)."""
+    if role in _circuit_breaker:
+        _circuit_breaker.pop(role, None)
+    _breaker_save(role, {"failures": 0, "last_failure_ts": 0})
+
+
+def _breaker_is_tripped(role: str) -> bool:
+    """Check if circuit breaker is tripped for a role."""
+    entry = _circuit_breaker.get(role)
+    if not entry:
+        entry = _breaker_load(role)
+        _circuit_breaker[role] = entry
+    if entry["failures"] < CIRCUIT_BREAKER_THRESHOLD:
+        return False
+    elapsed = time.time() - entry["last_failure_ts"]
+    if elapsed > CIRCUIT_BREAKER_COOLDOWN:
+        # Cooldown passed — reset
+        _circuit_breaker.pop(role, None)
+        _breaker_save(role, {"failures": 0, "last_failure_ts": 0})
+        return False
+    return True
+
+
+# ── Database Helpers ──────────────────────────────────────────────────
+
+def _db_connect(db_path: str = DB_PATH) -> sqlite3.Connection:
+    """Connect to spine DB with WAL mode and busy timeout.
+
+    Accepts db_path parameter so PipelineRelay instances can connect
+    to per-project spine databases (ADR-SEED-010 filesystem isolation).
+    """
+    conn = sqlite3.connect(db_path, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    return conn
+
+
+def _db_retry(fn, max_attempts=3, base_delay=1.0):
+    """Retry a DB operation with exponential backoff."""
+    for attempt in range(max_attempts):
+        try:
+            return fn()
+        except sqlite3.OperationalError as e:
+            if "locked" in str(e).lower() and attempt < max_attempts - 1:
+                delay = base_delay * (2 ** attempt)
+                time.sleep(delay)
+                continue
+            raise
+
+
+def _set_run_status(conn: sqlite3.Connection, run_id: str, status: str,
+                    extra: Optional[Dict] = None,
+                    reason: Optional[str] = None) -> None:
+    """Atomically update run status. Raises if run not found.
+
+    If status is a terminal failure (ESCALATED, ERROR, VERIFY_FAILED),
+    fires a Telegram notification so Eric knows without manually polling.
+
+    The dead letter row previously recorded only "Run escalated with status:
+    ESCALATED" — no phase, no cause — so a reader of the DB could tell that a
+    run died but nothing about why (dead_letter_queue id=25, 2026-08-26). The
+    calling function is captured automatically so every escalation site records
+    where it came from without each one having to remember to say so; `reason`
+    adds detail where the caller knows it.
+    """
+    caller = ''
+    try:
+        caller = inspect.stack()[1].function.lstrip('_') or ''
+    except Exception:
+        pass
+    cur = conn.execute(
+        "UPDATE workflow_runs SET status = ?, updated_at = ? WHERE id = ?",
+        (status, datetime.now(timezone.utc).isoformat(), run_id)
+    )
+    if cur.rowcount == 0:
+        raise ValueError(f"Run {run_id} not found or update failed")
+    conn.commit()
+
+    # Notify on terminal failures
+    if status in ("ESCALATED", "ERROR", "VERIFY_FAILED"):
+        try:
+            _notify_terminal_failure(conn, run_id, status)
+        except Exception as e:
+            print(f"[pipeline] Notification failed: {e}")
+        # Insert into dead letter queue (Component 11)
+        try:
+            conn.execute(
+                """INSERT INTO dead_letter_queue (run_id, error_message, phase, status)
+                   VALUES (?, ?, ?, 'pending')""",
+                (run_id,
+                 reason or (f"{status} raised in {caller}()" if caller
+                            else f"Run escalated with status: {status}"),
+                 caller or status)
+            )
+            conn.commit()
+        except Exception:
+            pass  # DLQ table may not exist in older DBs
+
+    # Notify on Eric Gate (so Eric knows to approve)
+    if status == "ERIC_GATE":
+        try:
+            _notify_eric_gate(conn, run_id)
+        except Exception as e:
+            print(f"[pipeline] Eric Gate notification failed: {e}")
+
+
+def _notify_terminal_failure(conn: sqlite3.Connection, run_id: str, status: str) -> None:
+    """Send a Telegram notification when a run hits a terminal failure."""
+    import urllib.request
+    import urllib.parse
+
+    # Get run details
+    cur = conn.execute(
+        "SELECT topic, status FROM workflow_runs WHERE id = ?", (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+    topic = row[0] or ""
+    topic_preview = topic[:100] + "..." if len(topic) > 100 else topic
+
+    # Get last phase from deliberation_rounds
+    cur = conn.execute(
+        "SELECT drafter_role, reviewer_signal FROM deliberation_rounds "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1", (run_id,)
+    )
+    last = cur.fetchone()
+    last_phase = last[0] if last else "unknown"
+    last_signal = last[1] if last else "unknown"
+
+    # Telegram bot token and chat ID from environment
+    bot_token = os.environ.get("CIS_TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("CIS_TELEGRAM_CHAT_ID", "")
+
+    if not bot_token or not chat_id:
+        print(f"[pipeline] Run {run_id} → {status} (no Telegram notification configured)")
+        return
+
+    message = (
+        f"⚠️ Pipeline Run {status}\n"
+        f"Run: {run_id}\n"
+        f"Phase: {last_phase}\n"
+        f"Signal: {last_signal}\n"
+        f"Intent: {topic_preview}\n"
+        f"Check: curl localhost:5000/api/relay/{run_id}"
+    )
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = urllib.parse.urlencode({
+        "chat_id": chat_id,
+        "text": message,
+    }).encode()
+
+    req = urllib.request.Request(url, data=data, method="POST")
+    resp = urllib.request.urlopen(req, timeout=10)
+    if resp.status == 200:
+        print(f"[pipeline] Telegram notification sent for {run_id} ({status})")
+    else:
+        print(f"[pipeline] Telegram notification failed: HTTP {resp.status}")
+
+
+def _notify_eric_gate(conn: sqlite3.Connection, run_id: str) -> None:
+    """Send a Telegram notification when a run reaches Eric Gate."""
+    import urllib.request
+    import urllib.parse
+
+    cur = conn.execute(
+        "SELECT topic FROM workflow_runs WHERE id = ?", (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+    topic = row[0] or ""
+    topic_preview = topic[:100] + "..." if len(topic) > 100 else topic
+
+    bot_token = os.environ.get("CIS_TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("CIS_TELEGRAM_CHAT_ID", "")
+
+    if not bot_token or not chat_id:
+        print(f"[pipeline] Run {run_id} → ERIC_GATE (no Telegram notification configured)")
+        return
+
+    message = (
+        f"🔷 Pipeline Run at Eric Gate\n"
+        f"Run: {run_id}\n"
+        f"Intent: {topic_preview}\n"
+        f"Approve: curl -X POST localhost:5000/api/relay/{run_id}/gate "
+        f"-H 'Content-Type: application/json' "
+        f"-d '{{\"decision\":\"APPROVE\",\"rationale\":\"\"}}'"
+    )
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = urllib.parse.urlencode({
+        "chat_id": chat_id,
+        "text": message,
+    }).encode()
+
+    req = urllib.request.Request(url, data=data, method="POST")
+    resp = urllib.request.urlopen(req, timeout=10)
+    if resp.status == 200:
+        print(f"[pipeline] Eric Gate notification sent for {run_id}")
+    else:
+        print(f"[pipeline] Eric Gate notification failed: HTTP {resp.status}")
+
+
+def _create_run(conn: sqlite3.Connection, intent_text: str,
+                created_by: str = "pipeline_relay") -> str:
+    """Create a new workflow_run. Returns run_id."""
+    # Idempotency: check for existing non-terminal run with same intent
+    intent_hash = hashlib.sha256(intent_text.encode()).hexdigest()[:16]
+    run_id = f"run-{intent_hash}-{int(time.time())}"
+    conn.execute(
+        """INSERT INTO workflow_runs
+           (id, topic, result, status, created_at, max_rounds, rounds_completed)
+           VALUES (?, ?, 'PENDING', 'INTAKE', ?, 3, 0)""",
+        (run_id, intent_text, datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    return run_id
+
+
+def _get_run(conn: sqlite3.Connection, run_id: str) -> Optional[dict]:
+    """Get a workflow run by ID."""
+    cur = conn.execute(
+        "SELECT id, topic, status, created_at, directive_hash FROM workflow_runs WHERE id = ?",
+        (run_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0], "topic": row[1], "status": row[2],
+        "created_at": row[3], "directive_hash": row[4],
+    }
+
+
+# ── Deliberation Round Helpers ─────────────────────────────────────────
+
+def _start_round(conn: sqlite3.Connection, run_id: str, phase: str,
+                 round_num: int) -> int:
+    """Create a deliberation_rounds row. Returns round ID.
+
+    The spine schema has UNIQUE(run_id, round_number), so we auto-increment
+    the round number from the DB rather than trusting the caller's value.
+    The caller's round_num is used only as a revision_number hint.
+    """
+    # Get next available round_number for this run
+    cur = conn.execute(
+        "SELECT COALESCE(MAX(round_number), 0) + 1 FROM deliberation_rounds WHERE run_id = ?",
+        (run_id,)
+    )
+    actual_round_num = cur.fetchone()[0]
+
+    cur = conn.execute(
+        """INSERT INTO deliberation_rounds
+           (run_id, round_number, drafter_role, drafter_output,
+            reviewer_role, reviewer_signal, revision_number,
+            requires_eric_review, created_at)
+           VALUES (?, ?, ?, '', '', 'PENDING', ?, 0, ?)""",
+        (run_id, actual_round_num, phase, round_num,
+         datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def _complete_round(conn: sqlite3.Connection, round_id: int,
+                    reviewer_signal: str,
+                    extra: Optional[Dict] = None) -> None:
+    """Mark a deliberation round as complete with outputs.
+
+    reviewer_signal must be one of: PENDING, OBJECTIONS, CONSENSUS_REACHED,
+    ESCALATE, ERROR (per spine CHECK constraint).
+
+    After completing the round, ingests all narrative content into the
+    knowledge base (knowledge_messages) for FTS5 indexing. This is the
+    self-evolution bridge — every round's content becomes searchable by
+    future pipeline runs via pre-discovery.
+    """
+    fields = ["reviewer_signal = ?"]
+    values = [reviewer_signal]
+    if extra:
+        for col, val in extra.items():
+            fields.append(f"{col} = ?")
+            values.append(val)
+    values.append(round_id)
+    conn.execute(
+        f"UPDATE deliberation_rounds SET {', '.join(fields)} WHERE id = ?",
+        values
+    )
+    conn.commit()
+
+    # Self-evolution: ingest this round's narrative into the knowledge base
+    # so future runs can discover it via FTS5 search in pre-discovery
+    try:
+        # Get run_id and phase for source tagging
+        cur = conn.execute(
+            "SELECT run_id, drafter_role FROM deliberation_rounds WHERE id = ?",
+            (round_id,)
+        )
+        row = cur.fetchone()
+        if row:
+            run_id, phase = row[0], row[1]
+            _ingest_round_to_kb(conn, run_id, round_id, phase, reviewer_signal)
+    except Exception as e:
+        print(f"[pipeline] KB ingestion for round {round_id} failed: {e}")
+
+
+# ── Knowledge Base Ingestion (self-evolution bridge) ─────────────────
+
+def _ingest_to_kb(conn: sqlite3.Connection, run_id: str, phase: str,
+                  role: str, content: str, signal: str = "",
+                  extra_context: str = "") -> None:
+    """Ingest pipeline narrative into the knowledge_messages table.
+
+    This is the self-evolution bridge. Every phase's output flows into
+    the FTS5 knowledge base so future runs can discover it via pre-discovery.
+
+    The knowledge_messages table has an AFTER INSERT trigger that auto-indexes
+    into knowledge_messages_fts, so we just INSERT and the FTS5 index updates.
+
+    Source naming convention:
+      pipeline_{phase} — e.g. pipeline_brain, pipeline_code_review
+
+    Content format includes:
+      - Run ID and phase for traceability
+      - Signal (CONSENSUS_REACHED / OBJECTIONS / etc) for filtering
+      - The full narrative output
+      - Extra context (review pass, revision number, etc.)
+    """
+    if not content or not content.strip():
+        return
+
+    source = f"pipeline_{phase}"
+
+    # Build the narrative document
+    parts = [
+        f"[CIS Pipeline | Run: {run_id} | Phase: {phase} | Role: {role}]",
+    ]
+    if signal:
+        parts.append(f"[Signal: {signal}]")
+    if extra_context:
+        parts.append(f"[Context: {extra_context}]")
+    parts.append("")
+    parts.append(content)
+
+    document = "\n".join(parts)
+
+    try:
+        conn.execute(
+            """INSERT INTO knowledge_messages (role, content, source, timestamp)
+               VALUES (?, ?, ?, ?)""",
+            (role, document, source,
+             datetime.now(timezone.utc).isoformat())
+        )
+        conn.commit()
+    except Exception as e:
+        # KB ingestion is best-effort — don't crash the pipeline
+        print(f"[pipeline] KB ingest failed for {phase}/{role}: {e}")
+
+
+def _ingest_round_to_kb(conn: sqlite3.Connection, run_id: str,
+                        round_id: int, phase: str, signal: str) -> None:
+    """Ingest a complete deliberation round into the knowledge base.
+
+    Called after _complete_round(). Extracts all narrative content from
+    the round and ingests each piece with appropriate source tags.
+    """
+    cur = conn.execute(
+        """SELECT brain_output, drafter_output, reviewer1_output,
+                  reviewer2_output, menter_output, verify_output,
+                  human_question
+           FROM deliberation_rounds WHERE id = ?""",
+        (round_id,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return
+
+    brain_out, draft_out, r1_out, r2_out, menter_out, verify_out, human_q = row
+
+    context = f"round_{round_id}_signal_{signal}"
+
+    if brain_out:
+        _ingest_to_kb(conn, run_id, phase, "brain", brain_out, signal, context)
+    if draft_out:
+        _ingest_to_kb(conn, run_id, phase, "draft", draft_out, signal, context)
+    if r1_out:
+        _ingest_to_kb(conn, run_id, phase, "review1", r1_out, signal, context)
+    if r2_out:
+        _ingest_to_kb(conn, run_id, phase, "review2", r2_out, signal, context)
+    if menter_out:
+        _ingest_to_kb(conn, run_id, phase, "menter", menter_out, signal, context)
+    if verify_out:
+        _ingest_to_kb(conn, run_id, phase, "verify", verify_out, signal, context)
+    if human_q:
+        _ingest_to_kb(conn, run_id, phase, "human", human_q, signal, context)
+
+
+# ── Soul Document Builder (Component 6) ─────────────────────────────────
+
+import yaml as _yaml
+
+_ROLE_OVERLAYS = None
+_ROLE_OVERLAYS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config", "role_overlays.yaml"
+)
+
+
+def _load_role_overlays() -> dict:
+    """Load role overlays from YAML config. Cached after first load."""
+    global _ROLE_OVERLAYS
+    if _ROLE_OVERLAYS is not None:
+        return _ROLE_OVERLAYS
+    try:
+        with open(_ROLE_OVERLAYS_PATH) as f:
+            _ROLE_OVERLAYS = _yaml.safe_load(f) or {}
+    except Exception:
+        _ROLE_OVERLAYS = {}
+    return _ROLE_OVERLAYS
+
+
+def _prior_dispositions(intent: str, timeout: int = 20) -> str:
+    """Ask the research gate what the record already settled about this intent.
+
+    Calls the gate's own --advise-on mode rather than reimplementing the lookup,
+    so the briefing an agent receives and the check it is judged against can
+    never drift apart. Best effort: any failure returns empty and the phase
+    proceeds — this informs, it does not gate.
+    """
+    if not intent:
+        return ""
+    gate = os.path.join(str(_GATES_DIR), "gate_research_before_conclusion.py")
+    if not os.path.exists(gate):
+        return ""
+    try:
+        proc = subprocess.run(
+            ["python3", gate, "--advise-on", intent[:600],
+             "--db", DB_PATH],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
+def _build_soul_document(conn: sqlite3.Connection, role: str, intent: str,
+                         run_id: str, db_path: str = None) -> str:
+    """Build the soul document for an agent dispatch.
+
+    Structured as: PROJECT_BRIEF > ROLE_OVERLAY > KB_CONTEXT > RECENT_RUNS > ERICS_WORKING_METHODS
+    Total size budget: 8000 chars. Sections truncated if needed.
+    """
+    overlays = _load_role_overlays()
+    overlay = overlays.get(role, {})
+    role_text = overlay.get("role", "")
+    bias_text = overlay.get("bias_overlay", "")
+
+    # PROJECT_BRIEF — AGENTS.md content (truncated)
+    project_brief = ""
+    agents_md_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "AGENTS.md"
+    )
+    try:
+        with open(agents_md_path) as f:
+            project_brief = f.read()[:3000]  # truncate to 3000 chars
+    except Exception:
+        project_brief = "(AGENTS.md not found)"
+
+    # KB_CONTEXT — top 3 KB hits (reuse pre-discovery logic but standalone)
+    kb_context = ""
+    try:
+        keywords = " ".join(intent.split()[:8])
+        import re as _re
+        keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords).strip()
+        if keywords:
+            cur = conn.execute(
+                "SELECT content, source FROM knowledge_messages_fts "
+                "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 3",
+                (keywords,)
+            )
+            hits = cur.fetchall()
+            if hits:
+                kb_lines = []
+                for content, source in hits:
+                    preview = (content[:300] + "...") if len(content) > 300 else content
+                    kb_lines.append(f"- [{source}] {preview}")
+                kb_context = "\n".join(kb_lines)
+    except Exception:
+        kb_context = "(KB search unavailable)"
+
+    # RECENT_RUNS — last 3 completed runs
+    recent_runs = ""
+    try:
+        cur = conn.execute(
+            "SELECT id, topic, result, rounds_completed FROM workflow_runs "
+            "WHERE result = 'CONSENSUS_REACHED' "
+            "ORDER BY created_at DESC LIMIT 3"
+        )
+        runs = cur.fetchall()
+        if runs:
+            run_lines = []
+            for r_id, r_topic, r_result, r_rounds in runs:
+                topic_preview = (r_topic[:100] + "...") if r_topic and len(r_topic) > 100 else (r_topic or "")
+                run_lines.append(f"- [{r_id[:20]}...] {r_result} ({r_rounds} rounds): {topic_preview}")
+            recent_runs = "\n".join(run_lines)
+    except Exception:
+        recent_runs = "(no prior runs)"
+
+    # ERICS_WORKING_METHODS — static
+    methods = (
+        "Verification-hardening rule: self-report is not truth.\n"
+        "Evidence-backed response rule: every claim needs raw evidence.\n"
+        "READ_ONLY_STANDING_BY: do not modify until explicitly directed."
+    )
+
+    # Assemble with token budget — priority order
+    parts = []
+
+    # ROLE_OVERLAY (highest priority — always include)
+    if role_text:
+        parts.append(f"[ROLE_OVERLAY]\n{role_text}")
+    if bias_text:
+        parts.append(f"\n[BIAS_OVERLAY]\n{bias_text}")
+
+    # TASK (always include — this is what the agent is doing)
+    parts.append(f"\n[TASK]\n(Pipeline will provide the task prompt below)")
+
+    # KB_CONTEXT (always include marker even if empty — guardrail checks for marker presence)
+    if kb_context:
+        parts.append(f"\n[KB_CONTEXT]\n{kb_context[:1500]}")
+    else:
+        parts.append("\n[KB_CONTEXT]\n(No knowledge base hits for this intent)")
+
+    # PRIOR_DISPOSITIONS — what the record already decided about this intent.
+    # Produced by the same gate that will judge the output, so an agent is only
+    # ever failed on something it was shown first. Blocking is cheap to run but
+    # expensive to trigger (a failure costs a whole model round trip), so the
+    # way to keep a hard gate affordable is to make it rarely fire.
+    dispositions = _prior_dispositions(intent)
+    if dispositions:
+        parts.append(f"\n{dispositions[:1200]}")
+
+    # RECENT_RUNS
+    if recent_runs:
+        parts.append(f"\n[RECENT_RUNS]\n{recent_runs[:800]}")
+
+    # PROJECT_BRIEF
+    if project_brief:
+        parts.append(f"\n[PROJECT_BRIEF]\n{project_brief[:2000]}")
+
+    # ERICS_WORKING_METHODS
+    parts.append(f"\n[ERICS_WORKING_METHODS]\n{methods}")
+
+    soul = "\n".join(parts)
+
+    # Enforce 8000 char budget
+    if len(soul) > 8000:
+        soul = soul[:8000] + "\n...(soul document truncated)"
+
+    return soul
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  INTENT PROVENANCE — lock the enriched intent, inject it everywhere,
+#  and record drift at each phase boundary
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _lock_intent_provenance(
+    conn: sqlite3.Connection,
+    run_id: str,
+    original_intent: str,
+    enriched_intent: str,
+    kb_context: str = "",
+    brain_session_id: str = "",
+) -> None:
+    """Lock the enriched intent as the provenance anchor for a run.
+
+    Called once after the Brain phase produces its understanding.
+    Every downstream phase will be checked against this anchor.
+    """
+    kb_hash = ""
+    if kb_context:
+        kb_hash = hashlib.sha256(kb_context.encode()).hexdigest()[:16]
+    conn.execute(
+        "INSERT INTO intent_provenance "
+        "(run_id, original_intent, enriched_intent, kb_context_hash, brain_session_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (run_id, original_intent, enriched_intent, kb_hash, brain_session_id),
+    )
+    conn.commit()
+
+
+def _get_enriched_intent(conn: sqlite3.Connection, run_id: str) -> str:
+    """Retrieve the locked enriched intent for a run.
+
+    Returns the enriched intent string, or falls back to the
+    original intent from workflow_runs if no enriched intent is locked.
+    """
+    row = conn.execute(
+        "SELECT enriched_intent FROM intent_provenance "
+        "WHERE run_id = ? ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    if row and row[0]:
+        return row[0]
+    # Fallback: use the topic from the run
+    row = conn.execute(
+        "SELECT topic FROM workflow_runs WHERE id = ?", (run_id,)
+    ).fetchone()
+    return row[0] if row else ""
+
+
+def _intent_anchor_block(conn: sqlite3.Connection, run_id: str) -> str:
+    """Build the intent anchor block for injection into downstream phases.
+
+    This is the enriched intent that every phase sees as a fixed reference.
+    It's not just the previous phase's output — it's the original understanding
+    that Brain and Eric agreed on.
+    """
+    enriched = _get_enriched_intent(conn, run_id)
+    if not enriched:
+        return ""
+    return (
+        "\n\n## ══ INTENT ANCHOR (enriched — do not drift from this) ══\n"
+        f"{enriched}\n"
+        "## ══ END INTENT ANCHOR ══\n"
+    )
+
+
+def _record_phase_drift(
+    conn: sqlite3.Connection,
+    run_id: str,
+    phase: str,
+    round_num: int,
+    phase_output: str,
+    drift_score: float,
+    drift_reasons: list,
+    verdict: str,
+) -> None:
+    """Record drift measurement for a phase in phase_drift table."""
+    intent_snapshot = _get_enriched_intent(conn, run_id)
+    conn.execute(
+        "INSERT INTO phase_drift "
+        "(run_id, phase, round, intent_snapshot, phase_output, "
+        " drift_score, drift_reasons, verdict) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id, phase, round_num,
+            intent_snapshot[:4000],
+            (phase_output or "")[:4000],
+            drift_score,
+            json.dumps(drift_reasons) if drift_reasons else None,
+            verdict,
+        ),
+    )
+    conn.commit()
+
+
+def _measure_drift(
+    intent: str,
+    output: str,
+    phase: str,
+) -> tuple:
+    """Deterministic drift measurement between intent and phase output.
+
+    Returns (drift_score 0.0-1.0, reasons list, verdict string).
+
+    Layer 1: Fast deterministic heuristic — keyword overlap, scope expansion, action alignment.
+    Layer 2 (optional): Semantic comparison via local LLM (Qwen on port 8002).
+
+    Verdict levels:
+    - ALIGNED: drift < 0.2
+    - MINOR_DRIFT: 0.2 <= drift < 0.4
+    - SIGNIFICANT_DRIFT: 0.4 <= drift < 0.6
+    - DIVERGED: drift >= 0.6
+    """
+    if not intent or not output:
+        return (0.0, [], "ALIGNED")
+
+    # ── Layer 1: Deterministic heuristic ──────────────────────────────
+    stop_words = {
+        "the", "a", "an", "to", "for", "of", "in", "on", "at", "by",
+        "is", "are", "was", "were", "be", "been", "and", "or", "not",
+        "this", "that", "it", "with", "from", "as", "so", "if", "but",
+        "about", "into", "than", "then", "also", "just", "want", "need",
+        "build", "create", "add", "make", "please", "can", "you", "i",
+        "we", "me", "my", "our", "us", "will", "would", "should", "could",
+        "eric", "cis", "pipeline", "phase", "round", "run", "agent",
+        "gate", "brain", "draft", "verify", "menter", "reviewer",
+        "consensus", "objections", "escalate", "final_json", "status",
+        "role", "summary", "proposal", "directive", "output", "input",
+        "file", "code", "function", "method", "class", "import", "return",
+        "def", "self", "none", "true", "false", "error", "exception",
+        "json", "endpoint", "route", "table", "schema", "migration",
+        "sqlite", "database", "query", "insert", "update", "select",
+        "commit", "branch", "merge", "push", "pull", "request",
+        "config", "api", "runtime", "project", "intent", "understanding",
+    }
+
+    intent_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}@#$%^&*+=/\\|<>~`")
+        for w in intent.split()
+        if len(w) > 2 and w.lower() not in stop_words
+    )
+    output_words = set(
+        w.lower().strip(".,;:!?\"'()[]{}@#$%^&*+=/\\|<>~`")
+        for w in output.split()
+        if len(w) > 2
+    )
+
+    if not intent_words:
+        return (0.0, [], "ALIGNED")
+
+    # 1. Keyword overlap: how many intent concepts appear in output?
+    overlap = intent_words & output_words
+    overlap_ratio = len(overlap) / len(intent_words)
+
+    # 2. Scope expansion: how many new concepts did output introduce?
+    output_unique = output_words - intent_words - stop_words
+    expansion_ratio = len(output_unique) / max(len(output_words), 1)
+
+    # 3. Check for intent action verbs being honored
+    action_words = {"add", "fix", "remove", "update", "create", "build",
+                    "implement", "refactor", "test", "deploy", "configure",
+                    "redesign", "rework", "change", "replace", "wire",
+                    "connect", "integrate", "migrate", "document"}
+    intent_actions = intent_words & action_words
+    if intent_actions:
+        action_found = 0
+        for action in intent_actions:
+            if action in output_words:
+                action_found += 1
+        action_ratio = action_found / len(intent_actions) if intent_actions else 1.0
+    else:
+        action_ratio = 1.0
+
+    # Weighted drift score
+    det_score = (
+        (1.0 - overlap_ratio) * 0.4
+        + expansion_ratio * 0.3
+        + (1.0 - action_ratio) * 0.3
+    )
+    det_score = max(0.0, min(1.0, det_score))
+
+    reasons = []
+    if overlap_ratio < 0.2:
+        reasons.append(
+            f"Low keyword overlap ({overlap_ratio:.0%}) — output barely "
+            f"references intent concepts"
+        )
+    if expansion_ratio > 0.8 and len(output_unique) > 50:
+        reasons.append(
+            f"High scope expansion ({len(output_unique)} new concepts "
+            f"not in intent)"
+        )
+    if action_ratio < 0.5 and intent_actions:
+        reasons.append(
+            f"Action verbs from intent not reflected in output "
+            f"({action_ratio:.0%} of actions found)"
+        )
+
+    # ── Layer 2: Semantic drift via local LLM ─────────────────────────
+    # If the deterministic score is ambiguous (0.2-0.6) and a local LLM
+    # is available, do a semantic pass for a more nuanced verdict.
+    # This catches meaning drift that word overlap can't detect.
+    semantic_score = None
+    semantic_reasons = []
+    if 0.15 <= det_score <= 0.65:
+        semantic_score, semantic_reasons = _semantic_drift_check(
+            intent, output, phase
+        )
+
+    # Combine: if semantic check ran, weight it 60/40 (semantic/deterministic)
+    if semantic_score is not None:
+        drift_score = det_score * 0.4 + semantic_score * 0.6
+        reasons.extend(semantic_reasons)
+    else:
+        drift_score = det_score
+
+    drift_score = max(0.0, min(1.0, drift_score))
+
+    if drift_score < 0.2:
+        verdict = "ALIGNED"
+    elif drift_score < 0.4:
+        verdict = "MINOR_DRIFT"
+    elif drift_score < 0.6:
+        verdict = "SIGNIFICANT_DRIFT"
+    else:
+        verdict = "DIVERGED"
+
+    return (drift_score, reasons, verdict)
+
+
+def _semantic_drift_check(
+    intent: str,
+    output: str,
+    phase: str,
+) -> tuple:
+    """Semantic drift comparison using a local LLM.
+
+    Tries GLM-4.7-Flash (port 8003, ~90 tok/s) first, falls back to
+    Qwen3-VL-30B (port 8002, ~23 tok/s).
+
+    Returns (score 0.0-1.0, reasons list) or (None, []) if unavailable.
+
+    The LLM is asked to rate how well the output aligns with the intent
+    on a 0-10 scale, with a brief reason. This catches meaning drift
+    that word-overlap heuristics miss.
+    """
+    import urllib.request
+    import urllib.error
+
+    # Truncate to keep prompt manageable for local model
+    intent_short = intent[:1500]
+    output_short = output[:1500]
+
+    prompt = (
+        f"You are a drift detection system. Compare the OUTPUT to the INTENT.\n\n"
+        f"INTENT:\n{intent_short}\n\n"
+        f"OUTPUT (phase: {phase}):\n{output_short}\n\n"
+        f"Rate how well the OUTPUT aligns with the INTENT on a scale of 0-10:\n"
+        f"- 10 = perfectly aligned, output matches intent exactly\n"
+        f"- 7 = mostly aligned, minor deviations\n"
+        f"- 5 = partially aligned, some drift from intent\n"
+        f"- 3 = mostly drifted, output barely relates to intent\n"
+        f"- 0 = completely diverged, output has nothing to do with intent\n\n"
+        f"Respond with ONLY a JSON object, no thinking:\n"
+        f'{{"score": <0-10>, "reason": "<one sentence explanation>"}}'
+    )
+
+    # Try GLM first (faster), then Qwen
+    endpoints = [
+        ("http://127.0.0.1:8003/v1/chat/completions", "GLM-4.7-Flash-Q4_K_M.gguf"),
+        ("http://127.0.0.1:8002/v1/chat/completions", "qwen3-vl-30b-a3b-instruct-q4_k_m.gguf"),
+    ]
+
+    for url, model_name in endpoints:
+        payload = json.dumps({
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 1000,
+            "temperature": 0.1,
+        }).encode()
+
+        try:
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req, timeout=60)
+            data = json.loads(resp.read())
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+            # Parse the JSON response — be lenient
+            import re as _re
+            json_match = _re.search(r'\{[^}]+\}', content)
+            if json_match:
+                result = json.loads(json_match.group())
+                raw_score = float(result.get("score", -1))
+                reason = result.get("reason", "")
+                if 0 <= raw_score <= 10:
+                    drift_score = (10.0 - raw_score) / 10.0
+                    model_label = "GLM" if "8003" in url else "Qwen"
+                    return (drift_score, [f"Semantic ({model_label}): {reason} (score {raw_score}/10)"])
+        except Exception:
+            continue
+
+    return (None, [])
+
+
+# ── Pre-Discovery (mandatory before every agent call) ──────────────────
+
+def _consume_interjections(conn: sqlite3.Connection, run_id: str,
+                           phase: str) -> str:
+    """Fetch unconsumed Eric interjections for this run.
+
+    Marks them as consumed by the given phase. Returns formatted string
+    to inject into the agent prompt, or empty string if none.
+    """
+    try:
+        rows = conn.execute(
+            "SELECT id, message FROM pipeline_interjections "
+            "WHERE run_id = ? AND consumed_by_phase IS NULL "
+            "ORDER BY id ASC",
+            (run_id,),
+        ).fetchall()
+        if not rows:
+            return ""
+        parts = ["\n\n## ERIC INTERJECTION (backchannel — consider this)\n"]
+        for ij_id, message in rows:
+            parts.append(f"> {message}\n")
+            conn.execute(
+                "UPDATE pipeline_interjections "
+                "SET consumed_by_phase = ?, consumed_at = datetime('now') "
+                "WHERE id = ?",
+                (phase, ij_id),
+            )
+        conn.commit()
+        return "\n".join(parts) + "\n"
+    except Exception:
+        return ""
+
+
+def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
+                    role: str, run_id: str,
+                    web_search: bool = False) -> str:
+    """Run mandatory pre-discovery and format results for injection.
+
+    Searches: spine FTS5, filesystem, prior trajectories, optionally web.
+    Also injects any unconsumed Eric interjections (backchannel).
+    Returns a formatted string to prepend to the agent's prompt.
+    """
+    keywords = " ".join(intent.split()[:10])
+    # Sanitize FTS5 special chars: . " * ( ) : ^ { } +
+    # These cause "fts5: syntax error near X" if unescaped
+    import re as _re
+    keywords = _re.sub(r'[."*(){}:^+\-]', ' ', keywords)
+    keywords = keywords.strip()
+    if not keywords:
+        keywords = "CIS pipeline"
+    results = []
+
+    # 1. Spine FTS5 search
+    try:
+        cur = conn.execute(
+            "SELECT content, source FROM knowledge_messages_fts "
+            "WHERE knowledge_messages_fts MATCH ? ORDER BY rank LIMIT 5",
+            (keywords,)
+        )
+        kb_hits = cur.fetchall()
+        if kb_hits:
+            results.append("## Knowledge Base")
+            for content, source in kb_hits:
+                preview = (content[:200] + "...") if len(content) > 200 else content
+                results.append(f"- [{source}] {preview}")
+        else:
+            results.append("## Knowledge Base\n(No results found)")
+    except Exception as e:
+        results.append(f"## Knowledge Base\n(Search error: {e})")
+
+    # 2. Prior agent trajectories (MATM)
+    # Verify phase: exclude only same-run Menter trajectories (per spec §3.4)
+    # Other phases: exclude all same-run trajectories
+    try:
+        if phase == "verification":
+            cur = conn.execute(
+                "SELECT output_text, run_id, outcome, role, phase "
+                "FROM agent_trajectories "
+                "WHERE phase = ? AND role = ? "
+                "  AND (run_id != ? OR role != 'menter') "
+                "  AND outcome = 'success' "
+                "ORDER BY created_at DESC LIMIT 3",
+                (phase, role, run_id)
+            )
+        else:
+            cur = conn.execute(
+                "SELECT output_text, run_id, outcome, role, phase "
+                "FROM agent_trajectories "
+                "WHERE phase = ? AND role = ? AND run_id != ? "
+                "  AND outcome = 'success' "
+                "ORDER BY created_at DESC LIMIT 3",
+                (phase, role, run_id)
+            )
+        trajectories = cur.fetchall()
+        if trajectories:
+            results.append("\n## Prior Agent Trajectories")
+            for output, t_run, outcome, t_role, t_phase in trajectories:
+                preview = (output[:300] + "...") if len(output) > 300 else output
+                results.append(
+                    f"--- Trajectory (run {t_run}, {t_role}/{t_phase}, {outcome}) ---\n"
+                    f"{preview}"
+                )
+    except Exception as e:
+        results.append(f"\n## Prior Agent Trajectories\n(Search error: {e})")
+
+    # 3. Web search (Brain and Draft only)
+    if web_search:
+        try:
+            import urllib.request
+            import urllib.parse
+            query = urllib.parse.quote(f"{keywords} best practices 2026")
+            url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&srlimit=3"
+            req = urllib.request.Request(url, headers={"User-Agent": "CIS-Pipeline/1.0"})
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = json.loads(resp.read())
+            search_results = data.get("query", {}).get("search", [])
+            if search_results:
+                results.append("\n## Current Research (web)")
+                for item in search_results:
+                    results.append(f"- {item['title']}: {item.get('snippet', '')[:200]}")
+        except Exception as e:
+            results.append(f"\n## Current Research (web)\n(Search error: {e})")
+
+    return (
+        _build_soul_document(conn, role, intent, run_id)
+        + "\n\n[PRE-DISCOVERY RESULTS — review before proceeding]\n\n"
+        + "\n".join(results)
+        + _consume_interjections(conn, run_id, phase)
+        + "\n\n[END PRE-DISCOVERY — now produce your output]"
+    )
+
+
+# ── FINAL_JSON Parsing (per ADR-SEED-012) ──────────────────────────────
+
+_FINAL_JSON_RE = re.compile(
+    r'```json\s*(\{.*?\})\s*```|FINAL_JSON[:\s]*(\{.*?\})',
+    re.DOTALL
+)
+
+
+def _parse_final_json(text: str) -> Optional[dict]:
+    """Extract FINAL_JSON block from agent output.
+
+    Per ADR-SEED-012: every agent response must end with a FINAL_JSON block
+    containing role, status, summary, recommendation, next_action.
+
+    Returns parsed dict or None if not found.
+
+    Priority:
+    1. JSON blocks containing "role" field (FINAL_JSON signature)
+    2. Bare JSON at end of text containing "status" field
+    3. Any JSON code block (fallback)
+    """
+    # Collect all JSON code blocks and bare FINAL_JSON blocks
+    matches = _FINAL_JSON_RE.findall(text)
+    candidates = []
+    for match in matches:
+        for group in match:
+            if group:
+                try:
+                    parsed = json.loads(group)
+                    candidates.append(parsed)
+                except json.JSONDecodeError:
+                    continue
+
+    # Priority 1: JSON with "role" field (the FINAL_JSON signature)
+    for c in candidates:
+        if "role" in c:
+            return c
+
+    # Priority 2: candidates with "status" field
+    for c in candidates:
+        if "status" in c:
+            return c
+
+    # Priority 3: any candidate
+    if candidates:
+        return candidates[-1]
+
+    # Try bare JSON at end of text
+    lines = text.strip().split("\n")
+    for i in range(len(lines) - 1, -1, -1):
+        line = lines[i].strip()
+        if line.startswith("{") and "status" in line.lower():
+            candidate = "\n".join(lines[i:])
+            try:
+                brace_count = 0
+                end = -1
+                for j, ch in enumerate(candidate):
+                    if ch == "{":
+                        brace_count += 1
+                    elif ch == "}":
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end = j + 1
+                            break
+                if end > 0:
+                    return json.loads(candidate[:end])
+            except (json.JSONDecodeError, IndexError):
+                continue
+
+    return None
+
+
+async def _enforce_output_contract(
+    role: str, output: str, expected_statuses: list,
+    run_id: str, file_path: str = "",
+) -> tuple:
+    """Container enforcement: ensure agent output contains FINAL_JSON
+    with one of the expected statuses.
+
+    Per ADR-SEED-012: if FINAL_JSON is missing or has wrong status,
+    issue ONE repair prompt. If repair also fails, return (output, None)
+    so the caller can escalate.
+
+    Returns (output, parsed_dict_or_None). The output may be the repaired
+    version if the original was invalid.
+    """
+    parsed = _parse_final_json(output)
+    if parsed and parsed.get("status") in expected_statuses:
+        return output, parsed
+
+    # Issue repair prompt
+    print(f"[pipeline] {role} didn't produce valid FINAL_JSON "
+          f"(expected {expected_statuses}). Issuing repair prompt.")
+
+    status_example = expected_statuses[0]
+    repair_prompt = (
+        f"{output}\n\n"
+        f"## FORMAT REPAIR REQUIRED\n"
+        f"Your output is missing the required FINAL_JSON block.\n"
+        f"You MUST end your response with exactly this format:\n"
+        f'```json\n{{"role":"{role}","status":"{status_example}",'
+    )
+    if file_path:
+        repair_prompt += f'"file":"{file_path}",'
+    repair_prompt += f'"summary":"brief summary of what you did"}}\n```'
+
+    try:
+        repaired = await _call_agent(role, repair_prompt, run_id)
+        if repaired.strip():
+            reparsed = _parse_final_json(repaired)
+            if reparsed and reparsed.get("status") in expected_statuses:
+                print(f"[pipeline] {role} repair succeeded.")
+                return repaired, reparsed
+            print(f"[pipeline] {role} repair failed — still no valid FINAL_JSON.")
+            return repaired, None
+    except Exception as e:
+        print(f"[pipeline] {role} repair prompt failed: {e}")
+
+    return output, None
+
+
+# ── Trajectory Recording (MATM) ───────────────────────────────────────
+
+def _record_trajectory(conn: sqlite3.Connection, run_id: str, role: str,
+                       phase: str, input_text: str, output_text: str,
+                       round_number: Optional[int] = None,
+                       outcome: str = "pending",
+                       consensus_reached: int = 0) -> None:
+    """Record an agent trajectory to the shared memory (MATM).
+
+    config_version captures the git HEAD at recording time, so future
+    retrieval can filter by code state (trajectory from different code
+    version = different reliability).
+    """
+    # Capture config_version (git HEAD short hash)
+    config_version = "unknown"
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=DB_PATH.rsplit("/", 1)[0],
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            config_version = result.stdout.strip()
+        else:
+            config_version = f"git-error: {result.stderr.strip()[:50]}"
+    except Exception as e:
+        config_version = f"exception: {str(e)[:50]}"
+
+    conn.execute(
+        """INSERT INTO agent_trajectories
+           (run_id, role, phase, input_text, output_text,
+            round_number, outcome, consensus_reached, config_version)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (run_id, role, phase, input_text, output_text,
+         round_number, outcome, consensus_reached, config_version)
+    )
+    conn.commit()
+
+
+def _update_trajectory_outcome(conn: sqlite3.Connection, run_id: str,
+                                role: str, phase: str,
+                                outcome: str) -> None:
+    """Update the outcome of the most recent trajectory for a run/role/phase.
+
+    Called after a round completes — marks trajectory as 'success' or 'failed'
+    so future retrieval can filter by outcome (per spec §4.3).
+    """
+    conn.execute(
+        """UPDATE agent_trajectories SET outcome = ?
+           WHERE id = (
+               SELECT id FROM agent_trajectories
+               WHERE run_id = ? AND role = ? AND phase = ?
+               ORDER BY id DESC LIMIT 1
+           )""",
+        (outcome, run_id, role, phase)
+    )
+    conn.commit()
+
+
+# ── Async Agent Dispatch ────────────────────────────────────────────────
+
+# ── API Key Resolution ─────────────────────────────────────────────────
+
+def _resolve_api_key(role: str) -> str:
+    """Resolve the API key for a gateway role.
+
+    Priority:
+    1. CIS_{ROLE}_API_KEY env var (explicit override)
+    2. API_SERVER_KEY from the gateway's .env file
+    3. api_key from the gateway's config.yaml api_server section
+    4. Empty string (auth disabled)
+    """
+    # 1. Explicit env var
+    env_key = os.environ.get(f"CIS_{role.upper()}_API_KEY", "")
+    if env_key:
+        return env_key
+
+    # 2. Read from gateway .env file
+    profile = PROFILES.get(role, {})
+    hermes_profile = profile.get("hermes_profile", "")
+    if hermes_profile:
+        env_path = os.path.expanduser(f"~/.{hermes_profile}/.env")
+        if os.path.exists(env_path):
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("API_SERVER_KEY="):
+                            return line.split("=", 1)[1].strip()
+            except Exception:
+                pass
+
+        # 3. Read from config.yaml
+        cfg_path = os.path.expanduser(f"~/.{hermes_profile}/config.yaml")
+        if os.path.exists(cfg_path):
+            try:
+                import yaml
+                with open(cfg_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                key = cfg.get("api_server", {}).get("api_key", "")
+                if key:
+                    return key
+            except Exception:
+                pass
+
+    return ""
+
+
+def _ensure_progress_table(conn) -> None:
+    conn.execute("""CREATE TABLE IF NOT EXISTS run_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT NOT NULL, phase TEXT, role TEXT,
+        elapsed_s INTEGER, idle_s INTEGER, note TEXT,
+        at TEXT DEFAULT (datetime('now')))""")
+    conn.commit()
+
+
+def _gateway_idle_seconds(role: str) -> Optional[int]:
+    """Seconds since this agent's gateway last wrote to its log.
+
+    The gateway appends as the agent works — tool calls, warnings — so the log
+    mtime is a liveness signal that costs nothing to read. It is a proxy, not
+    proof: a genuinely busy model between tool calls looks briefly idle too.
+    """
+    path = f"/tmp/cis-logs/{role}.log"
+    try:
+        return int(time.time() - os.path.getmtime(path))
+    except OSError:
+        return None
+
+
+async def _heartbeat(run_id: str, phase: str, role: str, db_path: str) -> None:
+    """Record that an agent is still working, and whether it looks stalled.
+
+    A long timeout without this is indistinguishable from a hang: the first
+    code-path run sat 19.5 minutes in verification with no way to tell whether
+    it was checking files or wedged. Raising the limit is only safe if someone
+    can see the difference. (2026-08-28)
+    """
+    started = time.time()
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path, timeout=10)
+        _ensure_progress_table(conn)
+        while True:
+            await asyncio.sleep(HEARTBEAT_SECONDS)
+            elapsed = int(time.time() - started)
+            idle = _gateway_idle_seconds(role)
+            if idle is not None and idle > STALL_SECONDS:
+                note = (f"no gateway activity for {idle}s — may be stalled")
+            else:
+                note = "working"
+            try:
+                conn.execute(
+                    "INSERT INTO run_progress "
+                    "(run_id, phase, role, elapsed_s, idle_s, note) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (run_id, phase, role, elapsed, idle, note))
+                conn.commit()
+            except sqlite3.Error:
+                pass
+            print(f"[pipeline] {role} still working — {elapsed}s elapsed, {note}")
+    except asyncio.CancelledError:
+        pass
+    finally:
+        if conn:
+            conn.close()
+
+
+async def _call_agent(role: str, prompt: str, run_id: str) -> str:
+    """Dispatch a call to a Hermes gateway agent.
+
+    Returns the agent's text response.
+    Raises httpx.TimeoutException on timeout, httpx.ConnectError if unreachable.
+    """
+    if _breaker_is_tripped(role):
+        raise ConnectionError(
+            f"Circuit breaker tripped for {role} — gateway has failed "
+            f"{CIRCUIT_BREAKER_THRESHOLD} consecutive times. "
+            f"Cooling down for {CIRCUIT_BREAKER_COOLDOWN}s."
+        )
+
+    gateway_url = get_gateway_url(role)
+    if not gateway_url:
+        raise ValueError(f"Unknown role: {role}")
+
+    profile = PROFILES[role]
+    port = profile["port"]
+
+    # Health check before dispatch
+    healthy, error, _ = check_gateway(port)
+    if not healthy:
+        _breaker_record_failure(role)
+        raise ConnectionError(f"Gateway {role} (port {port}) is down: {error}")
+
+    api_key = _resolve_api_key(role)
+
+    # Inject project root context so the agent knows where files live.
+    # Inside the container, the project is at /workspace/cis (CIS_PROJECT_ROOT).
+    # On the host dev environment, it's at /mnt/projects/cis.
+    # Without this, agents search their home dir and can't find the codebase.
+    project_context = f"[PROJECT_ROOT: {PROJECT_ROOT}]\n"
+    prompt = project_context + prompt
+
+    payload = {
+        "model": "agent",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 8192,
+    }
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    timeout = AGENT_TIMEOUTS.get(role, AGENT_TIMEOUT)
+    # Report in while the call is outstanding, so a long agent and a hung one
+    # can be told apart from outside. Cancelled the moment the call returns.
+    beat = asyncio.create_task(_heartbeat(run_id, role, role, DB_PATH))
+    # Retry once on transient failures (Component 11 — Error Recovery)
+    last_error = None
+    try:
+      for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(gateway_url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+            break
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            last_error = e
+            if attempt == 0:
+                print(f"[pipeline] Transient error for {role}, retrying in 5s: {e}")
+                await asyncio.sleep(5)
+            else:
+                _breaker_record_failure(role)
+                raise ConnectionError(
+                    f"Gateway {role} (port {port}) failed after retry: {e}"
+                )
+    finally:
+        beat.cancel()
+
+    choices = data.get("choices", [])
+    if not choices:
+        _breaker_record_failure(role)
+        raise ConnectionError(
+            f"Gateway {role} (port {port}) returned no choices — "
+            f"likely a stale/zombie process. Response: {str(data)[:200]}"
+        )
+
+    content = choices[0].get("message", {}).get("content", "")
+    if not content.strip():
+        # Check for reasoning_content (some models put output there)
+        reasoning = choices[0].get("message", {}).get("reasoning_content", "")
+        if reasoning and reasoning.strip():
+            content = reasoning  # Use reasoning as content fallback
+
+    if not content.strip():
+        _breaker_record_failure(role)
+        raise ConnectionError(
+            f"Gateway {role} (port {port}) returned empty content — "
+            f"model backend not working. Response: {str(data)[:200]}"
+        )
+
+    _breaker_record_success(role)
+    return content
+
+
+async def _call_reviewers_parallel(prompt: str, run_id: str) -> Tuple[str, str, Optional[str], Optional[str]]:
+    """Call Review1 and Review2 in parallel, with retry on empty/ambiguous output.
+
+    Returns (review1_output, review2_output, review1_error, review2_error).
+
+    A reviewer that returns empty or unparseable output is retried once with a
+    repair prompt. If it still fails, the output is returned as-is with the
+    error set so the caller can decide how to handle the incomplete review.
+
+    A reviewer that returns a valid FINAL_JSON (CONSENSUS_REACHED or OBJECTIONS)
+    is considered to have completed its role, regardless of the signal.
+    """
+    MAX_REVIEWER_RETRIES = 2
+
+    async def _call_with_retry(role: str) -> Tuple[str, Optional[str]]:
+        """Call a reviewer, retry once if output is empty or unparseable."""
+        last_error = None
+        for attempt in range(MAX_REVIEWER_RETRIES + 1):
+            try:
+                output = await _call_agent(role, prompt, run_id)
+
+                # Empty output — retry with repair prompt
+                if not output.strip():
+                    last_error = "empty output"
+                    if attempt < MAX_REVIEWER_RETRIES:
+                        print(f"[pipeline] {role} returned empty — retrying (attempt {attempt+1})")
+                        continue
+                    return "", last_error
+
+                # Check if FINAL_JSON is parseable
+                parsed = _parse_final_json(output)
+                if parsed and parsed.get("status") in ("CONSENSUS_REACHED", "OBJECTIONS", "ESCALATE"):
+                    return output, None  # Valid signal — review complete
+
+                # FINAL_JSON missing or unparseable — try text-scan fallback
+                has_consensus = "CONSENSUS" in output.upper()
+                has_objection = "OBJECTION" in output.upper() or "ESCALATE" in output.upper()
+                if has_consensus or has_objection:
+                    return output, None  # Text-scan found a signal — review complete
+
+                # Ambiguous — retry with repair prompt
+                last_error = "ambiguous output (no FINAL_JSON, no text-scan signal)"
+                if attempt < MAX_REVIEWER_RETRIES:
+                    print(f"[pipeline] {role} returned ambiguous output — retrying (attempt {attempt+1})")
+                    # Re-dispatch with same prompt (repair prompt would need the original context)
+                    continue
+                return output, last_error
+
+            except (httpx.TimeoutException, ConnectionError, Exception) as e:
+                last_error = str(e)
+                if attempt < MAX_REVIEWER_RETRIES:
+                    print(f"[pipeline] {role} errored ({e}) — retrying (attempt {attempt+1})")
+                    continue
+                return "", last_error
+
+        return "", last_error
+
+    results = await asyncio.gather(
+        _call_with_retry("review1"),
+        _call_with_retry("review2"),
+    )
+    return results[0][0], results[1][0], results[0][1], results[1][1]
+
+
+def _check_consensus(r1_output: str, r2_output: str,
+                      r1_error: Optional[str] = None,
+                      r2_error: Optional[str] = None) -> Tuple[bool, bool, Optional[str]]:
+    """Check if both reviewers reached consensus.
+
+    Returns (consensus_reached, has_objections, objection_text).
+
+    Only reviewers that completed their role (produced a parseable signal)
+    can express consensus or objections. A reviewer with an error or
+    ambiguous output did NOT complete its role.
+
+    SINGLE-REVIEWER DEGRADATION: If one reviewer fails (empty/error) but the
+    other completed with OBJECTIONS, the objections are honored and Brain is
+    sent back for revision. Don't throw away valid feedback because the other
+    model hiccuped. Only escalate if BOTH reviewers fail, or if both complete
+    and can't reach consensus after max rounds.
+    """
+    # A reviewer with an error did not complete its role
+    r1_complete = r1_output.strip() and not r1_error
+    r2_complete = r2_output.strip() and not r2_error
+
+    if not r1_complete and not r2_complete:
+        return False, False, None  # Neither completed — incomplete, escalate
+
+    # Single-reviewer degradation: one failed, one completed
+    if not r2_complete:
+        # Only r1 completed — check if it has objections
+        r1_json = _parse_final_json(r1_output)
+        r1_status = r1_json.get("status", "") if r1_json else ""
+        if r1_status == "OBJECTIONS" or r1_status == "ESCALATE":
+            return False, True, f"[Review1] {r1_output[:2000]}\n[Review2] (no response — model failure)"
+        if r1_status == "CONSENSUS_REACHED":
+            # One reviewer says consensus, other is silent — proceed with caution
+            return True, False, None
+        # Text-scan fallback
+        if "OBJECTION" in r1_output.upper() or "ESCALATE" in r1_output.upper():
+            return False, True, f"[Review1] {r1_output[:2000]}\n[Review2] (no response — model failure)"
+        if "CONSENSUS" in r1_output.upper():
+            return True, False, None
+        return False, False, None  # r1 ambiguous, r2 incomplete
+
+    if not r1_complete:
+        # Only r2 completed — check if it has objections
+        r2_json = _parse_final_json(r2_output)
+        r2_status = r2_json.get("status", "") if r2_json else ""
+        if r2_status == "OBJECTIONS" or r2_status == "ESCALATE":
+            return False, True, f"[Review1] (no response — model failure)\n[Review2] {r2_output[:2000]}"
+        if r2_status == "CONSENSUS_REACHED":
+            return True, False, None
+        # Text-scan fallback
+        if "OBJECTION" in r2_output.upper() or "ESCALATE" in r2_output.upper():
+            return False, True, f"[Review1] (no response — model failure)\n[Review2] {r2_output[:2000]}"
+        if "CONSENSUS" in r2_output.upper():
+            return True, False, None
+        return False, False, None  # r2 ambiguous, r1 incomplete
+
+    # Both completed — parse their signals
+    r1_json = _parse_final_json(r1_output)
+    r2_json = _parse_final_json(r2_output)
+
+    r1_status = r1_json.get("status", "") if r1_json else ""
+    r2_status = r2_json.get("status", "") if r2_json else ""
+
+    # If we can't parse FINAL_JSON, try text scanning (fallback per ADR-SEED-012)
+    if not r1_json and not r2_json:
+        r1_consensus = "CONSENSUS" in r1_output.upper()
+        r2_consensus = "CONSENSUS" in r2_output.upper()
+        r1_objections = "OBJECTION" in r1_output.upper() or "ESCALATE" in r1_output.upper()
+        r2_objections = "OBJECTION" in r2_output.upper() or "ESCALATE" in r2_output.upper()
+        consensus = r1_consensus and r2_consensus
+        has_obj = r1_objections or r2_objections
+        obj_text = ""
+        if r1_objections:
+            obj_text += f"[Review1] {r1_output[:500]}\n"
+        if r2_objections:
+            obj_text += f"[Review2] {r2_output[:500]}"
+        return consensus, has_obj, obj_text
+
+    # If only one parsed — that reviewer's output is ambiguous even though non-empty
+    if not r1_json or not r2_json:
+        return False, False, None  # incomplete, not an objection
+
+    # Both parsed — check statuses
+    consensus = (r1_status == "CONSENSUS_REACHED" and r2_status == "CONSENSUS_REACHED")
+    has_obj = (r1_status == "OBJECTIONS" or r2_status == "OBJECTIONS"
+               or r1_status == "ESCALATE" or r2_status == "ESCALATE")
+
+    obj_text = ""
+    if r1_status == "OBJECTIONS" and r1_json:
+        obj_text += f"[Review1] {r1_json.get('summary', r1_output[:500])}\n"
+    if r2_status == "OBJECTIONS" and r2_json:
+        obj_text += f"[Review2] {r2_json.get('summary', r2_output[:500])}"
+
+    return consensus, has_obj, obj_text
+
+
+# ── L1 Deterministic Checks ────────────────────────────────────────────
+
+def _run_l1_checks(cwd: str) -> str:
+    """Run deterministic L1 checks against the working directory.
+
+    Captures git diff, checks file existence/size, and returns
+    a structured evidence report for the verify agent.
+    """
+    import subprocess
+
+    parts = []
+
+    # 1. Git diff stat
+    try:
+        diff_stat = subprocess.run(
+            ["git", "diff", "--stat"],
+            capture_output=True, text=True, timeout=15, cwd=cwd,
+        ).stdout.strip()
+        parts.append(f"## L1: Git Diff Stat\n```\n{diff_stat or '(no changes)'}\n```")
+    except Exception as e:
+        parts.append(f"## L1: Git Diff Stat\nERROR: {e}")
+
+    # 2. Git diff (full, capped at 2000 chars)
+    try:
+        diff_full = subprocess.run(
+            ["git", "diff"],
+            capture_output=True, text=True, timeout=15, cwd=cwd,
+        ).stdout.strip()
+        if len(diff_full) > 2000:
+            diff_full = diff_full[:2000] + "\n... (truncated)"
+        parts.append(f"## L1: Git Diff (Full)\n```diff\n{diff_full or '(no changes)'}\n```")
+    except Exception as e:
+        parts.append(f"## L1: Git Diff (Full)\nERROR: {e}")
+
+    # 3. Changed file existence + size check
+    try:
+        diff_names = subprocess.run(
+            ["git", "diff", "--name-only"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if diff_names:
+            file_lines = []
+            for fpath in diff_names.split("\n"):
+                full = os.path.join(cwd, fpath)
+                if os.path.exists(full):
+                    size = os.path.getsize(full)
+                    file_lines.append(f"  ✓ {fpath} ({size} bytes)")
+                else:
+                    file_lines.append(f"  ✗ {fpath} MISSING")
+            parts.append("## L1: Changed Files\n" + "\n".join(file_lines))
+        else:
+            parts.append("## L1: Changed Files\n(no changed files)")
+    except Exception as e:
+        parts.append(f"## L1: Changed Files\nERROR: {e}")
+
+    # 4. Untracked files
+    try:
+        untracked = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if untracked:
+            parts.append("## L1: Untracked Files\n" + untracked)
+    except Exception:
+        pass
+
+    return "\n\n".join(parts)
+
+
+def _run_isolated_l1(cwd: str, pre_exec_head: str) -> str:
+    """Run L1 checks from a clean git worktree at the pre-Menter state.
+
+    Creates a temporary git worktree at the pre-execution HEAD, applies
+    Menter's diff, runs L1 checks there, then cleans up. This is true
+    isolation — Menter never touched this directory, so cannot fabricate
+    evidence there.
+
+    If pre_exec_head is empty or worktree creation fails, falls back to
+    in-place L1 checks with an explicit warning in the report.
+    """
+    import subprocess
+    import tempfile
+
+    def _run(cmd, timeout=15, workdir=None):
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout,
+            cwd=workdir or cwd
+        )
+
+    parts = []
+    worktree_path = None
+
+    # Capture Menter's diff to apply in the clean worktree
+    try:
+        menter_diff = _run(["git", "diff"]).stdout
+    except Exception:
+        menter_diff = ""
+
+    # Try to create a clean worktree at the pre-execution HEAD
+    if pre_exec_head:
+        worktree_path = tempfile.mkdtemp(prefix=f"cis-verify-")
+        try:
+            wt_result = _run(
+                ["git", "worktree", "add", "--detach", worktree_path, pre_exec_head],
+                timeout=30,
+            )
+            if wt_result.returncode != 0:
+                parts.append(f"## L1-ISOLATED: Worktree creation FAILED\n{wt_result.stderr.strip()[:300]}")
+                parts.append("FALLING BACK to in-place checks — isolation NOT guaranteed.")
+                # Clean up the orphan tempdir
+                import shutil
+                try:
+                    shutil.rmtree(worktree_path, ignore_errors=True)
+                except Exception:
+                    pass
+                worktree_path = None
+            else:
+                parts.append(f"## L1-ISOLATED: Clean Worktree\nChecked out {pre_exec_head[:12]} at {worktree_path}")
+
+                # Apply Menter's diff to the clean worktree
+                if menter_diff.strip():
+                    patch_result = subprocess.run(
+                        ["git", "apply", "--allow-empty"],
+                        input=menter_diff, capture_output=True, text=True,
+                        timeout=15, cwd=worktree_path,
+                    )
+                    if patch_result.returncode == 0:
+                        parts.append("Menter's diff applied to clean worktree: OK")
+                    else:
+                        parts.append(f"Menter's diff FAILED to apply: {patch_result.stderr.strip()[:300]}")
+                        parts.append("This may indicate Menter's changes are corrupt or conflict.")
+
+                # Run baseline checks in the clean worktree
+                parts.append("\n### Baseline Checks (Clean Worktree)")
+                try:
+                    status = _run(["git", "status", "--short"], workdir=worktree_path).stdout.strip()
+                    parts.append(f"Git status: {status or '(clean)'}")
+                except Exception as e:
+                    parts.append(f"Git status error: {e}")
+
+                # Run L1 checks in the clean worktree
+                parts.append("\n### L1 Checks (Clean Worktree + Menter's Diff)")
+                parts.append(_run_l1_checks(worktree_path))
+
+                # Try import test in clean worktree
+                try:
+                    import_result = _run(
+                        ["python3.12", "-c",
+                         "import sys; sys.path.insert(0,'runtime'); from app import app; "
+                         f"print(f'Flask app imports OK, {{len(app.url_map._rules)}} routes')"],
+                        timeout=20, workdir=worktree_path,
+                    )
+                    if import_result.returncode == 0:
+                        parts.append(f"Import test: {import_result.stdout.strip()}")
+                    else:
+                        parts.append(f"Import test FAILED: {import_result.stderr.strip()[:300]}")
+                except Exception as e:
+                    parts.append(f"Import test error: {e}")
+
+        except Exception as e:
+            parts.append(f"## L1-ISOLATED: Worktree error\n{e}")
+            parts.append("FALLING BACK to in-place checks — isolation NOT guaranteed.")
+        finally:
+            # Clean up the worktree
+            if worktree_path:
+                try:
+                    _run(["git", "worktree", "remove", "--force", worktree_path], timeout=15)
+                    parts.append(f"\nWorktree cleaned up: {worktree_path}")
+                except Exception as e:
+                    parts.append(f"\nWorktree cleanup error: {e} (manual cleanup needed)")
+
+    if not pre_exec_head or worktree_path is None:
+        # Fallback: in-place checks (no isolation)
+        parts.append("## L1: In-Place Checks (NO ISOLATION — warning)")
+        parts.append("pre_exec_head was not captured or worktree failed.")
+        parts.append("These checks run in Menter's workspace — evidence may be fabricated.")
+        parts.append(_run_l1_checks(cwd))
+
+    return "\n\n".join(parts)
+
+
+# ── L1 Universal Checks for Code Chunks ───────────────────────────────
+
+def _run_chunk_l1(cwd: str, file_path: str, diff_text: str) -> str:
+    """Run universal L1 checks on a single code chunk.
+
+    These are deterministic checks that work on any codebase regardless
+    of language or pattern. Results are formatted as evidence for reviewers.
+    """
+    import subprocess
+    parts = []
+    full_path = os.path.join(cwd, file_path)
+
+    # 1. File exists and is non-empty
+    if not os.path.exists(full_path):
+        parts.append(f"## L1: File Exists\n✗ {file_path} MISSING")
+        return "\n\n".join(parts)
+    size = os.path.getsize(full_path)
+    parts.append(f"## L1: File Exists\n✓ {file_path} ({size} bytes)")
+    if size == 0:
+        parts.append("⚠ File is empty")
+
+    # 2. Diff is non-empty
+    if not diff_text.strip():
+        parts.append("## L1: Diff\n⚠ No diff captured — Menter may not have changed anything")
+    else:
+        diff_lines = diff_text.count("\n")
+        parts.append(f"## L1: Diff\n{diff_lines} lines in diff")
+
+    # 3. No hardcoded secrets (basic scan)
+    try:
+        with open(full_path) as f:
+            content = f.read()
+        secret_patterns = ["api_key=", "password=", "token=", "secret="]
+        found_secrets = []
+        for pat in secret_patterns:
+            if pat in content.lower():
+                # Check it's not an env var reference
+                for line_num, line in enumerate(content.split("\n"), 1):
+                    if pat in line.lower() and "os.environ" not in line and "getenv" not in line:
+                        found_secrets.append(f"  Line {line_num}: {line.strip()[:80]}")
+        if found_secrets:
+            parts.append("## L1: Secrets Scan\n⚠ Potential hardcoded secrets:\n" + "\n".join(found_secrets))
+        else:
+            parts.append("## L1: Secrets Scan\n✓ No hardcoded secrets found")
+    except Exception as e:
+        parts.append(f"## L1: Secrets Scan\nERROR: {e}")
+
+    # 4. No silent except: pass
+    try:
+        import re
+        silent_pattern = re.compile(r'except\s*.*:\s*\n\s*pass', re.MULTILINE)
+        matches = silent_pattern.findall(content)
+        if matches:
+            parts.append(f"## L1: Silent Error Handling\n⚠ Found {len(matches)} silent except:pass")
+        else:
+            parts.append("## L1: Silent Error Handling\n✓ No silent except:pass found")
+    except Exception:
+        pass
+
+    # 5. No print() debug statements (basic check)
+    try:
+        print_lines = [line_num for line_num, line in enumerate(content.split("\n"), 1)
+                       if "print(" in line and "print(f'" not in line]
+        if print_lines:
+            parts.append(f"## L1: Debug Statements\n⚠ Found print() on lines: {print_lines[:10]}")
+        else:
+            parts.append("## L1: Debug Statements\n✓ No print() found")
+    except Exception:
+        pass
+
+    # 6. Python syntax check (if .py file)
+    if file_path.endswith(".py"):
+        try:
+            result = subprocess.run(
+                ["python3.12", "-c", f"import py_compile; py_compile.compile('{full_path}', doraise=True)"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0:
+                parts.append("## L1: Syntax Check\n✓ Compiles without errors")
+            else:
+                parts.append(f"## L1: Syntax Check\n✗ COMPILE ERROR:\n{result.stderr.strip()[:500]}")
+        except Exception as e:
+            parts.append(f"## L1: Syntax Check\nERROR: {e}")
+
+    # 7. Existing tests still pass (if test runner exists)
+    try:
+        pytest_check = subprocess.run(
+            ["python3.12", "-m", "pytest", "--co", "-q", cwd],
+            capture_output=True, text=True, timeout=30, cwd=cwd,
+        )
+        if pytest_check.returncode == 0:
+            parts.append("## L1: Test Collection\n✓ Tests collect without errors")
+        else:
+            parts.append(f"## L1: Test Collection\n⚠ Test collection issues:\n{pytest_check.stderr.strip()[:300]}")
+    except Exception:
+        pass  # No pytest — skip
+
+    # 7b. Actually run tests (Component 10 — Verification Depth)
+    try:
+        pytest_run = subprocess.run(
+            ["python3.12", "-m", "pytest", "-x", "-q", "--tb=short", "--no-header"],
+            capture_output=True, text=True, timeout=120, cwd=cwd,
+        )
+        if pytest_run.returncode == 0:
+            lines = pytest_run.stdout.strip().split("\n")
+            summary = lines[-1] if lines else "All tests passed"
+            parts.append(f"## L1: Test Execution\n✓ {summary}")
+        else:
+            # Extract failure summary
+            stderr_lines = pytest_run.stdout.strip().split("\n")[-5:]
+            parts.append(f"## L1: Test Execution\n✗ FAILURES:\n" + "\n".join(stderr_lines)[:500])
+    except subprocess.TimeoutExpired:
+        parts.append("## L1: Test Execution\n⚠ Tests timed out after 120s")
+    except Exception:
+        pass  # No pytest — skip
+
+    # 7c. Directive scope verification (Component 10)
+    # Check if claimed files actually exist
+    try:
+        import re as _re
+        file_claims = _re.findall(r'(?:Created|Modified|Wrote|Updated):\s*`?([^\s`]+)`?', content)
+        if file_claims:
+            missing = [f for f in file_claims if not os.path.exists(os.path.join(cwd, f))]
+            if missing:
+                parts.append(f"## L1: Scope Verification\n✗ CLAIMED FILES NOT FOUND:\n" + "\n".join(missing[:10]))
+            else:
+                parts.append(f"## L1: Scope Verification\n✓ All {len(file_claims)} claimed files exist")
+    except Exception:
+        pass
+
+    return "\n\n".join(parts)
+
+
+# ── Pattern Catalog Helper ────────────────────────────────────────────
+
+def _read_codebase_overview(cwd: str) -> str:
+    """Read a project codebase and produce a summary for Brain.
+
+    Scans file types, directory structure, and existing patterns.
+    Returns a formatted string Brain can use to produce the pattern catalog.
+    """
+    import subprocess
+    parts = []
+
+    # 1. Directory structure (top 3 levels)
+    try:
+        result = subprocess.run(
+            ["find", cwd, "-maxdepth", "3", "-type", "f",
+             "-not", "-path", "*/.git/*", "-not", "-path", "*/__pycache__/*",
+             "-not", "-path", "*/node_modules/*", "-not", "-path", "*/.venv/*"],
+            capture_output=True, text=True, timeout=15,
+        )
+        files = result.stdout.strip().split("\n") if result.stdout.strip() else []
+        parts.append(f"## Files Found ({len(files)} total)")
+        # Show first 50 files
+        for f in files[:50]:
+            rel = os.path.relpath(f, cwd) if f else ""
+            parts.append(f"  {rel}")
+        if len(files) > 50:
+            parts.append(f"  ... and {len(files) - 50} more")
+    except Exception as e:
+        parts.append(f"## Files Found\nERROR: {e}")
+
+    # 2. Language detection by extension
+    try:
+        extensions = {}
+        for f in files:
+            if "." in os.path.basename(f):
+                ext = "." + os.path.basename(f).rsplit(".", 1)[1]
+                extensions[ext] = extensions.get(ext, 0) + 1
+        if extensions:
+            parts.append("\n## Languages by Extension")
+            for ext, count in sorted(extensions.items(), key=lambda x: -x[1]):
+                parts.append(f"  {ext}: {count} files")
+    except Exception:
+        pass
+
+    # 3. Test convention detection
+    test_indicators = []
+    for f in files:
+        basename = os.path.basename(f)
+        if "test" in basename.lower() or "spec" in basename.lower():
+            test_indicators.append(os.path.relpath(f, cwd))
+    if test_indicators:
+        parts.append(f"\n## Test Files ({len(test_indicators)} found)")
+        for t in test_indicators[:10]:
+            parts.append(f"  {t}")
+
+    # 4. Git log (last 5 commits for context)
+    try:
+        log = subprocess.run(
+            ["git", "log", "--oneline", "-5"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        ).stdout.strip()
+        if log:
+            parts.append(f"\n## Recent Commits\n{log}")
+    except Exception:
+        pass
+
+    return "\n".join(parts)
+
+
+# ── Pipeline Relay (main state machine) ───────────────────────────────
+
+class PipelineRelay:
+    """Production pipeline relay orchestrator.
+
+    Async state machine: Brain → Review1+2 → Draft → Review1+2
+    → Eric Gate → Menter → Verify → Complete.
+    """
+
+    def __init__(self, db_path: str = DB_PATH):
+        self.db_path = db_path
+        self.conn = _db_connect(self.db_path)
+
+    def close(self) -> None:
+        self.conn.close()
+
+    # ── Git Workflow (Component 9) ────────────────────────────────────
+
+    def _git(self, *args) -> str:
+        """Run a git command in the project root. Returns stdout."""
+        import subprocess
+        project_root = os.path.dirname(os.path.dirname(self.db_path))
+        result = subprocess.run(
+            ["git", "-C", project_root] + list(args),
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            print(f"[git] ERROR: {result.stderr.strip()}")
+            return ""
+        return result.stdout.strip()
+
+    def _git_create_branch(self, run_id: str):
+        """Create a feature branch for the run."""
+        branch = f"cis/run-{run_id[:20]}"
+        self._git("checkout", "-b", branch)
+        print(f"[git] Created branch: {branch}")
+
+    def _git_commit(self, run_id: str, topic: str):
+        """Commit all changes after Menter completes."""
+        msg = f"run-{run_id[:12]}: {topic[:80]}"
+        self._git("add", "-A")
+        self._git("commit", "-m", msg, "--no-gpg-sign")
+        print(f"[git] Committed: {msg}")
+
+    def _git_rollback(self, run_id: str):
+        """Rollback changes on verification failure."""
+        branch = f"cis/run-{run_id[:20]}"
+        self._git("checkout", "--", ".")
+        self._git("checkout", "master")
+        self._git("branch", "-D", branch)
+        print(f"[git] Rolled back branch: {branch}")
+
+    def _git_pr_command(self, run_id: str, topic: str) -> str:
+        """Generate the gh pr create command (does not auto-execute)."""
+        branch = f"cis/run-{run_id[:20]}"
+        return f"gh pr create --title \"{topic[:80]}\" --body \"Pipeline run: {run_id}\" --head {branch}"
+
+    def _card_context(self, run_id: str, topic: str) -> dict:
+        """Extract card context from the run topic if it's a BUILD CARD.
+
+        Returns a dict with keys: card_path, build_dir, smoke_script.
+        If the topic is not a card, returns empty strings for all keys.
+        """
+        result = {"card_path": "", "build_dir": "", "smoke_script": ""}
+        if not topic or not topic.strip().startswith("CARD "):
+            return result
+
+        # Save the card text to a file so gate_card_valid.sh can read it
+        import tempfile, re
+        card_dir = f"/tmp/cis-cards"
+        os.makedirs(card_dir, exist_ok=True)
+        card_path = os.path.join(card_dir, f"{run_id}.card.md")
+        with open(card_path, "w") as f:
+            f.write(topic)
+        result["card_path"] = card_path
+
+        # Extract build dir from BUILD section (look for /workspace/ paths)
+        build_match = re.search(r'/workspace/[a-z\-]+', topic)
+        if build_match:
+            result["build_dir"] = build_match.group(0)
+
+        # Extract EVIDENCE commands and build a smoke script
+        evidence_lines = []
+        in_evidence = False
+        for line in topic.splitlines():
+            stripped = line.strip()
+            if stripped.upper().startswith("EVIDENCE"):
+                in_evidence = True
+                continue
+            if in_evidence:
+                if stripped.upper().startswith("NOT IN THIS CARD"):
+                    break
+                if stripped.startswith("- "):
+                    cmd = stripped[2:].strip()
+                    if cmd:
+                        evidence_lines.append(cmd)
+
+        if evidence_lines:
+            smoke_path = os.path.join(card_dir, f"{run_id}.smoke.sh")
+            with open(smoke_path, "w") as f:
+                f.write("#!/bin/bash\n")
+                f.write("# Auto-generated smoke script from card EVIDENCE section\n")
+                f.write(f"# Card: {card_path}\n\n")
+                for cmd in evidence_lines:
+                    f.write(f"{cmd}\n")
+            os.chmod(smoke_path, 0o755)
+            result["smoke_script"] = smoke_path
+
+        print(f"[pipeline] Card context: card={card_path}, build_dir={result['build_dir']}, smoke={'yes' if result['smoke_script'] else 'no'}")
+        return result
+
+    async def start(self, intent_text: str) -> str:
+        """Create a new pipeline run and begin processing."""
+        run_id = _create_run(self.conn, intent_text)
+        print(f"[pipeline] Run created: {run_id}")
+        _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+        await self._brain_phase(run_id, intent_text)
+        return run_id
+
+    def start_sync(self, intent_text: str) -> str:
+        """Create a new pipeline run (sync, non-async). Does NOT start processing.
+
+        The API layer calls this to create the run, then launches
+        resume() in a background thread.
+        """
+        run_id = _create_run(self.conn, intent_text)
+        _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+        print(f"[pipeline] Run created (sync): {run_id}")
+        return run_id
+
+    async def resume(self, run_id: str) -> None:
+        """Resume a non-terminal run from its last known state."""
+        run = _get_run(self.conn, run_id)
+        if not run:
+            raise ValueError(f"Run {run_id} not found")
+        if run["status"] in TERMINAL_STATES:
+            print(f"[pipeline] Run {run_id} is terminal: {run['status']}")
+            return
+
+        intent = run["topic"]
+        status = run["status"]
+        print(f"[pipeline] Resuming {run_id} from {status}")
+
+        if status == "INTAKE":
+            _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+            await self._brain_phase(run_id, intent)
+        elif status == "BRAIN_PHASE":
+            await self._brain_phase(run_id, intent)
+        elif status == "WAITING_FOR_HUMAN":
+            print(f"[pipeline] Run {run_id} waiting for human answer")
+        elif status == "INTENT_REVIEW":
+            await self._intent_review(run_id, intent)
+        elif status == "DRAFT_PHASE":
+            await self._draft_phase(run_id, intent)
+        elif status == "PROPOSAL_REVIEW":
+            await self._proposal_review(run_id, intent)
+        elif status == "ERIC_GATE":
+            print(f"[pipeline] Run {run_id} waiting at ERIC_GATE")
+        elif status == "PATTERN_CATALOG":
+            await self._pattern_catalog(run_id, intent)
+        elif status == "CODE_REVIEW_GATE":
+            await self._code_review_gate(run_id, intent)
+        elif status == "EXECUTION":
+            await self._execution(run_id, intent)
+        elif status == "VERIFICATION":
+            await self._verification(run_id, intent)
+
+    async def _brain_phase(self, run_id: str, intent: str, round_num: int = 1) -> None:
+        """Brain phase: explore intent, produce structured understanding.
+
+        On round >1 (revision after reviewer objections), the reviewer
+        feedback is injected so Brain knows what to fix.
+        """
+        print(f"[pipeline] BRAIN phase (round {round_num}) for {run_id}")
+
+        round_id = _start_round(self.conn, run_id, "brain", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "brain", "brain", run_id, web_search=True
+        )
+
+        # On revision rounds, fetch reviewer objections from last intent_review
+        reviewer_feedback = ""
+        if round_num > 1:
+            cur = self.conn.execute(
+                "SELECT reviewer1_output, reviewer2_output "
+                "FROM deliberation_rounds "
+                "WHERE run_id = ? AND reviewer1_output IS NOT NULL "
+                "  AND reviewer1_output != '' "
+                "ORDER BY id DESC LIMIT 1",
+                (run_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                r1, r2 = row[0] or "", row[1] or ""
+                reviewer_feedback = (
+                    f"\n\n## Reviewer Feedback (round {round_num - 1} objections)\n"
+                    f"Your previous understanding was REJECTED by reviewers. "
+                    f"Fix these issues:\n\n"
+                    f"### Reviewer 1:\n{r1[:2000]}\n\n"
+                    f"### Reviewer 2:\n{r2[:2000]}\n\n"
+                    f"Revise your INTENT_UNDERSTANDING to address every objection above. "
+                    f"Do not repeat claims that were debunked. "
+                    f"Stick to verified facts from the knowledge base and file system.\n"
+                )
+
+        prompt = (
+            f"{discovery}{reviewer_feedback}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"You are Brain. Explore this intent and produce an INTENT_UNDERSTANDING.\n"
+            f"End with a FINAL_JSON block:\n"
+            f'```json\n{{"role":"brain","status":"READY","summary":"..."}}\n```\n'
+            f"If you need clarification, emit:\n"
+            f'```json\n{{"role":"brain","status":"NEEDS_CLARIFICATION","question":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("brain", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("brain")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"brain_output": str(e)})
+            _record_trajectory(self.conn, run_id, "brain", "brain",
+                          prompt, str(e), round_num)
+            _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
+            print(f"[pipeline] BRAIN failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "brain", "brain",
+                          prompt, output, round_num)
+
+        # ── Tier 1+2 Guardrails (check output BEFORE persisting) ──────────
+        gr_report = run_guardrails(
+            phase="brain", role="brain", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+            round_num=round_num, conn=self.conn, run_id=run_id,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] BRAIN blocked by guardrail — ESCALATE.")
+            # Still run external gates after round is complete so they can
+            # record outcomes even on failed runs
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            return
+
+        # ── Persist Brain output to spine BEFORE external gates fire ──────
+        # External gates (like gate_research_artifact_present) query the DB
+        # to verify outputs were stored. They must run AFTER _complete_round()
+        # writes the data.
+        
+        # Check for HUMAN_QUESTION
+        parsed = _parse_final_json(output)
+        if parsed and parsed.get("status") == "NEEDS_CLARIFICATION":
+            question = parsed.get("question", output[:500])
+            _set_run_status(self.conn, run_id, "WAITING_FOR_HUMAN")
+            _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                           {"brain_output": output, "human_question": question})
+            print(f"[pipeline] BRAIN needs clarification: {question}")
+            print(f"[pipeline] Run {run_id} waiting for human answer")
+            # External gates fire after round is complete
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            return
+
+        # Validate Brain produced a valid status — enforce with repair prompt
+        if not parsed or parsed.get("status") not in ("READY", "NEEDS_CLARIFICATION"):
+            output, parsed = await _enforce_output_contract(
+                "brain", output, ["READY", "NEEDS_CLARIFICATION"], run_id)
+            # Record the repair attempt
+            _record_trajectory(self.conn, run_id, "brain", "brain",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("READY", "NEEDS_CLARIFICATION"):
+            # Repair failed — escalate
+            _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] BRAIN output invalid — no READY status. ESCALATE.")
+            # External gates fire after round is complete
+            ext_report = run_external_gates(
+                phase="brain", role="brain", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            return
+
+        _update_trajectory_outcome(self.conn, run_id, "brain", "brain", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"brain_output": output})
+
+        # ── Lock intent provenance ──────────────────────────────────────
+        # Brain's output becomes the enriched intent anchor. Every downstream
+        # phase will be checked against this. This is the provenance chain root.
+        _lock_intent_provenance(
+            self.conn, run_id,
+            original_intent=intent,
+            enriched_intent=output,  # Brain's understanding is the enriched intent
+            kb_context=discovery,
+        )
+        # Record initial drift (Brain output vs original intent)
+        score, reasons, verdict = _measure_drift(intent, output, "brain")
+        _record_phase_drift(
+            self.conn, run_id, "brain", round_num, output,
+            score, reasons, verdict,
+        )
+        print(f"[pipeline] Intent provenance locked. Drift: {verdict} ({score:.2f})")
+
+        # ── Tier 5: External gate scripts (research artifact, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
+        ext_report = run_external_gates(
+            phase="brain", role="brain", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+
+        # A BLOCK-mode gate has to actually block. This was the one success path
+        # in the pipeline where external gate results were recorded and then
+        # ignored, so a gate marked BLOCK on the brain phase only ever wrote a
+        # note while the run carried on. Draft, execution and verification
+        # already do this; brain did not. (2026-08-27)
+        if ext_report.any_blocked:
+            _complete_round(self.conn, round_id, "ESCALATE",
+                            {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED",
+                            reason="BRAIN blocked by external gate")
+            print("[pipeline] BRAIN blocked by external gate — ESCALATE.")
+            return
+
+        # Proceed to intent review
+        _set_run_status(self.conn, run_id, "INTENT_REVIEW")
+        await self._intent_review(run_id, intent)
+
+    async def _intent_review(self, run_id: str, intent: str,
+                             round_num: int = 1) -> None:
+        """Intent review: parallel Review1 + Review2 check Brain's output."""
+        print(f"[pipeline] INTENT_REVIEW (round {round_num}) for {run_id}")
+
+        # Get brain output from last deliberation round
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        row = cur.fetchone()
+        brain_output = row[0] if row else ""
+
+        round_id = _start_round(self.conn, run_id, "intent_review", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "intent_review", "review1", run_id
+        )
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Brain's understanding:\n{brain_output}\n\n"
+            f"You are a reviewer. Check Brain's understanding for gaps, "
+            f"assumptions, and blind spots. End with FINAL_JSON:\n"
+            f'```json\n{{"role":"reviewer","status":"CONSENSUS_REACHED"'
+            f',"summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"reviewer","status":"OBJECTIONS"'
+            f',"summary":"..."}}\n```'
+        )
+
+        r1_out, r2_out, r1_err, r2_err = await _call_reviewers_parallel(prompt, run_id)
+
+        _record_trajectory(self.conn, run_id, "review1", "intent_review",
+                          prompt, r1_out, round_num)
+        _record_trajectory(self.conn, run_id, "review2", "intent_review",
+                          prompt, r2_out, round_num)
+
+        # ── Tier 1+2 Guardrails (sycophancy + schema on each reviewer) ──────
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            if rout.strip():
+                gr = run_guardrails(
+                    phase="intent_review", role=rrole, agent_output=rout,
+                    intent=intent, project_root=PROJECT_ROOT,
+                    other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                    round_num=round_num, conn=self.conn, run_id=run_id,
+                )
+                print(gr.summary)
+                record_gate_outcomes(self.conn, run_id, gr)
+        
+        # Mark trajectory outcomes — only 'success' if reviewer completed its role
+        _update_trajectory_outcome(self.conn, run_id, "review1", "intent_review",
+                                  "failed" if r1_err else "success")
+        _update_trajectory_outcome(self.conn, run_id, "review2", "intent_review",
+                                  "failed" if r2_err else "success")
+
+        # Check if both reviewers completed their role
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out, r1_err, r2_err)
+
+        # If reviewers didn't complete (consensus=False, has_obj=False, obj_text=None)
+        # that's INCOMPLETE — not an objection. Escalate so Eric sees the problem.
+        if not consensus and not has_obj and obj_text is None:
+            incomplete = []
+            if r1_err or not r1_out.strip():
+                incomplete.append(f"Review1 ({r1_err or 'empty'})")
+            if r2_err or not r2_out.strip():
+                incomplete.append(f"Review2 ({r2_err or 'empty'})")
+            _complete_round(self.conn, round_id, "ESCALATE", {
+                "reviewer1_output": r1_out,
+                "reviewer2_output": r2_out,
+            })
+            # External gates fire AFTER _complete_round so they can query persisted data
+            for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+                ext = run_external_gates(
+                    phase="review", role=rrole, agent_output=rout,
+                    run_id=run_id, project_root=PROJECT_ROOT,
+                )
+                print(ext.summary)
+                record_gate_outcomes(self.conn, run_id, ext)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
+            return
+
+        # Both reviewers completed — store their actual signal
+        actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
+        _intent_extra = {
+            "reviewer1_output": r1_out,
+            "reviewer2_output": r2_out,
+        }
+        if actual_signal == "OBJECTIONS" and obj_text:
+            _intent_extra["objections_json"] = json.dumps({"objections": obj_text})
+        _complete_round(self.conn, round_id, actual_signal, _intent_extra)
+        # External gates fire AFTER _complete_round so they can query persisted data
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            ext = run_external_gates(
+                phase="review", role=rrole, agent_output=rout,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext.summary)
+            record_gate_outcomes(self.conn, run_id, ext)
+
+        if has_obj and round_num < MAX_BRAIN_ROUNDS:
+            print(f"[pipeline] Reviewers object — back to Brain (round {round_num+1})")
+            _set_run_status(self.conn, run_id, "BRAIN_PHASE")
+            await self._brain_phase(run_id, intent, round_num + 1)
+        elif has_obj:
+            print(f"[pipeline] Max brain rounds ({MAX_BRAIN_ROUNDS}) — ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+        else:
+            print(f"[pipeline] Intent review consensus — proceed to Draft")
+            _set_run_status(self.conn, run_id, "DRAFT_PHASE")
+            await self._draft_phase(run_id, intent)
+
+    async def _draft_phase(self, run_id: str, intent: str,
+                          round_num: int = 1) -> None:
+        """Draft phase: produce structured proposal from Brain's understanding."""
+        print(f"[pipeline] DRAFT phase (round {round_num}) for {run_id}")
+        card_ctx = self._card_context(run_id, intent)
+
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        brain_output = row[0] if (row := cur.fetchone()) else ""
+
+        round_id = _start_round(self.conn, run_id, "draft", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "draft", "draft", run_id, web_search=True
+        )
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Brain's understanding:\n{brain_output}\n\n"
+            f"You are Draft. Write a structured proposal/spec.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"draft","status":"PROPOSAL_READY","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("draft", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("draft")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"drafter_output": str(e)})
+            _record_trajectory(self.conn, run_id, "draft", "draft",
+                          prompt, str(e), round_num)
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            print(f"[pipeline] DRAFT failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "draft", "draft",
+                          prompt, output, round_num)
+
+        # ── Tier 1+2 Guardrails ────────────────────────────────────────────
+        gr_report = run_guardrails(
+            phase="draft", role="draft", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT, prompt=prompt,
+            round_num=round_num, conn=self.conn, run_id=run_id,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # Validate Draft produced PROPOSAL_READY or REVISION_READY
+        parsed = _parse_final_json(output)
+
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            ext_report = run_external_gates(
+                phase="draft", role="draft", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid status — enforce with repair prompt before escalating
+        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            output, parsed = await _enforce_output_contract(
+                "draft", output, ["PROPOSAL_READY", "REVISION_READY"], run_id)
+            _record_trajectory(self.conn, run_id, "draft", "draft",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("PROPOSAL_READY", "REVISION_READY"):
+            # Repair failed — escalate
+            _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"drafter_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="draft", role="draft", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] DRAFT blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] DRAFT output invalid — no PROPOSAL_READY status. ESCALATE.")
+            return
+
+        # Success — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "draft", "draft", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"drafter_output": output})
+
+        # ── Tier 5: External gates (proposal_schema_valid, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
+        ext_report = run_external_gates(
+            phase="draft", role="draft", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] DRAFT blocked by external gate — ESCALATE.")
+            return
+
+        _set_run_status(self.conn, run_id, "PROPOSAL_REVIEW")
+        await self._proposal_review(run_id, intent, round_num)
+
+    async def _proposal_review(self, run_id: str, intent: str,
+                               round_num: int = 1) -> None:
+        """Proposal review: parallel reviewers critique Draft's proposal."""
+        print(f"[pipeline] PROPOSAL_REVIEW (round {round_num}) for {run_id}")
+
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        draft_output = row[0] if (row := cur.fetchone()) else ""
+
+        round_id = _start_round(self.conn, run_id, "proposal_review", round_num)
+        discovery = _pre_discovery(
+            self.conn, intent, "proposal_review", "review1", run_id
+        )
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"Eric's intent: {intent}\n\n"
+            f"Draft's proposal:\n{draft_output}\n\n"
+            f"You are a reviewer. Critique this proposal. End with FINAL_JSON:\n"
+            f'```json\n{{"role":"reviewer","status":"CONSENSUS_REACHED"'
+            f',"summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"reviewer","status":"OBJECTIONS"'
+            f',"summary":"..."}}\n```'
+        )
+
+        r1_out, r2_out, r1_err, r2_err = await _call_reviewers_parallel(prompt, run_id)
+
+        _record_trajectory(self.conn, run_id, "review1", "proposal_review",
+                          prompt, r1_out, round_num)
+        _record_trajectory(self.conn, run_id, "review2", "proposal_review",
+                          prompt, r2_out, round_num)
+
+        # ── Tier 1+2 Guardrails (sycophancy + schema on each reviewer) ──────
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            if rout.strip():
+                gr = run_guardrails(
+                    phase="proposal_review", role=rrole, agent_output=rout,
+                    intent=intent, project_root=PROJECT_ROOT,
+                    other_reviewer_output=r2_out if rrole == "review1" else r1_out,
+                    round_num=round_num, conn=self.conn, run_id=run_id,
+                )
+                print(gr.summary)
+                record_gate_outcomes(self.conn, run_id, gr)
+        
+        # Mark trajectory outcomes — only 'success' if reviewer completed its role
+        _update_trajectory_outcome(self.conn, run_id, "review1", "proposal_review",
+                                  "failed" if r1_err else "success")
+        _update_trajectory_outcome(self.conn, run_id, "review2", "proposal_review",
+                                  "failed" if r2_err else "success")
+
+        # Check if both reviewers completed their role
+        consensus, has_obj, obj_text = _check_consensus(r1_out, r2_out, r1_err, r2_err)
+
+        # If reviewers didn't complete — INCOMPLETE, not an objection. Escalate.
+        if not consensus and not has_obj and obj_text is None:
+            incomplete = []
+            if r1_err or not r1_out.strip():
+                incomplete.append(f"Review1 ({r1_err or 'empty'})")
+            if r2_err or not r2_out.strip():
+                incomplete.append(f"Review2 ({r2_err or 'empty'})")
+            _complete_round(self.conn, round_id, "ESCALATE", {
+                "reviewer1_output": r1_out,
+                "reviewer2_output": r2_out,
+            })
+            # External gates fire AFTER _complete_round so they can query persisted data
+            for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+                ext = run_external_gates(
+                    phase="review", role=rrole, agent_output=rout,
+                    run_id=run_id, project_root=PROJECT_ROOT,
+                )
+                print(ext.summary)
+                record_gate_outcomes(self.conn, run_id, ext)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] Review incomplete: {', '.join(incomplete)} — ESCALATE")
+            return
+
+        # Both reviewers completed — store their actual signal
+        actual_signal = "CONSENSUS_REACHED" if consensus and not has_obj else "OBJECTIONS"
+        extra = {
+            "reviewer1_output": r1_out,
+            "reviewer2_output": r2_out,
+        }
+        # Proposal review consensus requires Eric's approval
+        if actual_signal == "CONSENSUS_REACHED":
+            extra["requires_eric_review"] = 1
+        if actual_signal == "OBJECTIONS" and obj_text:
+            extra["objections_json"] = json.dumps({"objections": obj_text})
+        _complete_round(self.conn, round_id, actual_signal, extra)
+        # External gates fire AFTER _complete_round so they can query persisted data
+        for rrole, rout in (("review1", r1_out), ("review2", r2_out)):
+            ext = run_external_gates(
+                phase="review", role=rrole, agent_output=rout,
+                run_id=run_id, project_root=PROJECT_ROOT,
+            )
+            print(ext.summary)
+            record_gate_outcomes(self.conn, run_id, ext)
+
+        if has_obj and round_num < MAX_DRAFT_ROUNDS:
+            print(f"[pipeline] Reviewers object — back to Draft (round {round_num+1})")
+            _set_run_status(self.conn, run_id, "DRAFT_PHASE")
+            await self._draft_phase(run_id, intent, round_num + 1)
+        elif has_obj:
+            print(f"[pipeline] Max draft rounds ({MAX_DRAFT_ROUNDS}) — ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+        else:
+            print(f"[pipeline] Proposal review consensus — ERIC GATE")
+            _set_run_status(self.conn, run_id, "ERIC_GATE")
+            print(f"[pipeline] Run {run_id} waiting at ERIC GATE for approval")
+
+    async def _pattern_catalog(self, run_id: str, intent: str) -> None:
+        """Pattern Catalog phase: Brain reads codebase, produces pattern catalog.
+
+        After Eric approves the proposal, Brain reads the existing codebase
+        and identifies patterns, conventions, and completion criteria.
+        Reviewers validate the catalog before Menter uses it.
+        """
+        print(f"[pipeline] PATTERN_CATALOG phase for {run_id}")
+
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
+        codebase_overview = _read_codebase_overview(project_dir)
+
+        round_id = _start_round(self.conn, run_id, "pattern_catalog", 1)
+        discovery = _pre_discovery(
+            self.conn, intent, "pattern_catalog", "brain", run_id, web_search=True
+        )
+
+        # Get the approved directive
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"## CODEBASE OVERVIEW\n{codebase_overview}\n\n"
+            f"## APPROVED DIRECTIVE\n{directive}\n\n"
+            f"You are Brain. Read the codebase overview and the approved directive. "
+            f"Produce a PATTERN CATALOG that identifies:\n"
+            f"1. Language and toolchain\n"
+            f"2. Architectural patterns found in the existing code\n"
+            f"3. Convention rules (naming, file org, error handling)\n"
+            f"4. Test convention\n"
+            f"5. Completion criteria per pattern (what 'done' looks like)\n"
+            f"6. List of files Menter will need to create or modify\n\n"
+            f"If the codebase is empty (new project), derive patterns from the directive.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"brain","status":"READY","summary":"...",'
+            f'"files_planned":["path/to/file1.py","path/to/file2.py"]}}\n```'
+        )
+
+        try:
+            output = await _call_agent("brain", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("brain")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR",
+                           {"brain_output": str(e)})
+            _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                          prompt, str(e), 1)
+            _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "failed")
+            print(f"[pipeline] PATTERN_CATALOG failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                          prompt, output, 1)
+
+        parsed = _parse_final_json(output)
+        if not parsed or parsed.get("status") != "READY":
+            output, parsed = await _enforce_output_contract(
+                "brain", output, ["READY"], run_id)
+            _record_trajectory(self.conn, run_id, "brain", "pattern_catalog",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") != "READY":
+            # Repair failed — escalate
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"brain_output": output})
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] PATTERN_CATALOG invalid — no READY status. ESCALATE.")
+            return
+
+        _update_trajectory_outcome(self.conn, run_id, "brain", "pattern_catalog", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"brain_output": output})
+
+        # Save catalog to disk
+        catalog_path = os.path.join(project_dir, "runtime", "catalogs", "PATTERN_CATALOG.md")
+        os.makedirs(os.path.dirname(catalog_path), exist_ok=True)
+        with open(catalog_path, "w") as f:
+            f.write(f"# Pattern Catalog\n\nGenerated: {datetime.now(timezone.utc).isoformat()}\n\n")
+            f.write(output)
+
+        # Extract planned files from FINAL_JSON
+        files_planned = parsed.get("files_planned", [])
+        self._files_planned = files_planned
+
+        print(f"[pipeline] Pattern catalog saved. {len(files_planned)} files planned.")
+        _set_run_status(self.conn, run_id, "CODE_REVIEW_GATE")
+        await self._code_review_gate(run_id, intent)
+
+    async def _call_agent_with_retry(
+        self, role: str, prompt: str, run_id: str, chunk_num: int,
+        label: str, round_id: int, conn, diff_text: str, l1_results: str,
+        revision: int, review_a_output: str = "", review_b_output: str = "",
+    ) -> Optional[str]:
+        """Call an agent with one retry. Returns None if both attempts fail.
+
+        On failure, records the escalation to code_review_chunks and
+        completes the round with ERROR signal. The caller should check
+        for None and return immediately.
+        """
+        last_error = ""
+        for attempt in range(2):  # original + 1 retry
+            try:
+                output = await _call_agent(role, prompt, run_id)
+                if output.strip():
+                    return output
+                # Empty output — retry
+                last_error = "empty output"
+                print(f"[pipeline] {label} returned empty on chunk {chunk_num}"
+                      f" (attempt {attempt + 1}), retrying...")
+            except Exception as e:
+                err_msg = str(e) or repr(e)  # repr fallback for empty str(e)
+                last_error = err_msg
+                print(f"[pipeline] {label} failed on chunk {chunk_num}"
+                      f" (attempt {attempt + 1}): {err_msg}")
+                if attempt == 0:
+                    import asyncio as _aio
+                    await _aio.sleep(2)  # brief backoff before retry
+
+        # Both attempts failed — escalate
+        _breaker_record_failure(role)
+        _complete_round(conn, round_id, "ERROR")
+
+        # Build the INSERT based on which review phase we're in
+        cols = ["run_id", "chunk_number", "file_path", "diff_text", "l1_results"]
+        vals = [run_id, chunk_num, "", diff_text[:5000], l1_results]
+
+        if review_a_output:
+            cols.append("review_a_pass1")
+            vals.append(review_a_output[:5000])
+        if review_b_output:
+            cols.append("review_b_pass2")
+            vals.append(review_b_output[:5000])
+
+        cols.extend(["final_verdict", "revision_number", "created_at"])
+        vals.extend(["ESCALATE", revision, datetime.now(timezone.utc).isoformat()])
+
+        placeholders = ",".join("?" * len(vals))
+        col_list = ",".join(cols)
+        conn.execute(
+            f"INSERT INTO code_review_chunks ({col_list}) VALUES ({placeholders})",
+            vals
+        )
+        conn.commit()
+        return None
+
+    async def _code_review_gate(self, run_id: str, intent: str) -> None:
+        """Code Review Gate: Menter builds chunks, sequential three-pass review.
+
+        For each file:
+        1. Menter builds the chunk (with universal rules in prompt)
+        2. Pipeline captures diff + runs L1 universal checks
+        3. Reviewer A reviews (fresh eyes)
+        4. Reviewer B reviews (sees A's output, builds on it)
+        5. Reviewer A consensus (sees B's output, delivers verdict)
+        6. APPROVED → next chunk, CHANGES_REQUESTED → Menter revises
+        """
+        print(f"[pipeline] CODE_REVIEW_GATE phase for {run_id}")
+
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
+        files_planned = getattr(self, "_files_planned", [])
+
+        if not files_planned:
+            # Try to recover from DB
+            cur = self.conn.execute(
+                "SELECT brain_output FROM deliberation_rounds "
+                "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+                "  AND drafter_role = 'pattern_catalog' "
+                "ORDER BY id DESC LIMIT 1", (run_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                parsed = _parse_final_json(row[0])
+                if parsed:
+                    files_planned = parsed.get("files_planned", [])
+
+        if not files_planned:
+            # Planning no files is a legitimate outcome, not a failure. A run
+            # whose correct answer is "verify this" or "decide this" produces a
+            # judgement rather than an artifact, and code review has nothing to
+            # review. Skip straight to verification, which checks the outcome
+            # against its evidence — that check does not require a diff.
+            # Escalating here made every non-code task indistinguishable from a
+            # broken run (run-5c80ece4fdd0122d-1787703333, 2026-08-26).
+            print("[pipeline] No files planned — nothing to code review. "
+                  "Proceeding to VERIFICATION.")
+            _set_run_status(self.conn, run_id, "VERIFICATION")
+            await self._verification(run_id, intent)
+            return
+
+        # Get directive
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Get pattern catalog
+        cur = self.conn.execute(
+            "SELECT brain_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND brain_output IS NOT NULL AND brain_output != '' "
+            "  AND drafter_role = 'pattern_catalog' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        catalog = row[0] if (row := cur.fetchone()) else ""
+
+        # Capture pre-execution git state
+        import subprocess
+        try:
+            pre_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=10, cwd=project_dir,
+            ).stdout.strip()
+        except Exception:
+            pre_head = ""
+        self._pre_exec_head = pre_head
+
+        # Process each file as a chunk
+        for chunk_num, file_path in enumerate(files_planned, 1):
+            print(f"[pipeline] Chunk {chunk_num}/{len(files_planned)}: {file_path}")
+            await self._review_single_chunk(
+                run_id, intent, directive, catalog,
+                chunk_num, file_path, project_dir
+            )
+
+            # Check if this chunk was escalated
+            cur = self.conn.execute(
+                "SELECT final_verdict FROM code_review_chunks "
+                "WHERE run_id = ? AND chunk_number = ? "
+                "ORDER BY id DESC LIMIT 1", (run_id, chunk_num)
+            )
+            row = cur.fetchone()
+            if row and row[0] == "ESCALATE":
+                print(f"[pipeline] Chunk {chunk_num} escalated — stopping.")
+                _set_run_status(self.conn, run_id, "ESCALATED")
+                return
+
+        # All chunks complete — proceed to verification
+        print(f"[pipeline] All {len(files_planned)} chunks reviewed and incorporated.")
+        _set_run_status(self.conn, run_id, "VERIFICATION")
+        await self._verification(run_id, intent)
+
+    async def _review_single_chunk(self, run_id: str, intent: str,
+                                    directive: str, catalog: str,
+                                    chunk_num: int, file_path: str,
+                                    project_dir: str) -> None:
+        """Review a single chunk through the three-pass sequential process."""
+        import subprocess
+
+        revision = 1
+
+        while revision <= MAX_CHUNK_REVISIONS:
+            print(f"[pipeline] Chunk {chunk_num} revision {revision}")
+
+            # Step 1: Menter builds the chunk
+            round_id = _start_round(self.conn, run_id, "code_review", chunk_num)
+
+            menter_prompt = (
+                f"{MENTER_UNIVERSAL_RULES}\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"You are Menter. Build file: {file_path}\n"
+                f"This is chunk {chunk_num}. Build ONLY this file.\n"
+                f"Self-check against the universal rules before submitting.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"menter","status":"CHUNK_READY",'
+                f'"file":"{file_path}","summary":"..."}}\n```'
+            )
+
+            if revision > 1:
+                # Get previous revision directive
+                cur = self.conn.execute(
+                    "SELECT revision_directive FROM code_review_chunks "
+                    "WHERE run_id = ? AND chunk_number = ? AND revision_number = ?",
+                    (run_id, chunk_num, revision - 1)
+                )
+                row = cur.fetchone()
+                prev_directive = row[0] if row else ""
+                menter_prompt += (
+                    f"\n\n## REVISION REQUESTED\n"
+                    f"Reviewers requested changes. Fix these issues:\n{prev_directive}"
+                )
+
+            menter_output = await self._call_agent_with_retry(
+                "menter", menter_prompt, run_id, chunk_num, "Menter",
+                round_id, self.conn, "", "", revision)
+            if menter_output is None:
+                return
+
+            _record_trajectory(self.conn, run_id, "menter", "code_review",
+                              menter_prompt, menter_output, chunk_num)
+
+            # Validate Menter produced CHUNK_READY — enforce with repair prompt
+            parsed = _parse_final_json(menter_output)
+            if not parsed or parsed.get("status") != "CHUNK_READY":
+                # Container enforcement: issue ONE repair prompt, then escalate
+                print(f"[pipeline] Menter didn't produce CHUNK_READY. Issuing repair prompt.")
+                repair_prompt = (
+                    f"{menter_output}\n\n"
+                    f"## FORMAT REPAIR REQUIRED\n"
+                    f"Your output is missing the required FINAL_JSON block.\n"
+                    f"You MUST end your response with exactly this format:\n"
+                    f'```json\n{{"role":"menter","status":"CHUNK_READY",'
+                    f'"file":"{file_path}","summary":"brief summary of what you built"}}\n```'
+                )
+                menter_output = await self._call_agent_with_retry(
+                    "menter", repair_prompt, run_id, chunk_num, "Menter (repair)",
+                    round_id, self.conn, "", "", revision)
+                if menter_output is None:
+                    return
+
+                _record_trajectory(self.conn, run_id, "menter", "code_review",
+                                  repair_prompt, menter_output, chunk_num)
+                parsed = _parse_final_json(menter_output)
+
+            if not parsed or parsed.get("status") != "CHUNK_READY":
+                # Repair failed — escalate
+                _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "failed")
+                _complete_round(self.conn, round_id, "ESCALATE",
+                               {"menter_output": menter_output})
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, '', '', 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, revision,
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                print(f"[pipeline] Menter didn't produce CHUNK_READY after repair. ESCALATE.")
+                return
+
+            _update_trajectory_outcome(self.conn, run_id, "menter", "code_review", "success")
+
+            # Step 2: Capture diff + run L1 universal checks
+            try:
+                diff_text = subprocess.run(
+                    ["git", "diff"], capture_output=True, text=True,
+                    timeout=15, cwd=project_dir,
+                ).stdout
+            except Exception:
+                diff_text = ""
+
+            l1_results = _run_chunk_l1(project_dir, file_path, diff_text)
+
+            # Step 3: Pass 1 — Reviewer A (first pass, fresh eyes)
+            review_a_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE (what Menter was told to build)\n{directive}\n\n"
+                f"You are Reviewer A (first pass). Review this code chunk.\n"
+                f"Check against universal rules and pattern criteria.\n"
+                f"If the chunk doesn't match a known pattern, assess it on its own merit.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","checks_passed":[...],"checks_failed":[...]}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","checks_failed":[...]}}\n```'
+            )
+
+            review_a_output = await self._call_agent_with_retry(
+                "review1", review_a_prompt, run_id, chunk_num, "Reviewer A",
+                round_id, self.conn, diff_text, l1_results, revision)
+            if review_a_output is None:
+                return
+
+            _record_trajectory(self.conn, run_id, "review1", "code_review",
+                          review_a_prompt, review_a_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review1", "code_review", "success")
+
+            # Step 4: Pass 2 — Reviewer B (sees A's output, builds on it)
+            review_b_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"## REVIEWER A'S FINDINGS (first pass)\n{review_a_output}\n\n"
+                f"You are Reviewer B (second pass). You see Reviewer A's findings.\n"
+                f"Build on A's review. Find what A missed. Confirm or challenge A's findings.\n"
+                f"If the chunk doesn't match a known pattern, assess it on its own merit.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","checks_passed":[...],"checks_failed":[...],'
+                f'"items_missed_by_a":[...],"disagreements_with_a":[...]}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","checks_failed":[...]}}\n```'
+            )
+
+            review_b_output = await self._call_agent_with_retry(
+                "review2", review_b_prompt, run_id, chunk_num, "Reviewer B",
+                round_id, self.conn, diff_text, l1_results, revision,
+                review_a_output=review_a_output)
+            if review_b_output is None:
+                return
+
+            _record_trajectory(self.conn, run_id, "review2", "code_review",
+                          review_b_prompt, review_b_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review2", "code_review", "success")
+
+            # Step 5: Pass 3 — Reviewer A consensus (sees B's output)
+            consensus_prompt = (
+                f"## L1 UNIVERSAL CHECK RESULTS\n{l1_results}\n\n"
+                f"## CHUNK DIFF\n```diff\n{diff_text[:3000]}\n```\n\n"
+                f"## PATTERN CATALOG\n{catalog}\n\n"
+                f"## DIRECTIVE\n{directive}\n\n"
+                f"## YOUR FIRST PASS (Reviewer A)\n{review_a_output}\n\n"
+                f"## REVIEWER B'S FINDINGS (second pass)\n{review_b_output}\n\n"
+                f"You are Reviewer A (consensus pass). You see B's findings.\n"
+                f"Accept B's findings or push back with evidence.\n"
+                f"Deliver one consolidated verdict.\n"
+                f"End with FINAL_JSON:\n"
+                f'```json\n{{"role":"reviewer","status":"APPROVED",'
+                f'"summary":"...","consensus_summary":"..."}}\n```\n'
+                f'or\n```json\n{{"role":"reviewer","status":"CHANGES_REQUESTED",'
+                f'"summary":"...","revision_directive":"actionable feedback for Menter"}}\n```'
+            )
+
+            consensus_output = await self._call_agent_with_retry(
+                "review1", consensus_prompt, run_id, chunk_num, "Reviewer A consensus",
+                round_id, self.conn, diff_text, l1_results, revision,
+                review_a_output=review_a_output, review_b_output=review_b_output)
+            if consensus_output is None:
+                return
+
+            _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
+                          consensus_prompt, consensus_output, chunk_num)
+            _update_trajectory_outcome(self.conn, run_id, "review1", "code_review_consensus", "success")
+
+            # Step 6: Parse consensus verdict
+            consensus_parsed = _parse_final_json(consensus_output)
+            consensus_status = consensus_parsed.get("status", "") if consensus_parsed else ""
+
+            if not consensus_parsed or consensus_status not in ("APPROVED", "CHANGES_REQUESTED"):
+                # Enforce with repair prompt before escalating
+                consensus_output, consensus_parsed = await _enforce_output_contract(
+                    "review1", consensus_output, ["APPROVED", "CHANGES_REQUESTED"], run_id)
+                consensus_status = consensus_parsed.get("status", "") if consensus_parsed else ""
+                _record_trajectory(self.conn, run_id, "review1", "code_review_consensus",
+                                  "REPAIR_PROMPT", consensus_output, chunk_num)
+
+            if not consensus_parsed or consensus_status not in ("APPROVED", "CHANGES_REQUESTED"):
+                # Repair failed — escalate
+                print(f"[pipeline] Consensus incomplete for chunk {chunk_num}. ESCALATE.")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, review_a_consensus,
+                        final_verdict, revision_number, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ESCALATE', ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                     revision, datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                _complete_round(self.conn, round_id, "ESCALATE",
+                               {"menter_output": menter_output})
+                return
+
+            if consensus_status == "APPROVED":
+                # Chunk approved — record and incorporate
+                revision_directive_text = consensus_parsed.get("consensus_summary", "")
+                self.conn.execute(
+                    """INSERT INTO code_review_chunks
+                       (run_id, chunk_number, file_path, diff_text, l1_results,
+                        review_a_pass1, review_b_pass2, review_a_consensus,
+                        final_verdict, revision_directive, revision_number,
+                        incorporated, created_at, completed_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED', ?, ?, 1, ?, ?)""",
+                    (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                     review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                     revision_directive_text, revision,
+                     datetime.now(timezone.utc).isoformat(),
+                     datetime.now(timezone.utc).isoformat())
+                )
+                self.conn.commit()
+                _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                               {"menter_output": menter_output})
+                print(f"[pipeline] Chunk {chunk_num} APPROVED. Incorporated.")
+
+                # Ingest code review findings into knowledge base
+                _ingest_to_kb(self.conn, run_id, "code_review", "menter",
+                            menter_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_rev_{revision}_file_{file_path}")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review1",
+                            review_a_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass1_first_review")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review2",
+                            review_b_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass2_builds_on_review1")
+                _ingest_to_kb(self.conn, run_id, "code_review", "review1_consensus",
+                            consensus_output, "CHUNK_APPROVED",
+                            f"chunk_{chunk_num}_pass3_consensus")
+                return
+
+            # CHANGES_REQUESTED — record and loop for revision
+            revision_directive_text = consensus_parsed.get("revision_directive",
+                                                           consensus_output[:1000])
+            self.conn.execute(
+                """INSERT INTO code_review_chunks
+                   (run_id, chunk_number, file_path, diff_text, l1_results,
+                    review_a_pass1, review_b_pass2, review_a_consensus,
+                    final_verdict, revision_directive, revision_number,
+                    incorporated, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CHANGES_REQUESTED', ?, ?, 0, ?)""",
+                (run_id, chunk_num, file_path, diff_text[:5000], l1_results,
+                 review_a_output[:5000], review_b_output[:5000], consensus_output[:5000],
+                 revision_directive_text, revision,
+                 datetime.now(timezone.utc).isoformat())
+            )
+            self.conn.commit()
+            _complete_round(self.conn, round_id, "OBJECTIONS",
+                           {"menter_output": menter_output,
+                            "objections_json": json.dumps({"revision_directive": revision_directive_text, "chunk": chunk_num, "file": file_path})})
+
+            print(f"[pipeline] Chunk {chunk_num} CHANGES_REQUESTED. Revision {revision + 1}.")
+
+            # Ingest code review findings (including objections) into knowledge base
+            _ingest_to_kb(self.conn, run_id, "code_review", "menter",
+                        menter_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_rev_{revision}_file_{file_path}")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review1",
+                        review_a_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass1_first_review")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review2",
+                        review_b_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass2_builds_on_review1")
+            _ingest_to_kb(self.conn, run_id, "code_review", "review1_consensus",
+                        consensus_output, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_pass3_consensus_revision_directive")
+            _ingest_to_kb(self.conn, run_id, "code_review", "revision_directive",
+                        revision_directive_text, "CHANGES_REQUESTED",
+                        f"chunk_{chunk_num}_rev_{revision}")
+
+            revision += 1
+
+        # Max revisions exceeded
+        print(f"[pipeline] Chunk {chunk_num} max revisions ({MAX_CHUNK_REVISIONS}) exceeded. ESCALATE.")
+        _set_run_status(self.conn, run_id, "ESCALATED")
+
+    async def _execution(self, run_id: str, intent: str) -> None:
+        """Execution phase: Menter builds per approved FINAL_DIRECTIVE."""
+        print(f"[pipeline] EXECUTION phase for {run_id}")
+        card_ctx = self._card_context(run_id, intent)
+
+        # Capture pre-execution git state for L1 diff
+        import subprocess
+        try:
+            pre_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+                cwd=DB_PATH.rsplit("/", 1)[0],
+            ).stdout.strip()
+        except Exception:
+            pre_head = ""
+        self._pre_exec_head = pre_head
+
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Freeze directive hash
+        directive_hash = hashlib.sha256(directive.encode()).hexdigest()
+        self.conn.execute(
+            "UPDATE workflow_runs SET directive_hash = ? WHERE id = ?",
+            (directive_hash, run_id)
+        )
+        self.conn.commit()
+
+        round_id = _start_round(self.conn, run_id, "execution", 1)
+        
+        # ── Tier 5: Pre-execution external gates (git_state, final_directive_allowed) ─
+        pre_ext = run_external_gates(
+            phase="pre_menter", role="menter", agent_output=directive,
+            run_id=run_id, project_root=PROJECT_ROOT,
+        )
+        print(pre_ext.summary)
+        record_gate_outcomes(self.conn, run_id, pre_ext)
+        if pre_ext.any_blocked:
+            print(f"[pipeline] MENTER blocked by external gate — ESCALATE.")
+            _complete_round(self.conn, round_id, "ESCALATE")
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            return
+        
+        discovery = _pre_discovery(
+            self.conn, intent, "execution", "menter", run_id
+        )
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"FINAL_DIRECTIVE (hash: {directive_hash[:16]}):\n{directive}\n\n"
+            f"You are Menter. Execute this directive. Build exactly what is spec'd.\n"
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"menter","status":"CONSENSUS_REACHED","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("menter", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("menter")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR")
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            print(f"[pipeline] MENTER failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "menter", "execution",
+                          prompt, output, 1)
+
+        # ── Tier 1+2 Guardrails (claim-action, code quality, path contract) ─
+        gr_report = run_guardrails(
+            phase="execution", role="menter", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT,
+            pre_exec_head=getattr(self, "_pre_exec_head", ""),
+            prompt=prompt, conn=self.conn, run_id=run_id,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # Validate Menter produced a valid status
+        parsed = _parse_final_json(output)
+        
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            ext_report = run_external_gates(
+                phase="menter", role="menter", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid status — enforce with repair prompt before escalating
+        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            output, parsed = await _enforce_output_contract(
+                "menter", output, ["CONSENSUS_REACHED", "DONE", "COMPLETE"], run_id)
+            _record_trajectory(self.conn, run_id, "menter", "execution",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or parsed.get("status") not in ("CONSENSUS_REACHED", "DONE", "COMPLETE"):
+            # Repair failed — escalate
+            _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"menter_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="menter", role="menter", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] MENTER blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] MENTER output invalid — no completion status. ESCALATE.")
+            return
+
+        # Success — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "menter", "execution", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                        {"menter_output": output})
+
+        # ── Tier 5: External gates (file_exists, implementation_artifact, no_secrets) ─
+        # NOW fire after round is persisted so gates can query the DB
+        ext_report = run_external_gates(
+            phase="menter", role="menter", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] MENTER blocked by external gate — ESCALATE.")
+            return
+
+        _set_run_status(self.conn, run_id, "VERIFICATION")
+        await self._verification(run_id, intent)
+
+    async def _verification(self, run_id: str, intent: str) -> None:
+        """Verification phase: Verify checks Menter's work independently.
+
+        L1 deterministic checks run first (git diff, file existence/size).
+        Results are fed to the verify agent as evidence. The agent does
+        L2 semantic verification on top of the L1 evidence.
+        """
+        card_ctx = self._card_context(run_id, intent)
+        print(f"[pipeline] VERIFICATION phase for {run_id}")
+
+        # Get the directive (Draft's proposal) — NOT Menter's self-report
+        cur = self.conn.execute(
+            "SELECT drafter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND drafter_output IS NOT NULL AND drafter_output != '' "
+            "  AND drafter_role = 'draft' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        directive = row[0] if (row := cur.fetchone()) else ""
+
+        # Get Menter's output (what was actually built)
+        cur = self.conn.execute(
+            "SELECT menter_output FROM deliberation_rounds "
+            "WHERE run_id = ? AND menter_output IS NOT NULL AND menter_output != '' "
+            "ORDER BY id DESC LIMIT 1", (run_id,)
+        )
+        menter_output = row[0] if (row := cur.fetchone()) else ""
+
+        # Run L1 deterministic checks with clean-checkout isolation
+        # DB_PATH is <repo>/data/cis_memory.db — one rsplit leaves data/,
+        # not the repo root, so catalogs landed in data/runtime/catalogs and
+        # git commands ran from data/. Confirmed wrong since 2026-07-09.
+        project_dir = os.path.dirname(os.path.dirname(DB_PATH))
+        pre_head = getattr(self, "_pre_exec_head", "")
+        l1_evidence = _run_isolated_l1(project_dir, pre_head)
+        print(f"[pipeline] L1 isolated checks complete ({len(l1_evidence)} chars)")
+
+        round_id = _start_round(self.conn, run_id, "verification", 1)
+        discovery = _pre_discovery(
+            self.conn, intent, "verification", "verify", run_id
+        )
+
+        prompt = (
+            f"{discovery}{_intent_anchor_block(self.conn, run_id)}\n\n"
+            f"## L1 DETERMINISTIC EVIDENCE (auto-collected)\n"
+            f"{l1_evidence}\n\n"
+            f"## FINAL_DIRECTIVE (what Menter was told to build)\n{directive}\n\n"
+            f"## MENTER'S SELF-REPORT (what Menter claims it did)\n{menter_output}\n\n"
+            f"You are Verify. Cross-check the L1 evidence against the directive. "
+            f"Menter's self-report is NOT evidence — it is a claim. Verify independently. "
+            f"Run additional evidence commands if needed (git diff, tests, "
+            f"file state). Trust nothing Menter claimed — verify independently. "
+            f"End with FINAL_JSON:\n"
+            f'```json\n{{"role":"verify","status":"PASS","summary":"..."}}\n```\n'
+            f'or\n```json\n{{"role":"verify","status":"FAIL","summary":"..."}}\n```'
+        )
+
+        try:
+            output = await _call_agent("verify", prompt, run_id)
+        except Exception as e:
+            _breaker_record_failure("verify")
+            _set_run_status(self.conn, run_id, "ERROR")
+            _complete_round(self.conn, round_id, "ERROR")
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            print(f"[pipeline] VERIFY failed: {e}")
+            return
+
+        _record_trajectory(self.conn, run_id, "verify", "verification",
+                          prompt, output, 1)
+
+        # ── Tier 1+2 Guardrails (claim-action, honesty, schema) ────────────
+        gr_report = run_guardrails(
+            phase="verification", role="verify", agent_output=output,
+            intent=intent, project_root=PROJECT_ROOT,
+            pre_exec_head=getattr(self, "_pre_exec_head", ""),
+            prompt=prompt, conn=self.conn, run_id=run_id,
+        )
+        print(gr_report.summary)
+        record_gate_outcomes(self.conn, run_id, gr_report)
+        
+        # Parse verify output
+        parsed = _parse_final_json(output)
+        status = parsed.get("status", "") if parsed else ""
+        
+        # Guardrail block — escalate immediately (policy violation, not format)
+        if gr_report.any_blocked:
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            ext_report = run_external_gates(
+                phase="verify", role="verify", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
+            return
+
+        # Invalid verdict — enforce with repair prompt before escalating
+        if not parsed or status not in ("PASS", "FAIL"):
+            output, parsed = await _enforce_output_contract(
+                "verify", output, ["PASS", "FAIL"], run_id)
+            status = parsed.get("status", "") if parsed else ""
+            _record_trajectory(self.conn, run_id, "verify", "verification",
+                              "REPAIR_PROMPT", output, 1)
+
+        if not parsed or status not in ("PASS", "FAIL"):
+            # Repair failed — escalate
+            _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "failed")
+            _complete_round(self.conn, round_id, "ESCALATE",
+                           {"verify_output": output})
+            # External gates fire AFTER _complete_round so they can query persisted data
+            ext_report = run_external_gates(
+                phase="verify", role="verify", agent_output=output,
+                run_id=run_id, project_root=PROJECT_ROOT,
+                **card_ctx,
+            )
+            print(ext_report.summary)
+            record_gate_outcomes(self.conn, run_id, ext_report)
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            if gr_report.any_blocked:
+                print(f"[pipeline] VERIFY blocked by guardrail — ESCALATE.")
+            else:
+                print(f"[pipeline] Run {run_id} ESCALATED — verify output unparseable")
+            return
+
+        # Valid verdict — persist BEFORE external gates fire
+        _update_trajectory_outcome(self.conn, run_id, "verify", "verification", "success")
+        _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
+                       {"verify_output": output})
+
+        # Set workflow_runs.result BEFORE external gates fire so
+        # gate_eric_approval.py can verify result == CONSENSUS_REACHED
+        if status == "PASS":
+            self.conn.execute(
+                "UPDATE workflow_runs SET result = 'CONSENSUS_REACHED', "
+                "completed_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), run_id)
+            )
+        else:
+            self.conn.execute(
+                "UPDATE workflow_runs SET result = 'VERIFY_FAILED', "
+                "completed_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), run_id)
+            )
+        self.conn.commit()
+
+        # ── Tier 5: External gates (service_health, endpoint, db_state, eric_approval) ─
+        # NOW fire after round is persisted so gates can query the DB
+        ext_report = run_external_gates(
+            phase="verify", role="verify", agent_output=output,
+            run_id=run_id, project_root=PROJECT_ROOT,
+            **card_ctx,
+        )
+        print(ext_report.summary)
+        record_gate_outcomes(self.conn, run_id, ext_report)
+        if ext_report.any_blocked:
+            _set_run_status(self.conn, run_id, "ESCALATED")
+            print(f"[pipeline] VERIFY blocked by external gate — ESCALATE.")
+            return
+
+        if status == "FAIL":
+            # Saga compensation: git stash Menter's changes
+            print(f"[pipeline] VERIFY FAIL — compensating (git stash)")
+            stash_ref = ""
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["git", "stash", "push", "-m", f"CIS compensation: {run_id} verify FAIL"],
+                    capture_output=True, text=True, timeout=30,
+                    cwd=DB_PATH.rsplit("/", 1)[0],
+                )
+                if result.returncode == 0:
+                    stash_ref = result.stdout.strip()
+                    print(f"[pipeline] Compensation: changes stashed ({stash_ref})")
+                else:
+                    print(f"[pipeline] Compensation: git stash failed: {result.stderr.strip()}")
+            except Exception as e:
+                print(f"[pipeline] Compensation error: {e}")
+
+            # Record compensation in DB audit trail
+            self.conn.execute(
+                """UPDATE deliberation_rounds SET
+                   verify_output = ?,
+                   objections_json = ?
+                   WHERE id = ?""",
+                (output, json.dumps({"stash_ref": stash_ref, "status": "FAIL"}), round_id)
+            )
+            self.conn.commit()
+            _set_run_status(self.conn, run_id, "VERIFY_FAILED")
+        else:
+            print(f"[pipeline] VERIFY PASS — run complete")
+            _set_run_status(self.conn, run_id, "CONSENSUS_REACHED")
+
+
+# ── CLI Entry Point ────────────────────────────────────────────────────
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="CIS Pipeline Relay")
+    parser.add_argument("--intent", "-i", help="Intent text to start a new run")
+    parser.add_argument("--resume", "-r", help="Resume a run by ID")
+    parser.add_argument("--status", "-s", help="Show status of a run")
+    args = parser.parse_args()
+
+    if args.status:
+        conn = _db_connect()
+        run = _get_run(conn, args.status)
+        if run:
+            print(f"Run ID: {run['id']}")
+            print(f"Topic: {run['topic']}")
+            print(f"Status: {run['status']}")
+            print(f"Created: {run['created_at']}")
+            if run['directive_hash']:
+                print(f"Directive hash: {run['directive_hash'][:16]}...")
+        else:
+            print(f"Run {args.status} not found")
+        conn.close()
+        return
+
+    relay = PipelineRelay()
+
+    if args.intent:
+        run_id = asyncio.run(relay.start(args.intent))
+        print(f"\nPipeline run: {run_id}")
+    elif args.resume:
+        asyncio.run(relay.resume(args.resume))
+    else:
+        parser.print_help()
+
+    relay.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,601 @@
+# NEXT SESSION — updated 2026-08-28 (evening)
+
+Paste this file as the first message of a new session.
+Rewrite it at session end. Never append.
+
+## Constraints (every card)
+Interpreter and cwd explicit. Pipeline: /usr/local/lib/hermes-agent/venv/bin/python, cd /workspace/cis
+ask_history.py: python3.12 only, positional args, no flags.
+Verify every claim with a command. If a lookup fails twice, stop and report.
+Container clock is UTC, host is local. Never run python from data/drive_imports.
+Gate scripts: edit tools/gates (a symlink to enforcement/mwl-proof-v2/gates).
+Gate changes need a container image rebuild; runtime/ changes are mounted and live.
+
+## State — the loop works; retrieval underneath it does not
+run-7207d316ce5a50a5-1787932828 finished CONSENSUS_REACHED across eleven rounds
+(2026-08-28). Six gateways healthy on 8643-8648 INSIDE the container (the host
+gateways on those ports are a different set — check the right one).
+
+But every agent call in every recent run carried "(KB search unavailable)", and
+the pipeline's proven work so far is greet.py and two runs confirming the six
+agents have their own pitfalls.md. The deliberation loop is real. What it
+deliberates ON is not yet grounded in the KB.
+
+## The goal — Eric, 2026-08-29. Read this before reordering anything.
+The contained pipeline is being set up to REPLACE the VM (host) pipeline.
+That requires a fully operational KB inside the container — semantic AND SQL.
+Order of work, in Eric's words:
+  1. Get the KB fully working (semantic + SQL) for the container.
+  2. Then make all the fixes already in the queue.
+  3. Then keep uncovering and addressing logical, deterministic, functional
+     issues.
+The point of all of it: give the container an infrastructure that can finally do
+the real work of BUILDING PROJECTS with a trustworthy AI assistant.
+
+Sharpened 2026-08-29: the immediate goal is to OPTIMIZE AND READY THE KB so the
+pipeline can reference it — and then use that to UNCOVER WHICH DETERMINISTIC
+GATES NEED TWEAKING OR CREATING. The KB is not the destination. It is the
+instrument for finding out what the gates should be. A pipeline that can read
+the record can be asked where the record contradicts what it is doing.
+DAM is NOT current work. It belongs to the creative app build, after the
+container infrastructure is finished. Do not start it.
+GPU is free — nothing is using it (the llama-server on 8002 holding 20.7GB is a
+leftover from KB processing a month ago; no agent set is configured to call it).
+All six container agents are CLOUD: brain/draft/menter -> api.deepseek.com,
+review1/review2/verify -> openrouter. The pipeline uses no local GPU at all.
+
+That last line is the test to apply to any proposed work. Governance ceremony,
+protocol adherence, and enterprise-shaped process are not the goal and were
+what the 2026-06-18 dev pivot was called to kill — "the models had been running
+me in circles instead of building out functionality." True governance here is
+deterministic script: a gate that actually enforces, a check that actually
+checks. Not a ritual. If a queue item is ceremony, cut it.
+
+## What the KB is actually FOR — Eric, 2026-08-29. The clearest statement yet.
+All progress so far came from Eric asking the right question at the right time
+and causing a pivot. He wants a STRUCTURE that replaces those accidental
+insights with a system that does it for him — built from the experience of
+working with him plus the development knowledge in the training data. The system
+has to become strong enough to OVERRIDE THE ENTERPRISE BIAS and start thinking
+the way he does.
+THAT is what "it is all in the KB" means. The value of his words is not that
+they are authoritative. It is that they are AN ALTERNATE PATH TO ENTERPRISE
+METHODS — and the only one available.
+
+Why that holds: training data is overwhelmingly enterprise, because that is what
+has been written down about building software. A model reaching for "sound
+practice" reaches for that by default. It is why this codebase grew ADRs,
+approval workflows, tiered build plans and governance contracts with nobody
+deciding it should. The models were not failing; they were succeeding at what
+they were trained on. The corpus is the counterweight, and it is the only one,
+because nobody else wrote this method down.
+
+The insights are NOT accidental — this matters for building it. Twice on
+2026-08-29 Eric redirected the session (the archive drive; the dev pivot). Both
+times he was pattern-matching against something he knew was in the record and
+the assistant had not looked for. The gift is smelling that a direction is
+wrong. The correction itself came from the corpus. Instinct is not
+mechanizable; the lookup it triggers is.
+
+What to build, and it is the same trait->check conversion as item 20:
+gate_research_before_conclusion checks a factual CLAIM against the record. Point
+the same pattern at METHOD — "does the record contain a decision that
+contradicts the direction being proposed?" Enterprise drift has signatures:
+phases gated behind more discussion, roles multiplying, approval ceremony
+applied to BUILDING rather than to the product, roadmaps deepening instead of
+shipping. Those are detectable against a corpus holding fourteen months of Eric
+rejecting them.
+LIMIT: a model cannot be made to think like Eric — that is a trait and traits do
+not hold. A system CAN check proposals against his recorded method and refuse
+the ones that contradict it. The reference material is the corpus, not a term
+list. bias_drift_detector is the crude version of this and should be rebuilt on
+the corpus once item 1 gives the container semantic search.
+PRECONDITION, now met: on 2026-08-29 the search tool reached 4.7% of the corpus
+and Claude Code sessions reached it zero times. Both fixed that day. The
+alternate path was on disk and unreadable until then.
+
+## Why the ceremony accumulated — Eric, 2026-08-29. Do not lose this.
+It was not a design choice. It was an artifact of the tooling available at the
+time. Eric was working through frontier-model CHATS that could not do actual
+work — everything moved by copy-paste. He could not argue a point to a
+conclusion or vet one against a running system, so there was nothing to settle a
+disagreement except more discussion. Months of work defaulted into enterprise
+bias and ceremonial governance because talk was the only thing the setup could
+produce. He is emphatic this cannot be overstated as the cause.
+The breakthrough came when agentic tooling arrived — openclaw changing the scene,
+and Eric adopting Hermes soon after to add to the copy-paste process.
+
+The operational lesson, and it is a live risk not a historical note:
+CEREMONY IS WHAT FILLS THE GAP WHEN THE ASSISTANT CANNOT DO THE WORK.
+Whenever the assistant cannot run the thing, read the thing, or change the
+thing, the work degrades into talk about the work, and the talk hardens into
+process. Watch for it in the present tense: long clarifying exchanges, proposals
+about proposals, roadmaps gated behind more discussion. The fix is never a
+better protocol — it is restoring the ability to act and then acting.
+This session hit exactly that failure twice and Eric had to say so both times.
+
+## Queue — reordered 2026-08-28: retrieval, then the gate, then ingest
+Ingest was #1. It is now #6. Writing more into a KB that agents cannot read does
+not help, and neither does a gate that cannot say what it is asking you to
+approve. Retrieval and the briefing are both FIXED (see Done). What is left at
+the top is a decision Eric has to make, not code.
+
+Dates below are mixed by design: the host clock is local, the container is UTC,
+so 2026-08-28 evening here is 2026-08-29 early in run IDs and briefings.
+
+1. GIVE THE CONTAINER SEMANTIC SEARCH. Blocks the whole goal above — the
+   container cannot replace the VM pipeline while it can only do keyword search.
+   Verified 2026-08-29: chromadb ABSENT, sentence_transformers ABSENT in
+   /usr/local/lib/hermes-agent/venv; pipeline_relay.py contains zero references
+   to chroma. Its KB_CONTEXT is FTS5 only (relay lines ~681 and ~1136).
+   Everything needed is already on the box:
+     - model: /mnt/models/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2
+     - store: /mnt/projects/cis/data/chroma_data -> /workspace/cis/data/chroma_data
+       (already mounted; the repo mount covers it)
+     - container HAS network (huggingface.co returns 200) — but MOUNT the model
+       rather than download it. A download is version drift waiting to happen
+       (failure mode 6) and makes the container depend on the internet to think.
+   Work:
+     a) Dockerfile: pip install chromadb sentence-transformers. Image rebuild.
+     b) Mount /mnt/models/huggingface read-only; set HF_HOME / TRANSFORMERS_CACHE
+        to it so the model loads offline and identically every time.
+     c) Set CIS_CHROMA_PATH=/workspace/cis/data/chroma_data. It is currently
+        UNSET, and chroma_index.py defaults to the HOST path /mnt/projects/...,
+        which does not exist inside the container. CIS_SPINE_PATH is already set
+        correctly — this one was simply missed.
+     d) pipeline_relay.py KB_CONTEXT: query BOTH. FTS5 covers 100% of the text
+        and catches exact names; the vector index catches meaning. They fail
+        differently, so merge rather than choose.
+   Proof it worked: a run whose task uses different words than the record still
+   returns relevant KB_CONTEXT hits.
+   STATUS 2026-08-29 — image cis-hermes:pipeline-semantic BUILT and the model
+   VERIFIED loading in-container (dim 384, max_seq_length 256, same as host).
+   Not yet swapped into cis-hermes:pipeline; the working image is untouched.
+   Four things had to be solved, all worth keeping:
+     - Unpinned pip gave the container sentence-transformers 6.0.0 against the
+       host's 5.5.0. Now pinned to the host exactly (chromadb 1.5.9,
+       sentence-transformers 5.5.0, transformers 5.8.1, huggingface_hub 1.14.0).
+       A different major version could embed queries in a different geometry
+       from the 460k vectors the host wrote — degraded retrieval, no error.
+     - Repo-id model resolution FAILS in the container even with the cache
+       mounted, HF_HOME set, versions pinned and files provably readable. Fixed
+       by naming the snapshot by absolute path via CIS_EMBED_MODEL, honoured in
+       runtime/mcp_bridge/chroma_index.py. The snapshot hash in that path IS the
+       model pin, made visible.
+     - Chroma rejects any single add() over 5,461 records; rechunk now
+       sub-batches independently of the row batch.
+     - CHROMA IS NOT SAFE FOR CONCURRENT ACCESS. Reading the store from the
+       container while a host ingest wrote to it produced
+       "Error deserializing pickle file: trailing bytes found". This is a real
+       constraint for the goal, not a one-off: once the container queries Chroma
+       live, host-side ingest/re-embed jobs MUST NOT run at the same time.
+       Decide the arbitration — a lock file, a maintenance window, or moving
+       ingest inside the container. Do not leave it to luck.
+
+2. DONE 2026-08-29 — KB coverage fixed, then over-corrected, then scoped.
+   The vector index now holds 451,167 vectors: every source EXCEPT archive.
+   That is the build corpus — CIS, SWA, pipeline, sessions, docs — which is
+   what Eric wants searchable right now.
+   ARCHIVE IS DELIBERATELY OUT OF THE SEMANTIC INDEX. All 2,186,884 rows remain
+   in the spine and are fully keyword-searchable via FTS5 (54,076 hits for
+   "blender" confirm it). Do not re-add it wholesale — that is what broke
+   retrieval on 2026-08-29 (see the cautionary note below).
+   THE ARCHIVE NEEDS SEPARATE PROCESSING, LATER (Eric, 2026-08-29):
+     - "Troys 500GB Drive" (774,270 chunks) is an old computer backup.
+       NEVER incorporate it.
+     - _2 Word, _3 Image, _4 Action, _5 Sound and web are DOMAIN RESOURCE
+       LIBRARIES — software, tutorials and reference material per domain. The
+       orchestrator draws on them to set up a project; the LMS and DAM
+       reference them. _2 Word in particular holds the original creative ideas
+       and rough drafts that projects are built from.
+     - _4 Action is 1,254,353 .py files out of 1,386,838 chunks — 90% source
+       code. It is SOFTWARE to be installed or referenced (DAM's job), not
+       knowledge to be searched by meaning.
+     - So the eventual split is prose vs software, not creative vs method.
+       Not now. This is after the pipeline infrastructure is complete.
+   Tools built for this, all idempotent:
+     tools/rechunk_for_embedding.py    — split oversized rows to fit the model
+     tools/rebuild_vector_index.py     — drop and rebuild from the spine
+     tools/sync_missing_embeddings.py  — find and fix store drift
+     tools/ingest_claude_code_sessions.py / ingest_hermes_sessions_v2.py
+
+3. 89% OF THE KB WAS NOT SEMANTICALLY SEARCHABLE — cautionary record.
+   The embedding model (all-MiniLM-L6-v2) has max_seq_length 256 tokens —
+   about 1,000 characters. Everything past that is silently TRUNCATED at embed
+   time. The corpus was chunked at 4,000 (ingest_sessions.py) and the archive
+   averages 9,710, so most rows are represented in the vector index by their
+   opening line only.
+     KB total: 1,800,079,092 chars | inside the window: 207,982,019 (11%)
+     archive       165,482 chunks   9% embedded (avg 9,710 chars)
+     swa_project    23,427 chunks  27%
+     hermes_*        ~11k chunks   26%
+     chatgpt_export  3,787 chunks  25%
+     claude_export   9,467 chunks  47%
+     cis_docs       75,794 chunks  75% (avg 168 chars — the only well-covered one)
+   This explains why every semantic search returned cis_docs headings and why
+   the archive never surfaced: short chunks are the only ones fully represented.
+   FTS5 keyword search is UNAFFECTED — it indexes 100% of the text. Only the
+   vector layer is truncated, and ask_history uses only the vector layer.
+   RESOLVED for the build corpus. All non-archive sources re-chunked to 900
+   chars and re-embedded; they are at 97-100% coverage. Archive is out of the
+   vector index by decision (see item 2).
+   WHAT WENT WRONG, worth keeping because it was a textbook failure:
+   The archive was embedded because it was 91% of the byte deficit. Its SIZE
+   was measured; its CONTENT never was. It became 2.19M of 2.64M vectors — 82%
+   of the index, 53% source code — and "why was the orchestrator set aside"
+   started returning Blender addon source. Two minutes of sampling first would
+   have prevented a two-hour job and a rebuild. This happened twenty minutes
+   after item 21 (never guess, look at the file) was written into this queue.
+   ALSO LEARNED THE HARD WAY:
+     - Query-time filtering is NOT a fix. A metadata `where` clause makes Chroma
+       scan every vector; the archive-excluded query never returned.
+     - Deleting in place leaves tombstones and keeps the file large. Rebuild.
+     - Dropping a collection ORPHANS its segment directory. 4.9GB was left
+       behind; verify against the collections/segments tables before removing.
+     - VACUUM after a rebuild or the file keeps the freed pages (21GB -> 8.3GB
+       after vacuum plus orphan cleanup).
+   STILL WORTH DOING: hybrid search in ask_history — merge FTS5 (100% coverage,
+   free, catches exact identifiers) with the vector query (catches meaning).
+   pipeline_relay.py already does this; ask_history does not.
+   NOTE the container CANNOT use any of this. It has no chromadb and no
+   sentence_transformers, and pipeline_relay.py never touches Chroma — the
+   pipeline's KB_CONTEXT is FTS5 only, which was always 100% covered. Re-chunking
+   still helps it: KB_CONTEXT previews the first 300 chars of a matched chunk,
+   which against a 3,700-char blob is usually the wrong part.
+   To give the pipeline semantic search: install both libs in the image and mount
+   the model from /mnt/models, or expose a host search endpoint it can call.
+   That is a separate job — see item 18.
+
+4. Point runs at DEV-PIVOT documents, not build_plan_nodes.
+   Eric, 2026-08-29: "most of the ADRs fell from relevance months ago, around
+   the time the dev pivot was realized." Checked — he is right, and it decides
+   which list a run should name.
+     build_plan_nodes (30): a CONSTRUCTION record. 27 COMPLETE, 2 DEFERRED,
+       1 PENDING. It says Tier 9 Chroma COMPLETE (its search reached 4.7%),
+       Tier 12 KB Ingestion COMPLETE (sessions never reach the KB), Tier 11B
+       Eric Gate Approval Record COMPLETE (its briefing was blank). COMPLETE
+       here means BUILT, not WORKING. Historical. Do not attach new work to it.
+     docs/DEV-PIVOT_STATUS.md (17, of which 12 LIVE): the actual live tracker.
+       Auto-regenerated from the dev_pivot_status table
+       (tools/export/generate_dev_pivot_manifest.py) — one of the two docs that
+       re-dirty after every commit. It already carries the mechanism the build
+       plan lacks: INVALIDATED = progress solved it, LIVE = still unsolved.
+   Today's seven fixes map onto LIVE entries:
+     DEV-PIVOT-05 (16 failure modes — "re-audit needed against current
+       capability"): today WAS that re-audit. Seven live failures found, five
+       fixed. Mode 11 (silent failure) was the species in every one.
+     DEV-PIVOT-01 (governance in bash, not embedded in app): the Eric Gate
+       briefing fix.
+     DEV-PIVOT-03 (guardrails are hooks, not kernel enforcement): the FINAL_JSON
+       and effort_metric findings.
+     DEV-PIVOT-11/12/13 (corpus, catalog): the retrieval fixes and item 6.
+   So the field is not blank for want of a decision — it was pointed at a
+   retired list. Wire goal_references.dependency_node / tier_advanced to the
+   DEV-PIVOT id a run addresses.
+   STILL ERIC'S CALL: whether a run names its DEV-PIVOT at intake, or nothing
+   does and repairs are marked maintenance. Do NOT let brain infer it — that
+   lets the pipeline claim it advanced a problem it did not.
+   NOTE a data defect found alongside: projects.id is lowercase ('cis') and
+   build_plan_nodes.project_id is uppercase ('CIS'). A plain join returns 0 of
+   30 rows. runtime/api/relay.py:1058 papers over it with COLLATE NOCASE;
+   anything else joining these tables silently gets nothing. Pick one case.
+   Eric asked 2026-08-29 whether to add an agent to explain approvals. Answer
+   stands: not yet. The briefing now says what is proposed, what it touches,
+   whether it can be undone, and what was objected to. Read it first and see
+   whether an explainer is still needed. An agent summarizing an approval
+   becomes the thing Eric approves from, which defeats the briefing hash and
+   re-creates the rubber stamp one layer up — defensible only ON TOP of a
+   populated briefing, never instead of one.
+
+5. APPROVE OR CLOSE run-e70293544935a92e-1787973534, waiting at the gate since
+   2026-08-29. Briefing now renders in full; hash is stable across rebuilds.
+     python3.12 tools/eric_gate/build_briefing.py \
+       --workflow-run-id run-e70293544935a92e-1787973534 --markdown
+     python3.12 tools/eric_gate/record_decision.py \
+       --workflow-run-id run-e70293544935a92e-1787973534 --decision APPROVE \
+       --briefing-hash <hash from the briefing> --goal-reference-id 12 \
+       --rationale "..."
+   Approving lets it write one new file and run implementation + verification —
+   the first time that path has run with working KB search. Recommended.
+   Also at the gate: run-d087d1ffc9d972c8 (topic "smoke check") and
+   run-9f86d081884c7d65 (topic "test"), both 2026-08-22 throwaways. Do not
+   approve; close them so the gate queue reflects real work.
+
+6. effort_metric measures the DRAFT role by code complexity, but draft produces
+   prose specs — menter writes the code. guardrails.py:3012 adjusts expectations
+   for brain/review1/review2 by word count and omits draft, so a correct 724-word
+   spec scored ratio 0.26 and was reported as "Sandbagging suspected".
+   ADVISORY only — it does not block (only BLOCK-mode failures escalate, relay
+   line 2632) — but it is false noise in every draft report. Likely one-line fix:
+   add "draft" to the role tuple. Confirm draft never emits code first.
+
+7. ask_history ranking, remaining work. Source filter removed and results now
+   over-fetch, drop fragments under 200 chars, and cap 2 per source, so bare
+   headings no longer crowd out reasoning (fixed 2026-08-29). Still open: the
+   vector layer only covers 11% of the corpus — see item 1. Hybrid FTS5 search
+   is the fix, not more reranking.
+8. Session ingest, remaining work. tools/ingest_claude_code_sessions.py is
+   BUILT and run (645 chunks, 2026-08-26..29, in SQLite and Chroma). It is
+   deterministic — no model, nothing summarised, exchanges kept as pairs so an
+   objection stays attached to what it changed. Still open:
+     - nothing triggers it; it is manual (see item 9)
+     - only covers ~/.claude/projects; container agent state.db still unhandled
+       (item 12, blocked on item 8)
+     - the April distillation contract (docs/contracts/CIS Session Transcript
+       Extraction Contract v1.md) is NOT implemented. Verbatim ingest was built
+       first because it needs no model and so carries no trust problem. Decide
+       later whether distillation is worth adding ON TOP.
+9. Measure prompt size on every agent call, then decide a cap. Nothing measures
+   or limits the task prompt (the soul document is capped at 8000 chars; what is
+   built on top of it is not). Across 469 calls: avg 12k chars, 62 over 20k, max
+   63,802 — and the three largest all went to VERIFICATION. agent_trajectories
+   .tokens_in exists and is 0 on every row. Over-length input fails silently.
+
+10. Persist and rotate agent state. /home/worker/.hermes-* is not mounted, so every
+   container recreate wipes it — brain went 422 messages -> 35 during 2026-08-28's
+   rebuilds. That reset masks the absence of a retention policy; when rebuilds stop,
+   those DBs grow unbounded. Mount them, decide what is ingested, what is dropped.
+   Blocks the container-history half of item 6.
+
+11. Decide what the container regulates itself vs what needs a human trigger.
+   Everything done by hand on 2026-08-27/28 — commit, image rebuild, container
+   recreate, closeout, starting a run, approving at the gate — has no trigger.
+   Suggested split: self-regulating = ingest after a run, rotate agent state,
+   record prompt sizes, rebuild when gates change. Human trigger = approve at
+   gate, commit, start a run. Approval must never automate; that is the gate.
+
+12. Stream agent completions instead of blocking on one call. Gateways support it
+   (verified on 8648); token cost is zero. Replaces the heartbeat's weak liveness
+   proxy with observed output. menter reported elapsed 180s / idle 180s, meaning
+   its gateway log is never written during a call.
+
+13. Export gate warns "expected 12 artifacts, found 13" on every commit.
+   tools/gates/gate_export_agreement.sh, EXPECTED_COUNT.
+
+14. Container agent history does not reach the KB. ingest_sessions.py reads host
+   paths and expects sessions/*.json; container agents keep history in state.db
+   under /home/worker/.hermes-*. Extraction exists, ingestion does not. See item 5.
+
+15. data/ is gitignored, so data/container_sessions/ (2,759 agent messages) and
+   data/drive_imports/ (the 16 April SESSION_INSIGHT_RECORDs) are on disk but not
+   in version control. Decide whether that matters.
+
+16. gateway_status_qwen (project_state id=101) stale — claims Qwen is 2nd reviewer
+   on 8644. Container reviewers are review1 8643, review2 8647.
+
+17. CLAUDE.md says the spine is runtime/spine.db; that file is 0 bytes. Spine and
+   KB are both data/cis_memory.db (4.8GB), mirrored into Chroma at
+   data/chroma_data (9.8GB, 299,514 embeddings, in sync with SQLite).
+
+18. Retention policy for data/backups/ — 4.8GB per spine write, 70GB free.
+
+19. 601 asks mined into cards/*.jsonl; only 32 cards ever generated.
+   cards/asks_ranked.jsonl orders them by corpus weight. generate_cards.py over
+   them is hours of local GPU (/mnt/models, /mnt/models2) and yields roughly 8%.
+
+20. Put a hermes agent INTO these working sessions (Eric's ask, 2026-08-28).
+   Today Claude Code does the diagnosis and Eric carries every decision alone,
+   which does not scale — his words: "I cannot keep up anymore." A hermes agent
+   in the loop could hold context, answer from the KB, and take the questions
+   Claude Code currently routes to Eric. Prime (8642 on the host) is the obvious
+   candidate; the six container agents are role-locked to pipeline phases.
+   Decide: which agent, what it is allowed to decide, how it gets the transcript.
+   Depends on item 6 — an agent in the conversation is only useful if the
+   conversation reaches the KB.
+
+21. IMPLEMENT THE ROLE THEORY INTO THE AGENTS. Eric's note, 2026-08-29, recorded
+   verbatim in intent: much of the early ceremonial governance debate was
+   CONCEPTUAL. There was extensive dialogue about roles and philosophical
+   guardrails. At some point all of that theory needs to be implemented into the
+   AGENT PERSONALITIES and the APPLICATION GUIDELINES, so a system is in place to
+   outline the CREATIVE ARCHITECTURE.
+   Read this against the 2026-06-18 dev pivot, and do not collapse the two.
+   The pivot killed governance CEREMONY — process ritual, role theatre, approval
+   ritual applied to the act of building. It did not kill the thinking about what
+   each agent IS and what constrains it. That thinking is unimplemented, not
+   wrong. The ceremony was the delivery mechanism failing, not the content.
+   Where it would land — the surfaces already exist and are thin:
+     - ROLE_OVERLAY and BIAS_OVERLAY, injected per call by pipeline_relay.py.
+       Currently a couple of sentences each. Example seen 2026-08-28: "Resist
+       enterprise patterns. Eric builds creative tools, not enterprise software."
+       That single line is the whole bias guardrail for the brain role.
+     - the per-role soul document (capped at 8000 chars)
+     - the six per-role skill sets the Dockerfile seeds (references/pitfalls.md)
+     - config/agents_static.yaml role definitions and constraints
+   Source material: the April CIS chats hold the full-scope design; the role and
+   guardrail dialogue is spread through the corpus. Both are now searchable —
+   the agent history was re-ingested 2026-08-29 (171,245 chunks, full history to
+   2026-05-30) and Claude Code sessions are ingested too.
+   METHOD — Eric, 2026-08-29, and this is the whole approach:
+   The agents are stateless and real persistent memory is not possible, so the
+   philosophical rules CANNOT be carried as character traits. Traits are not
+   enforceable. The expectations and Eric's way of working must therefore be
+   built into the FUNCTIONALITY, deterministically.
+   Refinement worth keeping: statelessness does not block memory — retrieval now
+   hands agents facts on every call. It blocks retained HABIT. You can give an
+   agent knowledge; you cannot give it habits. Habits must live outside the model.
+   So every rule becomes a check that runs, or it does not exist:
+     "ground every claim in codebase facts" -> output without file:line fails
+     "don't call something missing without looking" -> the gate runs the lookup
+     "resist enterprise patterns" -> term-list flag (bias_drift_detector)
+     "stay in scope" -> keyword overlap vs intent (scope_compliance)
+   THREE OF THOSE ALREADY EXIST. gate_research_before_conclusion is the template:
+   it exists because "be diligent" was unenforceable, so someone turned it into a
+   script that does the lookup and refuses the output. Convert the rest the same
+   way. Do not write longer prompts — a longer overlay is still a trait.
+   KNOWN LIMIT, record it honestly: not every rule converts. "Keep the exchange
+   intact so an objection stays attached to what it changed" converts cleanly —
+   both ingest tools do it by construction. "Understand what he is actually
+   asking for" has no deterministic form. Sort the rules into convertible and
+   not, and do not dress an unenforceable one up as a gate — that is theatre with
+   a script tag.
+   DO NOT resurrect "privilege Eric's language over model language" as a rule.
+   Eric ruled against it twice (2026-08-29). The value is in the RESULT OF THE
+   EXCHANGE, not in his words alone. mine_asks_claude_code.py implements the
+   rejected version — it deliberately carries nothing a model wrote, which keeps
+   the objection and loses what it changed. Kept for card provenance; not the
+   model for memory.
+   Evidence from 2026-08-29 supporting the method: every defect found in the
+   pipeline that day was a broken SCRIPT (regex missing "/", column names cut to
+   their first letter, a JSON parser truncating valid output). None was a failure
+   of agent character. The one character failure in the session was Claude Code's
+   — asserting the archive drive was unknown without searching, exactly what
+   gate_research_before_conclusion blocks for pipeline agents and nothing blocks
+   for Claude Code.
+
+   This is the item that connects the machinery to the point of it. Everything
+   else on this queue makes the pipeline WORK. This one decides what it IS.
+
+22. GATE: NEVER GUESS — LOOK AT THE FILE. Eric's note, 2026-08-29.
+   The models must never guess. To determine an action they must look directly
+   at the file. Guessing wastes tokens and time on multiple wrong attempts.
+   THE RULE, stated so it can be checked:
+   An agent may not assert the content, structure or state of a file it has not
+   opened in this run. If the output makes a claim about a file, the trajectory
+   must contain a read of that file. No claim without a look.
+   WHY IT IS WORTH A GATE, from this session: diagnosing why the container could
+   not load the embedding model took FOUR wrong hypotheses in a row — version
+   drift, a read-only mount, HF env vars, then cache layout. Each was a guess,
+   each cost a build or a container run. What settled it in one command was
+   looking directly: print the resolved cache path, then load the snapshot by
+   absolute path. The looking was cheaper than any single guess, and it was
+   available from the start. Same pattern earlier the same day: the archive
+   drive was declared unknown without a lookup, and the KB had it.
+   IMPLEMENTATION SKETCH — this is a sibling of
+   gate_research_before_conclusion, which already does the equivalent for the
+   RECORD. This one does it for the FILESYSTEM.
+     - scan agent output for file references (paths, file:line, "the file
+       contains", "X is defined in Y")
+     - check the run's trajectory for a corresponding read of that path
+     - no read -> FAIL, with the message naming the file it should have opened
+   Mode BLOCK for menter and verify, where a wrong claim about a file becomes a
+   wrong edit. ADVISORY first for brain and draft until the false-positive rate
+   is known — gate_research_before_conclusion shipped BLOCK and its first two
+   firings were false positives from subject parsing.
+   KNOWN LIMIT: this catches unsupported claims, not wrong reasoning about a
+   file that WAS read.
+   PREREQUISITE — CHECKED 2026-08-29, AND IT IS MISSING. Nothing records which
+   files an agent read. agent_trajectories holds only id, run_id, role, phase,
+   input_text, output_text, feedback_text, round_number, outcome,
+   consensus_reached, config_version, marginal_utility, created_at, tokens_in,
+   tokens_out. There is no tool_calls or agent_tool_calls table;
+   dispatch_events has 12 rows and is something else. Verify outputs carry no
+   tool-call markers either.
+   So the gate CANNOT be built until reads are captured. Do that first:
+   the Hermes gateway executes the tools, so its logs are where to look
+   (/home/worker/.hermes-*/ inside the container — see item 8 about mounting
+   those before a rebuild wipes them). Land the capture, then the gate.
+   Belongs with item 20 — a trait ("be rigorous") converted into a check.
+
+## Storage (documented in the KB, ADR-003 — look there before asking)
+vda=system 491G | vdb=/mnt/projects 246G | vdc=/mnt/archive 9.1T (8.0T used)
+vdd=/mnt/cache 110G | vde=/mnt/models 229G | vdf=/mnt/models2 228G
+/mnt/archive holds the creative corpus: _02 Mind, _1 OS, _2 Word, _3 Image,
+_4 Action, _5 Sound, WIAS, anthropic_exports. The KB indexes its text. The
+originals — images, audio, project files — are only on the drive.
+
+## Gate status (2026-08-28)
+gate_research_before_conclusion is BLOCK on brain and draft. 18 firings: 16 PASS,
+2 FAIL — both false positives from subject parsing, both fixed. It has never
+caught a real unresearched claim. Read that alongside item 1: the agents it
+judges have had no working KB search.
+
+## Method (learned 2026-08-27, re-proved 2026-08-28)
+Absence is not defect. Search before concluding:
+python3.12 tools/ask_history.py "<subject> decision"
+Proved again this session: I told Eric I was unaware of the archive drive. The
+KB had the full topology and ADR-003. I had not searched. Then the search tool
+itself turned out to reach 4.7% — so a failed lookup is not evidence of absence
+until item 2 is fixed.
+
+## Done 2026-08-28 (evening) — two retrieval defects found and fixed
+FIXED pipeline KB search. runtime/abstraction/pipeline_relay.py stripped
+[."*(){}:^+-] from the intent before FTS5 MATCH but not "/", so any task naming a
+path raised 'fts5: syntax error near "/"' and a bare `except` reported it to the
+agent as "(KB search unavailable)". 99 calls across 18 runs ran blind — including
+every call of the eleven-round run. The same bug was at TWO sites (KB_CONTEXT
+~line 638 and pre-discovery ~line 1083); both now strip to alphanumerics and quote
+each term, so no residue can be read as an operator. Verified in-container: the
+exact intent that failed now returns 3 hits.
+Failure mode 11 — silent failure — sitting in the research path.
+
+FIXED ask_history reach. tools/ask_history.py filtered to four source names and
+reached 14,011 of 299,514 embeddings (4.7%). One of the four, "hermes_session",
+was a source_KEY prefix written by ingest_sessions.py, not a source value, and
+matched 0 rows. Filter removed; results now print their source. Verified: a
+storage-topology query now returns the ADR-003 answer from cis_docs, which was
+invisible before.
+Note: gate_research_before_conclusion checks claims against the FULL corpus but
+told agents to research with the 4.7% tool. Those are now aligned.
+
+FIXED FINAL_JSON extraction. runtime/abstraction/guardrails.py pulled the JSON
+out with a non-greedy regex (\{.*?\}) that stops at the FIRST closing brace. Any
+agent whose summary quotes a regex, character class, or code block emits a valid
+JSON string containing "}" — and the validator truncated it mid-string, reported
+'Unterminated string starting at column 53', and BLOCKED the run. Replaced with a
+brace-matching scanner that tracks string state and escapes (_scan_json_object /
+_extract_final_json). Verified: the exact draft output that was blocked now
+returns PASS, status=PROPOSAL_READY.
+This punished agents for discussing code — in a system whose whole subject is code.
+Failure modes 13/14 inverted: the parser, not the model, produced the bad signal.
+
+Ran the first pipeline run with working KB search: run-e70293544935a92e-1787972762.
+All four calls (brain, both reviewers, draft) show real [KB_CONTEXT] hits — the
+first time in 18 runs. Run then ESCALATED on the two false positives above; the
+draft's actual content was correct and independently confirmed the FTS5 fix by
+reading the live file (two sanitizer sites, lines 644 and 1094, both on the fixed
+whitelist; the old buggy pattern survives only in the .bak).
+
+FIXED the Eric Gate briefing, which rendered every field as "No X available".
+Three separate causes, found in this order:
+  a) dict_from_row in tools/eric_gate/build_briefing.py did
+     [d[0] for d in row.keys()] — but sqlite3.Row.keys() ALREADY returns column
+     names, so d[0] took the first CHARACTER of each name. Every row became
+     {'i':..., 't':..., 's':...} with colliding keys, and every lookup by real
+     column name silently returned nothing. The connection sets
+     row_factory = sqlite3.Row, so this path always ran. This one line emptied
+     the whole briefing. Now list(row.keys()).
+  b) The briefing read decision_trails and goal_references — but BOTH are written
+     by the approval handler in runtime/api/relay.py, i.e. AFTER Eric decides.
+     The gate asked for a decision it could not describe, then record_decision.py
+     refused the decision for want of a --goal-reference-id that only approval
+     would create. Circular. pipeline_relay.py now calls _seed_gate_provenance()
+     at gate entry; the approval handler's find-or-create finds it instead of
+     inserting a duplicate. build_briefing falls back to the draft's FINAL_JSON
+     summary and the run topic when trails are absent.
+  c) reversibility and files_expected_to_change were hardcoded to "UNKNOWN" and
+     []. Now derived. Reversibility strips the Non-goals section and explicit
+     negations first — a naive scan read "no edits to live module" as an edit and
+     reported REVIEW REQUIRED for a pure file-create, i.e. the negation flipped
+     the verdict to the dangerous side. Files are taken from the summary only;
+     scanning the whole draft swept in every path the agent merely inspected.
+Verified on run-e70293544935a92e-1787973534: all four sections populate, and the
+briefing hash is stable across rebuilds so record_decision.py can match it.
+Objections were NOT a defect — 25 of 344 rounds carry objections_json and it
+renders; this run simply reached consensus at every phase without any.
+
+BUILT tools/ingest_claude_code_sessions.py — Claude Code sessions now reach the
+KB. 645 chunks from 2026-08-26..29, written to BOTH stores (knowledge_messages +
+FTS5, and the Chroma "knowledge_messages" collection ask_history queries; writing
+one leaves the material invisible to half the system). Deterministic: no model,
+nothing summarised, so there is no generated prose to distrust. Keeps exchanges
+as PAIRS — an operator turn and the reply that answered it — and repeats the ask
+at the head of every continuation chunk, so no chunk is an answer with its
+question missing. Verified: a query about the 2026-08-29 governance exchange now
+returns that exchange at rank 1, carrying both halves.
+Two things had to be fixed to make it work, both found by testing it:
+  - first pass chunked at 4,000 chars; the embedding model truncates at ~1,000,
+    so the chunks ranked 291st. Re-chunked to 900 and re-ingested. That led to
+    item 1, which is the same defect across the whole corpus.
+  - ask_history returned only cis_docs headings. Now over-fetches, drops
+    fragments under 200 chars, and caps 2 per source.
+FIXED guardrails.py:495 — the second copy of the FINAL_JSON parser bug, in the
+sycophancy check. Reviewer output extraction went 10 -> 11 of 12; the remaining
+one truncated its own output with no marker, a real mode-14 protocol failure.
+
+Established: SQLite and Chroma are in sync (299,612 / 299,514). The KB answers
+architecture questions well through ~June and holds nothing from the Claude Code
+sessions of 2026-08-26..28, where the container was designed.
+Task drafted for item 3 in scratchpad/task_session_ingest.md.
+Backups: scratchpad/ask_history.py.bak, pipeline_relay.py.bak,
+NEXT_SESSION.md.bak-20260828-213911.
