@@ -136,7 +136,12 @@ if [ "$ARTIFACT_COUNT" -lt 1 ]; then
     exit 1
 fi
 
-EXPECTED_COUNT=12
+# 13 = AGENTS.md + READ_FIRST_HERMES_CONTEXT.md + HCP_00..HCP_09 + DEV-PIVOT_STATUS.md.
+# This constant read 12 through all of 2026-08 while the manifest carried 13, so every
+# commit printed "WARN: expected 12 artifacts, found 13". The gate still passed —
+# artifact agreement is the pass/fail authority, not this count — but a warning that
+# fires on every commit is a warning nobody reads. Update it when the manifest changes.
+EXPECTED_COUNT=13
 if [ "$ARTIFACT_COUNT" -ne "$EXPECTED_COUNT" ]; then
     echo "WARN: expected ${EXPECTED_COUNT} artifacts, found ${ARTIFACT_COUNT}"
     WARNINGS=$((WARNINGS + 1))
