@@ -1,8 +1,25 @@
-# NEXT SESSION — standing context. Updated 2026-08-30.
+# NEXT SESSION — standing context. Updated 2026-09-01.
 
 Paste this file as the first message of a new session.
 
-**THE TASK QUEUE IS `docs/UNIFIED_BUILD_LIST.md`. IT IS NOT IN THIS FILE.**
+**THE TASK QUEUE IS `docs/UNIFIED_BUILD_LIST.md` — 90 items. IT IS NOT IN THIS FILE.**
+
+## Mining status — 2026-09-01
+P1 (acknowledged), P2 (reasoning), P4 (filesystem) and P6 (targeted) are COMPLETE:
+every candidate carries a recorded verdict. P3 (keyword) has 4,479 rows still
+PENDING in `mining_candidates` — `TODO` and `XXX` are over half of it and yield
+poorly. 88 TASK candidates became 40 tasks; 15 were already on the list, 25 were
+folded in (the list went 63 -> 90 items). Evidence for every one:
+`data/mining_archive/MINED_TASKS.md`.
+
+Each folded item carries `pipeline_scope` and `need_status`. Scope is NOT a
+priority: NOT_IN_CONTAINER_PATH means the code is not executed by the container,
+not that the finding is dead — the VM was the prototype, and 5 of those are OPEN
+needs the container has not met. UNASSESSED items name the one check that settles
+them, so absence is never read as an open need.
+
+The command that survives a cleared context:
+    python3.12 tools/ask_history.py "<subject> decision"
 
 This file holds only what does not change session to session: how to work here,
 what the goal is, and which decisions must not be eroded. It carries no tasks,
@@ -19,7 +36,28 @@ ask_history.py: python3.12 only, positional args, no flags.
 Verify every claim with a command. If a lookup fails twice, stop and report.
 Container clock is UTC, host is local. Never run python from data/drive_imports.
 Gate scripts: edit tools/gates (a symlink to enforcement/mwl-proof-v2/gates).
+  GIT CANNOT STAGE THROUGH THAT SYMLINK — `git add tools/gates/x.sh` fails with
+  "pathspec is beyond a symbolic link". Address those files as
+  `enforcement/mwl-proof-v2/gates/x.sh`. Editing via tools/gates is fine; only
+  the git path must be the real one.
 Gate changes need a container image rebuild; runtime/ changes are mounted and live.
+
+## Three verification rules — from CARD_3.1, each earned by a mistake
+1. VM vs CONTAINER. Most of the record describes the VM pipeline, which is
+   structurally different. Name which pipeline a structural finding describes
+   BEFORE verifying it. Worked error: a VM-era finding that the drafter and one
+   reviewer shared a model is FALSE in the container — review1 qwen/qwen3.7-max,
+   review2 z-ai/glm-5.2, draft deepseek-v4-pro.
+2. FILE PRESENCE IS NOT EXECUTION. The repo is mounted whole at /workspace/cis,
+   so every VM file is visible inside the container — but container_app.py
+   registers only relay_bp plus health/UI routes. An ALREADY_BUILT verdict needs
+   the route or the import path, not the file existing.
+3. THREE ENFORCEMENT LAYERS, easily confused. (a) container_gate_runner.py, the
+   pre_tool_call hook — FIRES on every tool call, registered by the mwl-proof
+   plugin. (b) The 51 scripts in /opt/cis-gates/ — DEAD except that one; nothing
+   else invokes them. (c) pipeline_relay's run_guardrails() — FIRES, but only in
+   verification, after the work is done. Finding one wired is not evidence
+   another is.
 
 ## HOW TO WORK HERE — Eric, 2026-08-29. Standing instruction, not a preference.
 "I am always looking for the best most complete and evidence based result and
