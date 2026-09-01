@@ -1,7 +1,75 @@
 # Files Changed Recently
-Generated: 2026-09-01 12:33 UTC | Run: run-977849c752aa
+Generated: 2026-09-01 12:40 UTC | Run: run-cf652f6f10ba
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a2912a6 Fold 25 mined tasks into the build list, with scope and need on each
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## data/mining_archive/MINED_TASKS.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## docs/cards/CARD_0.1_inventory_prior_mining_(INVESTIGATE).md 
+
+## docs/cards/CARD_0.2_corpus_inventory_(INVESTIGATE).md 
+
+## docs/cards/CARD_1.1_create_mining_candidates_(BUILD).md 
+
+## docs/cards/CARD_2.1_PASS_1:_acknowledged-but-unresolved_(SEMANTIC).md 
+
+## docs/cards/CARD_2.2_PASS_2:_reasoning_that_implies_a_task_(SEMANTIC).md 
+
+## docs/cards/CARD_2.3_PASS_3:_keyword_sweep_for_what_semantic_misses_(FTS5).md 
+
+## docs/cards/CARD_2.4_PASS_4:_the_filesystem,_by_content_not_filename_(BUILD).md 
+
+## docs/cards/CARD_2.5_PASS_5:_artifacts_named_in_the_record_(SEMANTIC_+_FILESYSTEM).md 
+
+## docs/cards/CARD_2.6_PASS_6:_gaps_by_category,_not_by_count_(SEMANTIC).md 
+
+## docs/cards/CARD_2.7_pass_completeness_check_(INVESTIGATE).md 
+
+## docs/cards/CARD_3.1_adjudicate_one_batch_(BUILD_send_repeatedly).md 
+
+## docs/cards/CARD_3.2_integrity_audit_(INVESTIGATE_every_~10_batches).md 
+
+## docs/cards/CARD_4.1_consolidate_(BUILD).md 
+
+## docs/cards/CARD_4.2_merge_against_the_build_list_(BUILD).md 
+
+## docs/cards/CARD_4.3_write_it_for_me_to_read_(BUILD).md 
+
+## docs/cards/CARD_5.1_one_card_per_task_(BUILD).md 
+
+## docs/cards/CARD_5.2_dependency_order_(INVESTIGATE).md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 747a43b Mined tasks not on the build list: 25 from four completed passes
 
@@ -468,42 +536,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
 
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tests/test_eric_gate.py 
-
-## tools/eric_gate/record_decision.py 
-
-## 3760595 Make approval actually approve: advance the run, and give it an id
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/api/relay.py 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
 

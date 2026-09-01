@@ -129,7 +129,13 @@ docs/architecture_atlas/original_CISChats/
 /runtime/db/cis_memory_db
 
 # Kanban runtime data (not source code)
-data/
+# Anchored with /data/* rather than data/ so git still descends into the
+# directory — a blanket `data/` exclusion makes any negation below it inert,
+# because git never looks inside an excluded directory. Nested data/ dirs
+# elsewhere are covered by .venv/ (line 26); none are tracked.
+/data/*
+!/data/mining_archive/
+!/data/mining_archive/**
 proposals/
 
 # Runtime live backups (tracked for gateway service recovery)
@@ -157,5 +163,6 @@ CLAUDE.md.bak.*
 *.bak.2*
 *.bak2.2*
 
-# Mining archive — evidence base for UNIFIED_BUILD_LIST, must survive
-!data/mining_archive/
+# Mining archive — evidence base for UNIFIED_BUILD_LIST, must survive.
+# The working negation lives beside the /data/* rule above; a negation here
+# would be inert because it sits below the parent-directory exclusion.
