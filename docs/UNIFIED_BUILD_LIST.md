@@ -1110,6 +1110,30 @@ The designed backlink syntax for knowledge-record markdown was never implemented
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5158; full record in `data/mining_archive/MINED_TASKS.md`.
 
 
+
+### 3.21 Move the queue out of markdown and into the spine
+
+The build list is a markdown document, so any UI that shows it has to parse prose. `mined_tasks`
+already proved the structural form this needs: one row per task carrying scope, need_status,
+evidence count, first and last raised, and the candidate ids behind it. Moving the queue into the
+spine as a table gives a UI something to read directly, and it removes the two-lists failure
+permanently — 2.12 exists because a second queue drifted from the first, and prose is what makes
+that drift possible.
+
+**Eric, 2026-09-01:** the list should appear in the UI as a roadmap of ongoing development.
+
+**Scope:** UNDETERMINED — the spine is shared by both pipelines, but which surface renders the
+roadmap is not settled. The VM dashboard is Eric's operator surface today; container_app.py serves
+only static /ui/.
+
+**Need:** OPEN — stated as a requirement on 2026-09-01. `mined_tasks` demonstrates the shape works;
+nothing yet renders it.
+
+**The one check that settles the scope:** decide which surface renders the roadmap before choosing
+where the table lives.
+
+**Depends on:** nothing. Blocks 4.18 (the card factory needs a table to read) and the UI roadmap.
+
 # TIER 4 — after the infrastructure works
 
 - **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.
@@ -1264,6 +1288,82 @@ Intelligent routing between local and frontier models is unimplemented, the benc
 
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5141; full record in `data/mining_archive/MINED_TASKS.md`.
 
+
+
+### 4.17 Automate issue intake — nothing adds to this list but a person
+
+New issues reach this list only because someone writes them here by hand. That is why the
+2026-08-31 mining recovery was necessary at all: months of recognitions sat in the record and never
+became items, because the only intake path was human attention.
+
+The raw material already exists and is already being captured. `hook_payload.jsonl` logs every tool
+call, including blocked ones — written by `enforcement/mwl-proof-v2/plugin/__init__.py:22`. Nothing
+reads it. `cis_shell_hook.sh:32` writes a second payload log with the same status.
+
+**Scope:** CONTAINER — the plugin that writes the payload log runs in the container on every tool
+call.
+
+**Need:** OPEN — verified: grep across runtime/, tools/ and enforcement/ finds writers only, no
+consumer of either payload log.
+
+**The one check that settles the design:** decide what an automated intake produces — a candidate
+row for adjudication, or a queue item directly. It must not be the latter without a gate, or the
+list fills with noise.
+
+**Related:** the end-of-day evaluation item — both are about the system noticing its own state
+without Eric reading logs.
+
+### 4.18 Wire the card factory to the queue
+
+The card generators exist and stalled. `tools/generate_cards.py`, `tools/generate_intention_cards.py`
+and `tools/seed_pipeline_cards.py` are all present, and `cards/pipeline_cards.db` holds 32 cards —
+verified 2026-09-01. They were never pointed at the task queue, so nothing regenerates cards as the
+queue changes.
+
+Wiring them to read the tasks table would give one card per issue, kept in step with the queue
+rather than hand-seeded.
+
+**Carry this rule, from 2026-08-31:** a task nobody has investigated gets an INVESTIGATE card, never
+a BUILD card. And PROOF on every card must be a command the operator can run — not a description of
+what success looks like. A BUILD card for unexamined work is how the pipeline gets sent to build the
+wrong thing confidently.
+
+**Scope:** NOT_IN_CONTAINER_PATH — the generators and `cards/pipeline_cards.db` are VM tooling; none
+is imported by `container_app.py` or `pipeline_relay.py`.
+
+**Need:** OPEN — the generators exist, the card count has not moved from 32, and the queue now has a
+structured form to read.
+
+**The one check that settles the shape:** confirm whether `pipeline_cards.db`'s existing schema can
+carry the mined_tasks fields (scope, need_status, evidence, candidate ids) or needs replacing.
+
+**Depends on:** 3.21 — the factory needs a table, not a markdown document, to read.
+
+### 4.19 A button that sends an issue card into the pipeline
+
+**Eric, 2026-09-01.** From the roadmap in the UI, select a card and route it into the pipeline as a
+run.
+
+**TWO CONSTRAINTS ON THE RECORD — both must hold before this is built:**
+
+1. **Eric selects the card. The pipeline must not pull its own work.** This is the
+   evaluator-must-not-be-the-builder rule in a new place: a system that chooses which of its own
+   defects to fix, and then judges whether it fixed them, has no independent check left anywhere in
+   the loop. Selection stays with the operator.
+
+2. **Nothing routes in until a run can be stopped.** Verified 2026-09-01: the relay blueprint
+   exposes eight routes and `grep -c cancel runtime/api/relay.py` returns 0. A one-click path into
+   an unstoppable process is worse than no button — today the friction of starting a run by hand is
+   the only brake that exists.
+
+**Scope:** CONTAINER — the pipeline the button would feed is the container pipeline.
+
+**Need:** OPEN — stated as a requirement on 2026-09-01.
+
+**The one check that settles readiness:** the stop button (Tier 1) must land first. Until then this
+item is blocked by its own second constraint.
+
+**Depends on:** the Tier 1 stop-button item, 3.21, and 4.18.
 
 # REFERENCE DOCUMENTS — for when we reach each item, not before
 
