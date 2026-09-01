@@ -1,20 +1,27 @@
-# MINED TASKS — not on the build list
+# MINED TASKS — evidence record
 
-**PROVISIONAL.** P3's 4,479 keyword rows remain unadjudicated. This file will change when they are worked; tasks may be added and evidence counts may rise.
+**PROVISIONAL.** P3's 4,479 keyword rows remain unadjudicated.
 
-**Complete:** P1 (acknowledged-but-unresolved), P2 (reasoning that implies a task), P4 (the filesystem, by content not filename), P6 (targeted re-mine of the productive sources). Every candidate in those four passes carries a recorded verdict.
+These 25 tasks are folded into `docs/UNIFIED_BUILD_LIST.md`, which is the queue. This file is the evidence behind them and is not a second queue.
+
+**Complete passes:** P1, P2, P4, P6 — every candidate carries a recorded verdict.
 
 ## What each pass contributed
 
 | pass | queued | TASK verdicts | what it reached |
 |---|---|---|---|
-| P1 acknowledged | 567 | 16 | documents that state a problem in the words a taxonomy would use |
-| P2 reasoning | 862 | 22 | exchanges where a problem was reasoned through and nobody wrote a task |
-| P3 keyword | 11,722 | 12 | exact markers and identifiers semantic search cannot reach — 4,479 still pending |
-| P4 filesystem | 874 | 22 | 1,885 .md files read by content, filenames ignored — including the container's own skill library |
-| P6 targeted | 1,170 | 16 | a second semantic pass in the corpus's own register, aimed at the seam P2 opened |
+| P1 acknowledged | 567 | 16 | documents stating a problem in taxonomy words |
+| P2 reasoning | 862 | 22 | exchanges reasoned through with no task written |
+| P3 keyword | 11,722 | 12 | exact markers semantic search cannot reach — 4,479 pending |
+| P4 filesystem | 874 | 22 | 1,885 .md read by content, filenames ignored |
+| P6 targeted | 1,170 | 16 | second semantic pass in the corpus's own register |
 
-Scope is recorded per task. CONTAINER means the finding was verified against the pipeline in production. VM_ONLY means it describes the older VM pipeline. UNDETERMINED names the check that would settle it.
+## Labels
+
+- **CONTAINER** — verified against the pipeline in production.
+- **NOT_IN_CONTAINER_PATH** — the code is not executed by the container. This is NOT the same as irrelevant: the VM was the prototype, so a finding there may be a requirement the container has not met.
+- **UNDETERMINED** — scope not established; the item names the check.
+- **need_status** — OPEN (the need stands), SUPERSEDED (answered), UNASSESSED (the record does not settle it).
 
 ---
 
@@ -22,7 +29,7 @@ Scope is recorded per task. CONTAINER means the finding was verified against the
 # CONTAINER
 
 
-## gate-mechanics
+## need: UNASSESSED
 
 ### Build the verification snapshot and provenance gaps
 
@@ -31,11 +38,26 @@ Execution snapshot and git snapshot isolation are both recorded as verified gaps
 - **Raised:** 5 times, 2026-07-13 to 2026-08-24
 - **Sources:** fs:enforcement
 - **Scope:** CONTAINER — all four documents are the container's own skill library describing its verification phase; 15815 still needs verify-snapshot-gap.md read in full
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 15782,15784,15723,15720,15815
 
 **Strongest excerpt** — `enforcement/mwl-proof-v2/cis-pipeline-architecture/references/session_recovery_technique.md`
 
 > may continue after the gap but the agent has no memory of what it did during the gap.
+
+### Make review independence verifiable, not assumed
+
+Nothing checks that a reviewer searched before delivering a verdict; a revision carries no objection-to-resolution mapping; an empty or ambiguous reviewer response is consumed as a review; and Eric has no guaranteed second opinion. NOTE: the model-sharing half of this is FALSE in the container.
+
+- **Raised:** 5 times, 2026-06-27 to 2026-08-29
+- **Sources:** cis_docs, hermes_glm-reviewer, hermes_glm-verifier, hermes_prime
+- **Scope:** CONTAINER — container review1 is qwen/qwen3.7-max and review2 is z-ai/glm-5.2 against draft deepseek-v4-pro — three lineages, so model-sharing does not apply; the independence CHECKS are still absent
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
+- **Candidates:** 166,976,13826,14972,3563
+
+**Strongest excerpt** — `hermes_prime`
+
+> [asked] look through the session log for yesterday where we realized that the advisor chat is just pretending to have different roles and all are running the same model because the config files are not completely setup. **May 25, 12:12 AM** — session `api-a7bc10d5b6371553` Dug deeper and confirmed: Prime and V4-Pro Advisor are the *same model* `deepseek-v4-pro` — the only difference is `reasoning_effort`, which is set identically everywhere. All three configs are copies of the original. The core finding is captured in `/mnt/projects/cis/runtime/docs/BRAINSTORMING_TODO.md`. Let me pull the actu
 
 ### Give the pipeline a stop button and validate its input
 
@@ -44,6 +66,7 @@ The relay blueprint exposes eight routes and none cancels a run; grep for 'cance
 - **Raised:** 2 times, 2026-07-08 to 2026-07-08
 - **Sources:** fs:cis_kernel
 - **Scope:** CONTAINER — runtime/api/relay.py is the blueprint container_app.py registers at line 27; no _validate_intent in runtime/abstraction/pipeline_relay.py
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 15439,15418
 
 **Strongest excerpt** — `cis_kernel/extraction/functional_intents/relay_extraction_analysis.md`
@@ -57,6 +80,7 @@ The v2.0 deadlock came from a clearance token the gate itself could prevent you 
 - **Raised:** 2 times, 2026-06-27 to 2026-08-29
 - **Sources:** cis_docs, claude_export
 - **Scope:** CONTAINER — the .GATE_DISABLED override plane is repo-level and applies to both pipelines
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 1462,508
 
 **Strongest excerpt** — `claude_export`
@@ -70,14 +94,12 @@ A code review ran against a diff that omitted the new file entirely while L1 con
 - **Raised:** 2 times, 2026-08-29 to 2026-08-29
 - **Sources:** hermes_glm-reviewer, pipeline_code_review
 - **Scope:** CONTAINER — the source rows are pipeline_code_review, i.e. container runs
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 783,786
 
 **Strongest excerpt** — `hermes_glm-reviewer`
 
 > [asked] ## L1 UNIVERSAL CHECK RESULTS ## L1: File Exists ✗ runtime/abstraction/pipeline_relay.py MISSING ## CHUNK DIFF ```diff diff --git a/PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md b/PROJECT_CONTEXT_PACK_UPLOAD/HC... These are two completely different descriptions of the same behavior. The applied diff (chunk diff) correctly identifies the no-op. The proposal incorrectly describes functional exclusion. This means either the implementer ignored the proposal and wrote correct text, or there are two conflicting versions in circulation. The review is evaluating a proposal that doesn'
-
-
-## pipeline-defect
 
 ### Keep test data out of canonical state
 
@@ -86,6 +108,7 @@ A test transition wrote proposal_id='test-lifecycle-001' into live lifecycle_eve
 - **Raised:** 1 times, 2026-08-29 to 2026-08-29
 - **Sources:** claude_export
 - **Scope:** CONTAINER — lifecycle_events is the shared spine
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 1360
 
 **Strongest excerpt** — `claude_export`
@@ -93,26 +116,24 @@ A test transition wrote proposal_id='test-lifecycle-001' into live lifecycle_eve
 > The test transition writes a row with `proposal_id='test-lifecycle-001'` into your live spine and leaves it there. That's test data in the canonical state table. Either have the test clean up after itself (delete the test row after verifying), or use a clearly-marked test value and confirm it won't be picked up by anything that reads `lifecycle_events` later. A stray test transition sitting in the lifecycle log is the kind of thing that confuses a future verifier — "why is there a DRAFT_READY for a proposal that doesn't exist."
 
 
-## review-independence
-
-### Make review independence verifiable, not assumed
-
-Nothing checks that a reviewer searched before delivering a verdict; a revision carries no objection-to-resolution mapping; an empty or ambiguous reviewer response is consumed as a review; and Eric has no guaranteed second opinion. NOTE: the model-sharing half of this is FALSE in the container.
-
-- **Raised:** 5 times, 2026-06-27 to 2026-08-29
-- **Sources:** cis_docs, hermes_glm-reviewer, hermes_glm-verifier, hermes_prime
-- **Scope:** CONTAINER — container review1 is qwen/qwen3.7-max and review2 is z-ai/glm-5.2 against draft deepseek-v4-pro — three lineages, so model-sharing does not apply; the independence CHECKS are still absent
-- **Candidates:** 166,976,13826,14972,3563
-
-**Strongest excerpt** — `hermes_prime`
-
-> [asked] look through the session log for yesterday where we realized that the advisor chat is just pretending to have different roles and all are running the same model because the config files are not completely setup. **May 25, 12:12 AM** — session `api-a7bc10d5b6371553` Dug deeper and confirmed: Prime and V4-Pro Advisor are the *same model* `deepseek-v4-pro` — the only difference is `reasoning_effort`, which is set identically everywhere. All three configs are copies of the original. The core finding is captured in `/mnt/projects/cis/runtime/docs/BRAINSTORMING_TODO.md`. Let me pull the actu
-
-
 # UNDETERMINED
 
 
-## continuity-and-record
+## need: UNASSESSED
+
+### Automate the ADR-048 intake and handoff package
+
+The record calls the manual transfer of structured content the largest remaining automation gap and it is still done by hand. The Downloads watcher runtime model and draft storage format were never settled; cis_build_handoff_package.py and cis_download_watcher.py were never built; a dropped return-dispatch pickup deadlocks the run.
+
+- **Raised:** 4 times, 2026-05-13 to 2026-08-02
+- **Sources:** fs:cards, fs:cis_kernel
+- **Scope:** UNDETERMINED — the ADR-048 staging path is VM-side, but whether the container pipeline's own intake replaces the need is not established
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
+- **Candidates:** 15019,15020,15017,14994
+
+**Strongest excerpt** — `cis_kernel/extraction/functional_intents/08_open_questions_extraction_analysis.md`
+
+> - **Architectural Significance**: The Downloads watcher's runtime model (daemon vs Flask-started) is unresolved, creating a process architecture gap ## Discovery 2: Draft Storage Format Unresolved - **Architectural Significance**: Dashboard modularization approach (React vs Flask partials vs lightweight JS) is unresolved - **Architectural Significance**: Formal zone classification (ACTIVE, MIRROR, ARCHIVE, LEGACY, TRANSITIONAL, DEPRECATED) for ADR-047 is unresolved - **Runtime Impact**: Without classification, filesystem becomes ungoverned; retention and migration policies cannot be enforced -
 
 ### Settle the glossary-collision and inheritance-index schemas
 
@@ -121,6 +142,7 @@ Unresolved glossary term collisions block cross-layer operations with no collisi
 - **Raised:** 2 times, 2026-05-13 to 2026-05-13
 - **Sources:** fs:cis_kernel
 - **Scope:** UNDETERMINED — would be settled by checking whether any container phase reads the glossary or the index
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 15023,15024
 
 **Strongest excerpt** — `cis_kernel/extraction/functional_intents/15_inheritance_index_extraction_analysis.md`
@@ -134,6 +156,7 @@ Corrections are logged but never fed back into the extraction model, so the revi
 - **Raised:** 1 times, 2026-06-27 to 2026-06-27
 - **Sources:** cis_kernel
 - **Scope:** UNDETERMINED — would be settled by establishing whether the container's pattern catalog consumes correction history
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 5162
 
 **Strongest excerpt** — `cis_kernel`
@@ -147,6 +170,7 @@ Without one, the primary-plus-fallback requirement cannot be enforced.
 - **Raised:** 1 times, 2026-08-29 to 2026-08-29
 - **Sources:** cis_kernel
 - **Scope:** UNDETERMINED — no capability_taxonomy, CapabilityClaim or capability_registry anywhere under runtime/ — absent from both pipelines
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 79
 
 **Strongest excerpt** — `cis_kernel`
@@ -160,6 +184,7 @@ seed_memory.py failed with 'database or disk is full' across roughly a thousand 
 - **Raised:** 1 times, 2026-08-29 to 2026-08-29
 - **Sources:** hermes_prime
 - **Scope:** UNDETERMINED — the seed target and its current completeness were never established
+- **Need:** UNASSESSED — not assessed — this exercise assessed only the NOT_IN_CONTAINER_PATH tasks
 - **Candidates:** 3513
 
 **Strongest excerpt** — `hermes_prime`
@@ -167,71 +192,10 @@ seed_memory.py failed with 'database or disk is full' across roughly a thousand 
 > [asked] [IMPORTANT: Background process proc_00d2558b5b2e completed (exit code 0). Command: cd /mnt/projects/cis/runtime && python3 scripts/seed_memory.py 2>&1 Output: 518/1536] top_level_extraction_analysis.md... ✗ database or d... ✗ database or disk is full [1530/1536] utab_system_assessment_extraction_analysis.md... ✗ database or disk is full [1531/1536] utab_todo_extraction_analysis.md... ✗ database or disk is full [1532/1536] vendor_extraction_analysis.md... ✗ database or disk is full [1533/1536] we_will_be_starting_from_scratch_so_extraction_analysis... ✗ database or disk is full [1534/15
 
 
-## operator-load
-
-### Automate the ADR-048 intake and handoff package
-
-The record calls the manual transfer of structured content the largest remaining automation gap and it is still done by hand. The Downloads watcher runtime model and draft storage format were never settled; cis_build_handoff_package.py and cis_download_watcher.py were never built; a dropped return-dispatch pickup deadlocks the run.
-
-- **Raised:** 4 times, 2026-05-13 to 2026-08-02
-- **Sources:** fs:cards, fs:cis_kernel
-- **Scope:** UNDETERMINED — the ADR-048 staging path is VM-side, but whether the container pipeline's own intake replaces the need is not established
-- **Candidates:** 15019,15020,15017,14994
-
-**Strongest excerpt** — `cis_kernel/extraction/functional_intents/08_open_questions_extraction_analysis.md`
-
-> - **Architectural Significance**: The Downloads watcher's runtime model (daemon vs Flask-started) is unresolved, creating a process architecture gap ## Discovery 2: Draft Storage Format Unresolved - **Architectural Significance**: Dashboard modularization approach (React vs Flask partials vs lightweight JS) is unresolved - **Architectural Significance**: Formal zone classification (ACTIVE, MIRROR, ARCHIVE, LEGACY, TRANSITIONAL, DEPRECATED) for ADR-047 is unresolved - **Runtime Impact**: Without classification, filesystem becomes ungoverned; retention and migration policies cannot be enforced -
+# NOT_IN_CONTAINER_PATH
 
 
-# VM_ONLY
-
-
-## continuity-and-record
-
-### Record the decision rationale that was never written down
-
-The file-size limit has no explanatory note; the build plan still depends on a spec cited as containing factual errors and no longer on disk; the 640-line spec has no risk register.
-
-- **Raised:** 3 times, 2026-06-27 to 2026-08-29
-- **Sources:** cis_docs, claude_code
-- **Scope:** VM_ONLY — project_decisions is not read or written in the container path
-- **Candidates:** 161,147,152
-
-**Strongest excerpt** — `claude_code`
-
-> [user] again another best practice question, I dont know why there is a limit in the first place. [assistant] Fair question, and I shouldn't guess at your own reasoning — let me check whether the rule's origin is recorded anywhere. [assistant] Nothing recorded — both commits that touched the file have no explanatory notes, so the reason wasn't written down anywhere. What follows is my reading as a general practice, not something I recovered from your project.
-
-### Implement knowledge-record backlinks
-
-The designed backlink syntax for knowledge-record markdown was never implemented in cis_normalize.py.
-
-- **Raised:** 1 times, 2026-06-27 to 2026-06-27
-- **Sources:** cis_docs
-- **Scope:** VM_ONLY — cis_normalize.py is VM ingestion tooling, not in the container path
-- **Candidates:** 5158
-
-**Strongest excerpt** — `cis_docs`
-
-> The backlink syntax for knowledge record MD files was designed but not implemented in `cis_normalize.py`.
-
-
-## gate-mechanics
-
-### Close the gate bypass and generalise enforcement
-
-The write-block was proven on one file and never generalised to the 16 failure modes. The pre_tool_call hook bypass describes the VM only.
-
-- **Raised:** 2 times, 2026-06-27 to 2026-08-29
-- **Sources:** claude_export, hermes_v4pro
-- **Scope:** VM_ONLY — no pre_tool_call configured in any /home/worker/.hermes-*/config.yaml; the container constrains agents by image and mount
-- **Candidates:** 13418,14719
-
-**Strongest excerpt** — `claude_export`
-
-> this is great news, but it proves we can stop a file from being writen to. can we enforce all of these? The 16 failure modes: 2.1 Trust Failures (3) 1. Self-reported completion without evidence 2. Hallucinated claims masquerading as facts 3. Rubber-stamp reviews 2.2 Knowledge Failures (3) 4. Training-data staleness 5. Context amnesia across sessions 6. Version drift in static configs 2.3 Process Failures (6) 7. Scope creep by implementer 8. Constraint bypass through placeholder data 9. Pipeline bypass (agents calling scripts directly) 10. Role confusion 11. Silent gate failures 12. Concurrency
-
-
-## operator-load
+## need: OPEN
 
 ### Finish or retire the VM operator surfaces
 
@@ -239,7 +203,8 @@ Pipeline source list and pagination, intake auto-refresh, the Review page, the D
 
 - **Raised:** 5 times, 2026-04-24 to 2026-06-27
 - **Sources:** cis_docs, fs:cis_kernel, fs:docs
-- **Scope:** VM_ONLY — all are VM dashboard surfaces; container_app.py registers only relay_bp plus health/UI
+- **Scope:** NOT_IN_CONTAINER_PATH — all are VM dashboard surfaces; container_app.py registers only relay_bp plus health/UI
+- **Need:** OPEN — these are Eric's operator surfaces and he still works through them. The container serves only static /ui/, so nothing has replaced them — the need stands either as build or as an explicit retirement.
 - **Candidates:** 5138,15527,15230,5153,15551
 
 **Strongest excerpt** — `cis_kernel/extraction/functional_intents/cis_dashboard_monolith_20260420_extraction_analysis.md`
@@ -252,12 +217,27 @@ Human router, human triage clerk, human reviewer selector and human schema recon
 
 - **Raised:** 5 times, 2026-06-27 to 2026-08-29
 - **Sources:** cis_docs, claude_export, hermes_glm-reviewer, hermes_prime
-- **Scope:** VM_ONLY — the four relay roles and the escalation path are the VM-era manual workflow
+- **Scope:** NOT_IN_CONTAINER_PATH — the four relay roles and the escalation path are the VM-era manual workflow
+- **Need:** OPEN — he is still the relay — this very session ran as him passing directives between steps. The container has not removed the four roles; it changed where the work executes, not who routes it.
 - **Candidates:** 14561,541,1169,127,3552
 
 **Strongest excerpt** — `hermes_prime`
 
 > [asked] let me explain it better first. Prime said it was going to look into the issue to send a better prompt to R1, that's where it looks like its working. the bigger issue I think is the way the excalation happened. Prime ask... Second, the feedback failure. During that 7 minutes, there was no "R1 has been notified, it's working" signal. So you were in a void — joined a new thread, asked "are you there?", and R1 either never received it (connection was already dead) or couldn't deliver it back. Either way, you got silence. The root failure: escalation was treated as a task to optimize rathe
+
+### Record the decision rationale that was never written down
+
+The file-size limit has no explanatory note; the build plan still depends on a spec cited as containing factual errors and no longer on disk; the 640-line spec has no risk register.
+
+- **Raised:** 3 times, 2026-06-27 to 2026-08-29
+- **Sources:** cis_docs, claude_code
+- **Scope:** NOT_IN_CONTAINER_PATH — project_decisions is not read or written in the container path
+- **Need:** OPEN — neither pipeline records it. project_decisions is not read or written in the container path either, so the need is unmet rather than answered — the container needs its own answer.
+- **Candidates:** 161,147,152
+
+**Strongest excerpt** — `claude_code`
+
+> [user] again another best practice question, I dont know why there is a limit in the first place. [assistant] Fair question, and I shouldn't guess at your own reasoning — let me check whether the rule's origin is recorded anywhere. [assistant] Nothing recorded — both commits that touched the file have no explanatory notes, so the reason wasn't written down anywhere. What follows is my reading as a general practice, not something I recovered from your project.
 
 ### Secure the operator surfaces before any field exposure
 
@@ -265,15 +245,30 @@ Flask has no app-level login and Phase 0 (backup safety net) is deferred with ba
 
 - **Raised:** 2 times, 2026-06-01 to 2026-08-29
 - **Sources:** fs:cis_kernel, hermes_prime
-- **Scope:** VM_ONLY — the Flask dashboard and its login surface run on the VM
+- **Scope:** NOT_IN_CONTAINER_PATH — the Flask dashboard and its login surface run on the VM
+- **Need:** OPEN — Flask has no app-level login and the field-access security review was never done. Neither pipeline supplies authentication for the operator surface, so the need stands.
 - **Candidates:** 15004,3620
 
 **Strongest excerpt** — `cis_kernel/build/CIS_SCRATCHPAD.md`
 
 > **Purpose:** Brain dump and partial todo list for the CIS build conversation ## 2026-05-26 — Schedule/Todo Page Rebuild - Conditional form fields per item_type (appointment shows time dropdowns, deadline requires due_date, attention_item has no due/scheduled) **Purpose:** Extend the Schedule/Todo page into a field-work evidence capture system that helps Eric keep up with daily work obligations, progress notes, billing documentation, and mileage tracking. - Flask has no app-level login * Phase 0: DEFERRED — Proxmox/backup safety net. Google Drive backup integrity unverified; Eric accepted risk.
 
+### Retire the legacy inline relay in app.py
 
-## pipeline-defect
+PIPELINE_RUNS, portal_pipeline_start and portal_pipeline_status are still at app.py:824-917, duplicating api/relay.py, with only a TODO at line 22. app.py now declares itself reference-only, so the question is whether the file retires wholesale.
+
+- **Raised:** 1 times, 2026-08-29 to 2026-08-29
+- **Sources:** hermes_brainstorm
+- **Scope:** NOT_IN_CONTAINER_PATH — app.py is not the container entry point; container_app.py is
+- **Need:** OPEN — the duplicate code is present at app.py:824-917 and the file's own header declares it reference-only. The cleanup stands regardless of which pipeline runs.
+- **Candidates:** 3337
+
+**Strongest excerpt** — `hermes_brainstorm`
+
+> [asked] [PRE-DISCOVERY RESULTS — review before proceeding] ## Knowledge Base (Search error: fts5: syntax error near "/") [END PRE-DISCOVERY — now produce your output] Eric's intent: Add a TODO comment to the top of runtime/ap... 2. Legacy ad-hoc pipeline: embedded **inline** in `app.py` at lines 794-917 — an in-memory `PIPELINE_RUNS` dict plus `portal_pipeline_start` and `portal_pipeline_status` routes. Shells out to `drafter_start.py` + `pipeline_dispatch.sh` as subprocesses. No persistence, no circuit breaker, no crash recovery. This is ~125 lines of duplicate/overlapping relay logic that wa
+
+
+## need: UNASSESSED
 
 ### Build the ADR-045 execution queue and run logging
 
@@ -281,12 +276,27 @@ execution_jobs schema, queue worker and operator queue routing are all recorded 
 
 - **Raised:** 2 times, 2026-04-26 to 2026-04-29
 - **Sources:** fs:docs
-- **Scope:** VM_ONLY — no execution_jobs or runs table in the spine; the queue is VM-era design
+- **Scope:** NOT_IN_CONTAINER_PATH — no execution_jobs or runs table in the spine; the queue is VM-era design
+- **Need:** UNASSESSED — the container pipeline keeps its own run records in workflow_runs and deliberation_rounds. Whether that makes a separate execution queue and run-logging table moot, or leaves a real gap, is not established.
 - **Candidates:** 15570,15625
 
 **Strongest excerpt** — `docs/claude_chat_transcripts/2026-04-18_Phase 1 intelligence extraction priorities.md`
 
 > **Is template functionality built?** No. There's no mechanism to read a template file. The handoff content is assembled inline in the Python function. **Decided but not yet built:** - The existing image__weird_war_tales_cover__001 has no project_id in its manifest (pre-fix) — if used, project_id will need to be patched manually into that manifest The Router Spec requires every extraction run to record: task type, model used, prompt version, input source, output, validation result, escalation count, runtime metrics. There is no `runs` table in the DB and no mechanism capturing this. Without it,
+
+### Close the gate bypass and generalise enforcement
+
+The write-block was proven on one file and never generalised to the 16 failure modes. The pre_tool_call hook bypass describes the VM only.
+
+- **Raised:** 2 times, 2026-06-27 to 2026-08-29
+- **Sources:** claude_export, hermes_v4pro
+- **Scope:** NOT_IN_CONTAINER_PATH — no pre_tool_call configured in any /home/worker/.hermes-*/config.yaml; the container constrains agents by image and mount
+- **Need:** UNASSESSED — CORRECTION: the container does fire a pre_tool_call hook — plugin mwl-proof is enabled at config.yaml:52-55, registers the hook at plugin/__init__.py:55, and hook_seen.log shows FIRED entries through 2026-08-31. My earlier check grepped config.yaml for the hook name and missed it. Whether that hook closes the write-outside-the-project bypass is not established.
+- **Candidates:** 13418,14719
+
+**Strongest excerpt** — `claude_export`
+
+> this is great news, but it proves we can stop a file from being writen to. can we enforce all of these? The 16 failure modes: 2.1 Trust Failures (3) 1. Self-reported completion without evidence 2. Hallucinated claims masquerading as facts 3. Rubber-stamp reviews 2.2 Knowledge Failures (3) 4. Training-data staleness 5. Context amnesia across sessions 6. Version drift in static configs 2.3 Process Failures (6) 7. Scope creep by implementer 8. Constraint bypass through placeholder data 9. Pipeline bypass (agents calling scripts directly) 10. Role confusion 11. Silent gate failures 12. Concurrency
 
 ### Fix the construction-view data contract and its missing handlers
 
@@ -294,7 +304,8 @@ F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes th
 
 - **Raised:** 2 times, 2026-08-29 to 2026-08-29
 - **Sources:** claude_export, pipeline_intent_review
-- **Scope:** VM_ONLY — VM dashboard; container_app.py serves only static /ui/
+- **Scope:** NOT_IN_CONTAINER_PATH — VM dashboard; container_app.py serves only static /ui/
+- **Need:** UNASSESSED — the view is a VM dashboard surface. Whether Eric still uses it, and whether the container needs an equivalent, is not settled by the record.
 - **Candidates:** 724,838
 
 **Strongest excerpt** — `pipeline_intent_review`
@@ -307,7 +318,8 @@ runtime/api/extraction_runs.py:27,32 and captures.py:23,28 hardcode LIMIT 50 wit
 
 - **Raised:** 1 times, 2026-08-29 to 2026-08-29
 - **Sources:** cis_kernel
-- **Scope:** VM_ONLY — neither blueprint is registered in container_app.py
+- **Scope:** NOT_IN_CONTAINER_PATH — neither blueprint is registered in container_app.py
+- **Need:** UNASSESSED — extraction_runs and captures are not registered in container_app.py. Whether the VM app that serves them is still running is not settled by the record.
 - **Candidates:** 809
 
 **Strongest excerpt** — `cis_kernel`
@@ -320,12 +332,27 @@ advisor_messages needs a nullable batch_id; thread_id plus timestamp proximity c
 
 - **Raised:** 1 times, 2026-08-29 to 2026-08-29
 - **Sources:** hermes_prime
-- **Scope:** VM_ONLY — advisor_messages is referenced nowhere in the container path
+- **Scope:** NOT_IN_CONTAINER_PATH — advisor_messages is referenced nowhere in the container path
+- **Need:** UNASSESSED — advisor_messages is absent from the container path. Whether parallel advisor rounds are still run at all is not settled by the record.
 - **Candidates:** 1402
 
 **Strongest excerpt** — `hermes_prime`
 
 > [asked] Phase 3 — Reconcile Mode: Planning Directive This is a planning document only. No code is to be written until the spec is approved by Eric and reviewed by ChatGPT. What Phase 3 must produce: A Reconcile Mode that takes t... **No. Not without a schema addition.** The only grouping mechanism is `thread_id` + timestamp proximity. A Direct Mode message could be interleaved between the user save and the three assistant saves, or between parallel rounds in the same thread. **Smallest schema-safe option:** Add a nullable `batch_id TEXT` column to `advisor_messages`. The parallel endpoint gene
+
+### Implement knowledge-record backlinks
+
+The designed backlink syntax for knowledge-record markdown was never implemented in cis_normalize.py.
+
+- **Raised:** 1 times, 2026-06-27 to 2026-06-27
+- **Sources:** cis_docs
+- **Scope:** NOT_IN_CONTAINER_PATH — cis_normalize.py is VM ingestion tooling, not in the container path
+- **Need:** UNASSESSED — cis_normalize.py is not in the container path. Whether knowledge-record backlinks are still wanted in the current knowledge model is not settled.
+- **Candidates:** 5158
+
+**Strongest excerpt** — `cis_docs`
+
+> The backlink syntax for knowledge record MD files was designed but not implemented in `cis_normalize.py`.
 
 ### Lock the video preprocessing decisions
 
@@ -333,25 +360,13 @@ Whisper model size and the segment-level video source_unit schema must be decide
 
 - **Raised:** 1 times, 2026-06-27 to 2026-06-27
 - **Sources:** cis_docs
-- **Scope:** VM_ONLY — video preprocessing is the VM creative-ingestion path
+- **Scope:** NOT_IN_CONTAINER_PATH — video preprocessing is the VM creative-ingestion path
+- **Need:** UNASSESSED — video preprocessing is creative-runtime work the dev pivot deferred. The record does not say whether it was dropped or postponed.
 - **Candidates:** 5149
 
 **Strongest excerpt** — `cis_docs`
 
 > 5. What was left unresolved Whisper model size was not decided or locked. The choice between medium and large affects transcription quality and processing time. This must be decided before video preprocessing is implemented. The video source_unit schema — segment-level with timestamp_start and timestamp_end fields — was described but not written as a schema file or locked as an ADR. Video preprocessing in cis_preprocess.py was identified as the next build target but was not implemented. The session ended before this work could begin. The Phase 0 archive run — 10 files from real archive materia
-
-### Retire the legacy inline relay in app.py
-
-PIPELINE_RUNS, portal_pipeline_start and portal_pipeline_status are still at app.py:824-917, duplicating api/relay.py, with only a TODO at line 22. app.py now declares itself reference-only, so the question is whether the file retires wholesale.
-
-- **Raised:** 1 times, 2026-08-29 to 2026-08-29
-- **Sources:** hermes_brainstorm
-- **Scope:** VM_ONLY — app.py is not the container entry point; container_app.py is
-- **Candidates:** 3337
-
-**Strongest excerpt** — `hermes_brainstorm`
-
-> [asked] [PRE-DISCOVERY RESULTS — review before proceeding] ## Knowledge Base (Search error: fts5: syntax error near "/") [END PRE-DISCOVERY — now produce your output] Eric's intent: Add a TODO comment to the top of runtime/ap... 2. Legacy ad-hoc pipeline: embedded **inline** in `app.py` at lines 794-917 — an in-memory `PIPELINE_RUNS` dict plus `portal_pipeline_start` and `portal_pipeline_status` routes. Shells out to `drafter_start.py` + `pipeline_dispatch.sh` as subprocesses. No persistence, no circuit breaker, no crash recovery. This is ~125 lines of duplicate/overlapping relay logic that wa
 
 ### Settle model routing and the benchmark protocol
 
@@ -359,7 +374,8 @@ Intelligent routing between local and frontier models is unimplemented, the benc
 
 - **Raised:** 1 times, 2026-06-27 to 2026-06-27
 - **Sources:** cis_docs
-- **Scope:** VM_ONLY — routing between local and frontier models is the VM ingestion concern; the container uses fixed per-role model config
+- **Scope:** NOT_IN_CONTAINER_PATH — routing between local and frontier models is the VM ingestion concern; the container uses fixed per-role model config
+- **Need:** UNASSESSED — the container uses fixed per-role model config. Whether routing between local and frontier models is still wanted, or was answered by the fixed assignment, is not established.
 - **Candidates:** 5141
 
 **Strongest excerpt** — `cis_docs`
@@ -367,7 +383,7 @@ Intelligent routing between local and frontier models is unimplemented, the benc
 > - Intelligent routing between local and frontier models not implemented. - Model benchmark protocol needs operationalization. - Qwen3-VL-32B FP8 test path remains a future task. - Frontier API escalation remains conditional and unbuilt.
 
 
-## review-independence
+## need: SUPERSEDED
 
 ### Make inter-agent review traffic first-class and readable
 
@@ -375,7 +391,8 @@ The Drafter can call the Reviewer with no stored response and no message id, cla
 
 - **Raised:** 3 times, 2026-08-29 to 2026-08-29
 - **Sources:** claude_export, hermes_r1
-- **Scope:** VM_ONLY — dispatch_log is absent from runtime/abstraction/ and container_app.py
+- **Scope:** NOT_IN_CONTAINER_PATH — dispatch_log is absent from runtime/abstraction/ and container_app.py
+- **Need:** SUPERSEDED — the container answers this a different way: deliberation_rounds carries reviewer1_output and reviewer2_output (spine_schema.sql:1003-1004), so a verdict is a stored per-round field rather than Drafter narration, and the container's own record shows the [:500] payload truncation was removed. The dispatch_log relay this describes is not how the container moves review output.
 - **Candidates:** 13859,13468,14616
 
 **Strongest excerpt** — `claude_export`

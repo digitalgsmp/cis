@@ -166,6 +166,33 @@ everything works normally once released.
 
 ---
 
+
+## From the 2026-08/09 mining pass — added 2026-09-01
+
+Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+### 0.4 Override plane and fail-mode policy before any blocking gate is trusted
+
+The v2.0 deadlock came from a clearance token the gate itself could prevent you from writing. Build and prove an out-of-band override first; state fail-open vs fail-closed per mode.
+
+**Scope:** CONTAINER — the .GATE_DISABLED override plane is repo-level and applies to both pipelines
+
+**Need:** OPEN — the container's pre_tool_call hook and container_gate_runner.py contain no GATE_DISABLED reference, so the override plane the v2.0 post-mortem called the single most load-bearing rule is not present in the layer that fires. The need stands.
+
+
+**Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 1462,508; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 0.5 Secure the operator surfaces before any field exposure
+
+Flask has no app-level login and Phase 0 (backup safety net) is deferred with backup integrity unverified; /ui/schedule was blocked on an authentication review that never happened, and the page carries client, work and personal obligations.
+
+**Scope:** NOT_IN_CONTAINER_PATH — the Flask dashboard and its login surface run on the VM
+
+**Need:** OPEN — Flask has no app-level login and the field-access security review was never done. Neither pipeline supplies authentication for the operator surface, so the need stands.
+
+**Evidence:** raised 2 times, 2026-06-01 to 2026-08-29; mining_candidates 15004,3620; full record in `data/mining_archive/MINED_TASKS.md`.
+
+
 # TIER 1 — blocks a run completing end to end
 
 ### 1.1 Prove a run completes past the gate
@@ -667,6 +694,45 @@ This is the gate 1.8 has to become, and it applies to assistants in these
 sessions before it ever applies to a container agent — the failures logged here
 are all from the session that wrote the item.
 
+
+## From the 2026-08/09 mining pass — added 2026-09-01
+
+Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+### 1.14 Give the pipeline a stop button and validate its input
+
+The relay blueprint exposes eight routes and none cancels a run; grep for 'cancel' returns 0. pipeline_relay.py accepts the intent string with no validation, so a malformed intent enters the pipeline and is caught only downstream.
+
+**Scope:** CONTAINER — runtime/api/relay.py is the blueprint container_app.py registers at line 27; no _validate_intent in runtime/abstraction/pipeline_relay.py
+
+**Need:** OPEN — verified absent: the relay blueprint exposes eight routes and grep -c cancel returns 0; there is no _validate_intent in pipeline_relay.py. Both halves stand.
+
+
+**Evidence:** raised 2 times, 2026-07-08 to 2026-07-08; mining_candidates 15439,15418; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 1.15 Remove Eric from the relay roles he still fills by hand
+
+Human router, human triage clerk, human reviewer selector and human schema reconciler. The reviewer-implementer challenge loop halts on him; the Implementer-to-Verifier loop has no owner; the manual instruction template has no automation; escalation needs a snapshot-and-switch with an acknowledgement signal rather than a prompt-optimisation step.
+
+**Scope:** NOT_IN_CONTAINER_PATH — the four relay roles and the escalation path are the VM-era manual workflow
+
+**Need:** OPEN — he is still the relay — this very session ran as him passing directives between steps. The container has not removed the four roles; it changed where the work executes, not who routes it.
+
+**Evidence:** raised 5 times, 2026-06-27 to 2026-08-29; mining_candidates 14561,541,1169,127,3552; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 1.16 Close the gate bypass and generalise enforcement
+
+The write-block was proven on one file and never generalised to the 16 failure modes. The pre_tool_call hook bypass describes the VM only.
+
+**Scope:** NOT_IN_CONTAINER_PATH — no pre_tool_call configured in any /home/worker/.hermes-*/config.yaml; the container constrains agents by image and mount
+
+**Need:** UNASSESSED — CORRECTION: the container does fire a pre_tool_call hook — plugin mwl-proof is enabled at config.yaml:52-55, registers the hook at plugin/__init__.py:55, and hook_seen.log shows FIRED entries through 2026-08-31. My earlier check grepped config.yaml for the hook name and missed it. Whether that hook closes the write-outside-the-project bypass is not established.
+
+**The one check that settles it:** test whether the mwl-proof pre_tool_call hook blocks a write outside /workspace/cis
+
+**Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 13418,14719; full record in `data/mining_archive/MINED_TASKS.md`.
+
+
 # TIER 2 — blocks trusting what a run produces
 
 ### 2.1 Twenty-three guardrails observe and cannot act
@@ -844,6 +910,57 @@ build manifest records this as eliminated, so the recognition may be stale.
 
 ---
 
+
+## From the 2026-08/09 mining pass — added 2026-09-01
+
+Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+### 2.19 Build the verification snapshot and provenance gaps
+
+Execution snapshot and git snapshot isolation are both recorded as verified gaps never built; the gate approval endpoint inserts with no provenance system; after a session-gap recovery the agent has no record of what it did during the gap.
+
+**Scope:** CONTAINER — all four documents are the container's own skill library describing its verification phase; 15815 still needs verify-snapshot-gap.md read in full
+
+**Need:** OPEN — partly answered and still open. Git snapshot isolation IS built — _run_isolated_l1 (pipeline_relay.py:1958-1967) creates a worktree at the pre-execution HEAD so Menter cannot fabricate evidence, with an explicit fallback warning. The execution snapshot, gate provenance and session-gap memory remain unbuilt, and the fallback path is itself unverified.
+
+
+**Evidence:** raised 5 times, 2026-07-13 to 2026-08-24; mining_candidates 15782,15784,15723,15720,15815; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 2.20 Make review independence verifiable, not assumed
+
+Nothing checks that a reviewer searched before delivering a verdict; a revision carries no objection-to-resolution mapping; an empty or ambiguous reviewer response is consumed as a review; and Eric has no guaranteed second opinion. NOTE: the model-sharing half of this is FALSE in the container.
+
+**Scope:** CONTAINER — container review1 is qwen/qwen3.7-max and review2 is z-ai/glm-5.2 against draft deepseek-v4-pro — three lineages, so model-sharing does not apply; the independence CHECKS are still absent
+
+**Need:** OPEN — verified absent in production code: pipeline_relay.py has _db_retry (line 244) for database calls only, and line 698 states that any failure returns empty and the phase continues. No check refuses to advance on an empty or unsearched reviewer response, so the need stands.
+
+
+**Evidence:** raised 5 times, 2026-06-27 to 2026-08-29; mining_candidates 166,976,13826,14972,3563; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 2.21 The reviewed diff must contain the deliverable
+
+A code review ran against a diff that omitted the new file entirely while L1 confirmed it on disk, and reviewers evaluated proposal text that did not match the applied patch.
+
+**Scope:** CONTAINER — the source rows are pipeline_code_review, i.e. container runs
+
+**Need:** OPEN — pipeline_relay.py has no chunk_diff-to-directive comparison and no expected-file manifest, so nothing checks that the diff under review contains the deliverable. The need stands.
+
+
+**Evidence:** raised 2 times, 2026-08-29 to 2026-08-29; mining_candidates 783,786; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 2.22 Fix the construction-view data contract and its missing handlers
+
+F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes the view non-functional, and the UI gate action handlers the directive assumes exist were never confirmed.
+
+**Scope:** NOT_IN_CONTAINER_PATH — VM dashboard; container_app.py serves only static /ui/
+
+**Need:** UNASSESSED — the view is a VM dashboard surface. Whether Eric still uses it, and whether the container needs an equivalent, is not settled by the record.
+
+**The one check that settles it:** confirm whether the VM dashboard construction view is still in use
+
+**Evidence:** raised 2 times, 2026-08-29 to 2026-08-29; mining_candidates 724,838; full record in `data/mining_archive/MINED_TASKS.md`.
+
+
 # TIER 3 — independent defects, no dependants
 
 - **3.1** `ask_history` does not merge FTS5 with vector search. The relay does;
@@ -896,6 +1013,102 @@ build manifest records this as eliminated, so the recognition may be stale.
   about. Verify or retire it.
 
 ---
+
+
+## From the 2026-08/09 mining pass — added 2026-09-01
+
+Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+### 3.13 Resolve the memory seed failure
+
+seed_memory.py failed with 'database or disk is full' across roughly a thousand extraction files; whether the seed completed or is still short was never recorded.
+
+**Scope:** UNDETERMINED — the seed target and its current completeness were never established
+
+**Need:** UNASSESSED — the failure is a single 2026-05 log entry. Whether the seed later completed is not recorded either way, and the disk-full condition may long since have cleared.
+
+**The one check that settles it:** re-run seed_memory.py and compare its completion count against the extraction file count
+
+**Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 3513; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.14 Finish or retire the VM operator surfaces
+
+Pipeline source list and pagination, intake auto-refresh, the Review page, the DAM nav surface and the LXC public endpoint are specified and unbuilt; the Intel sidebar tabs are decorative placeholders; the dashboard cannot track long-running subprocess work; creating a CIS Live session does not auto-populate the sidebar so rounds can be logged against the wrong session; cis_review.py was built with no contract.
+
+**Scope:** NOT_IN_CONTAINER_PATH — all are VM dashboard surfaces; container_app.py registers only relay_bp plus health/UI
+
+**Need:** OPEN — these are Eric's operator surfaces and he still works through them. The container serves only static /ui/, so nothing has replaced them — the need stands either as build or as an explicit retirement.
+
+**Evidence:** raised 5 times, 2026-04-24 to 2026-06-27; mining_candidates 5138,15527,15230,5153,15551; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.15 Record the decision rationale that was never written down
+
+The file-size limit has no explanatory note; the build plan still depends on a spec cited as containing factual errors and no longer on disk; the 640-line spec has no risk register.
+
+**Scope:** NOT_IN_CONTAINER_PATH — project_decisions is not read or written in the container path
+
+**Need:** OPEN — neither pipeline records it. project_decisions is not read or written in the container path either, so the need is unmet rather than answered — the container needs its own answer.
+
+**Evidence:** raised 3 times, 2026-06-27 to 2026-08-29; mining_candidates 161,147,152; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.16 Retire the legacy inline relay in app.py
+
+PIPELINE_RUNS, portal_pipeline_start and portal_pipeline_status are still at app.py:824-917, duplicating api/relay.py, with only a TODO at line 22. app.py now declares itself reference-only, so the question is whether the file retires wholesale.
+
+**Scope:** NOT_IN_CONTAINER_PATH — app.py is not the container entry point; container_app.py is
+
+**Need:** OPEN — the duplicate code is present at app.py:824-917 and the file's own header declares it reference-only. The cleanup stands regardless of which pipeline runs.
+
+**Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 3337; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.17 Build the ADR-045 execution queue and run logging
+
+execution_jobs schema, queue worker and operator queue routing are all recorded as not built, and the Router Spec's required extraction run-logging table does not exist.
+
+**Scope:** NOT_IN_CONTAINER_PATH — no execution_jobs or runs table in the spine; the queue is VM-era design
+
+**Need:** UNASSESSED — the container pipeline keeps its own run records in workflow_runs and deliberation_rounds. Whether that makes a separate execution queue and run-logging table moot, or leaves a real gap, is not established.
+
+**The one check that settles it:** decide whether workflow_runs and deliberation_rounds make a separate queue moot
+
+**Evidence:** raised 2 times, 2026-04-26 to 2026-04-29; mining_candidates 15570,15625; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.18 Add pagination to the capped list endpoints
+
+runtime/api/extraction_runs.py:27,32 and captures.py:23,28 hardcode LIMIT 50 with no paging.
+
+**Scope:** NOT_IN_CONTAINER_PATH — neither blueprint is registered in container_app.py
+
+**Need:** UNASSESSED — extraction_runs and captures are not registered in container_app.py. Whether the VM app that serves them is still running is not settled by the record.
+
+**The one check that settles it:** confirm whether the VM app serving extraction_runs and captures is still running
+
+**Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 809; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.19 Group parallel advisor rounds reliably
+
+advisor_messages needs a nullable batch_id; thread_id plus timestamp proximity cannot separate interleaved parallel rounds.
+
+**Scope:** NOT_IN_CONTAINER_PATH — advisor_messages is referenced nowhere in the container path
+
+**Need:** UNASSESSED — advisor_messages is absent from the container path. Whether parallel advisor rounds are still run at all is not settled by the record.
+
+**The one check that settles it:** confirm whether parallel advisor rounds are still run
+
+**Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 1402; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 3.20 Implement knowledge-record backlinks
+
+The designed backlink syntax for knowledge-record markdown was never implemented in cis_normalize.py.
+
+**Scope:** NOT_IN_CONTAINER_PATH — cis_normalize.py is VM ingestion tooling, not in the container path
+
+**Need:** UNASSESSED — cis_normalize.py is not in the container path. Whether knowledge-record backlinks are still wanted in the current knowledge model is not settled.
+
+**The one check that settles it:** confirm whether backlinks are still wanted in the current knowledge model
+
+**Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5158; full record in `data/mining_archive/MINED_TASKS.md`.
+
 
 # TIER 4 — after the infrastructure works
 
@@ -976,6 +1189,82 @@ build manifest records this as eliminated, so the recognition may be stale.
 
 ---
 
+
+## From the 2026-08/09 mining pass — added 2026-09-01
+
+Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+### 4.11 Automate the ADR-048 intake and handoff package
+
+The record calls the manual transfer of structured content the largest remaining automation gap and it is still done by hand. The Downloads watcher runtime model and draft storage format were never settled; cis_build_handoff_package.py and cis_download_watcher.py were never built; a dropped return-dispatch pickup deadlocks the run.
+
+**Scope:** UNDETERMINED — the ADR-048 staging path is VM-side, but whether the container pipeline's own intake replaces the need is not established
+
+**Need:** OPEN — container_app.py exposes no intake, staging or drafts route, so the container has not replaced the ADR-048 staging path. The manual transfer the record calls the largest remaining automation gap is still unanswered by either pipeline.
+
+
+**Evidence:** raised 4 times, 2026-05-13 to 2026-08-02; mining_candidates 15019,15020,15017,14994; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 4.12 Settle the glossary-collision and inheritance-index schemas
+
+Unresolved glossary term collisions block cross-layer operations with no collision-to-runtime bridge; the inheritance index has no machine-readable schema and neither session-initialization nor query-routing consumes it.
+
+**Scope:** UNDETERMINED — would be settled by checking whether any container phase reads the glossary or the index
+
+**Need:** UNASSESSED — no container phase reads a glossary or inheritance index — confirmed by grep over runtime/abstraction/ and container_app.py. Absence is not evidence the need stands: whether these artefacts are still wanted is a design decision nobody has recorded.
+
+**The one check that settles it:** check whether any container phase reads the glossary or the inheritance index
+
+**Evidence:** raised 2 times, 2026-05-13 to 2026-05-13; mining_candidates 15023,15024; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 4.13 Close the system-learning loop
+
+Corrections are logged but never fed back into the extraction model, so the review work produces no improvement.
+
+**Scope:** UNDETERMINED — would be settled by establishing whether the container's pattern catalog consumes correction history
+
+**Need:** OPEN — pipeline_relay.py contains no reference to corrections, so nothing feeds review outcomes back into any model. The loop the record describes is absent from the running pipeline, and the record states the intent plainly rather than leaving it open.
+
+
+**Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5162; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 4.14 Define the capability taxonomy and criticality criteria
+
+Without one, the primary-plus-fallback requirement cannot be enforced.
+
+**Scope:** UNDETERMINED — no capability_taxonomy, CapabilityClaim or capability_registry anywhere under runtime/ — absent from both pipelines
+
+**Need:** UNASSESSED — absent from both pipelines. The record names it as a prerequisite for enforcing primary-plus-fallback, but nothing establishes that that requirement is still live. Needs a decision on whether the taxonomy is wanted before it can be called open.
+
+**The one check that settles it:** decide where the taxonomy is meant to live — it is absent from both pipelines
+
+**Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 79; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 4.15 Lock the video preprocessing decisions
+
+Whisper model size and the segment-level video source_unit schema must be decided before video preprocessing is built.
+
+**Scope:** NOT_IN_CONTAINER_PATH — video preprocessing is the VM creative-ingestion path
+
+**Need:** UNASSESSED — video preprocessing is creative-runtime work the dev pivot deferred. The record does not say whether it was dropped or postponed.
+
+**The one check that settles it:** decide whether video preprocessing is dropped or postponed
+
+**Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5149; full record in `data/mining_archive/MINED_TASKS.md`.
+
+### 4.16 Settle model routing and the benchmark protocol
+
+Intelligent routing between local and frontier models is unimplemented, the benchmark protocol is not operationalised, and the Qwen3-VL-32B FP8 test path is unsettled.
+
+**Scope:** NOT_IN_CONTAINER_PATH — routing between local and frontier models is the VM ingestion concern; the container uses fixed per-role model config
+
+**Need:** UNASSESSED — the container uses fixed per-role model config. Whether routing between local and frontier models is still wanted, or was answered by the fixed assignment, is not established.
+
+**The one check that settles it:** decide whether fixed per-role model config answers the routing need
+
+**Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5141; full record in `data/mining_archive/MINED_TASKS.md`.
+
+
 # REFERENCE DOCUMENTS — for when we reach each item, not before
 
 These exist and describe some of the above. **None of them counts as
@@ -995,6 +1284,12 @@ implementation.** Their only use is to save design time when we build.
 | `docs/CIS_CONFLICT_REGISTER.md` | 228 | 2.9 |
 
 ---
+
+
+## Recorded, not queued — superseded by the container
+
+- **Make inter-agent review traffic first-class and readable** — the container answers this a different way: deliberation_rounds carries reviewer1_output and reviewer2_output (spine_schema.sql:1003-1004), so a verdict is a stored per-round field rather than Drafter narration, and the container's own record shows the [:500] payload truncation was removed. The dispatch_log relay this describes is not how the container moves review output. (raised 3 times; mining_candidates 13859,13468,14616). Recorded so it is not mined again.
+- **Keep test data out of canonical state** — a test transition wrote proposal_id='test-lifecycle-001' into live lifecycle_events. The stray row is gone: lifecycle_events now holds zero rows with a test- proposal_id, so the incident is closed. A guard against recurrence would be new work, not this item. (raised 1 time; mining_candidates 1360). Recorded so it is not mined again.
 
 # HOW TO WORK THIS LIST
 
