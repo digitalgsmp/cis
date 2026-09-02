@@ -756,6 +756,10 @@ Review2 (glm-reviewer, port 8647) was stripped on 2026-09-02 so Claude Code coul
 
 Half the item is therefore done: the rule is now expressible as a command. The other half — something actually calling it — is not, so today the check is a thing a person must remember to run, which is the same failure as a comment that says MUST BE RESTORED. **Wiring it is the remaining work.** `runtime/abstraction/pipeline_relay.py` is on the do-not-modify list, so the call site is a decision, not a detail; the options and their costs are in the session record for 2026-09-02.
 
+**Closeout reports it as of 2026-09-02.** `tools/closeout.sh` calls the check at step 1b and prints what it finds, and the final summary carries a `Dev-mode agents:` line. It REPORTS, it does not block — a stripped agent is a fine state to end a session in, and refusing to close a session over one would only teach people to skip closeout. What it buys is that the state is never silently carried into tomorrow.
+
+**This is not the check the item asks for.** Closeout runs after the work; it can only describe the state, never prevent a run from starting in it. The real guard belongs at run entry, and it is still open. The obstacle is not the writing but the placement: the relay has several paths into a run, and a guard on one of them is a check with a hole — worse than none, because it reads as covered. Finding the single chokepoint means reading `pipeline_relay.py` closely, which is reading, not modifying, so the do-not-modify constraint does not block it.
+
 ---
 
 ## The review loop — six items, added 2026-09-02

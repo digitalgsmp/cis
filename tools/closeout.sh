@@ -142,6 +142,35 @@ fi
 
 echo "[CIS CLOSEOUT] Dirty file check: PASS"
 
+# ── Dev-mode report (queue item 1.17) ─────────────────────────────────────────
+# REPORTS, NEVER BLOCKS. A stripped agent is a fine state to end a session in —
+# it is only a problem when a run starts. This exists so the state is never
+# silently carried into tomorrow; the real guard belongs at run entry, which is
+# still open work under 1.17.
+echo ""
+echo "[CIS CLOSEOUT] Step 1b: Dev-mode agent check (report only)..."
+DEV_MODE_OUTPUT=""
+DEV_MODE_RC=0
+if [[ -x "$PROJECT_ROOT/tools/check_dev_mode.sh" ]]; then
+    # One invocation, output and exit code together. The `||` is required —
+    # set -e is on and this check exits non-zero by design when it finds
+    # something. Running it twice could also report two different states.
+    DEV_MODE_OUTPUT="$(bash "$PROJECT_ROOT/tools/check_dev_mode.sh" 2>&1)" \
+        || DEV_MODE_RC=$?
+    while IFS= read -r _line; do
+        [[ -n "$_line" ]] && echo "[CIS CLOSEOUT]   $_line"
+    done <<< "$DEV_MODE_OUTPUT"
+    case "$DEV_MODE_RC" in
+        0) DEV_MODE_STATE="all agents clean" ;;
+        1) DEV_MODE_STATE="DEV MODE IN EFFECT — restore before any pipeline run (1.17)" ;;
+        *) DEV_MODE_STATE="could not check — state unknown, not clean" ;;
+    esac
+else
+    DEV_MODE_STATE="check script missing"
+    echo "[CIS CLOSEOUT]   tools/check_dev_mode.sh not found or not executable"
+fi
+echo "[CIS CLOSEOUT] Dev-mode check: REPORTED (does not block closeout)"
+
 if $CHECK_ONLY; then
     echo ""
     echo "[CIS CLOSEOUT] CHECK COMPLETE — closeout is safe to run."
@@ -287,6 +316,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "[CIS] SESSION CLOSED"
 echo "[CIS] HEAD: $END_HEAD"
+echo "[CIS] Dev-mode agents: ${DEV_MODE_STATE:-not checked}"
 if [[ -n "$COMMIT_HASH" ]]; then
     echo "[CIS] Committed regenerated context: yes ($COMMIT_HASH)"
 else
