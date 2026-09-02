@@ -863,6 +863,22 @@ This is also what makes the external perspective cumulative. Without it every ad
 
 **Related:** 4.1 is the same gap without the dependency. Blocks 1.18, 1.19, 1.20, 1.21 and 2.25 — the loop does not ship without this.
 
+### 1.23 A code run has never completed end to end
+
+1.1 proved the path is walkable on a documentation task — one file, no code written. On that run the three BLOCK-mode verification guardrails all SKIPPED: `claim_action_verifier` ("no file or function claims detected"), `intent_compliance` ("no Python code blocks to test"), `capability_claim_verifier` ("no capability claims detected"). Legitimate for that task, and the point stands — the three strongest checks are shaped for code and have never fired.
+
+Two code-run attempts failed for unrelated reasons. `run-4bbeea78056e2607-1788121167`, the first code-writing attempt, escalated on an OpenRouter 402 reported as "ambiguous output" (1.11); the retry, `run-4bbeea78056e2607-1788122307`, timed out in draft with no cause recorded (1.13). Neither failure says anything about whether the code path works — both died before reaching it.
+
+**Scope:** CONTAINER — the pipeline path is the same one 1.1 walked. What is untested is every check that only engages when there is code to check.
+
+**Need:** OPEN — until a code run passes, nothing downstream is estimable and it is not known what else is broken. The guardrail evidence from 1.1 is evidence about a documentation task only.
+
+**Also the review loop's first real test.** A code run produces a result neither Eric nor Claude Code can fully evaluate alone, which is the case 1.20 exists for. Run it through the loop, not beside it — the card reviewed before it executes (1.18), the result objected to and answered (1.19), the engineering evaluated by Qwen (1.20). A code run checked the old way would prove the pipeline walks and prove nothing about whether the check on it works.
+
+**The one check that settles it:** a completed run whose guardrail summary shows the three named checks reporting PASS or FAIL rather than SKIP.
+
+**Related:** 1.1 (the documentation run that established the path is walkable), 1.11 and 1.13 (the two failures that stopped the earlier attempts, both fixed or open on their own items), 2.1 (the guardrail audit this would give real code-path data to).
+
 
 # TIER 2 — blocks trusting what a run produces
 
