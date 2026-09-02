@@ -65,9 +65,11 @@ once the container works. The loop and the container address the same defect in
 two places: a single model working alone cannot check itself.
 
 **ERIC DOES NOT RETURN TO TRANSPORT MODE.** He spent the VM era carrying text
-between models by hand, and that is what this system exists to end. A design
-that requires him to relay output between two agents is a regression regardless
-of what it buys. If a proposal needs him in the middle, it is drawn wrong.
+between models by hand — transport mode — and that is what this system exists to
+end. A design that requires him to relay output between two agents is a
+regression regardless of what it buys. If a proposal needs him in the middle to
+move text, it is drawn wrong. His judgement in the middle is the point; his
+copy-paste is the defect.
 
 ## Constraints (every card)
 Interpreter and cwd explicit. Pipeline: /usr/local/lib/hermes-agent/venv/bin/python, cd /workspace/cis
