@@ -752,6 +752,10 @@ Review2 (glm-reviewer, port 8647) was stripped on 2026-09-02 so Claude Code coul
 
 **The one check that settles it:** grep the six container configs for `DEV MODE` and confirm the pipeline refuses to start while any hit remains.
 
+**The check exists and is NOT wired — 2026-09-02.** `tools/check_dev_mode.sh` reads all six container configs, reports what each stripped agent is missing (read from the parsed YAML, not from the comment — the comment is the thing being distrusted), and exits 1 when any is in dev mode, 0 when all are clean, 2 when it cannot check. An unverifiable state deliberately does not read as a pass. Tested this session: it names review2 with "79 skills disabled on api_server; ALL toolsets removed on api_server; MCP server 'cis-knowledge' disabled" and exits 1.
+
+Half the item is therefore done: the rule is now expressible as a command. The other half — something actually calling it — is not, so today the check is a thing a person must remember to run, which is the same failure as a comment that says MUST BE RESTORED. **Wiring it is the remaining work.** `runtime/abstraction/pipeline_relay.py` is on the do-not-modify list, so the call site is a decision, not a detail; the options and their costs are in the session record for 2026-09-02.
+
 ---
 
 ## The review loop — six items, added 2026-09-02
