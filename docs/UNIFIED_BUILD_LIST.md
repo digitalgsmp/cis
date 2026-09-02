@@ -794,6 +794,22 @@ extended rather than replaced.
 *Reference:* the record already designed a `CapabilityClaim` object with
 validation status, provenance and correction history.
 
+**Variant: asserting absence from outside scope.** Observed 2026-09-02 on the
+first real advisor call. Review2 was asked to review a config change under
+/home/worker; its file tools are scoped to /workspace/cis. It ran ~14
+search_files calls that each returned empty, then reported "The backup file does
+not exist" and "the other five configs are unverifiable" under a heading reading
+WHAT I OBJECT TO. All three backups existed. It converted "I cannot see it" into
+"it does not exist."
+This is distinct from the base rule. 2.7 asks whether an agent read the file it
+describes. This asks whether the path was ever in the agent's scope. A reviewer
+whose access is narrower than what it reviews will confidently report absence,
+and nothing currently makes it say out-of-scope instead.
+Checkable form: an agent asserting that something does not exist must show the
+path was within its declared scope. An empty search outside scope is not
+evidence of absence. Failure mode 2 — hallucinated claims as fact — reproduced
+in the reviewer role on its first call.
+
 ### 2.8 Verification results change nothing
 **Checked:** `gate_outcomes` (4,375 rows) IS read — but only to *display*:
 a FAIL list for one run, and a recent-200 listing. Nothing aggregates across
@@ -1171,6 +1187,12 @@ Measured on review2, 2026-09-02: the 79 skills cost 2,193 tokens, 14% of the pro
 **The one check that settles it:** a PONG call per agent recording prompt_tokens before and after, against the loadout each role actually uses.
 
 **Related:** 1.6 (prompt size is never measured) is the same blind spot seen from the cost side. 1.17 restores review2; this item decides what "restored" should mean.
+
+Measured 2026-09-02: the trimmed advisor cost 109,778 prompt tokens on one real
+review, against 4,502 on a ping. ~16 tool calls, each resending accumulated
+context. The per-turn floor is not the cost of a review — turn count is. Cutting
+skills and toolsets lowers the floor and does not touch this. Any advisor
+protocol should hand the agent its evidence rather than making it search for it.
 
 # TIER 4 — after the infrastructure works
 
