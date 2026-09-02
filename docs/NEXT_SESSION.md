@@ -1,8 +1,8 @@
-# NEXT SESSION — standing context. Updated 2026-09-01.
+# NEXT SESSION — standing context. Updated 2026-09-02.
 
 Paste this file as the first message of a new session.
 
-**THE TASK QUEUE IS `docs/UNIFIED_BUILD_LIST.md` — 90 items. IT IS NOT IN THIS FILE.**
+**THE TASK QUEUE IS `docs/UNIFIED_BUILD_LIST.md` — 100 items. IT IS NOT IN THIS FILE.**
 
 ## Mining status — 2026-09-01
 P1 (acknowledged), P2 (reasoning), P4 (filesystem) and P6 (targeted) are COMPLETE:
@@ -29,6 +29,45 @@ verified item by item (42 items checked, 42 now carried).
 
 Do not reintroduce a task list here. Two lists drift, and neither one can be
 trusted after that — the failure is already on the queue as item 2.12.
+
+## The advisor loop — state as of 2026-09-02
+
+An external perspective on Claude Code's work exists and is reachable.
+`tools/advisor_review.sh <id>` reads `reviews/pending/<id>.md`, sends it to the
+advisor with a fixed scope line, and writes `reviews/done/<id>.response.md` with
+the token cost in the header. Packet in, single-turn review out: 3,306 tokens
+against 109,778 for the same review done with tools, because an advisor with no
+tools cannot spend sixteen turns searching.
+
+The scope line is the load-bearing part. An advisor whose file access was
+narrower than what it reviewed reported three existing backups as missing, under
+a heading reading WHAT I OBJECT TO — it turned "I cannot see it" into "it does
+not exist". The line tells it to name what is missing instead. Give the packet
+everything; never make it look.
+
+**Review2 (8647) is in dev mode and must be restored — queue item 1.17.** Skills
+disabled, toolsets emptied, `mcp_servers.cis-knowledge.enabled: false`. It is a
+text advisor right now, not a pipeline reviewer. Backups are in the profile
+directory and in `data/backups/`. A comment saying MUST BE RESTORED is not a
+check, which is the point of 1.17.
+
+**The loop is designed and recorded, not built:** 1.18 (nothing checks the
+card), 1.19 (one-shot critique loses what exchange catches), 1.20 (Qwen on 8643
+as the third lineage, evaluating code Eric cannot), 1.21 (the loop waits rather
+than running past him), 2.25 (the feed is an HTTP POST, not an agent), and 1.22
+(none of it reaches the KB — blocks the other five). Read the header above 1.18
+before touching any of them; they are one design.
+
+**Why it is permanent.** Working with LLMs produces confident wrong output
+structurally — Eric, 2026-09-02: "this madness working with llms is a feature
+that can't be escaped." The external perspective is not scaffolding to remove
+once the container works. The loop and the container address the same defect in
+two places: a single model working alone cannot check itself.
+
+**ERIC DOES NOT RETURN TO TRANSPORT MODE.** He spent the VM era carrying text
+between models by hand, and that is what this system exists to end. A design
+that requires him to relay output between two agents is a regression regardless
+of what it buys. If a proposal needs him in the middle, it is drawn wrong.
 
 ## Constraints (every card)
 Interpreter and cwd explicit. Pipeline: /usr/local/lib/hermes-agent/venv/bin/python, cd /workspace/cis
