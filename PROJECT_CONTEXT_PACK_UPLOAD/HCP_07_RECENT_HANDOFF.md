@@ -2,9 +2,9 @@
 Date: 2026-09-02
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `b7b054f`
+HEAD: `1fc17e1`
 
-Generated: 2026-09-02 08:22 UTC | Run: run-2585e080841c
+Generated: 2026-09-02 08:37 UTC | Run: run-8869985fbaac
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
