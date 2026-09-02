@@ -744,6 +744,102 @@ Review2 (glm-reviewer, port 8647) was stripped on 2026-09-02 so Claude Code coul
 
 **The one check that settles it:** grep the six container configs for `DEV MODE` and confirm the pipeline refuses to start while any hit remains.
 
+---
+
+## The review loop — six items, added 2026-09-02
+
+1.18 through 1.22 and 2.25 are one design. They are listed separately because
+they are built separately, but none of them is worth building alone: a card
+review with no exchange is a second opinion nobody can answer (1.18 needs 1.19);
+an exchange with no technical evaluator only ever critiques packets (1.19 needs
+1.20); a loop that never waits turns all of it into a transcript Eric reads
+afterwards (1.21); a feed with no waiting loop is a notification stream (2.25
+needs 1.21); and every one of them produces knowledge that currently reaches
+nothing (1.22 blocks all five).
+
+### 1.18 Cards are written and executed by the same party
+
+A wrong card produces a result that satisfies a wrong EXPECT, and a review that checks the result against that EXPECT passes it. The whole check rests on the card, and nothing checks the card. This is evaluator-must-not-be-the-builder one level above where 4.10 guards it: 4.10 separates the agent that judges the work from the agent that did it, and leaves whoever wrote the instruction unexamined.
+
+Fix: the packet goes to the advisor twice. Once with the card before it runs — "what would this fail to establish, and what result would satisfy it while being wrong" — and once with the result, as today. A card review is a few hundred tokens against the 2,083 a result review cost on 2026-09-02, so the cost objection does not hold.
+
+**Scope:** CONTAINER — `tools/advisor_review.sh` sends one packet after the fact. A pre-flight mode is a second packet shape, not a second script.
+
+**Need:** OPEN — every card this session was written and executed by the same party, and the review that followed checked the result against the card's own EXPECT.
+
+**The one check that settles it:** take a card whose EXPECT was met and ask the advisor what that EXPECT would fail to establish. If it names something the result review missed, the gap is real.
+
+**Related:** 4.10 (harness self-improvement loop) guards the level below this. Needs 1.19 — a card objection nobody can answer is a second opinion, not a check.
+
+### 1.19 One-shot critique loses what multi-round exchange catches
+
+`advisor_review.sh` gives the reviewer one look and no reply. Eric, 2026-09-02: "them not looking at each other's responses is not how you were catching additional issues through me transporting."
+
+Evidence from this week, all of it from exchanges rather than verdicts: the three-enforcement-layer confusion took two rounds to resolve, VM-versus-container took three, and the `wc -l` off-by-one surfaced only because a number was questioned and the raw output came back. A single verdict would have carried all three errors forward.
+
+Fix: Claude Code may answer an objection with evidence; the reviewer withdraws it or holds it. Capped at two rounds, written to `reviews/` as a thread rather than a file per verdict. No vote and no arbiter — the exchange is the product, not a score derived from it. This is why `deliberation_rounds` exists in the spine rather than a single verdict field.
+
+**Scope:** CONTAINER — `tools/advisor_review.sh` writes one response file per packet and exits. A thread needs the packet, the objection, the answer and the withdrawal in one artifact.
+
+**Need:** OPEN — verified in the code this session: the script posts once, writes `reviews/done/<id>.response.md`, and has no reply path.
+
+**The one check that settles it:** re-run a review where the advisor made a factually wrong objection, answer it with evidence, and see whether the withdrawal changes the finding set. On 2026-09-02 the advisor claimed three existing backups did not exist; one round with the `ls` output would have retracted it.
+
+**Related:** 2.7's absence-from-outside-scope variant is the failure a reply round closes. Needs 1.20 to be worth running twice.
+
+### 1.20 Add Qwen (8643) as technical evaluator
+
+Eric, 2026-09-02: he cannot evaluate code or technical choices. That is the gap GLM's objections do not close — GLM critiques the result packet, not the engineering. Every technical decision this session was made and checked by the same model family.
+
+Three roles, three lineages: Claude Code builds, GLM (review2, 8647) objects to the result, Qwen (review1, 8643) evaluates the code and the method. Qwen leads on agentic coding benchmarks and is furthest from Claude's lineage, which is the point — 1.19 buys nothing if both reviewers share a blind spot (failure mode 16).
+
+Qwen needs the same advisor treatment review2 got: skills disabled, toolsets trimmed, the scope line, and `mcp_servers.cis-knowledge.enabled: false` so it carries no `cis_dispatch_*` tools. Measured, not assumed — review1's loadout has never been audited, and `platform_toolsets` is unset in all six configs.
+
+**Scope:** CONTAINER — `/home/worker/.hermes-review1/config.yaml`, port 8643, model `qwen/qwen3.7-max`, verified reachable 2026-09-02. `advisor_review.sh` already takes `CIS_ADVISOR_PROFILE` and `CIS_ADVISOR_PORT`, so no script change is needed to reach it.
+
+**Need:** OPEN — review1 is untouched and still carries the full default loadout. A ping cost 16,568 prompt tokens on 2026-09-02, higher than review2's 15,853 before trimming.
+
+**The one check that settles it:** trim review1 the same way and measure; then give both advisors the same packet and count the findings only one of them raised. If that number is zero, the second lineage is not paying for itself.
+
+**Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled.
+
+### 1.21 The loop must stop and wait, not run past Eric
+
+Eric, 2026-09-02: "having the loop waiting on my approval is a lot better for me than physically being locked to a screen watching, reading, understanding and copy pasting every exchange."
+
+This is not a kill switch, and the distinction matters. On 2026-08-31 the drafter ignored nine minutes of interrupts because it was mid-call and working — nothing was broken, and a stop button would have solved nothing. The requirement is that the loop reaches a state where it is WAITING, so nothing is lost while he is away and a wrong direction stops early instead of after four cards.
+
+PAUSE POINTS: between queue items, and before any card that writes. A read-only card does not need him; a card editing `runtime/abstraction/pipeline_relay.py` does. That is the consequence-class split already sketched in 1.10 — the same read/write line, applied to when the loop asks rather than to what a gate blocks.
+
+**Scope:** UNDETERMINED — no loop runner exists yet. Whether the waiting state lives in a script, in the spine, or in the relay is not settled, and choosing wrong here is expensive.
+
+**Need:** OPEN — today the loop is Eric issuing one card per turn, which is a pause point at every step and the very hand-carrying this is meant to remove. The failure mode being designed against is the opposite one: a loop that runs four cards past a wrong turn.
+
+**The one check that settles it:** decide where the waiting state lives before building it — a script that blocks, or a queue row the loop polls. The second survives a restart; the first does not.
+
+**Related:** 1.14 (stop button) is the different problem — that one interrupts work in flight, this one declines to start it. 2.25 depends on this: a feed with no waiting loop is a notification stream.
+
+### 1.22 Nothing the loop produces reaches the KB — BLOCKS 1.18 through 1.21 and 2.25
+
+As designed, the loop captures nothing. Verified 2026-09-02:
+
+- `tools/catalog/ingest_sessions.py` scans `~/.hermes-*/sessions/session_*.json`. A direct API call to a gateway writes no session file, so the advisor exchanges are invisible to it.
+- `reviews/` is files on disk reaching no index. The first two exist as of this session and are tracked in git and nowhere else.
+- Telegram replies (2.25) reach nothing at all.
+- `grep -c ingest tools/closeout.sh` returns **0**. Closeout commits code and never ingests knowledge.
+
+ERIC'S INPUTS ARE THE POINT. Everything the 2026-08/09 mining recovered came from him reframing — VM-versus-container, the on-the-fly documents, rejecting the sampling. `docs/NEXT_SESSION.md` records why: the corpus is the counterweight to enterprise bias and the only one, because nobody else wrote this method down. A loop that produces those reframings and loses them rebuilds the same archaeology in three months, and the mining pass that recovered 4,479 candidates is the measure of what that costs.
+
+Three things need capturing: the review threads in `reviews/`; Eric's redirects WITH what they redirected, since an objection separated from what it changed is his own stated failure; and Claude Code's sessions, which `tools/ingest_claude_code_sessions.py` handles and nothing triggers.
+
+**Scope:** REPO — this is 4.1 restated with a deadline attached. Both ingest tools exist and work; neither fires. The closeout hook is where they would fire, and it is four lines in `tools/closeout.sh`.
+
+**Need:** OPEN — verified this session: closeout contains no ingest call, and the session ingest tool cannot see gateway API calls because they produce no session file. The second half is not a wiring problem; it needs the loop to write its own record.
+
+**The one check that settles it:** run a review round, then query the KB for what the reviewer objected to. If it is not there, the loop is lossy and none of the other five items should ship.
+
+**Related:** 4.1 is the same gap without the dependency. Blocks 1.18, 1.19, 1.20, 1.21 and 2.25 — the loop does not ship without this.
+
 
 # TIER 2 — blocks trusting what a run produces
 
@@ -1013,6 +1109,26 @@ The consequence is not the wasted call, it is the stale one. A packet that has b
 **The one check that settles it:** determine whether pipeline_relay's calls are cache-eligible and what identity the cache keys on — full prompt, message list, or something narrower. If the key is the prompt, a revised proposal changes it and the risk is bounded; if it is narrower, it is not.
 
 **Related:** 3.22 — a cached reply also reports zero tokens, so any per-agent cost measurement that lands on a cache hit will understate the true cost.
+
+### 2.25 The feed is a direct API call, not an agent
+
+Part of the review loop added 2026-09-02 — see the note above 1.18.
+
+One message per card: the item, one sentence on what happened, the objection if there was one, what is next. No code, no output dumps. The reply is "go" or a redirect.
+
+NOT root Hermes. The host pipeline is being retired as soon as the container is functional, and building the advisor system on a component scheduled for retirement repeats the mistake the 2026-09-01 scope pass found in 12 mined tasks.
+
+NOT a container agent either. Messaging is a transport, not a role, and an agent given the job inherits its loadout — that is exactly how cis-knowledge handed pipeline dispatch to a read-only advisor (2.23). An agent whose job is to send a sentence should not acquire the ability to start a run because the toolset it was given happened to carry one.
+
+So: an HTTP POST from the loop script using the bot credentials. No agent on either end, no coupling to the VM.
+
+**Scope:** UNDETERMINED — where the Telegram bot token and chat id live today is not established, and that determines whether this is reachable from the container, from the host, or from neither without a credential move.
+
+**Need:** OPEN — no feed exists. Today the transport is Eric reading terminal output.
+
+**The one check that settles it:** find where the Telegram bot token and chat id live today, and whether they are reachable from wherever the loop runs.
+
+**Depends on:** 1.21. A feed without a waiting loop is a notification stream nobody reads by noon. **Blocked by:** 1.22 — replies that reach no index are the same loss as reviews that reach no index.
 
 
 # TIER 3 — independent defects, no dependants
