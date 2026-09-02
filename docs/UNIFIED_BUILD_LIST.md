@@ -1000,6 +1000,20 @@ F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes th
 
 **The one check that settles it:** confirm whether an agent holding only cis-knowledge can start a run, then decide whether the server should expose read and dispatch as separate toolsets.
 
+### 2.24 The gateway caches OpenRouter replies on prompt identity
+
+Verified 2026-09-02 while building the advisor protocol: five `OpenRouter response cache HIT` entries in the review2 agent log. A re-review returned in 0.4s with an identical body and `usage` reporting `prompt_tokens 0, completion_tokens 0, total_tokens 0`; the gateway log recorded the same call as `in=0 out=0 total=0`. The reply looks fresh and costs nothing to record.
+
+The consequence is not the wasted call, it is the stale one. A packet that has been revised can be answered by the review of its earlier version, and the artifact will record a cost of zero for a review that never ran. Nothing in the response distinguishes a cached reply from a live one.
+
+**Scope:** CONTAINER — the gateway's OpenRouter response cache, hit on the api_server path. `tools/advisor_review.sh` works around it with a per-call nonce (`RUN_TAG`), which is a workaround in one script, not a fix. The pipeline's own agent calls in runtime/abstraction/pipeline_relay.py carry no such guard.
+
+**Need:** OPEN — the workaround covers the advisor path only. Whether a pipeline re-run after a revision can be answered from cache is not established, and that is the case that matters: a reviewer appearing to re-review revised work while returning its earlier verdict is a rubber-stamp review (failure mode 3) produced by infrastructure rather than by the model.
+
+**The one check that settles it:** determine whether pipeline_relay's calls are cache-eligible and what identity the cache keys on — full prompt, message list, or something narrower. If the key is the prompt, a revised proposal changes it and the risk is bounded; if it is narrower, it is not.
+
+**Related:** 3.22 — a cached reply also reports zero tokens, so any per-agent cost measurement that lands on a cache hit will understate the true cost.
+
 
 # TIER 3 — independent defects, no dependants
 
