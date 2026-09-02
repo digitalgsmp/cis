@@ -244,6 +244,14 @@ the 2.1 audit, and three findings worth keeping:
 **One data point, not a proof of reliability.** One small task, one file, no code
 written. What it establishes is that the path is walkable.
 
+**The code run is also the loop's first real test — added 2026-09-02.** A code
+run produces a result neither Eric nor Claude Code can fully evaluate alone,
+which is exactly the case the three-role review (1.20) exists for. Run it
+through the loop rather than beside it: the card reviewed before it executes
+(1.18), the result objected to and answered (1.19), the engineering evaluated by
+Qwen (1.20). A code run checked the old way would prove the pipeline walks and
+prove nothing about whether the check on it works.
+
 ### 1.2 Approve or close run-e70293544935a92e-1787973534  — **Eric's decision**
 Briefing renders, hash stable, goal_reference 12 exists. Two 2026-08-22
 throwaways also sit at the gate (`"test"`, `"smoke check"`) — close those.
@@ -757,6 +765,19 @@ afterwards (1.21); a feed with no waiting loop is a notification stream (2.25
 needs 1.21); and every one of them produces knowledge that currently reaches
 nothing (1.22 blocks all five).
 
+**Why these sit in Tier 1 and not behind the container work.** Eric, 2026-09-02:
+working with LLMs produces confident wrong output structurally — "this madness
+working with llms is a feature that can't be escaped" — so an external
+perspective is permanent, not scaffolding removed once the container works. The
+pipeline's own reviewers will need one too. The loop and the container address
+the same defect in two places: a single model working alone cannot check itself.
+Treating the loop as a detour on the way to the container misreads what the
+container is for.
+
+The standing constraint that follows: Eric does not fall back into transport
+mode. A design that requires him to carry text between models is a regression
+regardless of what it buys.
+
 ### 1.18 Cards are written and executed by the same party
 
 A wrong card produces a result that satisfies a wrong EXPECT, and a review that checks the result against that EXPECT passes it. The whole check rests on the card, and nothing checks the card. This is evaluator-must-not-be-the-builder one level above where 4.10 guards it: 4.10 separates the agent that judges the work from the agent that did it, and leaves whoever wrote the instruction unexamined.
@@ -837,6 +858,8 @@ Three things need capturing: the review threads in `reviews/`; Eric's redirects 
 **Need:** OPEN — verified this session: closeout contains no ingest call, and the session ingest tool cannot see gateway API calls because they produce no session file. The second half is not a wiring problem; it needs the loop to write its own record.
 
 **The one check that settles it:** run a review round, then query the KB for what the reviewer objected to. If it is not there, the loop is lossy and none of the other five items should ship.
+
+This is also what makes the external perspective cumulative. Without it every advisor session starts cold, and the reframings that produced this list are produced and lost. Eric, 2026-09-02.
 
 **Related:** 4.1 is the same gap without the dependency. Blocks 1.18, 1.19, 1.20, 1.21 and 2.25 — the loop does not ship without this.
 
