@@ -732,6 +732,18 @@ The write-block was proven on one file and never generalised to the 16 failure m
 
 **Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 13418,14719; full record in `data/mining_archive/MINED_TASKS.md`.
 
+### 1.17 Restore the dev-mode agent configs before any pipeline run
+
+Review2 (glm-reviewer, port 8647) was stripped on 2026-09-02 so Claude Code could borrow it as a text advisor: 79 skills disabled through `skills.platform_disabled.api_server`, toolsets cut to `file` and `cis-knowledge` through `platform_toolsets.api_server`. Prompt cost went 15,853 → 4,502 tokens. The strip also removed `cis-soul` and `cis-pipeline-architecture`, the two CIS-specific skills a pipeline reviewer needs.
+
+**Scope:** CONTAINER — /home/worker/.hermes-review2/config.yaml, two appended blocks both marked `# DEV MODE 2026-09-02`. Backups `config.yaml.bak.20260902-devmode` (pre-skills) and `config.yaml.bak.20260902-devmode-2` (pre-toolsets), both md5-verified and separately reversible. The other five agent configs were not touched.
+
+**Need:** OPEN — review2 is in dev mode now. Restore only what the role needs: the measurement showed most of the original 15,853 tokens was never used by a reviewer, so a full revert would restore the waste along with the capability.
+
+**The rule this needs:** a comment is not a check. Both blocks say MUST BE RESTORED and nothing enforces it. A startup check should refuse to run the pipeline while any agent config still carries a dev-mode marker. Rules become checks or they do not exist.
+
+**The one check that settles it:** grep the six container configs for `DEV MODE` and confirm the pipeline refuses to start while any hit remains.
+
 
 # TIER 2 — blocks trusting what a run produces
 
@@ -960,6 +972,18 @@ F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes th
 
 **Evidence:** raised 2 times, 2026-08-29 to 2026-08-29; mining_candidates 724,838; full record in `data/mining_archive/MINED_TASKS.md`.
 
+### 2.23 The cis-knowledge toolset grants pipeline dispatch to anything that uses it
+
+`cis-knowledge` registers 18 MCP tools, and three of them start pipeline work — `cis_dispatch_drafter`, `cis_dispatch_reviewer`, `cis_dispatch_implementer`. They ship in the same toolset as KB search, so any agent given KB access can start a run as a side effect. Verified 2026-09-02 on review2, which holds those three tools despite being trimmed to a read-only advisor.
+
+**Scope:** CONTAINER — runtime/mcp_bridge/tools.py defines all 18 and the server registers them as one set (agent.log, 2026-08-29: "registered 18 tool(s)"). The fix is in the MCP server, not config: config can only take or leave the whole toolset.
+
+**Need:** OPEN — this contradicts the standing rule that runs are not started without Eric. The capability arrived by inheritance, not by decision. Nothing ever chose to give reviewers dispatch.
+
+**Affects:** every agent using cis-knowledge, not only review2.
+
+**The one check that settles it:** confirm whether an agent holding only cis-knowledge can start a run, then decide whether the server should expose read and dispatch as separate toolsets.
+
 
 # TIER 3 — independent defects, no dependants
 
@@ -1133,6 +1157,20 @@ nothing yet renders it.
 where the table lives.
 
 **Depends on:** nothing. Blocks 4.18 (the card factory needs a table to read) and the UI roadmap.
+
+### 3.22 Audit token cost per agent against what the role actually needs
+
+Measured on review2, 2026-09-02: the 79 skills cost 2,193 tokens, 14% of the prompt. Tool schemas cost the rest. `platform_toolsets.api_server` was unset, so all 14 toolsets loaded — including browser, image_gen, vision, cronjob and code_execution, none of which a reviewer uses. The five largest tool schemas were 24KB alone: session_search 5,919 bytes, terminal 5,675, delegate_task 5,573, skill_manage 4,138, memory 2,836.
+
+**Scope:** CONTAINER — the six /home/worker/.hermes-*/config.yaml files. `platform_toolsets` is unset in all six; no agent's loadout has ever been matched to its role.
+
+**Need:** OPEN — one agent measured, five not. Repeat the measurement for brain, draft, review1, menter and verify, and cut each to what its role needs.
+
+**Eric, 2026-09-02:** adaptability is part of the method — skills and tools should be optimised per use case, and the loadout should change between dev and production mode.
+
+**The one check that settles it:** a PONG call per agent recording prompt_tokens before and after, against the loadout each role actually uses.
+
+**Related:** 1.6 (prompt size is never measured) is the same blind spot seen from the cost side. 1.17 restores review2; this item decides what "restored" should mean.
 
 # TIER 4 — after the infrastructure works
 
