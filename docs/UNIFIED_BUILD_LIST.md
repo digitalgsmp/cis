@@ -901,6 +901,30 @@ Two code-run attempts failed for unrelated reasons. `run-4bbeea78056e2607-178812
 
 **Related:** 1.1 (the documentation run that established the path is walkable), 1.11 and 1.13 (the two failures that stopped the earlier attempts, both fixed or open on their own items), 2.1 (the guardrail audit this would give real code-path data to).
 
+### 1.24 Brain is fed its own prior attempts, labelled successful, from runs that failed
+
+Found 2026-09-04 by dumping the six payloads of `run-4bbeea78056e2607-1788140226`. The `## Prior Agent Trajectories` block inside `[PRE-DISCOVERY RESULTS]` hands brain three earlier trajectories — all of them `brain/brain` rows, all on the **same intent**, each tagged `success`:
+
+```
+--- Trajectory (run run-4bbeea78056e2607-1788129615, brain/brain, success) ---
+--- Trajectory (run run-4bbeea78056e2607-1788122307, brain/brain, success) ---
+--- Trajectory (run run-4bbeea78056e2607-1788121167, brain/brain, success) ---
+```
+
+**The label is true per row and misleading per run.** Those brain phases did succeed. The runs did not: `run-4bbeea78056e2607-1788122307` **failed at draft**, and `run-4bbeea78056e2607-1788121167` **failed at both intent reviews** — confirmed in `agent_trajectories.outcome`. The selection filters on phase outcome and never looks at what happened downstream, so a phase output that led nowhere is presented to the next attempt as a success to build on.
+
+Brain therefore opens its turn reading three near-identical restatements of its own earlier answer to the identical question, and then produces a fourth. Nothing in the payload says these attempts went on to fail, or why.
+
+**Why this is Tier 1 rather than a cost item.** It is failure mode 1 wearing the pipeline's own clothes — self-reported completion without evidence, recycled as input. The risk is not the 1,178 characters; it is that a wrong understanding which failed downstream is the most heavily weighted precedent the next brain sees, and the same intent has now been attempted four times.
+
+**Scope:** CONTAINER — the trajectory selection in the pre-discovery builder in `runtime/abstraction/pipeline_relay.py`.
+
+**Need:** OPEN — the payload for the run above contains all three, and the two failure outcomes are in the same table the selector reads.
+
+**The one check that settles it:** for any run cited in a `Prior Agent Trajectories` block, confirm the run reached a terminal success state, not merely that the quoted phase row says `success`. A trajectory from a run that escalated or timed out should either be excluded or carry what became of it.
+
+**Related:** 1.23 (the code run that has never completed — two of the three runs cited here are its failed attempts), 1.11 and 1.13 (why those two died: an API 402 reported as ambiguous output, and a draft timeout with no cause), 2.13 (runs are not linked to what they advance), and 2.3 / 3.23 for the rest of the payload composition.
+
 
 # TIER 2 — blocks trusting what a run produces
 
@@ -953,6 +977,27 @@ at the turn count), 1.6 (prompt size never measured), 4.10 (evaluator must not
 be the builder — cross-feeding reviewers is what makes deliberation genuine
 rather than two parallel opinions), and failure mode 15, cross-model agreement
 without genuine deliberation, which this arrangement guarantees.
+
+**The prompt asks review2 for something the payload makes impossible — 2026-09-04.**
+Review2's `[BIAS_OVERLAY]`, and its profile personality, both instruct it:
+
+> Bias to admit: toward consensus. Correct by finding what Review1 missed.
+
+Review1's output is not in review2's payload. The two calls are **byte-identical**
+— 22,128 characters each in `intent_review`, 27,074 each in `proposal_review`,
+confirmed on `run-4bbeea78056e2607-1788140226`. Review2 cannot find what Review1
+missed because it has never seen what Review1 said.
+
+This is worse than a dead guardrail. `sequential_review` failing to run is a
+check that is absent; an overlay demanding an impossible comparison is an
+instruction the model will comply with **by inventing** the thing it cannot
+observe — producing a confident account of Review1's blind spots derived from
+nothing. The bias correction the role depends on is not merely missing, it is
+counterfeited.
+
+Either the payload gains Review1's output, or the overlay stops asking for it.
+Leaving both as they are is the arrangement most likely to produce agreement
+that looks deliberated.
 
 ### 2.4 No validation layer — 23 independent recognitions in the record
 **Checked:** `needs_review` — the quarantine flag — exists in **no table and no
@@ -1244,6 +1289,56 @@ Each of the six profile volumes still holds the `mwl-proof` copy seeded into it 
 
 **Related:** 2.15 (gate scripts that have never fired — the same absence-read-as-health pattern), 1.17 (a comment is not a check), 0.4 (the override plane, which is the other thing that must be verified rather than assumed before enforcement is trusted).
 
+### 2.27 The web-research block returns marketing copy, with raw HTML, into every call
+
+The `## Current Research (web)` section of `[PRE-DISCOVERY RESULTS]` is the staleness gate for failure mode 4 — training-data staleness — and on `run-4bbeea78056e2607-1788140226` it delivered this, verbatim, to all six calls:
+
+```
+## Current Research (web)
+- Search engine optimization: liked <span class="searchmatch">its</span> simple design.
+  Off-page factors (such as PageRank and hyperlink analysis) were considered as well as
+  on-page factors (such as <span class="searchmatch">keywo
+- Google Ads: AI Essentials: Ads Power Pair <span class="searchmatch">Best</span>
+  <span class="searchmatch">Practices</span>&quot;. Google Ads Help. Retrieved 2024-11-01.
+- Search engine marketing: or discuss which of the <span class="searchmatch">tools</span>
+  works better to get the traffic for selected <span class="searchmatch">keywords</span>
+```
+
+The task was merging FTS5 keyword results into `tools/ask_history.py`. The query terms — search, keywords, best practices — retrieved Wikipedia articles on **search-engine marketing**. Not stale, not wrong: simply about a different subject that shares vocabulary.
+
+**Two defects, and the second is the worse one.** The retrieval is unfiltered, and the output is not sanitised: `<span class="searchmatch">` markup and `&quot;` entities go into the prompt as-is, truncated mid-word (`keywo`). A block that ships raw HTML has had nothing between the search API and the agent.
+
+701 chars x 6 calls = 4,206 characters, ~1,050 tokens. The cost is trivial. The problem is that a section headed *Current Research* carries content with no relation to the task, and an agent instructed to weigh pre-discovery has no way to tell that this particular block is noise.
+
+**Scope:** CONTAINER — the web-research step of the pre-discovery builder in `runtime/abstraction/pipeline_relay.py`.
+
+**Need:** OPEN — present in all six payloads of the run above.
+
+**The one check that settles it:** take a run's web-research block and ask whether any line mentions the subject of the task. If not, the block is noise and should be omitted rather than included empty-handed — and either way the markup must be stripped before it reaches a prompt.
+
+**Related:** failure mode 4 (this gate's purpose), 2.18 (placeholders not marked as placeholders — the same problem of unusable content presented as usable), 3.23 (the rest of the payload audit).
+
+### 2.28 KB_CONTEXT is duplicated inside PRE-DISCOVERY in the same prompt
+
+Both `[KB_CONTEXT]` and the `## Knowledge Base` section of `[PRE-DISCOVERY RESULTS]` are built in the same call and land in the same payload, carrying the same rows under two headings. On `run-4bbeea78056e2607-1788140226`, three of the four signals are identical:
+
+```
+[KB_CONTEXT]      round_355, round_357, round_361                (1,304 chars)
+PRE-DISCOVERY     round_355, round_357, round_361, round_363     (1,128 chars)
+```
+
+Present in all six calls: 7,824 characters of `KB_CONTEXT` across the run, most of it repeated a few thousand characters further down the same prompt.
+
+**The cost is minor; the effect on the agent is not.** Material repeated under two headings reads as two independent corroborating sources, which is exactly the signal an agent weighing evidence should not be given falsely. It is the retrieval-side version of failure mode 15 — agreement that is not independent.
+
+**Scope:** CONTAINER — `_add_hit` and `_pre_discovery` in `runtime/abstraction/pipeline_relay.py` both query and both render; neither knows about the other.
+
+**Need:** OPEN — verified in all six payloads of the run above.
+
+**The one check that settles it:** extract the row identifiers from both blocks of one payload and intersect them. A non-empty intersection is the defect; the fix is one block or a documented reason for two.
+
+**Related:** 0.2 (both blocks are redaction choke points, so both were already known to exist — the duplication was not), 3.23, 2.3.
+
 
 # TIER 3 — independent defects, no dependants
 
@@ -1462,6 +1557,46 @@ review, against 4,502 on a ping. ~16 tool calls, each resending accumulated
 context. The per-turn floor is not the cost of a review — turn count is. Cutting
 skills and toolsets lowers the floor and does not touch this. Any advisor
 protocol should hand the agent its evidence rather than making it search for it.
+
+### 3.23 Two thirds of every relay payload is context repeated call to call
+
+The full composition of `run-4bbeea78056e2607-1788140226`, six calls, 131,197 characters — the relay-side prompt, separate from the per-agent system prompt that 3.22 trimmed:
+
+| component | chars | ~tokens | share |
+|---|---|---|---|
+| constraints + prior phase output | 46,087 | 11,521 | 35.1% |
+| intent anchor | 31,815 | 7,953 | 24.2% |
+| `[PRE-DISCOVERY RESULTS]` | 15,712 | 3,928 | 12.0% |
+| `[PROJECT_BRIEF]` | 12,108 | 3,027 | 9.2% |
+| `[KB_CONTEXT]` | 7,824 | 1,956 | 6.0% |
+| intent restatement | 6,090 | 1,522 | 4.6% |
+| `[RECENT_RUNS]` | 3,006 | 751 | 2.3% |
+| `[PRIOR_DISPOSITIONS]` | 2,496 | 624 | 1.9% |
+| task body (brain only) | 2,187 | 546 | 1.7% |
+| `[ERICS_WORKING_METHODS]` | 1,242 | 310 | 0.9% |
+| `[ROLE_OVERLAY]` | 1,047 | 261 | 0.8% |
+| `[BIAS_OVERLAY]` | 1,024 | 256 | 0.8% |
+| `[TASK]` | 324 | 81 | 0.2% |
+| instruction header | 235 | 58 | 0.2% |
+
+**4,446 characters are byte-identical on every call** — `KB_CONTEXT`, `PRIOR_DISPOSITIONS`, `RECENT_RUNS`, `PROJECT_BRIEF`, `ERICS_WORKING_METHODS` — sent six times for 26,676 chars, **6,669 tokens, 20% of the payload**. `PROJECT_BRIEF` is the one that varies, and it varies by exactly one line:
+
+```
+-Generated: 2026-08-30 22:34 UTC | Run: run-bb278c9e6ee9 | Latest pipeline: ...126284
++Generated: 2026-08-31 01:40 UTC | Run: run-0caadf8cedb4 | Latest pipeline: ...140226
+```
+
+**The intent anchor is restated in full to all four downstream calls** — 6,363 chars plus a 1,218-char restatement immediately after it, 9,476 tokens across the run, 29% of the payload. The anchor exists so phases do not drift from the intent; nothing establishes that repeating it verbatim per call, rather than once per run, is what achieves that.
+
+Only the 35% labelled *constraints + prior phase output* differs by phase and carries the work — brain's understanding to the reviewers, draft's proposal to the proposal reviewers.
+
+**Scope:** CONTAINER — prompt assembly in `runtime/abstraction/pipeline_relay.py`.
+
+**Need:** OPEN — measured, unaddressed. This is Tier 3 because it is cost and shape, not correctness: no agent is misled by it, and 3.22 already took the larger bite. It becomes cheap to fix if 2.3 is done, because a conversation carries the fixed context once instead of per call.
+
+**The one check that settles it:** diff any two payloads from the same run and measure the identical span. Anything byte-identical across every call in a run is a candidate to send once.
+
+**Related:** **2.3** — the same root. Independent POSTs force both the re-sent context and the reviewers' blindness to each other; one change fixes both. 3.22 (the system-prompt side of the same bill, done), 1.6 (prompt size is never measured), 2.28 and 2.27 (specific defects inside these blocks), 1.24 (what the trajectory block feeds brain).
 
 # TIER 4 — after the infrastructure works
 
