@@ -97,6 +97,14 @@ case "${1:-start}" in
     # remainder of the joined command.
     #
     # advisor and evaluator take the image copy — they have no volume to mask it.
+    #
+    # THE OVERRIDE PLANE (2026-09-03, queue item 0.4). .gate-control is mounted
+    # read-only at /opt/cis-control/gate, and the plugin checks
+    # /opt/cis-control/gate/DISABLED as its first action on every tool call.
+    # `touch .gate-control/DISABLED` on the host turns the wall off with no
+    # restart; removing it turns the wall back on. Read-only means the agents
+    # can read that file and can never create it — an override the constrained
+    # agent can set is a self-disable, not an override. See .gate-control/README.md.
     echo "Starting $CONTAINER_NAME from image $IMAGE..."
 
     # Remove old stopped container if exists
@@ -113,6 +121,7 @@ case "${1:-start}" in
         -v /mnt/projects/hippa-case-management:/workspace/swa-repos/hippa-case-management:ro \
         -v /mnt/projects/cis-v1:/workspace/swa-repos/cis-v1:ro \
         -v $SECRETS_FILE:/workspace/secrets.env:ro \
+        -v $CIS_REPO/.gate-control:/opt/cis-control/gate:ro \
         -v /mnt/models/huggingface:/opt/models/huggingface:ro \
         -v cis-agent-brain:/home/worker/.hermes-brain \
         -v cis-agent-draft:/home/worker/.hermes-draft \

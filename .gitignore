@@ -166,3 +166,10 @@ CLAUDE.md.bak.*
 # Mining archive — evidence base for UNIFIED_BUILD_LIST, must survive.
 # The working negation lives beside the /data/* rule above; a negation here
 # would be inert because it sits below the parent-directory exclusion.
+
+# Override plane (2026-09-03). Whether enforcement is currently off is machine
+# state, not source — committing it would ship a disabled wall to a fresh
+# clone. The directory itself IS tracked via its README: Docker creates a
+# missing bind-mount source as a root-owned directory, which would then be
+# unwritable from a normal shell and break the one `touch` the override needs.
+.gate-control/DISABLED
