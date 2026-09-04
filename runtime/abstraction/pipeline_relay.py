@@ -1238,6 +1238,29 @@ def _consume_interjections(conn: sqlite3.Connection, run_id: str,
         return ""
 
 
+def _web_log(run_id: str, role: str, outcome: str, detail: str) -> None:
+    """Record which web-search outcome occurred, without touching the payload.
+
+    The block deliberately emits nothing to the prompt unless it has relevant
+    results, so three different situations look identical from the agent's side:
+    relevant hits, an API that returned zero rows, and a call that failed. This
+    is the only place that distinction survives.
+
+    Outcomes: RELEVANT | IRRELEVANT | NO_HITS | ERROR.
+
+    Appends to web_research.log beside the other operator-readable logs in the
+    repo root (hook_seen.log, gate_override.log). Never raises — a logging
+    failure must not take down a pre-discovery pass.
+    """
+    try:
+        with open(os.path.join(PROJECT_ROOT, "web_research.log"), "a") as f:
+            f.write("%s\t%s\t%s\t%s\t%s\n" % (
+                datetime.now(timezone.utc).isoformat(),
+                run_id, role, outcome, detail))
+    except Exception:
+        pass
+
+
 def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
                     role: str, run_id: str,
                     web_search: bool = False) -> str:
@@ -1304,23 +1327,113 @@ def _pre_discovery(conn: sqlite3.Connection, intent: str, phase: str,
     except Exception as e:
         results.append(f"\n## Prior Agent Trajectories\n(Search error: {e})")
 
-    # 3. Web search (Brain and Draft only)
+    # 3. Web search (Brain and Draft only) — BUILD LIST 2.27, fixed 2026-09-04.
     if web_search:
         try:
             import urllib.request
             import urllib.parse
-            query = urllib.parse.quote(f"{keywords} best practices 2026")
-            url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&srlimit=3"
-            req = urllib.request.Request(url, headers={"User-Agent": "CIS-Pipeline/1.0"})
-            resp = urllib.request.urlopen(req, timeout=10)
-            data = json.loads(resp.read())
-            search_results = data.get("query", {}).get("search", [])
-            if search_results:
-                results.append("\n## Current Research (web)")
+            import html as _html
+
+            # Wikipedia is a natural-language index; _fts_query builds FTS5
+            # syntax for SQLite. Handing it the OR-quoted expression made it
+            # ignore the quoting and rank on whichever words a general
+            # encyclopedia knows. On run-4bbeea78056e2607-1788140226 an intent
+            # about merging FTS5 into ask_history.py returned "Search engine
+            # optimization", "Google Ads" and "Search engine marketing" —
+            # tools/keyword/results plus the appended "best practices 2026"
+            # describes SEO exactly, while ask_history, FTS5 and Chroma matched
+            # nothing. The more project-specific the intent, the more reliably
+            # it returned marketing copy.
+            #
+            # Computed here rather than by changing _fts_query, which is shared
+            # with the KB path and must keep returning FTS5 syntax.
+            #
+            # Six terms, measured 2026-09-04 rather than chosen. Wikipedia ANDs
+            # terms, so the count decides everything:
+            #   10 — nothing ever matches, for any intent. The block becomes
+            #        permanently absent and the staleness gate is dead.
+            #    6 — the CIS intent returns 0 hits (correct: the encyclopedia
+            #        has no article on ask_history.py), while a control intent
+            #        Wikipedia does cover, "Implement SQLite FTS5 full-text
+            #        search with BM25 ranking", returns SQLite.
+            #    4 — 737 hits of unrelated noise; recall without precision.
+            web_terms = [
+                w for w in re.sub(r"[^A-Za-z0-9_ ]", " ", intent).split()
+                if len(w) > 2 and w.lower() not in _FTS_STOPWORDS
+            ][:6]
+            if web_terms:
+                query = urllib.parse.quote(" ".join(web_terms))
+                url = (
+                    "https://en.wikipedia.org/w/api.php?action=query&list=search"
+                    f"&srsearch={query}&format=json&srlimit=3"
+                )
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "CIS-Pipeline/1.0"})
+                resp = urllib.request.urlopen(req, timeout=10)
+                data = json.loads(resp.read())
+                search_results = data.get("query", {}).get("search", [])
+
+                # `snippet` is a FORMATTED field: it carries
+                # <span class="searchmatch"> and &quot; by design. Nothing else
+                # strips it — _redact_secrets looks for credentials, not markup
+                # — and the old [:200] cut mid-tag, which is where the payload's
+                # truncated "keywo" came from.
+                cleaned = []
                 for item in search_results:
-                    results.append(f"- {item['title']}: {item.get('snippet', '')[:200]}")
+                    snip = _html.unescape(
+                        re.sub(r"<[^>]+>", "", item.get("snippet", "")))
+                    cleaned.append(
+                        (item.get("title", ""), re.sub(r"\s+", " ", snip).strip()[:200]))
+
+                # Relevance gate. Matching ANY intent term is not enough: the
+                # SEO articles contained "tools", "keyword" and "results", each
+                # of which was an intent term. A result must share an
+                # IDENTIFYING term — one carrying an underscore or a digit, or
+                # capitalised — ask_history, FTS5, Chroma, pipeline_relay —
+                # rather than a word any article might contain.
+                # The first term is excluded from the capitalisation rule:
+                # intents open with a verb — "Modify", "Implement", "Add" — and
+                # treating that as identifying let "Forge (software)" through on
+                # a 2026-09-04 test purely because its article contains the word
+                # "modify". Underscores and digits stay identifying wherever
+                # they appear.
+                ident = {
+                    w.lower() for k, w in enumerate(web_terms)
+                    if ("_" in w) or any(c.isdigit() for c in w)
+                    or (k > 0 and w[:1].isupper() and len(w) > 3)
+                }
+                relevant = []
+                for title, snip in cleaned:
+                    words = set(re.sub(
+                        r"[^A-Za-z0-9_ ]", " ", f"{title} {snip}").lower().split())
+                    if ident & words:
+                        relevant.append((title, snip))
+
+                # Absent, heading included, when nothing relevant came back.
+                # A section that always appears always reads as evidence.
+                if relevant:
+                    results.append("\n## Current Research (web)")
+                    for title, snip in relevant:
+                        results.append(f"- {title}: {snip}")
+                    _web_log(run_id, role, "RELEVANT",
+                             f"{len(relevant)}/{len(search_results)} kept: "
+                             + "; ".join(t for t, _ in relevant))
+                elif search_results:
+                    _web_log(run_id, role, "IRRELEVANT",
+                             f"0/{len(search_results)} kept, dropped: "
+                             + "; ".join(t for t, _ in cleaned))
+                else:
+                    _web_log(run_id, role, "NO_HITS",
+                             "api returned 0 results for: " + " ".join(web_terms))
         except Exception as e:
-            results.append(f"\n## Current Research (web)\n(Search error: {e})")
+            # Silent in the PAYLOAD, recorded in the LOG. A "(Search error: ...)"
+            # line under a Current Research heading is the same present-but-empty
+            # section this block was fixed to stop producing, and the agent can do
+            # nothing with it. But absence must not be the only trace: HTTP 429
+            # from Wikipedia is reachable in ordinary use — hit while testing this
+            # on 2026-09-04 — and a failed search then looked identical to a
+            # search that found nothing relevant.
+            _web_log(run_id, role, "ERROR", f"{type(e).__name__}: {e}")
 
     # Everything pre-discovery found — KB rows, prior trajectories, filesystem,
     # web — is joined here and nowhere else, so one call covers the whole path.
