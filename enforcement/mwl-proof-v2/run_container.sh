@@ -80,6 +80,23 @@ case "${1:-start}" in
         DETACH_FLAG="-d"
     fi
 
+    # The six per-profile volumes preserve agent state (state.db, memories, the
+    # split skill files) across the docker rm below. They also MASK the image at
+    # that path: a named volume is seeded from the image only while it is empty,
+    # and docker rm does not delete volumes — so after first creation, a rebuild
+    # never refreshes anything inside those homes, the sealed plugin included.
+    #
+    # Hence the six nested :ro bind mounts added 2026-09-03. A deeper mount wins
+    # over a shallower one, so the plugin alone comes from the repo on every
+    # start while the rest of the home stays persistent. Read-only here is
+    # KERNEL-enforced, which is stronger than the Dockerfile's root-owned 0444 —
+    # that stops the worker, this stops root too.
+    #
+    # NOTE: no comments may go inside the docker run string below. It is one
+    # double-quoted argument to `sg docker -c`, so a '#' would comment out the
+    # remainder of the joined command.
+    #
+    # advisor and evaluator take the image copy — they have no volume to mask it.
     echo "Starting $CONTAINER_NAME from image $IMAGE..."
 
     # Remove old stopped container if exists
@@ -103,6 +120,12 @@ case "${1:-start}" in
         -v cis-agent-review2:/home/worker/.hermes-review2 \
         -v cis-agent-menter:/home/worker/.hermes-menter \
         -v cis-agent-verify:/home/worker/.hermes-verify \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-brain/plugins/mwl-proof:ro \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-draft/plugins/mwl-proof:ro \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-review1/plugins/mwl-proof:ro \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-review2/plugins/mwl-proof:ro \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-menter/plugins/mwl-proof:ro \
+        -v $CIS_REPO/enforcement/mwl-proof-v2/plugin:/home/worker/.hermes-verify/plugins/mwl-proof:ro \
         $ENTRYPOINT_MOUNT \
         $PROFILES_MOUNT \
         -e CIS_BRAIN_API_KEY=cis-brainstorm-gateway-key-2026 \

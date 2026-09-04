@@ -1,0 +1,155 @@
+# /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
+# CIS Advisor Profile — model config in this file, identity is role-based.
+#
+# PERMANENTLY STRIPPED BY DESIGN — this is NOT dev mode, do not "restore" it.
+# The three blocks at the bottom (skills.platform_disabled, platform_toolsets,
+# mcp_servers.cis-knowledge.enabled: false) are what this role IS. It reasons
+# only from the packet it is handed. An agent that cannot search cannot report
+# that something is absent when it merely could not reach it — the false-absence
+# failure observed 2026-09-02, when an advisor with narrower file access than its
+# subject reported three existing backups as missing under a heading reading
+# WHAT I OBJECT TO. Measured on review2: 15,853 -> 4,502 prompt tokens.
+model:
+  provider: openrouter
+  default: z-ai/glm-5.2
+  context_length: 131072
+  max_tokens: 1500
+agent:
+  max_turns: 90
+  gateway_timeout: 1800
+display:
+  personality: |
+    You are Advisor — you review the CARD, before it runs.
+    A wrong card produces a result that satisfies a wrong EXPECT, and a review
+    that checks the result against that EXPECT passes it. You are the check on
+    the instruction, not on the work.
+    Ask two things of every card: what would this fail to establish, and what
+    result would satisfy it while being wrong.
+    You have no tools and no file access. Everything you need is in the message.
+    If something you would need is not here, SAY WHAT IS MISSING. Never report
+    that it does not exist — you cannot see the disk, and "I cannot see it" is
+    not "it is not there".
+    ECONOMY: Say what matters and stop. No restating the question. No summarizing
+    what you just said. If a thought is complete in two sentences, two sentences
+    is the right answer.
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8649
+  api_key: cis-advisor-gateway-key-2026
+platforms:
+  api_server:
+    extra:
+      port: 8649
+mcp_servers:
+  cis-knowledge:
+    command: /usr/local/lib/hermes-agent/venv/bin/python
+    args:
+    - -m
+    - mcp_bridge.server
+    env:
+      CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
+      PYTHONPATH: /workspace/cis/runtime
+    # REQUIRED, not redundant. An empty platform_toolsets list alone is
+    # re-populated downstream by the non-configurable-toolset recovery block in
+    # hermes_cli/tools_config.py, which would hand this agent cis_dispatch_drafter,
+    # cis_dispatch_reviewer and cis_dispatch_implementer — the ability to start a
+    # pipeline run. That is queue item 2.23. Both settings are needed to reach
+    # zero tools.
+    enabled: false
+    timeout: 60
+terminal:
+  backend: local
+# THE WALL
+plugins:
+  enabled:
+    - mwl-proof
+  disabled: []
+tool_loop_guardrails:
+  hard_stop_enabled: true
+# 79 names for 75 skill files: 4 carry a frontmatter name differing from their
+# directory name, and both forms are listed so the disable matches either.
+skills:
+  platform_disabled:
+    api_server:
+    - airtable
+    - apple-notes
+    - apple-reminders
+    - architecture-diagram
+    - arxiv
+    - ascii-art
+    - ascii-video
+    - audiocraft
+    - audiocraft-audio-generation
+    - baoyu-infographic
+    - blogwatcher
+    - cis-pipeline-architecture
+    - cis-soul
+    - claude-code
+    - claude-design
+    - codebase-inspection
+    - codex
+    - comfyui
+    - computer-use
+    - design-md
+    - dogfood
+    - evaluating-llms-harness
+    - excalidraw
+    - findmy
+    - gif-search
+    - github-auth
+    - github-code-review
+    - github-issues
+    - github-pr-workflow
+    - github-repo-management
+    - google-workspace
+    - heartmula
+    - hermes-agent
+    - hermes-agent-skill-authoring
+    - hermes-desktop-plugins
+    - himalaya
+    - huggingface-hub
+    - humanizer
+    - imessage
+    - jupyter-live-kernel
+    - llama-cpp
+    - llm-wiki
+    - lm-evaluation-harness
+    - manim-video
+    - maps
+    - nano-pdf
+    - node-inspect-debugger
+    - notion
+    - obsidian
+    - ocr-and-documents
+    - opencode
+    - openhue
+    - p5js
+    - petdex
+    - plan
+    - polymarket
+    - popular-web-designs
+    - powerpoint
+    - pretext
+    - python-debugpy
+    - requesting-code-review
+    - research-paper-writing
+    - segment-anything
+    - segment-anything-model
+    - serving-llms-vllm
+    - simplify-code
+    - sketch
+    - songsee
+    - songwriting-and-ai-music
+    - spike
+    - systematic-debugging
+    - teams-meeting-pipeline
+    - test-driven-development
+    - touchdesigner-mcp
+    - vllm
+    - weights-and-biases
+    - xurl
+    - youtube-content
+    - yuanbao
+platform_toolsets:
+  api_server: []

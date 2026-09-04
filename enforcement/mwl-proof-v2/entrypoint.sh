@@ -15,7 +15,7 @@ mkdir -p "$LOG_DIR"
 
 # ── Clean stale pidfiles from previous container run ───────────────────
 # docker restart preserves /tmp, so old pidfiles cause false "already running"
-rm -f /tmp/brain.pid /tmp/draft.pid /tmp/review1.pid /tmp/review2.pid /tmp/menter.pid /tmp/verify.pid /tmp/pipeline_api.pid
+rm -f /tmp/brain.pid /tmp/draft.pid /tmp/review1.pid /tmp/review2.pid /tmp/menter.pid /tmp/verify.pid /tmp/advisor.pid /tmp/evaluator.pid /tmp/pipeline_api.pid
 
 # ── Load API keys from secrets file ────────────────────────────────────
 if [ -f /workspace/secrets.env ]; then
@@ -36,14 +36,21 @@ export CIS_REVIEW1_API_KEY="cis-qwen-reviewer-gateway-key-2026"
 export CIS_REVIEW2_API_KEY="cis-glm-reviewer-gateway-key-2026"
 export CIS_MENTER_API_KEY="cis-implementer-gateway-key-2026"
 export CIS_VERIFY_API_KEY="cis-verifier-gateway-key-2026"
+export CIS_ADVISOR_API_KEY="cis-advisor-gateway-key-2026"
+export CIS_EVALUATOR_API_KEY="cis-evaluator-gateway-key-2026"
 
 # ── Create HERMES_HOME directories for each profile ────────────────────
 # Each profile needs its own ~/.hermes-<name> with a config.yaml that sets
 # the port, model, and personality. The managed config at /etc/hermes
 # provides the enforcement keys (plugins, guardrails) that override
 # whatever the worker's config says — so the worker can't disable enforcement.
-PROFILES=(brain draft review1 review2 menter verify)
-PORTS=(8644 8645 8643 8647 8646 8648)
+# advisor (8649) and evaluator (8650) added 2026-09-03 — the review loop's two
+# reviewers (queue items 1.18 and 1.20). Both are permanently stripped to zero
+# tools in their profile configs; that is the role, not dev mode.
+# This list is hardcoded and so is the one in Dockerfile:153. Profile nine means
+# editing both.
+PROFILES=(brain draft review1 review2 menter verify advisor evaluator)
+PORTS=(8644 8645 8643 8647 8646 8648 8649 8650)
 
 for i in "${!PROFILES[@]}"; do
     profile="${PROFILES[$i]}"
@@ -71,6 +78,8 @@ GATEWAY_KEYS=(
     "cis-glm-reviewer-gateway-key-2026"
     "cis-implementer-gateway-key-2026"
     "cis-verifier-gateway-key-2026"
+    "cis-advisor-gateway-key-2026"
+    "cis-evaluator-gateway-key-2026"
 )
 
 # Per-profile Telegram tokens (env vars from run_container.sh)
@@ -82,6 +91,8 @@ TG_TOKENS=(
     "${CIS_TG_REVIEW2_TOKEN:-}"
     "${CIS_TG_MENTER_TOKEN:-}"
     "${CIS_TG_VERIFY_TOKEN:-}"
+    ""
+    ""
 )
 
 for i in "${!PROFILES[@]}"; do

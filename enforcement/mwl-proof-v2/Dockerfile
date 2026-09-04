@@ -128,7 +128,7 @@ RUN deluser pn 2>/dev/null; \
 
 # --- install the OBSERVER plugin into the worker's home AS ROOT, then seal it ---
 # Observer only — not the wall. Sealed anyway so the worker can't tamper.
-# Install into base .hermes AND all 6 profile homes (pre-created at build time
+# Install into base .hermes AND all 8 profile homes (pre-created at build time
 # so the plugin is root-owned and read-only; entrypoint only copies config.yaml)
 RUN mkdir -p /home/worker/.hermes/plugins \
     && cp -a /opt/cis-policy/plugin /home/worker/.hermes/plugins/mwl-proof \
@@ -137,7 +137,7 @@ RUN mkdir -p /home/worker/.hermes/plugins \
     && find /home/worker/.hermes/plugins/mwl-proof -type f -exec chmod 0444 {} \; \
     && chown worker:worker /home/worker/.hermes /home/worker/.hermes/plugins
 
-# --- bake CIS-specific skills into all 6 profile homes (root-owned, RO) ---
+# --- bake CIS-specific skills into all 8 profile homes (root-owned, RO) ---
 # cis-soul: behavior protocol for all profiles
 # cis-pipeline-architecture: pipeline architecture reference
 COPY cis-soul/ /tmp/cis-skills/cis-soul/
@@ -149,8 +149,17 @@ COPY cis-pipeline-architecture/ /tmp/cis-skills/cis-pipeline-architecture/
 # version instead, and the shared copy above remains the fallback.
 COPY cis-skills-per-role/ /tmp/cis-skills-per-role/
 
-# Pre-create all 6 profile home directories with sealed enforcement plugin
-RUN for profile in brain draft review1 review2 menter verify; do \
+# Pre-create all 8 profile home directories with sealed enforcement plugin.
+#
+# THIS LIST IS HARDCODED. Adding profile nine means editing it here as well as
+# in entrypoint.sh — there is no single place that names the profiles. The copy
+# MUST happen at build time and not in entrypoint.sh: entrypoint runs as worker
+# (uid 1000) and the image has no sudo, so a runtime copy is worker-owned and
+# writable by the very agent the plugin gates. That is sealed in a directory
+# listing and not in fact. Verified 2026-09-02.
+#
+# advisor and evaluator added 2026-09-03 (queue items 1.18, 1.20).
+RUN for profile in brain draft review1 review2 menter verify advisor evaluator; do \
         mkdir -p /home/worker/.hermes-$profile/plugins; \
         mkdir -p /home/worker/.hermes-$profile/skills/software-development; \
         cp -a /opt/cis-policy/plugin /home/worker/.hermes-$profile/plugins/mwl-proof; \

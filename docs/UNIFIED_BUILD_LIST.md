@@ -1169,13 +1169,39 @@ NOT a container agent either. Messaging is a transport, not a role, and an agent
 
 So: an HTTP POST from the loop script using the bot credentials. No agent on either end, no coupling to the VM.
 
-**Scope:** UNDETERMINED — where the Telegram bot token and chat id live today is not established, and that determines whether this is reachable from the container, from the host, or from neither without a credential move.
+**Scope:** HOST — settled 2026-09-02. The Telegram credentials live in the host Hermes profiles' `.env` files, seven bot tokens across `/home/eric/.hermes` and `/home/eric/.hermes-*`. They are readable by whoever runs Claude Code. The container has NONE: all six container profiles' `.env` files carry zero Telegram variables, because the `-e CIS_TG_*` plumbing in `run_container.sh:114-120` passes host variables that are unset. So a host-side feed works today with no credential move; a container-side feed needs a token plumbed in first.
 
-**Need:** OPEN — no feed exists. Today the transport is Eric reading terminal output.
+The token being in the root Hermes profile is a credential LOCATION, not a dependency — nothing above changes. The feed is still an HTTP POST that uses a bot token; no Hermes process is involved on either end, so nothing here retires with the VM pipeline. Only the file the token is read from would need to move.
 
-**The one check that settles it:** find where the Telegram bot token and chat id live today, and whether they are reachable from wherever the loop runs.
+**Need:** OPEN — no feed script exists. The transport underneath it is proven, which is a different thing.
+
+**The one check that settles it — DONE 2026-09-02, both directions.** Message 1149 out via a plain `curl` POST to `sendMessage`; Eric's "go" came back as message 1150 through `getUpdates`, from uid 6511416750, matching the `TELEGRAM_ALLOWED_USERS` value — so the loop can verify the reply is his and not another group member's.
+
+**The destination is a private chat, not a group.** The test ran in `CIS_Test_Group` (-5563618057), which held four bots besides Eric — three of them backed by running VM gateways, silent only because `TELEGRAM_REQUIRE_MENTION=true` in their configs. He deleted the group on 2026-09-02 rather than police that membership, and the feed now DMs him directly (uid 6511416750, verified: message 1155). A DM gives one agent by construction — there is no member list, so no second bot can appear — and `require_mention` does not apply in private chats. The bot is `@cis_kernel_bot`, bot id 8926607085, display name renamed to **HermesFeed** on 2026-09-02 so it is identifiable among the seven Hermes bots; the token and id are unchanged by that rename.
+
+**Replies arrive unthreaded — the loop needs its own correlation.** Eric's "go" carried no `reply_to_message` field, so Telegram's threading cannot tell the loop which card a reply answers. Either one card waits at a time, which 1.21's waiting state gives for free, or each message carries a short tag the reply must quote. The first is simpler and is what 1.21 already implies.
+
+**Stale, and left deliberately:** all seven host `.env` files still name the deleted group as `TELEGRAM_HOME_CHANNEL`, and five of those profiles have running gateways that would get a 403 on any post there. Harmless until a VM agent tries to reach him that way. Fix it in the same pass that wires the feed, pointing them at the uid rather than at a new group.
 
 **Depends on:** 1.21. A feed without a waiting loop is a notification stream nobody reads by noon. **Blocked by:** 1.22 — replies that reach no index are the same loss as reviews that reach no index.
+
+### 2.26 Six buried plugin copies wait inside the profile volumes
+
+Each of the six profile volumes still holds the `mwl-proof` copy seeded into it on 2026-08-29. Since 2026-09-03 those paths carry a read-only bind mount of `enforcement/mwl-proof-v2/plugin` from the repo, so the buried copies are masked and unreachable. Harmless while the mounts are there.
+
+**The failure mode is removal, not conflict.** Delete those six `-v` lines from `run_container.sh` and the August copies resurface — root-owned, correctly permissioned, indistinguishable from current. The container would then run a plugin frozen at 2026-08-29 while the repo moved on. Nothing errors, nothing logs, and an inspection of the file shows a plausible plugin. This is the stale-copy shape that has cost this repo repeatedly: absence of an error read as evidence of correctness.
+
+**The permission bits now lie, and this is the part that will mislead an auditor.** Under the bind mount the plugin reads `worker:worker 0644`, which looks strictly weaker than the previous `root:root 0444`. It is stronger. Verified 2026-09-03: a `touch` inside the mounted directory fails with *"Read-only file system"* — the kernel refuses at the mount layer, before permissions are consulted, and that holds for root as well as worker. Anyone auditing with `ls -la` and no knowledge of the mount will conclude the seal was loosened and may "fix" it back into a writable image copy.
+
+**Scope:** REPO — `enforcement/mwl-proof-v2/run_container.sh` lines 123-128, and the six `cis-agent-*` Docker volumes.
+
+**Need:** OPEN — the buried copies exist today and nothing detects either the resurrection case or the missing mount.
+
+**Removing them is not recommended.** It costs one root-privileged throwaway container per volume to delete roughly 5 KB each, cannot be done while the live container holds the volumes, and trades a masked file for six privileged writes to persistent state. If it is ever done, do it inside a rebuild window when the container is already down.
+
+**The one check that settles it:** at startup, md5 each mounted `plugins/mwl-proof` against `enforcement/mwl-proof-v2/plugin` and confirm the bind mount is actually present — not that the permission bits look right. A match plus a present mount is the pass; equal bits with no mount is the silent-failure case the check exists to catch.
+
+**Related:** 2.15 (gate scripts that have never fired — the same absence-read-as-health pattern), 1.17 (a comment is not a check), 0.4 (the override plane, which is the other thing that must be verified rather than assumed before enforcement is trusted).
 
 
 # TIER 3 — independent defects, no dependants
