@@ -42,7 +42,14 @@ mcp_servers:
     env:
       CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
       PYTHONPATH: /workspace/cis/runtime
-    enabled: true
+    # Disabled 2026-09-04. Across all six profiles' message stores the only call
+    # to any of cis-knowledge's 13 tools was one `cis_adapter_status` by review2,
+    # a health check — never once used for retrieval. It also carries
+    # cis_dispatch_drafter / _reviewer / _implementer, so any agent holding it can
+    # start a pipeline run (BUILD LIST 2.23). Required alongside
+    # platform_toolsets, not instead of it: a narrowed toolset list is
+    # re-populated by the recovery block in hermes_cli/tools_config.py.
+    enabled: false
     timeout: 60
 terminal:
   backend: local
@@ -53,3 +60,25 @@ plugins:
   disabled: []
 tool_loop_guardrails:
   hard_stop_enabled: true
+# TOOLSET TRIM 2026-09-04. Measured, not guessed. Three pings isolated the cost
+# nothing had separated before: tool schemas are 13,265 prompt tokens of a
+# 15,923-token profile (84%); the entire 75-skill index is 2,193 (14%). The
+# default api_server toolset hands every role 35 tool schemas.
+#
+# This list is the SMALLEST SET OF TOOLSETS covering what this role has actually
+# called. Toolsets are the unit, so a few unused tools ride along.
+#   file = read_file, search_files, write_file (4)   terminal = terminal (2)
+#   skills = skill_view, skills_list (3)             code_execution = execute_code (1)
+#
+# Review2's recorded usage: terminal 67, execute_code 51, search_files 35, read_file 31 (184 calls)
+# Evidence is strong — 399 messages. The one cis_adapter_status call is dropped deliberately; it is a health check, not review work.
+#
+# If a run shows it reaching for something outside this set, widen the list —
+# the evidence is per-profile and the query is:
+#   sqlite3 /home/worker/.hermes-review2/state.db \
+#     "SELECT tool_name, COUNT(*) FROM messages WHERE tool_name IS NOT NULL GROUP BY tool_name;"
+platform_toolsets:
+  api_server:
+  - file
+  - terminal
+  - code_execution

@@ -45,7 +45,14 @@ mcp_servers:
     env:
       CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
       PYTHONPATH: /workspace/cis/runtime
-    enabled: true
+    # Disabled 2026-09-04. Across all six profiles' message stores the only call
+    # to any of cis-knowledge's 13 tools was one `cis_adapter_status` by review2,
+    # a health check — never once used for retrieval. It also carries
+    # cis_dispatch_drafter / _reviewer / _implementer, so any agent holding it can
+    # start a pipeline run (BUILD LIST 2.23). Required alongside
+    # platform_toolsets, not instead of it: a narrowed toolset list is
+    # re-populated by the recovery block in hermes_cli/tools_config.py.
+    enabled: false
     timeout: 60
 terminal:
   backend: local
@@ -59,3 +66,32 @@ plugins:
   disabled: []
 tool_loop_guardrails:
   hard_stop_enabled: true
+# TOOLSET TRIM 2026-09-04. Measured, not guessed. Three pings isolated the cost
+# nothing had separated before: tool schemas are 13,265 prompt tokens of a
+# 15,923-token profile (84%); the entire 75-skill index is 2,193 (14%). The
+# default api_server toolset hands every role 35 tool schemas.
+#
+# This list is the SMALLEST SET OF TOOLSETS covering what this role has actually
+# called. Toolsets are the unit, so a few unused tools ride along.
+#   file = read_file, search_files, write_file (4)   terminal = terminal (2)
+#   skills = skill_view, skills_list (3)             code_execution = execute_code (1)
+#
+# Menter's recorded usage: terminal 6, search_files 5, read_file 5, write_file 2 (18 calls)
+# EVIDENCE IS THIN — only 33 messages, and this volume dates from 2026-08-29.
+# code_execution is included DESPITE not appearing in that history, on the
+# record rather than on the sample: the architecture skill documents run
+# run-86bc4d1009b8fb44-1783645778 completing all 7 phases with Menter making
+# the first successful file mutation in the container, and names Menter
+# explicitly as a caller of execute_code. Menter is the implementer; denying
+# it the ability to run what it writes would likely break the very code run
+# BUILD LIST 1.23 is waiting on. One extra tool schema is the cheaper risk.
+#
+# If a run shows it reaching for something outside this set, widen the list —
+# the evidence is per-profile and the query is:
+#   sqlite3 /home/worker/.hermes-menter/state.db \
+#     "SELECT tool_name, COUNT(*) FROM messages WHERE tool_name IS NOT NULL GROUP BY tool_name;"
+platform_toolsets:
+  api_server:
+  - file
+  - terminal
+  - code_execution
