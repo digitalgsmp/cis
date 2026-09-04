@@ -4,7 +4,14 @@
 CIS is a multi-agent governance pipeline where LLMs draft, review, and implement work under strict role constraints and enforcement gates. Built by Eric (Vector Pirate). Seven roles across six Hermes gateway endpoints: Brainstorm (brainstorm:8644), Drafter (v4pro:8645), Reviewer 1 (r1:8643), Reviewer 2 (glm-reviewer:8647), Implementer (v4impl:8646), Verifier (glm-verifier:8648), Prime/Chat (prime:8642).
 
 ## Architecture
-- **Spine DB:** SQLite at `runtime/spine.db` — schema in `runtime/schema/spine_schema.sql`
+- **Spine DB:** SQLite at `data/cis_memory.db` — 76 tables. This is what every
+  agent profile points `CIS_SPINE_PATH` at, and what `tools/ask_history.py`
+  reads. Schema reference in `runtime/schema/spine_schema.sql`.
+  `runtime/spine.db` IS AN EMPTY 0-BYTE FILE. This line named it as the spine
+  until 2026-09-04, and on that day a query run against it returned nothing and
+  was reported as "no such tables exist" — a false absence caused by the
+  instructions themselves. Query the empty file and every question has the same
+  answer. If a spine query comes back empty, check the path before believing it.
 - **Pipeline:** Router → Brainstorm → Drafter → Dual-Review (Qwen 3.7 Max + GLM 5.2) → Eric Gate → Implementer → GLM Verify
 - **Governance:** ADR decisions in `project_decisions` table, `docs/` directory for specs
 - **Build Plan:** `docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md` — authoritative build order

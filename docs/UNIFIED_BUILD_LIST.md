@@ -177,7 +177,17 @@ The v2.0 deadlock came from a clearance token the gate itself could prevent you 
 
 **Scope:** CONTAINER — the .GATE_DISABLED override plane is repo-level and applies to both pipelines
 
-**Need:** OPEN — the container's pre_tool_call hook and container_gate_runner.py contain no GATE_DISABLED reference, so the override plane the v2.0 post-mortem called the single most load-bearing rule is not present in the layer that fires. The need stands.
+**Need: HALF DONE 2026-09-04.** The override plane is built and proven. The fail-mode policy is not, and is now safe to change.
+
+**Built:** `.gate-control/` on the host, mounted read-only at `/opt/cis-control/gate`, with the check as the **first statement** of `_pre_tool_call` in `plugin/__init__.py` — above the logging and above the subprocess, so a hook that cannot log and a runner that will not start can both still be overridden. `touch .gate-control/DISABLED` disables the wall, `rm` re-arms it, neither needs a restart. An unreadable override falls through to enforcement rather than disabling it: the failure of the off switch must not itself be an off switch.
+
+**Read-only is the design.** The agents can read that file and can never create it — an override the constrained agent can set is a self-disable. Kernel-enforced at the mount layer, so it holds for root inside the container too.
+
+**Proven, per the record's requirement that a deterministic test pass before the wall is trusted.** `tools/test_override_plane.sh`, run from a bare shell with no Hermes involved, six assertions all passing: blocked call blocked; container sees the file through the mount; same call allowed; the override recorded in `gate_override.log`; **the container refused to create the file itself**; block restored on removal. It refuses to run if the override is already active rather than deleting an operator's own flag during cleanup.
+
+**Still open — the fail-mode half.** `plugin/__init__.py:50` still returns `None` on every failure path: a timeout at 10s, a missing runner, a non-zero exit, malformed JSON, empty stdout. Five routes to allow, and the gate cannot detect its own non-execution — failure mode 11, and the KB already flagged it: *"Fail-open default contradicts your fail-closed requirement. The hook system proceeds when the gate errors/times out."*
+
+**Why the order was right.** Today's system cannot deadlock precisely *because* it fails open — the v2.0 deadlock happened when a hook failed closed with no escape hatch. The override plane is not protection against the system as it stands; it is the precondition for changing the failure mode. That change is now safe to make, and it is the remaining work on this item. Commit `de42c8c`.
 
 
 **Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 1462,508; full record in `data/mining_archive/MINED_TASKS.md`.
@@ -746,7 +756,11 @@ Review2 (glm-reviewer, port 8647) was stripped on 2026-09-02 so Claude Code coul
 
 **Scope:** CONTAINER — /home/worker/.hermes-review2/config.yaml, two appended blocks both marked `# DEV MODE 2026-09-02`. Backups `config.yaml.bak.20260902-devmode` (pre-skills) and `config.yaml.bak.20260902-devmode-2` (pre-toolsets), both md5-verified and separately reversible. The other five agent configs were not touched.
 
-**Need:** OPEN — review2 is in dev mode now. Restore only what the role needs: the measurement showed most of the original 15,853 tokens was never used by a reviewer, so a full revert would restore the waste along with the capability.
+**Need: DONE 2026-09-04 — closed by the rebuild, not by anyone remembering.** `entrypoint.sh:56` copies `/etc/hermes/profiles/<name>.yaml` over each profile's `config.yaml` unconditionally on every container start, and `run_container.sh` recreates rather than restarts. So the dev-mode strip — which lived only in the volume — was overwritten the moment the container came up. review2's config is now byte-for-byte the repo profile. `tools/check_dev_mode.sh` reports **PASS — all 8 agents clean**, checking eight configs rather than six because it globs the profile directories.
+
+That is the item resolving itself by accident, and the accident is worth naming: a state that only exists inside a volume is not durable, and nobody would have known it reverted. The durable version is what 3.22 then did — the strip belongs in the repo profile, where it survives recreate, and review2 now carries a measured 7-tool loadout rather than either the 35-tool default or the borrowed advisor's zero.
+
+**The follow-on this creates:** `tools/advisor_review.sh` still defaults to `review2` on 8647. That is no longer a stripped text advisor; it is a pipeline reviewer. The real advisor is on 8649 at 390 tokens. Repointing it is two lines and its header comment about depending on the dev-mode strip needs rewriting with them.
 
 **The rule this needs:** a comment is not a check. Both blocks say MUST BE RESTORED and nothing enforces it. A startup check should refuse to run the pipeline while any agent config still carries a dev-mode marker. Rules become checks or they do not exist.
 
@@ -912,6 +926,33 @@ all 30 and decide per guardrail whether its default should enforce.
 ### 2.3 `sequential_review` is dead code
 **Checked:** defined in `guardrails.py`, never appended to any report. It is the
 guardrail against shared blind spots between reviewers, and it never runs.
+
+**Why it never runs — found 2026-09-04, and it is structural, not a wiring gap.**
+`pipeline_relay.py:1175` builds every agent call as a single independent POST:
+
+```python
+"messages": [{"role": "user", "content": prompt}],
+```
+
+One user message. No history, no accumulation, no other agent's output. Both
+reviewers receive the same constructed prompt and neither can see what the other
+said, so sequential review has nothing to be sequential *about*. Confirmed on a
+real run: review1 and review2 got byte-identical inputs in both the
+`intent_review` and `proposal_review` phases — 22,128 and 27,074 characters,
+matching exactly.
+
+**This is the same defect as the token cost, seen from the other side.** Because
+each call is independent, the agent's entire system prompt is rebuilt and
+re-billed every turn — 98,586 of a deliberation's 131,383 tokens before the 3.22
+trim. Giving reviewers a conversation would fix the blind-spot guardrail *and*
+stop paying for the system prompt six times. **They are one piece of work, not
+two**, and either one alone is the more expensive way to do it.
+
+**Related:** 3.22 (the cost side, now measured and trimmed at the floor but not
+at the turn count), 1.6 (prompt size never measured), 4.10 (evaluator must not
+be the builder — cross-feeding reviewers is what makes deliberation genuine
+rather than two parallel opinions), and failure mode 15, cross-model agreement
+without genuine deliberation, which this arrangement guarantees.
 
 ### 2.4 No validation layer — 23 independent recognitions in the record
 **Checked:** `needs_review` — the quarantine flag — exists in **no table and no
@@ -1383,7 +1424,32 @@ Measured on review2, 2026-09-02: the 79 skills cost 2,193 tokens, 14% of the pro
 
 **Scope:** CONTAINER — the six /home/worker/.hermes-*/config.yaml files. `platform_toolsets` is unset in all six; no agent's loadout has ever been matched to its role.
 
-**Need:** OPEN — one agent measured, five not. Repeat the measurement for brain, draft, review1, menter and verify, and cut each to what its role needs.
+**Need: DONE 2026-09-04.** All six measured and cut.
+
+**The split, isolated at last.** Three pings separated what nothing had separated before — a profile with skills off and toolsets off costs 390 tokens, skills off and toolsets at default costs 13,655, everything on costs 15,848. So of a 15,923-token profile: **tool schemas 13,265 (84%), the whole 75-skill index 2,193 (14%), base prompt 390 (2%)**. Skills are 29 tokens each, an index rather than bodies — `skill_view` fetches a body on demand, so skills were already lazy and there was nothing to win there. The cost was always the schemas.
+
+**What each role actually calls**, from its own `state.db` message store rather than assumed — the spine records no tool calls at all (2.6), and `hook_payload.jsonl` carries an opaque `task_id` with no role in it, so the per-profile stores are the only attributable source:
+
+| role | toolsets | tools | before | after | cut |
+|---|---|---|---|---|---|
+| brain | file, terminal, skills | 9 | 16,741 | 7,908 | 53% |
+| draft | file, terminal, skills | 9 | 16,873 | 8,039 | 52% |
+| review1 | file, terminal, code_execution | 7 | 16,563 | 4,843 | 71% |
+| review2 | file, terminal, code_execution | 7 | 15,923 | 4,610 | 71% |
+| menter | file, terminal, code_execution | 7 | 16,743 | 4,976 | 70% |
+| verify | code_execution | 1 | 15,923 | 1,463 | 91% |
+
+Down from 35 schemas each. On the six calls of a real deliberation, `run-4bbeea78056e2607-1788140226`: system overhead **98,586 → 34,853**, total **131,383 → 67,650**, overhead share **75% → 52%**. The 32,797 tokens of actual reasoning content are untouched — what went was schemas re-sent every turn.
+
+`cis-knowledge` disabled on all six. Across every profile's history the only call to any of its 13 tools was one `cis_adapter_status` health check by review2; it was never once used for retrieval, and it carries the three `cis_dispatch_*` tools, so holding it means being able to start a pipeline run (2.23). Disabling the MCP server is required *alongside* the toolset list, not instead of it — a narrowed list is re-populated by the recovery block in `hermes_cli/tools_config.py`.
+
+**Menter keeps `code_execution` although its history does not show it.** Its volume dates from 2026-08-29 and holds 18 calls; the architecture skill records what that sample misses — `run-86bc4d1009b8fb44-1783645778` completing all seven phases with Menter making the first successful file mutation in the container. Trimming to the sample would have removed the implementer's ability to run what it writes, the likeliest way to break the code run 1.23 waits on. The deviation was then **validated rather than argued**: menter's verification call produced its first ever recorded `execute_code`.
+
+**Every role verified working, not assumed**, each against an answer confirmed on the host afterwards: brain returned the README's first line and 319; draft returned 1705 and wrote it to a file; review1 returned 68428079 and 80; review2 returned 134655089 and 319; menter computed the sum of the first 500 primes as 824693 and wrote it. `hook_seen.log` grew on every call, proving the wall is registered and firing per profile — better evidence than `plugin_load.log`, whose eight `register()` lines name no profile.
+
+**Read the ping numbers correctly.** Those are idle-turn floors. The same agents doing real work cost far more — brain 16,162, draft 24,981, menter 15,966 — because file contents and tool results re-enter context. The trim removes fixed overhead, not work.
+
+**Edited in the repo profiles, not container configs**, so it survives recreate. Commits `f86ed4d` and `256a72d`.
 
 **Eric, 2026-09-02:** adaptability is part of the method — skills and tools should be optimised per use case, and the loadout should change between dev and production mode.
 

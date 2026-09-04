@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-09-04 19:28 UTC | Run: run-0784284a2773
+Generated: 2026-09-04 21:40 UTC | Run: run-8a4d0431dd01
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 256a72d trim the remaining five toolsets — a deliberation goes 131,383 -> 67,650 tokens
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## enforcement/mwl-proof-v2/profiles/brain.yaml 
+
+## enforcement/mwl-proof-v2/profiles/draft.yaml 
+
+## enforcement/mwl-proof-v2/profiles/menter.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review1.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review2.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## f86ed4d trim verify to code_execution — 15,923 -> 1,463 prompt tokens
 
@@ -444,37 +482,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/UNIFIED_BUILD_LIST.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 42a834b advisor review protocol — packet in, single-turn review out, 3.3k tokens against 110k tooled
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## reviews/done/toolset-trim-20260902.response.md 
-
-## reviews/pending/toolset-trim-20260902.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/advisor_review.sh 
