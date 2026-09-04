@@ -42,7 +42,15 @@ mcp_servers:
     env:
       CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
       PYTHONPATH: /workspace/cis/runtime
-    enabled: true
+    # Disabled 2026-09-04. No pipeline agent has ever used cis-knowledge for
+    # retrieval: across all six profiles' message stores the only call to any of
+    # its 13 tools was one `cis_adapter_status` by review2, a health check. It
+    # also carries cis_dispatch_drafter / _reviewer / _implementer, which give
+    # anything holding this toolset the ability to start a pipeline run —
+    # BUILD LIST 2.23. Required alongside platform_toolsets, not instead of it:
+    # an empty or narrowed toolset list is re-populated downstream by the
+    # non-configurable-toolset recovery block in hermes_cli/tools_config.py.
+    enabled: false
     timeout: 60
 terminal:
   backend: local
@@ -56,3 +64,17 @@ plugins:
   disabled: []
 tool_loop_guardrails:
   hard_stop_enabled: true
+# TOOLSET TRIM 2026-09-04. Measured, not guessed: the default api_server
+# toolset resolves to 35 tools costing ~13,265 prompt tokens, against a
+# 2,193-token skill index — tool schemas are 84% of this profile's 15,923.
+# Verify's entire recorded history is `execute_code`, six calls, from its own
+# state.db message store. `code_execution` resolves to exactly that one tool.
+#
+# Not a capability loss in practice: reading a file, listing a directory and
+# running an evidence command are all reachable through execute_code, which is
+# how Verify already did them. If a future run shows it reaching for something
+# else, widen this list — the evidence is in
+# /home/worker/.hermes-verify/state.db, `SELECT tool_name FROM messages`.
+platform_toolsets:
+  api_server:
+  - code_execution
