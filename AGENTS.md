@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-04 23:55 UTC | Run: run-bd0b76dd0e70 | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-05 02:19 UTC | Run: run-80963b7b6abf | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 

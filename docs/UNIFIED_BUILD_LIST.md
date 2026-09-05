@@ -814,6 +814,14 @@ Fix: the packet goes to the advisor twice. Once with the card before it runs —
 
 **Related:** 4.10 (harness self-improvement loop) guards the level below this. Needs 1.19 — a card objection nobody can answer is a second opinion, not a check.
 
+**THE DESIGN RECORD — Eric, hermes_v4pro, 2026-07-03.** Recovered 2026-09-04 by the P7-design mining pass, two months before this item was written. Verbatim, typos his:
+
+> this is not correct drafter has to stop for clarity and understanding check. then when approved it writes the spec and passes it to the reviewers. the pass is the only thing done with out waiting. the rreviewers have to stop to deliberate and reconcile any differences, that is presented to the user again for clarity, understanding and alignment check. if ok'ed it is returned to drafter for refinement or sent to the implementor. the implementor's work is quality checked and verified. that is a stop where the user needs to be observing and making sure that what is being done is aligned with goal and intention.
+
+**For this item:** *"drafter has to stop for clarity and understanding check"* — before it writes anything. This item was framed as reviewing the CARD before it runs; the record asks for the same thing one step earlier and inside the pipeline, an understanding check the drafter itself must pass before drafting. The card-review design is the right shape; it was arrived at independently, and the record specifies where it belongs.
+
+**Read the whole excerpt against what runs.** It names four stops. The pipeline implements one — the Eric Gate — and the single step Eric said should proceed *without* waiting ("the pass is the only thing done with out waiting") is the only one built. That inversion is the finding, and it is the shared root of 1.18, 1.19, 1.21 and 2.3.
+
 ### 1.19 One-shot critique loses what multi-round exchange catches
 
 `advisor_review.sh` gives the reviewer one look and no reply. Eric, 2026-09-02: "them not looking at each other's responses is not how you were catching additional issues through me transporting."
@@ -830,6 +838,14 @@ Fix: Claude Code may answer an objection with evidence; the reviewer withdraws i
 
 **Related:** 2.7's absence-from-outside-scope variant is the failure a reply round closes. Needs 1.20 to be worth running twice.
 
+**THE DESIGN RECORD — Eric, hermes_v4pro, 2026-07-03.** Recovered 2026-09-04 by the P7-design mining pass, two months before this item was written. Verbatim, typos his:
+
+> this is not correct drafter has to stop for clarity and understanding check. then when approved it writes the spec and passes it to the reviewers. the pass is the only thing done with out waiting. the rreviewers have to stop to deliberate and reconcile any differences, that is presented to the user again for clarity, understanding and alignment check. if ok'ed it is returned to drafter for refinement or sent to the implementor. the implementor's work is quality checked and verified. that is a stop where the user needs to be observing and making sure that what is being done is aligned with goal and intention.
+
+**For this item:** *"the rreviewers have to stop to deliberate and reconcile any differences"* — this is the exchange, specified. Not a second opinion collected in parallel, but two reviewers stopping, deliberating, and **reconciling**, with the reconciled result presented to Eric. This item argues one-shot critique loses what exchange catches; the record already required exchange, and required it between the reviewers rather than between an advisor and a packet.
+
+**One consequence worth carrying:** the record says the reconciliation output goes to the user "for clarity, understanding and alignment check". So the exchange this item builds is not finished when the two agree — agreement is the input to a human check, not a substitute for one.
+
 ### 1.20 Add Qwen (8643) as technical evaluator
 
 Eric, 2026-09-02: he cannot evaluate code or technical choices. That is the gap GLM's objections do not close — GLM critiques the result packet, not the engineering. Every technical decision this session was made and checked by the same model family.
@@ -845,7 +861,6 @@ Qwen needs the same advisor treatment review2 got: skills disabled, toolsets tri
 **The one check that settles it:** trim review1 the same way and measure; then give both advisors the same packet and count the findings only one of them raised. If that number is zero, the second lineage is not paying for itself.
 
 **Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled.
-
 ### 1.21 The loop must stop and wait, not run past Eric
 
 Eric, 2026-09-02: "having the loop waiting on my approval is a lot better for me than physically being locked to a screen watching, reading, understanding and copy pasting every exchange."
@@ -861,6 +876,23 @@ PAUSE POINTS: between queue items, and before any card that writes. A read-only 
 **The one check that settles it:** decide where the waiting state lives before building it — a script that blocks, or a queue row the loop polls. The second survives a restart; the first does not.
 
 **Related:** 1.14 (stop button) is the different problem — that one interrupts work in flight, this one declines to start it. 2.25 depends on this: a feed with no waiting loop is a notification stream.
+
+**THE DESIGN RECORD — Eric, hermes_v4pro, 2026-07-03.** Recovered 2026-09-04 by the P7-design mining pass, two months before this item was written. Verbatim, typos his:
+
+> this is not correct drafter has to stop for clarity and understanding check. then when approved it writes the spec and passes it to the reviewers. the pass is the only thing done with out waiting. the rreviewers have to stop to deliberate and reconcile any differences, that is presented to the user again for clarity, understanding and alignment check. if ok'ed it is returned to drafter for refinement or sent to the implementor. the implementor's work is quality checked and verified. that is a stop where the user needs to be observing and making sure that what is being done is aligned with goal and intention.
+
+**For this item, the excerpt settles the open question.** This item records that where the waiting state lives is undecided and "choosing wrong here is expensive". The record does not answer where it lives, but it does answer **how many there are and where they fall**, which is the harder half:
+
+1. drafter stops before writing the spec — clarity and understanding check
+2. reviewers stop to deliberate and reconcile with each other
+3. the reconciled result stops for Eric — clarity, understanding, alignment
+4. the implementer's work stops for verification, "where the user needs to be observing"
+
+And it names the one place that must NOT wait: *"the pass is the only thing done with out waiting"* — the hand-off from drafter to reviewers.
+
+**This item's PAUSE POINTS were drawn as "between queue items, and before any card that writes."** That is a read/write consequence split, invented here. The record's split is different and better founded: pauses fall wherever **understanding could have diverged**, not wherever a write could occur. A read-only card that misunderstands the intent is exactly as expensive as a write, and it is what four attempts at the ask_history intent produced.
+
+**Today the pipeline implements one of the four**, the Eric Gate, and implements the one step Eric said should not wait as its only synchronous behaviour.
 
 ### 1.22 Nothing the loop produces reaches the KB — BLOCKS 1.18 through 1.21 and 2.25
 
@@ -998,6 +1030,53 @@ counterfeited.
 Either the payload gains Review1's output, or the overlay stops asking for it.
 Leaving both as they are is the arrangement most likely to produce agreement
 that looks deliberated.
+
+**CORRECTION to the paragraphs above — 2026-09-05.** The claim that identical
+reviewer payloads are themselves the defect was wrong, and I wrote it into this
+item without checking whether the arrangement was chosen. It was.
+
+From `chatgpt_export`, a verification pass headed **"No Agent Sees Another's
+Answer"**:
+
+> Confirmed by code structure: Line 225: base_messages frozen before any gateway
+> calls. Line 237: Every call_one() receives the same base_messages list. Lines
+> 244–249: All three calls run concurrently from that single snapshot. Each agent
+> sees … identical for all three, containing zero assistant responses from the
+> current round. **Phase 2 verification complete. All 9 checks pass.**
+
+`docs/SPEC_PRODUCTION_PIPELINE_RELAY.md` (2026-07-08) agrees: *"Review1 and
+Review2 receive the same input simultaneously via asyncio + httpx."*
+Independence within a round is deliberate, verified against nine checks, and
+protects against anchoring — the second opinion is worthless if it has already
+read the first. Objections travel back through Brain on revision rounds
+(`pipeline_relay.py:2564`), so the cross-feed exists; it is mediated, not absent.
+
+**What survives the correction, and it is the real defect:** the reviewers never
+deliberate WITH each other at any point. Independence within a round is sound.
+Independence *forever* is not what was asked for, and the record is explicit —
+see the design record below. `CLAUDE.md`'s stated mitigation for failure mode 15,
+*"Objections cross-fed between reviewers; must address each"*, describes
+reviewer-to-reviewer exchange and the code cross-feeds to Brain instead. And
+review2's `BIAS_OVERLAY` still instructs it to "correct by finding what Review1
+missed", which no round ever lets it do.
+
+**THE DESIGN RECORD — Eric, hermes_v4pro, 2026-07-03.** Recovered 2026-09-04 by
+the P7-design mining pass. Verbatim, typos his:
+
+> this is not correct drafter has to stop for clarity and understanding check. then when approved it writes the spec and passes it to the reviewers. the pass is the only thing done with out waiting. the rreviewers have to stop to deliberate and reconcile any differences, that is presented to the user again for clarity, understanding and alignment check. if ok'ed it is returned to drafter for refinement or sent to the implementor. the implementor's work is quality checked and verified. that is a stop where the user needs to be observing and making sure that what is being done is aligned with goal and intention.
+
+**For this item:** *"the rreviewers have to stop to deliberate and reconcile any
+differences"*. That is a reconciliation phase between the two reviewers, after
+their independent passes and before Eric sees anything — which is precisely what
+`sequential_review` was written to guard and precisely what does not exist. The
+guardrail is not dead because someone forgot to wire it. It is dead because the
+phase it belongs to was never built.
+
+The fix is therefore not "show Review2 the Review1 output in the same round" —
+that would destroy the independence the nine checks confirmed. It is a
+**reconciliation step after both have answered independently**, whose output is
+what goes to Eric. Both properties then hold: independent first pass, genuine
+deliberation second.
 
 ### 2.4 No validation layer — 23 independent recognitions in the record
 **Checked:** `needs_review` — the quarantine flag — exists in **no table and no
