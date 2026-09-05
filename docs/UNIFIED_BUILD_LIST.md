@@ -601,10 +601,25 @@ mode 3 (rubber-stamp review) with the human on the receiving end: approval given
 without the ability to evaluate is exactly the rubber stamp the gate exists to
 prevent.
 
+**SUPERSEDED IN FRAMING, 2026-09-04 — see `docs/DECISIONS/2026-09-04_recommendation_standard.md`.**
+This item says: give Eric options with consequences. **That now stands as the
+floor, not the target.** The standard is that agents **recommend** rather than
+interrogate — an informed, researched recommendation with the evidence and the
+reasoning, and a choice surfaced only where the evidence genuinely leaves one
+open. Asking Eric what he intends fails twice over: he is not a coder, so his
+intentions are not stated in engineering terms, and the agents are stateless, so
+nothing carries the answer to the next call. The decision record carries the
+other half — the recommendation must be checked against Eric's recorded method
+first, because a model asked for "best practice" reaches for enterprise defaults,
+and this is not a standard application or a standard development process. Read
+that file before building anything against this item.
+
 **The rule, stated so it can be checked:** any output that asks Eric to decide
 must carry, for each option, (a) what it means in plain language, (b) the
 evidence behind it, (c) what goes right if chosen, (d) what goes wrong. An open
-technical question with no options is a defect, not a request.
+technical question with no options is a defect, not a request. Under the 2026-09-04
+standard, an output that stops at (a)–(d) without naming which option it would
+take and why is also incomplete.
 
 **Where it lands:** the Eric Gate briefing first — that is the one surface where
 a decision is mandatory and cannot be automated (see Decisions to Protect). Then
