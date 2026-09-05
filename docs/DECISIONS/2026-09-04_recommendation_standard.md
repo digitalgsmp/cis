@@ -57,15 +57,27 @@ minimum, not the target. The standard is: bring a recommendation, and say which
 one you would take and why. Surface a genuine choice only where the evidence
 leaves one open — not as a way of moving the decision onto him.
 
-## Open, and it should be closed before schema decisions
+## The conversation this pointed at — RECOVERED 2026-09-04
 
-Eric raised incorporating **fundamental software development practices** roughly
-a week before this date, and that conversation was lost in ongoing work. It has
-not been recovered.
+This record noted that Eric had raised incorporating **fundamental software
+development practices** about a week earlier, and that the conversation was lost
+in ongoing work.
 
-It should be recovered before schema decisions are made — those are exactly the
-decisions where a recommendation has to be grounded in real practice and where a
-wrong default is expensive to undo. The two mining passes over the Hermes
-sessions (`design_intent`, `found_by` P7-design / P7b-design) did not surface it;
-the raw session files are the place to look, since that is where the 2026-07-03
-design record was eventually found after both indexes missed it.
+**It has been found: `docs/DECISIONS/2026-08-29_what_inference_supplies.md`.**
+
+It was not in the Hermes sessions. It happened in a Claude Code session on
+2026-08-29, in Eric's words *"sound development practices"* — which is why two
+mining passes and a keyword search all missed it, and why the raw transcript had
+to be read directly. Claude Code sessions reach no index (queue item 1.22).
+
+**It matters to this decision directly.** The standard here is that agents bring
+informed recommendations grounded in best practice. That finding says what to
+expect when they do: inference genuinely does bridge concepts to sound practice —
+the architecture it produced is right — but it **cannot verify its own output**,
+and will produce something shaped like sound practice without noticing it does
+not run.
+
+So a recommendation under this standard carries two obligations, not one. It must
+be checked against Eric's recorded method, so it is not enterprise slop. And it
+must carry the check that proves it conducts, because the model offering it
+cannot tell whether it does.

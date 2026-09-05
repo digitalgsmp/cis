@@ -1167,6 +1167,37 @@ This is why 1.6 (unmeasured prompts) and 3.9 (draft scored as code) both exist.
 `CLAUDE.md` names `runtime/spine.db` as the spine; that file is 0 bytes.
 Nothing detects the divergence. Fix the class, not the two cases.
 
+**The `runtime/spine.db` decoy — full history, 2026-09-05.** This item's second
+named instance has now been ruled on three separate times and is still on disk:
+
+- **2026-06-19**, `docs/DEV-PIVOT-17_ENFORCEMENT_ARCHITECTURE.md:105` —
+  *"Dead spine.db (0 bytes) confirmed a decoy, not a live fault — no action
+  needed."* Investigated and closed.
+- **`docs/ISSUE_FINDINGS.md:770`** — recorded again: *"CLAUDE.md still names
+  `runtime/spine.db` as the spine; that file is 0 bytes."*
+- **This item**, which has named it since it was written.
+- The 2026-08/09 mining pass clustered it a fourth time, in
+  `cards/corpus_clusters.json` under *"Documentation drift between spine.db and
+  cis_memory.db"*, 4 records — including the sharpest phrasing anyone has given
+  it: *"The spine DB is a 0-byte file, while the system uses cis_memory.db,
+  creating a false sense of integrity."* That cluster never reached this queue.
+
+**On 2026-09-04 it was reported as a fresh discovery and fixed as a single
+case** — `CLAUDE.md` was corrected, committed, and the prior records were not
+consulted. That is this item happening in the act of editing this item, which is
+the strongest evidence available that "fix the class, not the two cases" is the
+right instruction and that nothing enforces it.
+
+**The concrete residue:** `runtime/spine.db` is 0 bytes, dated `Jun 9 00:22`,
+**untracked** (excluded by `.gitignore:14 *.db`), and referenced by **no
+production code** — only `tests/mcp_bridge/*`, which build their own temporary
+`test_spine.db`. The real spine is `data/cis_memory.db`, as
+`ARCHITECTURE_VERIFIED_20260824.md:41` states.
+
+**Delete the empty file.** Nobody has, in three months of it misleading every
+reader who found it — including, twice, this assistant. It is the one action here
+that cannot break anything: untracked, unreferenced, zero bytes.
+
 ### 2.13 Runs are not linked to what they advance
 **Checked:** `build_plan_nodes.workflow_run_id` is NULL on all 30 rows. The
 Eric Gate briefing's Dependency Node and Tier Advanced fields render blank.
@@ -1691,6 +1722,56 @@ Only the 35% labelled *constraints + prior phase output* differs by phase and ca
 **The one check that settles it:** diff any two payloads from the same run and measure the identical span. Anything byte-identical across every call in a run is a candidate to send once.
 
 **Related:** **2.3** — the same root. Independent POSTs force both the re-sent context and the reviewers' blindness to each other; one change fixes both. 3.22 (the system-prompt side of the same bill, done), 1.6 (prompt size is never measured), 2.28 and 2.27 (specific defects inside these blocks), 1.24 (what the trajectory block feeds brain).
+
+### 3.24 Corpus and spine share one database — an open question, not work
+
+**This is recorded so it stops being an assumption. It is not a task.** Measured
+2026-09-05 against `data/cis_memory.db`:
+
+| category | tables | rows | share |
+|---|---|---|---|
+| CORPUS (the KB) | 27 | 8,562,850 | 94.5% |
+| OPERATIONAL (the spine) | 28 | 6,240 | **0.1%** |
+| MINING | 2 | 15,351 | 0.2% |
+| OTHER | 20 | 480,439 | 5.3% |
+| | **77** | **9,064,880** | |
+
+The operational spine — every run, gate outcome, deliberation round and Eric Gate
+approval this project has ever recorded — is **6,240 rows, one tenth of one
+percent of the file it lives in**. `gate_outcomes` 4,694, `agent_trajectories`
+507, `deliberation_rounds` 361, `workflow_runs` 105, `build_plan_nodes` 30,
+`eric_gate_approvals` 29. The 5.9 GB is corpus: `knowledge_messages` 2,647,151
+plus its FTS shadows, `dam_extracted_text` 189,161, `observations` 287,712.
+
+**Three consequences, all currently theoretical:**
+- Every operational query pays corpus costs. Backup, `VACUUM`, `PRAGMA
+  integrity_check` and `foreign_key_check` all traverse 5.9 GB to protect 6,240
+  rows.
+- The write patterns are opposite. The corpus is bulk-ingested then read-only;
+  the spine is small, transactional and constantly updated. They contend for one
+  file lock — which is also why 0.3's Chroma arbitration has a SQLite-shaped
+  cousin nobody has hit yet.
+- A corpus rebuild and a live pipeline run touch the same file.
+
+**Why this is an open question rather than a defect.**
+`ARCHITECTURE_VERIFIED_20260824.md:41` records the arrangement as a fact —
+*"Spine: data/cis_memory.db, 4.8GB, ~70 tables"* — and no document anywhere asks
+whether it should be one file or two. It was never decided; it accumulated. That
+is worth knowing before someone treats it as settled architecture in either
+direction.
+
+**Do not act on this yet.** The cost is theoretical until something is slow or a
+backup fails, and splitting a database that 30+ tools open by path is a large
+change for a benefit nobody has felt. Revisit it when there is a symptom.
+
+**One authoritative table count, because three have been in circulation.**
+`data/cis_memory.db` has **77 tables**. Not 178 — that figure counted indexes,
+triggers and FTS internals from `sqlite_master`. Not 76 — that is the corrected
+figure currently in `CLAUDE.md`, off by one. **77.**
+
+**Related:** 2.12 (the `runtime/spine.db` decoy, and why "the spine" needed
+settling at all), 0.1 (FK enforcement, which pays the traversal cost described
+above), 0.3 (the same contention problem solved for Chroma).
 
 # TIER 4 — after the infrastructure works
 
