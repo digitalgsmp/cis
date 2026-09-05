@@ -1162,10 +1162,16 @@ governing size, required sections, or what the role is expected to produce.
 This is why 1.6 (unmeasured prompts) and 3.9 (draft scored as code) both exist.
 
 ### 2.12 Primer and runtime diverge silently
-**Two live instances in code/data today:** `gateway_status_qwen` claims Qwen is
+**Two instances as originally found:** `gateway_status_qwen` claims Qwen is
 2nd reviewer on 8644 — the container uses review1/8643 and review2/8647.
-`CLAUDE.md` names `runtime/spine.db` as the spine; that file is 0 bytes.
+`CLAUDE.md` named `runtime/spine.db` as the spine; that file was 0 bytes.
 Nothing detects the divergence. Fix the class, not the two cases.
+
+**Status: one of the two is closed.** `CLAUDE.md` was corrected 2026-09-04 and
+the empty file deleted 2026-09-05 (see below). `gateway_status_qwen` is
+unchanged, and no detector exists for either. Both statements above are kept in
+their found form deliberately — an item about stale assertions should not quietly
+rewrite its own.
 
 **The `runtime/spine.db` decoy — full history, 2026-09-05.** This item's second
 named instance has now been ruled on three separate times and is still on disk:
@@ -1194,9 +1200,19 @@ production code** — only `tests/mcp_bridge/*`, which build their own temporary
 `test_spine.db`. The real spine is `data/cis_memory.db`, as
 `ARCHITECTURE_VERIFIED_20260824.md:41` states.
 
-**Delete the empty file.** Nobody has, in three months of it misleading every
-reader who found it — including, twice, this assistant. It is the one action here
-that cannot break anything: untracked, unreferenced, zero bytes.
+**DELETED 2026-09-05.** `rm runtime/spine.db`, after confirming in the same
+command that it was 0 bytes, last written `2026-06-09 00:22:03`, and untracked.
+Three months and four rulings after it was first identified. It cannot come back
+by accident — nothing in the codebase creates it, and `.gitignore:14 *.db` means
+it was never in the repo to restore.
+
+**The residue is closed. The item is not.** Deleting the file removes one
+instance; it does nothing about the class. `gateway_status_qwen` still claims
+Qwen is 2nd reviewer on 8644. Nothing detects either divergence, and the
+2026-09-04 recurrence above shows what that absence costs: a documented,
+four-times-ruled fact was rediscovered from scratch and fixed as a novelty. What
+this item still needs is the check — something that compares what the primer
+asserts against what the runtime does, and fails when they disagree.
 
 ### 2.13 Runs are not linked to what they advance
 **Checked:** `build_plan_nodes.workflow_run_id` is NULL on all 30 rows. The
