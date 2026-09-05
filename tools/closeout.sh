@@ -178,6 +178,61 @@ if $CHECK_ONLY; then
     exit 0
 fi
 
+# ── Ingest knowledge ──────────────────────────────────────────────────────────
+# BUILD LIST 1.22. Closeout committed code and never ingested knowledge, so the
+# KB only grew when someone remembered. Both ingest tools worked and nothing
+# fired them. This is the four lines the item asked for.
+#
+# REPORT, NEVER BLOCK — same shape as the dev-mode check above. A failed ingest
+# must not refuse a session close: the alternative teaches people to skip
+# closeout, and then the code stops being committed too.
+#
+# Every invocation is `|| RC=$?` guarded because `set -e` is on at line 15 and
+# these tools exit non-zero on partial work by design.
+echo ""
+echo "[CIS CLOSEOUT] Step 1c: Ingesting session knowledge (report only)..."
+INGEST_STATE="not run"
+INGEST_FAILED=0
+INGEST_RAN=0
+KM_BEFORE="$(sqlite3 "$PROJECT_ROOT/data/cis_memory.db" \
+    'SELECT COUNT(*) FROM knowledge_messages;' 2>/dev/null || echo 0)"
+
+# Hermes gateway sessions -> knowledge_messages. SQLite only; no Chroma write,
+# so no lock is needed — verified 2026-09-05, the file has no chroma reference.
+# Claude Code transcripts -> knowledge_messages. Takes chroma_write itself.
+#
+# NOT tools/catalog/append_embeddings.py. It writes Chroma through a bare
+# chromadb.PersistentClient with NO LOCK (verified 2026-09-05), on the same
+# store 0.3 protects — running it from closeout is exactly the concurrent write
+# that corrupts a live container read. tools/sync_missing_embeddings.py does the
+# same job, takes chroma_write, and is idempotent.
+for _tool in "tools/catalog/ingest_sessions.py" \
+             "tools/ingest_claude_code_sessions.py" \
+             "tools/sync_missing_embeddings.py"; do
+    if [[ ! -f "$PROJECT_ROOT/$_tool" ]]; then
+        echo "[CIS CLOSEOUT]   SKIP $_tool — not found"
+        continue
+    fi
+    INGEST_RAN=$((INGEST_RAN + 1))
+    _rc=0
+    _out="$(cd "$PROJECT_ROOT" && timeout 900 python3.12 "$_tool" 2>&1)" || _rc=$?
+    if [[ $_rc -eq 0 ]]; then
+        echo "[CIS CLOSEOUT]   OK   $_tool"
+    else
+        INGEST_FAILED=$((INGEST_FAILED + 1))
+        echo "[CIS CLOSEOUT]   FAIL $_tool (exit $_rc) — reported, not blocking"
+    fi
+    echo "$_out" | tail -3 | while IFS= read -r _l; do
+        [[ -n "$_l" ]] && echo "[CIS CLOSEOUT]        $_l"
+    done
+done
+
+KM_AFTER="$(sqlite3 "$PROJECT_ROOT/data/cis_memory.db" \
+    'SELECT COUNT(*) FROM knowledge_messages;' 2>/dev/null || echo 0)"
+INGEST_STATE="$INGEST_RAN tool(s) run, $INGEST_FAILED failed; knowledge_messages ${KM_BEFORE} -> ${KM_AFTER}"
+echo "[CIS CLOSEOUT]   knowledge_messages: ${KM_BEFORE} -> ${KM_AFTER}"
+echo "[CIS CLOSEOUT] Ingest: REPORTED (does not block closeout)"
+
 # ── Regenerate context ────────────────────────────────────────────────────────
 echo ""
 echo "[CIS CLOSEOUT] Step 2/6: Regenerating context..."
@@ -317,6 +372,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "[CIS] SESSION CLOSED"
 echo "[CIS] HEAD: $END_HEAD"
 echo "[CIS] Dev-mode agents: ${DEV_MODE_STATE:-not checked}"
+echo "[CIS] Knowledge ingest: ${INGEST_STATE:-not run}"
 if [[ -n "$COMMIT_HASH" ]]; then
     echo "[CIS] Committed regenerated context: yes ($COMMIT_HASH)"
 else
