@@ -201,14 +201,16 @@ KM_BEFORE="$(sqlite3 "$PROJECT_ROOT/data/cis_memory.db" \
 # so no lock is needed — verified 2026-09-05, the file has no chroma reference.
 # Claude Code transcripts -> knowledge_messages. Takes chroma_write itself.
 #
-# NOT tools/catalog/append_embeddings.py. It writes Chroma through a bare
-# chromadb.PersistentClient with NO LOCK (verified 2026-09-05), on the same
-# store 0.3 protects — running it from closeout is exactly the concurrent write
-# that corrupts a live container read. tools/sync_missing_embeddings.py does the
-# same job, takes chroma_write, and is idempotent.
+# NO EMBEDDING SWEEP HERE — removed 2026-09-05 after one real run.
+# tools/sync_missing_embeddings.py was wired in and hit the 900s timeout at
+# 708,000 of 2,187,692 rows. It was working, not stuck: it holds chroma_write
+# for its whole run by design (0.3), so a full sweep is a ~15-minute job that
+# blocks the container's semantic search for the entire window. That is a
+# maintenance job, not a session-close step. Run it on its own:
+#     python3.12 tools/sync_missing_embeddings.py --check
+# The two tools below take seconds and are the ones 1.22 actually asked for.
 for _tool in "tools/catalog/ingest_sessions.py" \
-             "tools/ingest_claude_code_sessions.py" \
-             "tools/sync_missing_embeddings.py"; do
+             "tools/ingest_claude_code_sessions.py"; do
     if [[ ! -f "$PROJECT_ROOT/$_tool" ]]; then
         echo "[CIS CLOSEOUT]   SKIP $_tool — not found"
         continue
