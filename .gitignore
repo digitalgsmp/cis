@@ -173,3 +173,4 @@ CLAUDE.md.bak.*
 # missing bind-mount source as a root-owned directory, which would then be
 # unwritable from a normal shell and break the one `touch` the override needs.
 .gate-control/DISABLED
+tmp/

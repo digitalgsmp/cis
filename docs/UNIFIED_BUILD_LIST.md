@@ -4,6 +4,22 @@
 **Replaces:** `docs/NEXT_SESSION.md` as the working list. That file keeps its
 Goal, Method and Decisions-to-Protect sections — those are not tasks.
 
+## TWO PLANES, AND THIS LIST GOVERNS ONE — Eric, 2026-09-06
+
+**This is a list of unimplemented needs for the CONTAINER to be work-ready.**
+The development apparatus — Eric, chat Claude, Claude Code, and the three dev
+agents — is a **separate plane**. It is how the container gets built; it is not
+what the container is.
+
+**Tier order governs the container plane only.** Read against that, several
+items look mis-tiered and are not: **1.8, 1.10, 1.15, 1.18–1.22 and 2.25** are
+apparatus items sitting in a container list. They are Tier 1 because **building**
+the container blocks on them, not because the container does. A reader who
+assumes one plane will conclude the tiers are wrong; the tiers are right and the
+planes are two.
+
+This is not a task. It is the frame the rest of the list is read through.
+
 ## The test used to build this list
 
 Eric, 2026-08-29:
@@ -131,6 +147,24 @@ bytes found"*. Needs a lock, a maintenance window, or ingest moved inside.
 **Blocks:** every item that runs an ingest.
 
 **DONE 2026-08-30 — a lock, in `runtime/mcp_bridge/chroma_lock.py`.**
+
+**CONDITIONALLY DONE — correct for the BATCH model only. 2026-09-06.** Every
+assumption below is right for a scheduled bulk ingest and inverts under
+continuous per-turn writes:
+
+- **Readers give up after 5s and degrade to keyword.** Sound when a write is a
+  rare 40-minute rebuild. Under continuous writes, degradation becomes the
+  normal case rather than the exception.
+- **Writers raise rather than proceed.** Sound when the caller is a batch job
+  that can be re-run. Under continuous writes the caller is a live turn, so a
+  refused write means a record is **dropped rather than delayed**.
+- **Writers hold the lock for a whole run.** Sized for a rebuild that must not
+  be seen half-built. For a per-turn append it holds a global exclusive lock for
+  a single row.
+
+Nothing here is wrong and nothing needs reverting. The lock stays as the correct
+answer for batch ingest. **Real-time writing needs a different contract, and that
+is 1.26** — which modifies this lock rather than replacing it.
 
 Not a maintenance window: that is a rule someone has to remember, and it has to
 hold when nobody is watching. Not ingest-moved-inside: an image rebuild and a
@@ -419,7 +453,7 @@ starts producing fifteen Work Orders a day the unit is drawn too small.
    approved Work Order. **Ships with a tested off switch**, as the record
    requires of every guardrail; a gate that can brick the repo is worse than the
    gap it closes.
-4. Add the independent verifier. Depends on 1.1.
+4. Add the independent verifier. 1.1 is DONE (run-e70293544935a92e-1787973534, 2026-08-30) — this step is unblocked.
 5. A served view **only if** reading files becomes the bottleneck. Not before.
    The portal failed because it was an interface looking for a workflow.
 
@@ -924,7 +958,22 @@ Three things need capturing: the review threads in `reviews/`; Eric's redirects 
 
 **Scope:** REPO — this is 4.1 restated with a deadline attached. Both ingest tools exist and work; neither fires. The closeout hook is where they would fire, and it is four lines in `tools/closeout.sh`.
 
-**Need:** OPEN — verified this session: closeout contains no ingest call, and the session ingest tool cannot see gateway API calls because they produce no session file. The second half is not a wiring problem; it needs the loop to write its own record.
+**Need: HALF DONE 2026-09-05 — the session-ingest half is wired.** Commit
+`e90e598` added step 1c to `tools/closeout.sh`; `grep -c ingest tools/closeout.sh`
+now returns **6**, where the item was written when it returned 0. The first real
+run ingested **+2,260 rows**, of which **514 are this session's own Claude Code
+transcript** — the session that recovered a lost design record *because* Claude
+Code transcripts reached no index put itself into the index.
+
+**What remains open is real-time availability, not ingest wiring.** Closeout runs
+at session end, so a fact recorded at 10:00 is unavailable to an agent at 10:05
+and becomes available only after the session closes. Stateless agents inside one
+session still cannot see each other's output. That is a different problem from
+the one this item was written about, and it is 1.26.
+
+The original second half also stands: a direct API call to a gateway writes no
+session file, so advisor exchanges remain invisible to `ingest_sessions.py`. That
+is not a wiring problem either — it needs the loop to write its own record.
 
 **The one check that settles it:** run a review round, then query the KB for what the reviewer objected to. If it is not there, the loop is lossy and none of the other five items should ship.
 
@@ -947,6 +996,98 @@ Two code-run attempts failed for unrelated reasons. `run-4bbeea78056e2607-178812
 **The one check that settles it:** a completed run whose guardrail summary shows the three named checks reporting PASS or FAIL rather than SKIP.
 
 **Related:** 1.1 (the documentation run that established the path is walkable), 1.11 and 1.13 (the two failures that stopped the earlier attempts, both fixed or open on their own items), 2.1 (the guardrail audit this would give real code-path data to).
+
+### 1.25 MENTER DOES THE WRITES; REVIEWERS REVIEW
+
+Review2 writing to disk duplicates the implementer's role. **Menter is the role
+that writes** — it holds `code_execution`, and the architecture skill records it
+making the first successful file mutation in the container
+(`run-86bc4d1009b8fb44-1783645778`, all seven phases).
+
+**Assign writes by ROLE, not by inherited toolset.** This is the same defect
+class as 2.23: a capability arrives because it shipped in a bundle, and nobody
+decided the role should have it. A reviewer that can write can act on its own
+verdict, which removes the separation the two-reviewer design exists to create —
+evaluator-must-not-be-the-builder, in the same place 4.10 and 4.19 guard it
+elsewhere.
+
+**Scope:** CONTAINER — the per-role `platform_toolsets` in
+`enforcement/mwl-proof-v2/profiles/*.yaml`, and whatever the review prompts ask
+the reviewers to produce.
+
+**Need:** OPEN — the 2026-09-04 trim gave review1 and review2
+`file, terminal, code_execution` on measured usage, which includes write
+capability. Usage justified it; role assignment was never the question asked.
+
+**The one check that settles it:** confirm whether any reviewer output has ever
+written to disk, then decide the role boundary before the next trim rather than
+inheriting it from the last one.
+
+**Related:** 2.23 (capability by inheritance rather than decision), 4.10, 4.19,
+3.22 (the trim that assigned the current loadouts, by usage not by role).
+
+### 1.26 KB WRITES HALT CARD WORK — 0.3's ARBITRATION HAS NO PRIORITY MODEL
+
+**The conflict: while the KB is being written, card tasks stop.**
+
+0.3 resolved this for batch ingest — readers take a SHARED lock, wait 5s, then
+give up and degrade to keyword search. **That is correct when ingest is
+occasional.** Under synchronized updating it becomes the normal case: every write
+window degrades whatever is running, and **card work halts against the very thing
+meant to keep it informed.**
+
+**0.3 arbitrates by ORDER OF ARRIVAL.** It has no notion of who is waiting or
+why. A 40-minute rebuild and a live card read are the same request to it.
+
+**ERIC'S POLICY, 2026-09-06 — a priority model, in order:**
+
+1. **The user has priority.** A write never degrades a live interaction.
+2. **A dependency has priority.** If the next step needs it, it goes now.
+3. **Everything else defers to idle.** Low-activity means *Eric is idle* —
+   nothing runs automatically in background.
+4. **Completion status is itself the payload.** Whether a task succeeded or
+   failed is what the next step needs, regardless of embedding state.
+
+**THE DESIGN CONSEQUENCE — split the status write from the corpus write.** They
+are different operations and only one is time-critical:
+
+| | status write | corpus write |
+|---|---|---|
+| target | spine row | Chroma embedding |
+| contends with | **6,240 operational rows** | **5.9 GB / 2.6M vectors** |
+| cost | milliseconds | seconds to minutes |
+| when | **now — never queues behind the corpus** | **defers to idle** |
+
+The dependent step reads status immediately; the vector catches up at idle. Rule
+4 is what makes that safe — the next step needs the *outcome*, not the embedding.
+
+**THIS REFRAMES 0.3 RATHER THAN REPLACING IT.** The lock is still needed for the
+corpus write, and the corpus write is still the thing that must not be
+interrupted mid-rebuild. **What is missing is that nothing time-critical sits
+behind it.**
+
+**Tier 1, and the tier is the point.** Card work halting on a KB write is not a
+cost problem — it is a **stall in the mechanism meant to process the queue**. It
+blocks the advisor loop, which is why this sits in Tier 1 rather than with the
+other KB items in Tier 2.
+
+**Scope:** the lock is `runtime/mcp_bridge/chroma_lock.py`; the readers are
+`pipeline_relay`'s semantic branch and `tools/ask_history.py`; the writers are
+the five ingest tools (and `tools/catalog/append_embeddings.py`, wired
+2026-09-05).
+
+**Need:** OPEN — the lock arbitrates by arrival order and there is no status/corpus
+split. Verified 2026-09-05: a 40-minute sweep held the exclusive lock throughout
+and every reader in that window degraded to keyword.
+
+**The one check that settles it:** start a KB write, then run a card that reads
+status. **The status read completes; the semantic read defers without failing the
+card.** If the card stalls, the split is not real.
+
+**Related:** 0.3 (conditional DONE — correct for batch, not for synchronized),
+1.22 (what gets written, and when), 3.24 (the same contention problem SQLite-side,
+recorded as not-yet-symptomatic), 2.30 (which needs the status half to be
+readable in time to be useful).
 
 ### 1.24 Brain is fed its own prior attempts, labelled successful, from runs that failed
 
@@ -1200,6 +1341,27 @@ production code** — only `tests/mcp_bridge/*`, which build their own temporary
 `test_spine.db`. The real spine is `data/cis_memory.db`, as
 `ARCHITECTURE_VERIFIED_20260824.md:41` states.
 
+**IT IS A CLASS OF 29, NOT TWO INSTANCES — 2026-09-07.** A filesystem sweep
+found **29 zero-byte `.db` / `.sqlite3` files** across the repo. `runtime/spine.db`,
+deleted below as "the decoy", was one of thirty. **Three are named
+`cis_memory.db`** — the same name as the real 5.9 GB spine — at `./`,
+`./runtime/` and `./runtime/memory/`. `./pipeline_cards.db` sits empty at root
+while the real one is `cards/pipeline_cards.db` at 110 KB. Every one of them
+answers a `ls` or an `os.path.exists` truthfully and a query with silence.
+
+**CANDIDATE CAUSE — CHECKED AND IT DOES NOT HOLD FOR THE CONTAINER.**
+`pipeline_relay.py:34` defaults to a **host** path:
+`DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")`,
+and SQLite creates an empty file rather than failing when a path does not exist.
+The card proposing this said to check before treating it as established.
+**Checked 2026-09-07:** the container sets
+`CIS_SPINE_PATH=/workspace/cis/data/cis_memory.db` and
+`CIS_PROJECT_ROOT=/workspace/cis`, so the host-path default never applies there.
+**The cause of the 29 is unexplained and stays unexplained** — recorded as
+refuted rather than carried as a plausible story. What remains true is the
+mechanism: any code that opens a spine path without that env var set will create
+an empty file instead of failing, which is how a decoy is born.
+
 **DELETED 2026-09-05.** `rm runtime/spine.db`, after confirming in the same
 command that it was 0 bytes, last written `2026-06-09 00:22:03`, and untracked.
 Three months and four rulings after it was first identified. It cannot come back
@@ -1370,6 +1532,18 @@ F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes th
 
 **The one check that settles it:** confirm whether an agent holding only cis-knowledge can start a run, then decide whether the server should expose read and dispatch as separate toolsets.
 
+**DECIDED 2026-09-06 — split read from dispatch in the server. Not "withhold the
+toolset".** KB access for the advisor is **mandatory**: an advisor that cannot
+read the record cannot check a claim against it, which is the job. So the answer
+is not to take `cis-knowledge` away — it is that the server must stop shipping
+retrieval and run-starting as one set.
+
+**The fix is in `runtime/mcp_bridge/tools.py`**, where all 18 tools are defined
+and registered together. **Config cannot do this** — `platform_toolsets` can only
+take or leave the whole set, which is why the 2026-09-04 trim had to disable
+`cis-knowledge` entirely on all six profiles and thereby removed retrieval it
+would rather have kept.
+
 ### 2.24 The gateway caches OpenRouter replies on prompt identity
 
 Verified 2026-09-02 while building the advisor protocol: five `OpenRouter response cache HIT` entries in the review2 agent log. A re-review returned in 0.4s with an identical body and `usage` reporting `prompt_tokens 0, completion_tokens 0, total_tokens 0`; the gateway log recorded the same call as `in=0 out=0 total=0`. The reply looks fresh and costs nothing to record.
@@ -1480,6 +1654,157 @@ Present in all six calls: 7,824 characters of `KB_CONTEXT` across the run, most 
 
 **Related:** 0.2 (both blocks are redaction choke points, so both were already known to exist — the duplication was not), 3.23, 2.3.
 
+### 2.30 The spine is the stateless agents' source of truth
+
+A stateless agent needs one place that answers four questions: **what is the
+current item, what does it depend on, what was just done, and did it succeed.**
+
+Today that is **four places**: a markdown queue, git history, `workflow_runs`,
+and the previous session's output. No agent can assemble all four, and each
+reader parses the prose differently — which is exactly how 2.12's divergence
+happens.
+
+**This is the requirement 3.21 serves, and it is recorded here so 3.21 is not
+read as UI work.** Moving the queue into the spine is not about rendering a
+roadmap; it is about giving stateless agents a single readable state. The
+roadmap is a consequence, not the purpose.
+
+**Scope:** CONTAINER — the agents that need it run there.
+
+**Need:** OPEN — all four sources exist and none is authoritative.
+
+**Related:** 2.12 — divergence is what happens when each reader parses prose
+differently. 3.21 is the implementation. 1.26 supplies the "did it succeed" half
+in time to be useful.
+
+### 2.32 SUPERSESSION HAS NO SCHEMA REPRESENTATION
+
+The 2026-09-06 dependency read found a section at **line 2044**, *"Recorded, not
+queued — superseded by the container"*, carrying two entries written explicitly
+so they are not mined again. **Nothing in any schema can express what they are.**
+
+There is no supersession edge type anywhere: not in `build_plan_dependencies`
+(which has `HARD` and `SOFT` only), not in `mined_tasks`, not in the proposed
+`queue_edges`. So an abandoned approach and a current one are indistinguishable
+to anything reading the data — and the only thing preventing a superseded item
+being mined back in is a prose heading a parser will not see.
+
+**Scope:** REPO/CONTAINER — the queue schema 3.21 creates.
+
+**Need:** OPEN — the section exists, the edge type does not.
+
+**Depends on:** 3.21 — there is no table to add the edge kind to until the queue
+is one.
+
+**The one check that settles it:** take the two entries at line 2044 and ask
+whether a query can distinguish them from open items. Today it cannot.
+
+**Related:** 2.12 (a superseded thing that still reads as current is the same
+failure), C/3.25 below (the other edge kind the same read found missing).
+
+### 2.33 DESCRIPTION INDEX OVER THE IDENTIFIED SPECS
+
+`tools/find_specs_by_content.py` identified **210 specification documents, 132 of
+them invisible to a filename search**. Roughly **200 have never been read.** They
+are found today only by someone already knowing to look.
+
+**The fix is the mechanism skills already use.** One line per document — what
+capability it covers, when it applies — loaded at session start the way skill
+descriptions are, so the model matches against the line and opens the document
+only when it is the right one. It does not need to search for what it does not
+know exists.
+
+**SIZE IT AT ~10K TOKENS LOADED. NOT A PERCENTAGE OF CONTEXT.** Skill
+descriptions cost ~29 tokens each (measured, 3.22), so 210 lines is under 6K.
+The window is **200K, not 1M**, and **every turn re-sends it** — 3.23 measured
+what fixed context costs when it is repeated per call. A percentage-of-context
+budget grows silently as models grow; a token ceiling does not.
+
+**The failure mode to design against: a description that overstates coverage is
+2.12.** A line claiming a document covers something it does not sends the reader
+to the wrong place with confidence, which is worse than the document being
+invisible.
+
+**Scope:** REPO — the index is generated from the documents; the loading is a
+per-role prompt concern.
+
+**Need:** OPEN — 210 identified, ~200 unread, no index exists.
+
+**The one check that settles it:** ask for a capability covered by one of the 132
+filename-invisible documents and see whether the index surfaces it without a
+search.
+
+**Cost is the reading, not the writing.** Generating 210 lines mechanically is
+easy and produces 210 plausible wrong lines. Each has to be read.
+
+### 2.34 PER-ROLE STATE SLICES, DERIVED NOT AUTHORED
+
+Not every role needs the whole state, and sending it to all of them is what 3.23
+measured as 20% byte-identical repetition per call.
+
+- **Brain gets full state.** It is the entry point where direction is set, and a
+  narrowed view is exactly where a wrong direction starts.
+- **Reviewers get the task plus its dependency neighbours** — what it supersedes,
+  what it blocks.
+- **Verify gets the claim and the evidence path.** Nothing else bears on whether
+  the claim holds.
+
+**DERIVED, NOT AUTHORED. Each slice is a query against one table**, so slices
+cannot diverge from each other. Hand-authored slices drift, and that drift is
+2.12.
+
+**EVERY SLICE CARRIES ITS OWN BOUNDARY** — *these items are in scope, others
+exist, out-of-scope is not absence.* 2.7 already recorded the failure this
+prevents: a reviewer whose file access was narrower than its subject ran ~14
+empty searches and reported "the backup file does not exist" under a heading
+reading WHAT I OBJECT TO. All three backups existed. **A narrowed context without
+a stated boundary manufactures false absence.**
+
+**PREREQUISITE — 2.13, and it is a hard one.** `build_plan_nodes.workflow_run_id`
+is NULL on all 30 rows, so **no gate has ever checked a run against the queue
+item it advances.** Until that join works, full context is the only thing holding
+alignment, and narrowing any role's view removes the only check there is. Build
+2.13 first or this makes things worse.
+
+**Scope:** CONTAINER — prompt assembly in `runtime/abstraction/pipeline_relay.py`.
+
+**Need:** OPEN — every role receives the same constructed context today.
+
+**Depends on:** 2.13 (the join that makes alignment checkable), 3.21 (the table
+the slices are queries against).
+
+**The one check that settles it:** give a reviewer a slice and confirm it can
+still state what it was NOT shown. If it cannot, the boundary is missing and 2.7
+recurs.
+
+**Collapses most of 3.23's fixed-context cost** as a side effect, but the reason
+to build it is alignment, not tokens.
+
+### 2.31 Constrain queue writes before any agent gets them
+
+**An agent that can write the queue can mark its own work done.** That is
+evaluator-must-not-be-the-builder in a new place, and it is the same failure
+4.10 guards against in the harness and 4.19 guards against in card selection.
+
+Once 3.21 makes the queue a table, write access becomes a live question rather
+than a theoretical one — a markdown file nobody can edit mid-run is an accidental
+protection that a table removes.
+
+**Write access to the queue table must be settled BEFORE any agent is given it.**
+Not after the first agent needs it, because by then the answer will be shaped by
+what is convenient.
+
+**Scope:** CONTAINER.
+
+**Need:** OPEN — the queue is not yet a table, so nothing has write access. This
+item exists to be answered before that changes.
+
+**Depends on:** 3.21.
+
+**Related:** 4.10 (the harness must not edit its own scorer), 4.19 (the pipeline
+must not select its own work), 2.17 (what a silently-wrong write to an audit
+table costs).
+
 
 # TIER 3 — independent defects, no dependants
 
@@ -1498,6 +1823,22 @@ Present in all six calls: 7,824 characters of `KB_CONTEXT` across the run, most 
 - **3.6** `projects.id` is `'cis'`, `build_plan_nodes.project_id` is `'CIS'`.
   A plain join returns 0 of 30 rows; `relay.py:1058` papers over it with
   COLLATE NOCASE.
+  **SCOPE CORRECTED IN BOTH DIRECTIONS, 2026-09-07.**
+  **Wider than written — a data-only fix does not hold.** The two schemas
+  disagree *by default*: `build_plan_nodes.project_id TEXT NOT NULL DEFAULT
+  'CIS'` against `workflow_runs.project_id TEXT DEFAULT 'cis'`. An `UPDATE` that
+  lowercases the 30 rows is reverted by the next default insert, and **SQLite
+  cannot `ALTER` a column default** — changing it means a table rebuild. The fix
+  is a migration, not an update.
+  **Narrower than reported — `corpus_entries` is not in scope.** On 2026-09-06 I
+  reported "243 rows across two tables". 213 of those were
+  `corpus_entries.project_tag`, found by matching any column name containing
+  "project". Checked 2026-09-07: it is `project_tag TEXT DEFAULT 'CIS'` with the
+  comment `-- CIS, SWA, WIAS`, **no `REFERENCES projects`** — a free-text tag,
+  not a foreign key, with an FTS5 shadow that a rewrite would have to rebuild for
+  no benefit. It does not join to `projects.id` and does not need to.
+  **Real scope: 30 rows in one table, plus one column default.** Recorded in both
+  directions so neither the overreach nor the underreach is repeated.
 - **3.7** `data/` is gitignored — `container_sessions/` and `drive_imports/`
   are not in version control.
 - **3.8** Memory store has no governance: no access control, no audit trail, no
@@ -1649,8 +1990,19 @@ only static /ui/.
 **Need:** OPEN — stated as a requirement on 2026-09-01. `mined_tasks` demonstrates the shape works;
 nothing yet renders it.
 
-**The one check that settles the scope:** decide which surface renders the roadmap before choosing
-where the table lives.
+**The one check that settles the scope — REWRITTEN 2026-09-06. The original was
+backwards.** It read: *decide which surface renders the roadmap before choosing
+where the table lives.* That makes a presentation venue the gate on a data
+structure. **The UI is a venue for what is already in the DB and the KB; it
+cannot be built until the structure is reconciled and functioning.**
+
+The table's location is settled by the **stateless-agent requirement (2.30)**,
+not by a surface decision. The check is therefore: **can a stateless agent read
+the current item, its dependencies, and the last completion status from one
+place?** When that is true the table is right, whatever renders it — and until
+it is true, no surface can help.
+
+**This item is not UI work.** 2.30 records why it exists.
 
 **Depends on:** nothing. Blocks 4.18 (the card factory needs a table to read) and the UI roadmap.
 
@@ -1738,6 +2090,64 @@ Only the 35% labelled *constraints + prior phase output* differs by phase and ca
 **The one check that settles it:** diff any two payloads from the same run and measure the identical span. Anything byte-identical across every call in a run is a candidate to send once.
 
 **Related:** **2.3** — the same root. Independent POSTs force both the re-sent context and the reviewers' blindness to each other; one change fixes both. 3.22 (the system-prompt side of the same bill, done), 1.6 (prompt size is never measured), 2.28 and 2.27 (specific defects inside these blocks), 1.24 (what the trajectory block feeds brain).
+
+### 3.25 THE REFERENCE-DOCUMENTS TABLE IS A DEPENDENCY MAP WITH NO EDGE KIND
+
+The `REFERENCE DOCUMENTS` table near the end of this file maps **ten documents to
+the items they cover** — 1.3, 1.4, 2.4, 2.5, 2.1, 2.2, 2.11, 2.7, 2.8, 4.3, 3.4,
+1.5, 2.9. It is a real dependency map and nothing treats it as one.
+
+**Found the same way 2.32 was:** the 2026-09-06 edge extraction produced edges
+from those table rows and I dismissed them as table noise, then the item-by-item
+read showed they were not noise. There is no edge kind for *document covers
+item* — the proposed `queue_edges` has `depends_on`, `blocks`, `blocked_by`,
+`related`, `supersedes`, `same_root`, and no `documents`.
+
+**Needs an edge kind before the next mining pass**, or the same rows get
+discarded again by whoever writes the next extractor.
+
+**Scope:** REPO — the queue schema 3.21 creates.
+
+**Need:** OPEN — the table exists, the edge kind does not.
+
+**The one check that settles it:** ask which document covers item 2.8. The answer
+is in the file and no query can reach it.
+
+**Related:** 2.32 (the other missing edge kind, same read), 3.21.
+
+### 3.26 DEAD TELEGRAM NOTIFICATION CODE IN THE RELAY
+
+`runtime/abstraction/pipeline_relay.py` carries two notification functions —
+`_notify_terminal_failure` (:376) and `_notify_eric_gate` (:431) — that build a
+Telegram `sendMessage` call and post it. **They have never fired.**
+
+They read `CIS_TELEGRAM_BOT_TOKEN` and `CIS_TELEGRAM_CHAT_ID`. `entrypoint.sh`
+writes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_HOME_CHANNEL`. **Different names**, so
+the lookups return empty and both functions take their fallback branch:
+`"(no Telegram notification configured)"`.
+
+**This is 2.18's shape exactly** — code that reads as a built feature, degrades
+politely, and does nothing. It looked finished for long enough that a session on
+2026-09-02 concluded the container had no Telegram path at all, having checked
+the `.env` files and the entrypoint rather than the relay.
+
+**NOTE AGAINST 2.25, which settled the feed as HOST scope: this is dead relay
+code, not the feed.** Do not read this item as reopening that decision. The two
+answers can both stand — the feed is a host-side HTTP POST, and these two
+functions are unreachable code that should be either wired to the real variable
+names or deleted.
+
+**Scope:** CONTAINER — `runtime/abstraction/pipeline_relay.py`, on the
+do-not-modify list.
+
+**Need:** OPEN — both functions present, both unreachable.
+
+**The one check that settles it:** set the two variables the relay actually reads
+and force a terminal failure. Either a message arrives, or the code is dead in a
+second way as well.
+
+**Related:** 2.18 (placeholders not marked as placeholders), 2.25 (the feed —
+separate, settled, host scope).
 
 ### 3.24 Corpus and spine share one database — an open question, not work
 
@@ -1836,18 +2246,22 @@ above), 0.3 (the same contention problem solved for Chroma).
   CIS currently conflates the two, so the boundary has to be drawn before the
   loop can safely exist.
 
-  **PREREQUISITE, and it is the real gate: 1.1.** The loop runs on evidence from
-  completed runs — HASE's mismatch set is *proxy said good, oracle said bad*,
-  which here is *Menter said done, Verify said fail*. **No run has ever gone end
-  to end**, so today the loop would have nothing to reason from and would
-  recommend from the code's appearance rather than its behaviour. That is
-  guessing with extra steps.
+  **PREREQUISITE, and it is the real gate: 1.23.** The loop runs on evidence
+  from completed runs — HASE's mismatch set is *proxy said good, oracle said
+  bad*, which here is *Menter said done, Verify said fail*. A run completed
+  2026-08-30 (`run-e70293544935a92e-1787973534`), but it was a documentation
+  task whose three BLOCK-mode verification guardrails all SKIPPED — no code was
+  checked, so the mismatch set still has no members. The gate did not open; it
+  moved from 1.1 to 1.23. Until a code run completes and Verify fires, the loop
+  would have nothing to reason from and would recommend from the code's
+  appearance rather than its behaviour. That is guessing with extra steps.
 
   **Cheapest first step, and the record calls it out as highest value / lowest
   cost:** prompts are hardcoded in `pipeline_relay.py`. Move them to versioned
   files, add `prompt_version` and a run-outcome record, and the mismatch data of
   2.8 starts accumulating on its own. That work is useful whether or not the
-  full loop is ever built.
+  full loop is ever built, and it has no dependency on 1.23 — it is unblocked
+  now.
 
   **Related and already listed:** 2.8 (verification results change nothing — the
   mismatch set is exactly this), 4.4 (no learning loop from approve/reject),
@@ -1858,6 +2272,24 @@ above), 0.3 (the same contention problem solved for Chroma).
   Not applicable from HASE, checked rather than assumed: RL weight training
   (GRPO/PPO, 8×H20) and evolutionary search over hundreds of candidate harnesses
   per phase. Both need infrastructure CIS does not have.
+
+- **NINE MONTHS OF SPECS, NOTHING COMPLETED — WHY THE CONTAINER EXISTS.**
+  *Context, not a task.* **Eric, 2026-09-06:** transporting work between models
+  by hand, plus stateless amnesia, has never allowed work to get **past the
+  current topic**. That is why the same requests recur across nine months of
+  documentation with solutions worked out and never finished.
+
+  This is the operator-side statement of the loop 4.9 describes from the
+  system's side. 4.9 says undocumented configuration causes failure causes
+  recovery causes no documentation causes future failure. This says why the loop
+  never broke: **nothing survived the end of a topic**, so every session
+  re-derived what the last one had already solved.
+
+  It is the reason the container exists, and the measure of whether it works.
+  The 210 specification documents (2.33), the 4,479 mining candidates, and this
+  list itself are all artifacts of the same loop — solutions produced and lost.
+  Recorded here so the container is judged against ending it, not against
+  producing more of it.
 
 - **4.9** The documentation-gap loop, named in the record and still running:
   *"Undocumented configuration -> failure -> recovery -> no documentation ->
@@ -1989,8 +2421,22 @@ is imported by `container_app.py` or `pipeline_relay.py`.
 **Need:** OPEN — the generators exist, the card count has not moved from 32, and the queue now has a
 structured form to read.
 
-**The one check that settles the shape:** confirm whether `pipeline_cards.db`'s existing schema can
-carry the mined_tasks fields (scope, need_status, evidence, candidate ids) or needs replacing.
+**The one check that settles the shape — ANSWERED 2026-09-06. It needs
+replacing.** `cards/pipeline_cards.db` holds 32 rows and its schema is
+`id, title, intent, source_session, source_profile, source_date, priority,
+status, times_requested, done_when, not_in_card`. **No `scope`, no
+`need_status`, no `evidence_count`, no `candidate_ids`.** It is card-shaped, not
+queue-shaped.
+
+**And the generator is destructive by design.** `tools/seed_pipeline_cards.py`
+opens with `if os.path.exists(DB): os.remove(DB)` — it deletes and rebuilds the
+database on every run, seeded from **five hand-written `cards/inbox/*.md` files
+dated 2026-08-02** plus goals hardcoded in the script.
+
+**So "wire the factory to the queue" is a rewrite, not a wiring job.** Pointing
+the existing generator at a queue table means replacing its source, its schema
+and its destroy-and-rebuild behaviour — at which point nothing of it survives but
+the name.
 
 **Depends on:** 3.21 — the factory needs a table, not a markdown document, to read.
 
