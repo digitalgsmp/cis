@@ -1,5 +1,5 @@
 # Terms and Naming — CIS Advisor Loop
-Generated: 2026-09-07 21:28 UTC | Run: run-cf686c9a38b6
+Generated: 2026-09-07 21:31 UTC | Run: run-d122824f34e0
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
