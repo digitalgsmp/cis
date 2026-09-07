@@ -12,7 +12,23 @@
 #         reads   reviews/pending/<id>.md
 #         writes  reviews/done/<id>.response.md   (round 1)
 #                 reviews/done/<id>.reply.md      (round 2)
-#         records both rounds in deliberation_rounds as run_id advisor-<id>
+#         records each round in deliberation_rounds as
+#         run_id advisor-<id>-<profile>
+#
+# DUAL LINEAGE IS THE DEFAULT (BUILD LIST 1.20). One invocation sends the
+# SAME packet to GLM (advisor, 8649) and Qwen (evaluator, 8650). The packet is
+# built once and hashed once, so both reviews are provably of one artifact --
+# without that, 'the two models disagreed' cannot be distinguished from 'the
+# two models saw different things'.
+#
+# 1.20's measure is the count of findings only one lineage raised. Run
+# 2026-09-07 on the 3.6 card: GLM 5, Qwen 2, and neither found the other's
+# most serious. Set CIS_ADVISOR_PROFILE / CIS_ADVISOR_PORT to force one.
+#
+# run_id carries the profile because UNIQUE(run_id, round_number) would
+# otherwise reject the second lineage's round 1 -- and reject it through the
+# same IntegrityError that implements the two-round cap, reporting 'cap
+# reached' for what is actually a collision.
 #
 # THE REPLY ROUND — BUILD LIST 1.19. Round 1 is a verdict nobody can answer,
 # which is the failure 1.19 names: on 2026-09-02 the advisor reported three
@@ -62,8 +78,12 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER="${CIS_CONTAINER:-cis-pipeline}"
-PROFILE="${CIS_ADVISOR_PROFILE:-advisor}"
-PORT="${CIS_ADVISOR_PORT:-8649}"
+# Default: both lineages. An explicit override forces one.
+if [[ -n "${CIS_ADVISOR_PROFILE:-}" || -n "${CIS_ADVISOR_PORT:-}" ]]; then
+    LINEAGES=("${CIS_ADVISOR_PROFILE:-advisor}:${CIS_ADVISOR_PORT:-8649}")
+else
+    LINEAGES=("advisor:8649" "evaluator:8650")
+fi
 TIMEOUT="${CIS_ADVISOR_TIMEOUT:-560}"
 MAX_TOKENS="${CIS_ADVISOR_MAX_TOKENS:-2000}"
 
@@ -165,8 +185,54 @@ curl -s -m "$timeout" -X POST "http://127.0.0.1:$port/v1/chat/completions" \
 rm -f /tmp/advisor_payload.json
 '
 
+# One call per lineage. A failure in one is reported and the other still
+# records -- a half-review that says so beats a silent single review.
+FAILED=0
+for _lin in "${LINEAGES[@]}"; do
+PROFILE="${_lin%%:*}"
+PORT="${_lin##*:}"
+if [[ ${#LINEAGES[@]} -gt 1 ]]; then
+    OUT="$OUTDIR/$ID.$PROFILE.response.md"
+    [[ -n "$REPLY_FILE" ]] && OUT="$OUTDIR/$ID.$PROFILE.reply.md"
+fi
+echo "--- lineage: $PROFILE on $PORT ---"
+
 RESP="$(printf '%s' "$BODY" | docker exec -i -u worker "$CONTAINER" \
-    sh -c "$REMOTE_SH" -- "$PROFILE" "$PORT" "$TIMEOUT")"
+    sh -c "$REMOTE_SH" -- "$PROFILE" "$PORT" "$TIMEOUT")" || {
+    echo "FAILED: $PROFILE on $PORT did not answer — other lineages continue" >&2
+    FAILED=$((FAILED+1)); continue; }
+if [[ -z "$RESP" ]]; then
+    echo "FAILED: $PROFILE on $PORT returned an empty body" >&2
+    FAILED=$((FAILED+1)); continue
+fi
+
+# CHECK THE PAYLOAD, NOT THE EXIT CODE. The gateway answers HTTP 200 with an
+# error object in the body — BUILD LIST 1.11 recorded exactly this (a billing
+# 402 delivered as a successful completion) and it happened again on 2026-09-07
+# with {"error":{"code":"agent_incomplete"}} after four truncation retries.
+# docker exec exits 0, RESP is non-empty, and the failure only surfaces inside
+# the recorder, whose sys.exit(1) kills the whole script under `set -e` — so one
+# lineage failing took the other down with it. Guarding the transport is not
+# guarding the result.
+ERR="$(printf '%s' "$RESP" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception as e:
+    print("not JSON: " + str(e)[:120]); sys.exit(0)
+if isinstance(d, dict) and d.get("error"):
+    e = d["error"]
+    print((e.get("code","") + ": " + e.get("message","")) if isinstance(e, dict) else str(e)[:200])
+    sys.exit(0)
+if not (isinstance(d, dict) and d.get("choices")):
+    print("no choices in response"); sys.exit(0)
+' 2>/dev/null || echo "response could not be parsed")"
+
+if [[ -n "$ERR" ]]; then
+    echo "FAILED: $PROFILE on $PORT — $ERR" >&2
+    echo "        other lineages continue; this one recorded nothing" >&2
+    FAILED=$((FAILED+1)); continue
+fi
 
 # Split the reply out of the response and record the token cost alongside it,
 # so the cost of a review is in the artifact rather than in someone's memory.
@@ -175,7 +241,6 @@ RESP="$(printf '%s' "$BODY" | docker exec -i -u worker "$CONTAINER" \
 # silently discarded and sys.stdin.read() returns empty.
 RESP_TMP="$(mktemp)"
 LOG_TMP="$(mktemp)"
-trap 'rm -f "$RESP_TMP" "$LOG_TMP"' EXIT
 printf '%s' "$RESP" > "$RESP_TMP"
 
 ID="$ID" PROFILE="$PROFILE" PORT="$PORT" RUN_TAG="$RUN_TAG" \
@@ -236,7 +301,7 @@ print(f"token source: {source}")
 import sqlite3
 
 DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
-run_id = "advisor-" + os.environ["ID"]
+run_id = "advisor-" + os.environ["ID"] + "-" + os.environ["PROFILE"]
 rnd = int(os.environ["ROUND"])
 reply_file = os.environ.get("REPLY_FILE") or ""
 
@@ -311,3 +376,13 @@ except sqlite3.IntegrityError:
 except Exception as e:
     print(f"NOT recorded ({type(e).__name__}: {e}) — the artifact on disk stands")
 PY
+
+rm -f "$RESP_TMP" "$LOG_TMP"
+done
+
+if [[ $FAILED -gt 0 ]]; then
+    echo ""
+    echo "WARNING: $FAILED of ${#LINEAGES[@]} lineage(s) failed. The reviews above"
+    echo "are incomplete — do not read a single-lineage result as a dual review."
+    exit 1
+fi

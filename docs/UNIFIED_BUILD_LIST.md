@@ -963,6 +963,45 @@ before treating one sample as a pattern: two different models will differ on any
 single document, and one comparison does not establish that they differ
 *usefully* and repeatably.
 
+**SECOND PACKET — 2026-09-07.** `reviews/pending/migration-0030-r2.md`, sha256
+`4419478f6a20df0d…`, same recorded `packet_hash` on both rows, both MATCH. GLM
+(`advisor`, 8649) prompt 3,626 / completion 11,393; Qwen (`evaluator`, 8650)
+prompt 3,778 / completion 2,307.
+
+| | GLM only | Qwen only | Both |
+|---|---|---|---|
+| findings | 3 | 1 | 3 |
+
+GLM alone: `NOT NULL` on `project_id` untested; `AUTOINCREMENT` untested; and it
+asked for the collation of `projects.id`, saying it could not assess the FK
+without it — a request for evidence rather than a finding, and the right move.
+Qwen alone: **the `ON DELETE CASCADE` is never tested.** Shared: index
+definitions, non-`project_id` column corruption, the `status` CHECK.
+
+**Qwen's single finding was the one that mattered.** It became check 12, and
+check 12 is the only one that could have caught the rebuild silently breaking the
+dependency graph while all fourteen others passed — the exact hazard 0030 was
+shaped to avoid. A 3–1 split understates it: the count is not the measure, and
+this is the second time the *lower*-scoring lineage found the more serious thing.
+
+**Two packets. The split is holding and two is not a pattern.** Packet 1 was 2–5,
+packet 2 was 1–3, and in both the smaller number was the more consequential. That
+is suggestive and nothing more. A third packet is worth running before this is
+treated as settled.
+
+**A third, partial data point, recorded because it is about the harness rather
+than the models.** Revision 1 of the 0030 packet went to both lineages and **GLM
+did not answer** — the gateway returned HTTP 200 carrying
+`{"error":{"code":"agent_incomplete"}}` after four continuation attempts. The
+cause was `CIS_ADVISOR_MAX_TOKENS` defaulting to 2,000 against a reply that
+needed 11,393. This is **1.11 recurring**: a gateway laundering an upstream
+failure into a success status. The script's guard checked the `docker exec` exit
+code and the empty string, and both passed. `advisor_review.sh` now inspects the
+response **body** for an `error` key or absent `choices`, counts that lineage as
+failed, continues to the next, and exits non-zero with a warning against reading
+a single-lineage result as a dual review. Guarding the transport is not guarding
+the result.
+
 **Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled.
 ### 1.21 The loop must stop and wait, not run past Eric
 
@@ -1893,6 +1932,46 @@ table costs).
   no benefit. It does not join to `projects.id` and does not need to.
   **Real scope: 30 rows in one table, plus one column default.** Recorded in both
   directions so neither the overreach nor the underreach is repeated.
+  **DONE 2026-09-07 — `runtime/schema/migrations/0030_build_plan_nodes_project_id.sql`,
+  run against `data/cis_memory.db`.** The plain join now returns 30 of 30.
+  What the migration did: lowercased 30 rows to `'cis'`; changed the column
+  DEFAULT from `'CIS'` to `'cis'` **by table rebuild, because SQLite cannot
+  `ALTER` a column default**; added the missing `FOREIGN KEY` on `project_id`
+  to `projects(id)`; recreated both named indexes, which a rebuild drops
+  silently; and preserved the 25 `ON DELETE CASCADE` rows in
+  `build_plan_dependencies` via `foreign_keys=OFF` **and**
+  `legacy_alter_table=ON` together — under 0020's `RENAME`-first shape those
+  rows are destroyed two different ways, and neither pragma alone prevents both.
+  **The executable SQL was byte-identical across all three revisions**
+  (`a4dbf0712cda5e85…`, comments stripped, 12 statements). Revisions 2 and 3
+  changed the verification block only, so the SQL two advisors endorsed is the
+  SQL that ran. Numbered 0030, not 0021 — `0021_corpus_entries.sql` exists.
+  **15 checks, all passing, every one a command that can fail:**
+  (1) counts 30 and 25; (2) `project_id` = `[('cis', 30)]`; (3) DEFAULT as
+  declared = `'cis'`, notnull=1; (4) both FKs present; (5) the `project_id` FK
+  rejects a bad parent; (6) both indexes present; (7) `UNIQUE` still rejects a
+  duplicate; (8) `foreign_key_check` empty, `integrity_check` ok; (9) all 25
+  dependency rows **resolve** to live node ids, 0 fail to resolve; (10) the
+  DEFAULT applies **in practice** — an insert omitting the column stored `'cis'`,
+  rolled back; (11) the `workflow_run_id` FK rejects a bad parent; (12) **the
+  CASCADE still fires** — deleting node id 2 removed one dependency row,
+  25 → 24, rolled back to 25; (13) index **definitions** match, not just names —
+  `(project_id, status)` and `(project_id, sequence)`; (14) `NOT NULL` on
+  `project_id` rejects an explicit NULL; (15) the `status` CHECK rejects `'BOGUS'`.
+  No probe rows survived: `node_label LIKE '%-probe%'` returns 0.
+  Checks 9–11 came from Qwen's review of revision 1; 12–15 from the dual review
+  of revision 2. Check 12 is the one that mattered — see 1.20.
+  **AUTOINCREMENT on `id` is uncovered BY DECISION, not oversight.** GLM raised
+  it: if the rebuild dropped it, all fifteen checks still pass and the damage
+  appears later, when reused ids collide with dependency rows that still point at
+  them. Testing it needs a delete-then-insert probe across a transaction
+  boundary. It is declared in the CREATE TABLE and left to inspection, and the
+  migration file says so in as many words so the gap stays a decision.
+  **Follow-on, NOT done: `relay.py:1058`'s `COLLATE NOCASE` is now dead weight.**
+  It was load-bearing this morning and is not any more. Left in place
+  deliberately — removing it is a change to production query code and belongs in
+  its own item, not smuggled into a migration's commit.
+  Backups: `data/backups/build_plan_20260907T163931Z.sql` (2 CREATE, 55 INSERT).
 - **3.7** `data/` is gitignored — `container_sessions/` and `drive_imports/`
   are not in version control.
 - **3.8** Memory store has no governance: no access control, no audit trail, no

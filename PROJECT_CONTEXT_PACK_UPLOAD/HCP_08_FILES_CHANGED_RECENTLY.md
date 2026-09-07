@@ -1,7 +1,51 @@
 # Files Changed Recently
-Generated: 2026-09-07 14:28 UTC | Run: run-20a60f2d10c8
+Generated: 2026-09-07 17:55 UTC | Run: run-9a229c69baa8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## cc32f41 feat: advisor reply round, loop proven end to end on the 3.6 card
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## reviews/done/fix-3.6-preflight-qwen.response.md 
+
+## reviews/done/fix-3.6-preflight.reply.md 
+
+## reviews/done/fix-3.6-preflight.response.md 
+
+## reviews/pending/fix-3.6-evidence.md 
+
+## reviews/pending/fix-3.6-preflight-qwen.md 
+
+## reviews/pending/fix-3.6-preflight.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/advisor_review.sh 
 
 ## d8712cc docs: add 1.25, 1.26, 2.30-2.34, 3.25, 3.26 and eight corrections to the build list
 
@@ -442,35 +486,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## enforcement/mwl-proof-v2/profiles/review1.yaml 
 
 ## enforcement/mwl-proof-v2/profiles/review2.yaml 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## f86ed4d trim verify to code_execution — 15,923 -> 1,463 prompt tokens
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## enforcement/mwl-proof-v2/profiles/verify.yaml 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
