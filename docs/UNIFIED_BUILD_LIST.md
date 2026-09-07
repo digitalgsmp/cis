@@ -1475,6 +1475,64 @@ Eric Gate briefing's Dependency Node and Tier Advanced fields render blank.
 **Eric's call:** does a run name its DEV-PIVOT at intake, or are repairs marked
 maintenance? Do not let brain infer it.
 
+**INVESTIGATED 2026-09-07. WIRING GAP, NOT AN UNBUILT CAPABILITY.**
+`runtime/db/build_plan.py:74` `complete_node()` accepts `workflow_run_id` and
+writes it:
+
+```sql
+UPDATE build_plan_nodes
+   SET status='COMPLETE', evidence_path=?, commit_hash=?, workflow_run_id=?,
+       completed_at=datetime('now'), updated_at=datetime('now')
+ WHERE id=? AND status='IN_PROGRESS'
+```
+
+**Nothing calls it.** The only caller of anything in that module is
+`seed_build_plan.py`, which uses `create_node` and `create_dependency` only. The
+writer exists and has never fired — the column is empty for want of a call, not
+for want of code. Nothing needs building here; something needs connecting.
+
+**PREMISE CORRECTION — THE STATED SYMPTOM POINTS AT A DIFFERENT TABLE.**
+This item says the Eric Gate briefing's Dependency Node and Tier Advanced fields
+render blank *because* `workflow_run_id` is NULL. **They do not.**
+`build_plan_nodes` appears **zero times** in `tools/eric_gate/build_briefing.py`.
+Those two fields come from `goal_references`:
+
+- `build_briefing.py:252-283` — *"Build goal trace from `goal_references`"* —
+  selects `dependency_node, tier_advanced` and remaps them to
+  `dependency_graph_node` / `tier_advanced`
+- `build_briefing.py:568-569` renders `goal.get('dependency_graph_node')` and
+  `goal.get('tier_advanced')`, defaulting to `UNKNOWN`
+
+**And they are blank for a reason measured the same day:**
+
+```
+goal_references rows                : 30
+dependency_node NULL/empty          : 30
+tier_advanced   NULL/empty          : 30
+```
+
+**All thirty rows are empty in both columns.** So the symptom is real and the
+diagnosis in this item is wrong: populating `build_plan_nodes.workflow_run_id`
+would not change those fields by one character. **This item must be rescoped
+before it is built** — as written it would produce a correct-looking change that
+leaves the reported symptom exactly as it is, and the verification would pass
+because it would check the column that was changed. (That is 2.38's failure
+shape, found in a queue item rather than a migration.)
+
+**SEEDING, PARTIALLY UNEXPLAINED — RECORDED, NOT RESOLVED.**
+`tools/build_plan/seed_build_plan.py` hardcodes **15 tuples**. **Thirty rows
+exist.** The origin of the other 15 — the `7R.*`, `11A–D`, `12`, `13` and
+`ENFORCEMENT` nodes — **is not in the record.** No explanation is constructed
+here. Node ids also jump **15 → 46**, so rows were deleted at some point; that is
+why GLM's `AUTOINCREMENT` concern on migration 0030 was worth recording even
+though it went untested. Reused ids would collide with dependency rows that still
+point at them.
+
+**WHAT REMAINS ERIC'S CALL, UNCHANGED BY ANY OF THE ABOVE:** does a run name its
+DEV-PIVOT at intake, or are repairs marked maintenance? Do not let brain infer
+it. This rescoping establishes what the code does and does not do. It does not
+make that decision and must not be read as having made it.
+
 ### 2.15 Thirty-three of fifty-one gate scripts have never fired
 **Checked:** 51 gate scripts exist in `enforcement/mwl-proof-v2/gates/`.
 `gate_outcomes` has recorded 47 distinct names ever. Cross-referencing, **33
