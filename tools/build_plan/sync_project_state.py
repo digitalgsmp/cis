@@ -7,7 +7,7 @@ from db.build_plan import sync_project_state_from_build_plan
 
 if __name__ == '__main__':
     conn = init_db()
-    sync_project_state_from_build_plan(conn, 'CIS')
+    sync_project_state_from_build_plan(conn, 'cis')
     conn.commit()
     conn.close()
     print("project_state synced from build_plan_nodes")

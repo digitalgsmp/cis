@@ -75,7 +75,7 @@ def dashboard_full():
         conn = _connect_readonly()
         rows = conn.execute(
             "SELECT node_label, status, tier, completed_at FROM build_plan_nodes "
-            "WHERE status = 'COMPLETE' AND project_id = 'CIS' ORDER BY sequence"
+            "WHERE status = 'COMPLETE' AND project_id = 'cis' ORDER BY sequence"
         ).fetchall()
         conn.close()
         for r in rows:

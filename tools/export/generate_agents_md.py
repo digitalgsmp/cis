@@ -51,7 +51,7 @@ def query_spine(db_path):
     actions = conn.execute(
         """SELECT node_label AS id, tier, node_label AS description, status
            FROM build_plan_nodes
-           WHERE project_id='CIS' AND status IN ('PENDING','IN_PROGRESS')
+           WHERE project_id='cis' AND status IN ('PENDING','IN_PROGRESS')
            ORDER BY sequence"""
     ).fetchall()
 
@@ -69,7 +69,7 @@ def query_spine(db_path):
     bp_blockers = conn.execute(
         """SELECT node_label AS id, blocked_reason AS description, 'BLOCKED' AS status
            FROM build_plan_nodes
-           WHERE project_id='CIS' AND status='BLOCKED'
+           WHERE project_id='cis' AND status='BLOCKED'
            ORDER BY sequence"""
     ).fetchall()
     ab_blockers = conn.execute(

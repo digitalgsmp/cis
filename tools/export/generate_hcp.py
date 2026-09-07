@@ -179,7 +179,7 @@ def query_spine(db_path):
             WHERE bpd.node_id = bpn.id AND bpd.dependency_type = 'HARD'
               AND dep.status != 'COMPLETE') as unmet_hard_deps
            FROM build_plan_nodes bpn
-           WHERE bpn.project_id = 'CIS'
+           WHERE bpn.project_id = 'cis'
            ORDER BY bpn.sequence"""
     ).fetchall()]
 

@@ -84,14 +84,14 @@ def query_current_phase(db_path=None):
         in_progress = _rows_to_list(conn.execute(
             """SELECT node_label, status, tier, blocked_reason
                FROM build_plan_nodes
-               WHERE project_id = 'CIS' AND status = 'IN_PROGRESS'
+               WHERE project_id = 'cis' AND status = 'IN_PROGRESS'
                ORDER BY sequence"""
         ).fetchall())
 
         pending = _rows_to_list(conn.execute(
             """SELECT node_label, status, tier, blocked_reason
                FROM build_plan_nodes
-               WHERE project_id = 'CIS' AND status = 'PENDING'
+               WHERE project_id = 'cis' AND status = 'PENDING'
                ORDER BY sequence"""
         ).fetchall())
 
@@ -142,7 +142,7 @@ def query_next_actions(db_path=None):
                       evidence_path, commit_hash, completed_at,
                       approved_at, created_at, updated_at
                FROM build_plan_nodes
-               WHERE project_id = 'CIS' AND status = 'PENDING'
+               WHERE project_id = 'cis' AND status = 'PENDING'
                ORDER BY sequence"""
         ).fetchall()
         return _rows_to_list(rows)

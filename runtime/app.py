@@ -1075,7 +1075,7 @@ def portal_build_status():
             "SELECT node_label, tier, status, sequence, blocked_reason, "
             "completed_at, approved_at "
             "FROM build_plan_nodes "
-            "WHERE project_id = 'CIS' "
+            "WHERE project_id = 'cis' "
             "ORDER BY sequence"
         ).fetchall()
         db.close()

@@ -1830,6 +1830,129 @@ search.
 **Cost is the reading, not the writing.** Generating 210 lines mechanically is
 easy and produces 210 plausible wrong lines. Each has to be read.
 
+### 2.35 THE EXPORT GATE IS SELF-CERTIFYING
+**Found 2026-09-07, from a live failure.** Migration 0030 lowercased
+`build_plan_nodes.project_id`; 14 code sites still compared against `'CIS'` and
+began matching zero rows. The pre-commit hook regenerated all 13 exports from the
+broken queries and the gate printed **`PASS: all 13 artifacts match manifest`**
+while `HCP_05_NEXT_ACTIONS.md` silently lost its entire 30-row tier table. That
+result was committed in `049cdba`.
+
+**CORRECTED 2026-09-07, SAME DAY. THIS ITEM FIRST SAID THE GATE DOES NOT CHECK
+CONTENT. THAT IS WRONG, AND THE TRUTH IS WORSE.**
+`gate_export_agreement.sh:191-234` **does** check `sha256`, `char_count` **and**
+`line_count` against the manifest. It has the data. The defect is **ordering**:
+
+```
+▸ Regenerating exports from spine...
+[generate_all] Manifest written: runtime/manifests/EXPORT_MANIFEST.json
+▸ Running export agreement gate...
+PASS: all 13 artifacts match manifest
+```
+
+`generate_all.py` writes `EXPORT_MANIFEST.json` **from the artifacts it has just
+produced**, and the gate then compares those artifacts to that manifest. The
+check's success criteria are derived from the thing being checked. It can catch
+corruption *between generation and verification* and nothing else — never bad
+content, because the manifest describes whatever was generated. HCP_05 lost 30
+rows; **artifact and manifest changed together and agreed perfectly.**
+
+**Same class as the poisoned verification criterion 1.1 caught.** A check whose
+pass condition comes from its own subject cannot fail for the reason it exists.
+Adding more fields to the manifest does not fix it — sha256, char_count and
+line_count are already there and all three passed.
+
+**What to build:** a criterion that does not come from the artifact. A content
+floor per artifact — minimum row/section counts held in a **checked-in expectations
+file, not the generated manifest** — so an export that empties fails the gate.
+Failure mode 11, inside the enforcement layer itself.
+
+**Related:** 2.36 is the second, independent defect on the same path. Fixing
+either alone leaves the other: fix the fallback and the gate still passes on
+empty content; fix this and the gate still cannot see a substitution, because the
+artifact is full.
+
+### 2.36 AN AGENT'S PROJECT_BRIEF IS 16% OF THE DOCUMENT IT IS NAMED AFTER
+**Found 2026-09-07 while checking how far the 2.35 failure reached.**
+`pipeline_relay.py:729` builds PROJECT_BRIEF from `AGENTS.md` and truncates:
+
+```python
+project_brief = f.read()[:3000]  # truncate to 3000 chars
+```
+
+Measured the same day:
+
+```
+AGENTS.md total chars: 18376
+injected into prompts: 3000 (16%)
+LAST LINE THAT REACHES AN AGENT: '- /hom'
+
+## 3.                 at char  1453   REACHES agent
+## 4.                 at char  3408   NEVER REACHES AGENT
+## 6. Next Actions    at char 10624   NEVER REACHES AGENT
+## 7. Active Blockers at char 10763   NEVER REACHES AGENT
+```
+
+**Nothing says so at either end.** The prompt calls it PROJECT_BRIEF and the file
+calls itself the agents' context; neither records that five of seven sections are
+cut. An agent asked what it knows about the project would answer from the first
+16% and have no way to know the rest exists. **Failure mode 5 — context amnesia —
+built into the transport rather than caused by the model.**
+
+**THE FALLBACK, AND THE RANKING THIS ITEM CORRECTS.**
+`generate_agents_md.py:58` carries a deliberate fallback: *"if no
+PENDING/IN_PROGRESS build nodes, pull from `next_actions`."* When 0030 broke the
+build-plan query it fired, filling AGENTS.md §6 with three `NA-SEED-*` rows from
+a table the comment eight lines above calls **non-authoritative**. The section
+looked populated. Nothing in the file, the run log or the gate recorded that a
+substitution had happened. That is real and it should announce itself.
+
+**But it was ranked as the more dangerous of the two defects, and that was wrong.**
+The claim behind the ranking was that AGENTS.md is what every stateless agent
+reads. §6 begins at character 10,624 and the injection stops at 3,000. **The
+substitution's only audience was the manual handoff — it never reached the
+pipeline.** Recorded because a wrong severity call sends the work to the wrong
+place, and this one was made and corrected within a day.
+
+**What to decide:** whether 3,000 characters is the intended brief. If it is, the
+file should be built to fit it and say so; if it is not, the truncation is a
+silent context loss on every dispatch. Do not fix by raising the number without
+answering which.
+
+**Related:** 2.35 (the other defect on this path), 3.23 (payload composition).
+
+### 2.37 NOTHING TESTS THE ARTIFACTS FOR WHETHER ANYTHING EXERCISES THEM
+**Found 2026-09-07.** This list's own header test — *is this capability in the
+code today* — has only ever been pointed at the queue. **Nothing points it at the
+artifacts**, and the same shape keeps surfacing when anyone looks:
+
+| Surface | What was found | Item |
+|---|---|---|
+| Generated HCP exports | **11 of 13 read by nothing.** Written on every commit; no commit in their git history ever changed one on purpose | this item |
+| `runtime/tier7r/` | eight modules, marked COMPLETE across nodes 7R.1–7R.7, **imported by nothing** | 2.16 |
+| `runtime/spine.db` | 0-byte decoy, **ruled on four times across three months** before deletion | 2.12 |
+| Gate scripts | **33 of 51 never called once** | 2.15 |
+| `route_task.py`, `push_cis_live()` | described and never built; a function with no caller | 2.18 |
+| Specification documents | `find_specs_by_content.py` found **210, of which 132 are invisible to a filename search and ~200 unread** | 2.33 |
+
+**The common shape: a thing is declared, it is maintained, and no one has ever
+asked whether anything consumes it.** Each of the six above was found by a
+separate investigation that went looking for something else. That is not a
+detection method, it is luck applied repeatedly.
+
+**What to build:** 2.18's gate, pointed at artifacts rather than specs — for
+anything declared (an export, a module, a gate script, a spec), a check of
+whether anything reads, imports, or calls it, and a record when the answer is
+nothing. Cheap: the six findings above were each one `grep` by object name.
+
+**This is 2.12's instruction applied here: fix the class, not the cases.** Six
+instances are recorded and none of them generalised. Closing them one at a time
+is how the seventh gets found by accident too.
+
+**Not a retirement proposal.** Establishing that nothing reads a thing is not the
+same as deciding it should go. See the HCP disposition note in 3.27.
+
+
 ### 2.34 PER-ROLE STATE SLICES, DERIVED NOT AUTHORED
 
 Not every role needs the whole state, and sending it to all of them is what 3.23
@@ -1972,6 +2095,34 @@ table costs).
   deliberately — removing it is a change to production query code and belongs in
   its own item, not smuggled into a migration's commit.
   Backups: `data/backups/build_plan_20260907T163931Z.sql` (2 CREATE, 55 INSERT).
+  **THE MIGRATION BROKE 14 CALL SITES AND THE REVIEW COULD NOT HAVE CAUGHT IT.**
+  Found 2026-09-07, after the commit. Every site comparing `project_id = 'CIS'`
+  exactly now matched zero of 30 rows. Fixed the same day — `'CIS'` → `'cis'` at
+  14 sites in 9 files, plus 15 tuples in `seed_build_plan.py`, which the new FK
+  would otherwise have rejected outright. Backup:
+  `data/backups/case_fix_20260907T180202Z/`.
+  Sites: `generate_agents_md.py` ×2, `generate_hcp.py`, `runtime/app.py`,
+  `dashboard_api.py`, `pipeline.py` ×2, `mcp_bridge/spine.py` ×3,
+  `db/build_plan.py` ×2 (default parameters, not queries),
+  `sync_project_state.py`, and the seeder.
+  **`relay.py:1068` was the only site that kept working — because of the
+  `COLLATE NOCASE` this item called a workaround.** It was the one place that had
+  adapted to the disagreement. Called "dead weight" in this item hours before it
+  turned out to be the sole survivor; the note above it stands corrected.
+  **WHY THE DUAL REVIEW DID NOT CATCH IT: the packet told both advisors
+  "Writers of build_plan_nodes in production code: NONE (only tests)."** That was
+  false. `runtime/db/build_plan.py:19` writes via `INSERT OR IGNORE INTO`, which
+  a grep for `INSERT INTO` cannot see. Two independent lineages reasoned
+  correctly from a false premise. **This is the review's real limit: it audits
+  the artifact in front of it, and a wrong fact in the packet is invisible to
+  both models no matter how many there are.** Fifteen checks passed because every
+  one queried the table directly; not one asked whether anything else still could.
+  **THE SAME MISTAKE HAPPENED TWICE IN ONE SESSION.** The first enumeration of
+  broken sites found 9 and was reported as complete. A second pass by table name
+  found 14 — `grep "project_id='CIS'"` cannot see `project_id = 'CIS'` with
+  spaces. Both misses are one class: **enumerating a blast radius by statement
+  syntax instead of by the object being touched.** Enumerate by table name, then
+  classify each hit. See 2.35.
 - **3.7** `data/` is gitignored — `container_sessions/` and `drive_imports/`
   are not in version control.
 - **3.8** Memory store has no governance: no access control, no audit trail, no
@@ -2281,6 +2432,96 @@ second way as well.
 
 **Related:** 2.18 (placeholders not marked as placeholders), 2.25 (the feed —
 separate, settled, host scope).
+
+### 2.38 A SCHEMA CHANGE'S BLAST RADIUS MUST BE ENUMERATED BY OBJECT, NOT BY STATEMENT SYNTAX
+**Two misses in one session, 2026-09-07, from the same cause.**
+
+1. `grep "INSERT INTO build_plan_nodes"` missed `runtime/db/build_plan.py:19`,
+   which writes via **`INSERT OR IGNORE INTO`**. That miss was then asserted to
+   two advisors, in the review packet, as *"Writers of `build_plan_nodes` in
+   production code: NONE (only tests)."*
+2. `grep "project_id='CIS'"` missed five sites written **with spaces around the
+   equals** — including three in `runtime/mcp_bridge/spine.py`, which is what
+   the container's agents query for build state.
+
+**Fourteen sites existed.** The first survey found nine and was reported as
+complete. The second found all fourteen, and only because it enumerated every
+reference to the table **by name** and classified the hits afterwards.
+
+**THE RULE: enumerate by the object being touched — the table, the function, the
+file — then classify each reference as read, write, or schema, and for each
+read/write record whether it constrains the changed column and with what literal.
+Never enumerate by the syntax you expect to find.** A syntax pattern returns the
+statements you already imagined; the gap it leaves is invisible, because a grep
+that finds nothing and a grep that cannot see look identical.
+
+**THE SECOND HALF, AND IT IS THE LOAD-BEARING ONE.** Migration 0030 passed
+**fifteen** verification checks and broke **eight code paths**. Every one of the
+fifteen queried the changed table directly. Not one asked whether anything else
+still could. **Checks run against the changed object cannot see its callers**, so
+a green verification run and a broken system were the same output — and the run
+was green enough to commit.
+
+**What to build:** the call-site survey as a required section of any migration's
+verification block, not a habit. For any column appearing in a `WHERE` clause:
+enumerate every reference to the table, classify each, and record the result in
+the migration file. Cheap — one `grep` by object name — and the one time it was
+skipped it cost a commit that emptied the context exports.
+
+**This is also the demonstrated limit of dual review, and that is worth more than
+the grep lesson.** Both lineages reviewed 0030 competently and neither could have
+caught this, because the packet handed them a false premise and **review audits
+the artifact in front of it**. A wrong fact in the packet is invisible to every
+model regardless of how many review it. More reviewers do not fix a bad input;
+they agree about it faster. The survey belongs to whoever assembles the packet,
+before it is sent, and no number of lineages substitutes for it.
+
+**Related:** 3.6 (where both misses occurred; the detail is recorded in its
+body), 2.18 (a gap that announces nothing), 1.20 (the dual-review measure this
+bounds), 2.35 and 2.37 (checks that cannot fail for the reason they exist).
+
+### 3.27 DANGLING CONSUMERS IN THE EXPORT PATH
+**Checked 2026-09-07.** Three readers point at files that do not exist:
+
+- `runtime/api/collab_rounds.py:1091` — `PROJECT_CONTEXT_PACK_UPLOAD_GENERATED`.
+  **No such directory.**
+- `tools/collect_all_material.py:196-200` — **4 of 5 targets missing**
+  (`HCP_02_SYSTEM_ARCHITECTURE`, `HCP_03_ACTIVE_WORKSPACE`,
+  `HCP_04_DECISIONS_AND_RATIONALE`, `HCP_05_KNOWLEDGE_BASE` — names from an
+  older scheme than the generated set).
+- `tools/synthesize_full.py:79` and `tools/synthesize_phased.py:60` —
+  `HCP_01_INTENTIONS_AND_MISSION.md`. This one **exists**, is **hand-written**,
+  dated **2026-08-02**, and is **not one of the 13 generated artifacts**. The
+  most misleading of the three: it resolves, so nothing errors, and the caller
+  gets a file that no longer tracks the spine.
+
+The directory also holds ten `05_*.md`-style files from **2026-05-19** and eight
+`HCP_escalation_*` transcripts from **2026-06-17** — none generated, none in the
+manifest, all sitting beside the generated set under the same prefix.
+
+**Why this is Tier 3 and not urgent:** two of the three fail loudly if they ever
+run. The third does not, and that is the one to look at first.
+
+**HCP DISPOSITION IS OPEN, NOT DECIDED — recorded so the question is visible.**
+The live surface of the whole export pack is exactly two things:
+
+1. `AGENTS.md`'s first 3,000 characters, via `pipeline_relay.py:729` (see 2.36)
+2. one `^Status:` line in `HCP_01_CURRENT_STATE.md`, via
+   `gate_build_state_coherence.sh:77`
+
+Everything else is committed and checksummed, **which is not the same as read**.
+The six role `SKILL.md` files contain zero HCP references; so do the profiles.
+
+**Cost is not the argument.** Full regeneration takes **0.16 s** and fires on
+every commit unconditionally. Nothing is being saved by retiring it and nothing
+is being spent by keeping it, so the decision has to rest on whether the manual
+advisor handoff is still a path worth feeding — which is not readable off disk.
+
+Eric, 2026-09-07: *the docs are not the priority or the truth; the concepts and
+functionality are.* Recorded here rather than acted on, in either direction.
+
+**Related:** 2.35, 2.36, 2.37, 3.4 (two manifest directories, canonical status
+unresolved).
 
 ### 3.24 Corpus and spine share one database — an open question, not work
 

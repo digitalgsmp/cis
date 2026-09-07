@@ -2,9 +2,9 @@
 Date: 2026-09-07
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `cc32f41`
+HEAD: `049cdba`
 
-Generated: 2026-09-07 17:55 UTC | Run: run-9a229c69baa8
+Generated: 2026-09-07 19:39 UTC | Run: run-aec74e43312d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -97,7 +97,7 @@ Cognition failures are mitigated by design, not completed forever.
 ## Exact Next Action
 
 
-**NA-CONTROL-001**: Complete Control Plane spec through review
+Enforcement — Container Isolation (ADR-015/016).
 
 ## Eric Gate Approval Status
 

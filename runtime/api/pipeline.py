@@ -141,7 +141,7 @@ def api_pipeline_roadmap():
 
         built = conn.execute(
             "SELECT node_label, tier FROM build_plan_nodes"
-            " WHERE project_id='CIS' AND status='COMPLETE' ORDER BY sequence"
+            " WHERE project_id='cis' AND status='COMPLETE' ORDER BY sequence"
         ).fetchall()
         for b in built:
             result["built"].append({
@@ -152,7 +152,7 @@ def api_pipeline_roadmap():
 
         specified = conn.execute(
             "SELECT node_label, tier, status FROM build_plan_nodes"
-            " WHERE project_id='CIS' AND status IN ('PENDING','IN_PROGRESS')"
+            " WHERE project_id='cis' AND status IN ('PENDING','IN_PROGRESS')"
             " ORDER BY sequence"
         ).fetchall()
         for s in specified:

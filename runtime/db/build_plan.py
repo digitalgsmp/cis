@@ -43,7 +43,7 @@ def create_dependency(conn, node_id, depends_on_id, dependency_type='HARD'):
     return conn.total_changes > before
 
 
-def promote_unblocked(conn, project_id='CIS'):
+def promote_unblocked(conn, project_id='cis'):
     """Promote BLOCKED nodes whose HARD deps are all COMPLETE to PENDING.
     Returns list of promoted node_labels. DEFERRED nodes are never promoted."""
     promoted = []
@@ -83,7 +83,7 @@ def complete_node(conn, node_id, evidence_path=None, commit_hash=None, workflow_
     return promote_unblocked(conn)
 
 
-def sync_project_state_from_build_plan(conn, project_id='CIS'):
+def sync_project_state_from_build_plan(conn, project_id='cis'):
     """Write project_state cache from build_plan_nodes.
     Source label: 'build_plan_spine' (not 'gate' — this is a cache sync, not a gate result).
     Supersedes prior next_tier/next_action/build_phase rows."""
