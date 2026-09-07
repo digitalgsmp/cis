@@ -903,11 +903,65 @@ Three roles, three lineages: Claude Code builds, GLM (review2, 8647) objects to 
 
 Qwen needs the same advisor treatment review2 got: skills disabled, toolsets trimmed, the scope line, and `mcp_servers.cis-knowledge.enabled: false` so it carries no `cis_dispatch_*` tools. Measured, not assumed — review1's loadout has never been audited, and `platform_toolsets` is unset in all six configs.
 
-**Scope:** CONTAINER — `/home/worker/.hermes-review1/config.yaml`, port 8643, model `qwen/qwen3.7-max`, verified reachable 2026-09-02. `advisor_review.sh` already takes `CIS_ADVISOR_PROFILE` and `CIS_ADVISOR_PORT`, so no script change is needed to reach it.
+**Scope — REPOINTED 2026-09-07. It is `evaluator` on 8650, not review1 on 8643.**
+This item was written 2026-09-02, when review1 was the only Qwen in the system and
+borrowing it looked like the only route. The `evaluator` profile
+(`enforcement/mwl-proof-v2/profiles/evaluator.yaml`) was created 2026-09-03 for
+exactly this purpose: `qwen/qwen3.7-max` on port 8650, already at the advisor
+loadout — 79 skills disabled, `platform_toolsets: []`, `cis-knowledge` disabled so
+it carries no `cis_dispatch_*` tools (2.23). `advisor_review.sh` takes
+`CIS_ADVISOR_PROFILE` and `CIS_ADVISOR_PORT`, so nothing needed building.
 
-**Need:** OPEN — review1 is untouched and still carries the full default loadout. A ping cost 16,568 prompt tokens on 2026-09-02, higher than review2's 15,853 before trimming.
+**DO NOT TRIM review1. This is 1.17 repeated, and it was proposed on 2026-09-07.**
+3.22 gave review1 `file, terminal, code_execution` on measured evidence — **271
+tool calls, the largest sample of any role** (terminal 196, read_file 57,
+execute_code 13, search_files 5). review1 is a live participant in every pipeline
+dual review. Stripping it to `[]` would create a *second* zero-tool Qwen advisor
+while destroying the loadout its own history justifies — borrowing a pipeline
+reviewer as an advisor, which is precisely what 1.17 cost.
 
-**The one check that settles it:** trim review1 the same way and measure; then give both advisors the same packet and count the findings only one of them raised. If that number is zero, the second lineage is not paying for itself.
+**Need: HALF DONE 2026-09-07. The trim half never needed doing; the measurement is
+done. What remains is the judgement.**
+
+**THE CHECK RAN — 2026-09-07.** The identical packet (sha256 `a38ed0b8…`, verified
+byte-identical, same recorded `packet_hash` on both rows) went to GLM
+(`advisor`, 8649) and Qwen (`evaluator`, 8650). Both at the advisor loadout, both
+round 1, no reply round.
+
+| | GLM (advisor, 8649) | Qwen (evaluator, 8650) |
+|---|---|---|
+| prompt_tokens | 1,406 | 1,497 |
+| completion_tokens | 2,253 | 1,355 |
+
+**FINDINGS ONLY QWEN RAISED — 2:**
+1. **The rebuilt table has no `REFERENCES projects(id)`, so `pragma
+   foreign_key_check` is vacuous evidence.** Verbatim: *"the join returning 30
+   rows proves the values match, not that referential integrity is enforced…
+   `foreign_key_check` returns empty because there is no foreign key to check."*
+   **Verified:** `pragma foreign_key_list(build_plan_nodes)` returns one row, and
+   it is `workflow_run_id -> workflow_runs`. There is no FK on `project_id`. The
+   card used `foreign_key_check` as proof of a thing it cannot see.
+2. **Indexes and triggers are silently dropped by DROP + RENAME.** **Verified:**
+   `idx_bpn_project_status` and `idx_bpn_project_sequence` exist on the table and
+   the card recreated neither.
+
+**FINDINGS ONLY GLM RAISED — 5:** the `DEFAULT 'CIS'` is never verified (the
+card's central claim, untested by its own EXPECT); column-order misalignment
+silently corrupting `node_label`/`tier`; the `UNIQUE` constraint claimed but
+unchecked; the backup step being literal pseudo-code that produces nothing; and
+no check that 0021 does not collide with an existing migration. A sixth —
+`workflow_runs` still broken — was **WITHDRAWN** in round 2 against `select`
+output showing 105 rows, all `'cis'`, zero uppercase.
+
+**THE NUMBER 1.20 ASKS FOR: 2.** The criterion is that a zero means the second
+lineage is not paying for itself. It is not zero. Recorded without argument
+either way — the judgement is Eric's.
+
+**The one check that settles it — SATISFIED.** Give both advisors the same packet
+and count the findings only one raised. Done above. Re-run it on a second packet
+before treating one sample as a pattern: two different models will differ on any
+single document, and one comparison does not establish that they differ
+*usefully* and repeatably.
 
 **Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled.
 ### 1.21 The loop must stop and wait, not run past Eric

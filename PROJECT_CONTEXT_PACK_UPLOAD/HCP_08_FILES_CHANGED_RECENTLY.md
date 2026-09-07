@@ -1,7 +1,41 @@
 # Files Changed Recently
-Generated: 2026-09-07 13:00 UTC | Run: run-534c44c3008f
+Generated: 2026-09-07 14:28 UTC | Run: run-20a60f2d10c8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## d8712cc docs: add 1.25, 1.26, 2.30-2.34, 3.25, 3.26 and eight corrections to the build list
+
+## .gitignore 
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/CIS_SESSION_HANDOFF.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 0d5dc3e feat: add check_chroma_writers gate — two-sided proof confirmed
 
@@ -440,41 +474,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## enforcement/mwl-proof-v2/profiles/verify.yaml 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## de42c8c build the override plane — .gate-control, checked first, proven by a test
-
-## .gate-control/README.md 
-
-## .gitignore 
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## enforcement/mwl-proof-v2/plugin/__init__.py 
-
-## enforcement/mwl-proof-v2/run_container.sh 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/test_override_plane.sh 
