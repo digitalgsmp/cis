@@ -1940,6 +1940,32 @@ defect across two places is 2.12's own shape.
 
 **Depends on:** 1.21. A feed without a waiting loop is a notification stream nobody reads by noon. **Blocked by:** 1.22 — replies that reach no index are the same loss as reviews that reach no index.
 
+**THE PAUSE FILTER IS LOAD-BEARING AND LIVES IN ONE SCRIPT — recorded
+2026-09-09, against 1.21.** A loop stop is a `deliberation_rounds` row with
+`reviewer_signal='PENDING'`. So are **11 legacy pipeline rows** from June to
+August, carrying `reviewer_role=''` and `objections_json` **NULL**. The only
+thing separating the two is `reviewer_role='pause'`, and that predicate exists
+in exactly one place: `tools/advisor_review.sh`.
+
+**What a reader without it gets.** Querying `PENDING` alone returned **13 rows
+where 2 were loop stops**, and `json.loads` threw on the first NULL before
+printing anything — measured 2026-09-09 on a query that omitted the filter. So
+the failure is not subtle drift; it is a wrong count and an exception, which is
+the better of the two ways this could go wrong.
+
+**Why it matters beyond one query.** 1.21's whole justification is that the
+waiting state is a **row**, readable by something that was not running when the
+pause was set. That promise is only kept if the other reader knows the filter —
+and nothing carries it: not the schema, not a view, not a comment on the table.
+The `reviewer_role` column has `DEFAULT ''`, so a legacy row and a malformed
+pause row are indistinguishable to anything that does not already know what
+`'pause'` means.
+
+**The shape of the fix:** put the predicate somewhere a second reader inherits
+it rather than has to reconstruct it — a view over `deliberation_rounds`, or the
+separate table this deliberately avoided needing. Recorded now because the cost
+lands on whoever reads pauses next, not on the script that writes them.
+
 ### 2.26 Six buried plugin copies wait inside the profile volumes
 
 Each of the six profile volumes still holds the `mwl-proof` copy seeded into it on 2026-08-29. Since 2026-09-03 those paths carry a read-only bind mount of `enforcement/mwl-proof-v2/plugin` from the repo, so the buried copies are masked and unreachable. Harmless while the mounts are there.
@@ -2724,6 +2750,31 @@ and a round-3 result review are in `reviews/done/queue-3.21-*`.
 done* — the 10 completion-bearing items. *What is the current item* and *what
 does it depend on* need regenerated edges and are marked NOT AVAILABLE in the
 reader's own response. *Did it succeed* is absent by decision, `ADR-3.21-001`.
+
+**STANDING OBLIGATION, UNENFORCED — recorded 2026-09-09.** Every edit to
+`docs/UNIFIED_BUILD_LIST.md` invalidates `queue_items` until the extractor
+re-runs. The table is a projection; the markdown is authoritative; nothing
+notices when they part.
+
+`source_sha` makes the drift **detectable, not automatic** — check 8b compares
+the stored hash against the file, but only when somebody runs the verifier. **It
+happened twice on 2026-09-09** — once adding item 3.28, once adding the two 2.25
+records — and was caught by hand both times because the same session that edited
+the file also remembered to re-extract. A different session, or the same one an
+hour later, has nothing to remind it.
+
+**This is 2.39 pointed at the projection rather than at the queue.** 2.39 is a
+human remembering to confirm an item is still not in the code; this is a human
+remembering to rebuild a table after editing its source. Same defect, one layer
+down, and the same fix shape: a check that runs where a stale projection would do
+damage rather than where someone thinks to invoke it. **Three candidate homes:**
+`tools/closeout.sh`, the pre-commit hook that already regenerates six files, or
+`spine.query_queue_item()` itself — the reader refusing to answer from a
+projection whose `source_sha` no longer matches the file. The third is the only
+one that protects an agent reading the table between sessions.
+
+**Related:** 2.39 (the same defect aimed at the queue), 2.12 (two copies
+drifting is what this prevents, and what it becomes if left alone).
 
 **THREE LIMITS STAY OPEN. They are known-uncovered, not oversights.**
 
