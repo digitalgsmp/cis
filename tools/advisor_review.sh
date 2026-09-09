@@ -278,6 +278,14 @@ sys.exit(2)
 PY
 }
 
+# BUILD LIST 2.25 — render the stop and DM it to Eric. Host-side HTTP POST, no
+# agent on either end. A failed send must never fail the pause: the stop is
+# already a row in the spine, so losing the message loses visibility, not state.
+notify_stop() {
+    python3 "$REPO_ROOT/tools/pause_notify.py" "$ID" "$1" || \
+        echo "NOTE: pause is set; the Telegram notice did not send" >&2
+}
+
 if [[ "$MODE" == "pause" ]]; then
     case "$PAUSE_STOP" in
         card-written)    _WHAT="the card is written; next is round 1 review of $ID" ;;
@@ -285,6 +293,7 @@ if [[ "$MODE" == "pause" ]]; then
         result-reviewed) _WHAT="the result review is in; next is the following queue item" ;;
     esac
     pause_state set "$PAUSE_STOP" "$_WHAT"
+    notify_stop "$PAUSE_STOP"
     exit 0
 fi
 
@@ -635,7 +644,9 @@ echo ""
 if [[ "$ROUND" == "1" ]]; then
     pause_state set reviews-landed \
         "reviews are in for $ID — read reviews/done/$ID.*.response.md before executing"
+    notify_stop reviews-landed
 elif [[ "$ROUND" == "3" ]]; then
     pause_state set result-reviewed \
         "result review is in for $ID — read reviews/done/$ID.*.result.md before the next item"
+    notify_stop result-reviewed
 fi

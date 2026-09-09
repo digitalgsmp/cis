@@ -1,7 +1,73 @@
 # Files Changed Recently
-Generated: 2026-09-09 05:13 UTC | Run: run-2198eb07bf62
+Generated: 2026-09-09 12:41 UTC | Run: run-aadef38524af
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## a6e1a80 feat(3.21): queue_items in the spine, with its first reader
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## reviews/done/queue-3.21-build.advisor.result.md 
+
+## reviews/done/queue-3.21-build.evaluator.result.md 
+
+## reviews/done/queue-3.21-r2.advisor.response.md 
+
+## reviews/done/queue-3.21-r2.evaluator.response.md 
+
+## reviews/done/queue-3.21-r3.advisor.response.md 
+
+## reviews/done/queue-3.21-r3.evaluator.response.md 
+
+## reviews/pending/queue-3.21-build.md 
+
+## reviews/pending/queue-3.21-r2.md 
+
+## reviews/pending/queue-3.21-r3.md 
+
+## reviews/pending/queue-edges-disposition.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/mcp_bridge/tools.py 
+
+## runtime/schema/migrations/0031_queue_items.sql 
+
+## tools/advisor_review.sh 
+
+## tools/queue/extract_queue_items.py 
+
+## tools/queue/verify_queue_items.py 
 
 ## 722e61a feat: pause the loop between stops, add result review, fix round 2
 
@@ -500,36 +566,6 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## docs/DECISIONS/2026-09-04_recommendation_standard.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 2911024 attach the 2026-07-03 design record to 1.18, 1.19, 1.21 and 2.3; correct 2.3
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
 
 ## docs/UNIFIED_BUILD_LIST.md 
 

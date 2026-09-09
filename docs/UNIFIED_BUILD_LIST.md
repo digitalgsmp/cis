@@ -1875,7 +1875,42 @@ So: an HTTP POST from the loop script using the bot credentials. No agent on eit
 
 The token being in the root Hermes profile is a credential LOCATION, not a dependency — nothing above changes. The feed is still an HTTP POST that uses a bot token; no Hermes process is involved on either end, so nothing here retires with the VM pipeline. Only the file the token is read from would need to move.
 
-**Need:** OPEN — no feed script exists. The transport underneath it is proven, which is a different thing.
+**Need: BUILT 2026-09-09, ONE-WAY.** `tools/pause_notify.py`, called from the
+three stops in `tools/advisor_review.sh`. Host-side `urllib` POST, no agent on
+either end, exactly as this item settled. Delivered live at all three stops —
+message ids 1159, 1160, 1161, continuing from 1155.
+
+**What the message carries, and where it comes from.** Signal, verdict, packet
+hash status, token cost and the opening of the objection, all read from
+`deliberation_rounds.objections_json` as recorded. **Claude Code's account of a
+review is not what goes in the message.**
+
+**What it deliberately does NOT carry: unique-findings-per-lineage.** 1.20's
+measure needs both objections read side by side, and anything mechanical would be
+a summary wearing the advisors' name. The message says so in those words rather
+than leaving the reader to assume the omission is completeness.
+
+**A failed send does not fail the pause.** Tested with a deliberately bad token:
+the POST returned 401, the stop was still recorded PENDING, and the script exited
+0. Losing the message loses visibility, not state — the stop is a row first and a
+notification second.
+
+**ONE-WAY IS A DECISION, NOT AN OMISSION.** Eric's replies arrive with no
+`reply_to_message` field — measured 2026-09-02 and recorded above — so Telegram's
+own threading cannot say which card a reply answers. Consuming a reply needs
+something polling `getUpdates`, and **a long-running poller reintroduces exactly
+what 1.21's row was chosen to avoid**: a process that dies with its terminal and
+takes the loop's position with it. Wiring one would contradict the design the
+feed exists to serve. So: read the stop on the phone, release from the terminal
+with `--continue`. That is worse than replying "go" and far better than a stop
+nobody sees.
+
+**The inbound path was NOT re-proven on 2026-09-09.** `getMe` confirmed the token
+and identity; `getUpdates` returned **zero** updates, which shows the endpoint is
+reachable and authorized but exercises no round trip. **The 2026-09-02 proof
+above stands unchallenged rather than re-verified** — a distinction worth keeping,
+because "it worked a week ago and the endpoint answers today" is not the same
+claim as "it works."
 
 **The one check that settles it — DONE 2026-09-02, both directions.** Message 1149 out via a plain `curl` POST to `sendMessage`; Eric's "go" came back as message 1150 through `getUpdates`, from uid 6511416750, matching the `TELEGRAM_ALLOWED_USERS` value — so the loop can verify the reply is his and not another group member's.
 
@@ -1883,7 +1918,25 @@ The token being in the root Hermes profile is a credential LOCATION, not a depen
 
 **Replies arrive unthreaded — the loop needs its own correlation.** Eric's "go" carried no `reply_to_message` field, so Telegram's threading cannot tell the loop which card a reply answers. Either one card waits at a time, which 1.21's waiting state gives for free, or each message carries a short tag the reply must quote. The first is simpler and is what 1.21 already implies.
 
-**Stale, and left deliberately:** all seven host `.env` files still name the deleted group as `TELEGRAM_HOME_CHANNEL`, and five of those profiles have running gateways that would get a 403 on any post there. Harmless until a VM agent tries to reach him that way. Fix it in the same pass that wires the feed, pointing them at the uid rather than at a new group.
+**Stale, and NOT fixed by the pass that was supposed to fix it — corrected
+2026-09-09.** All seven host `.env` files still name the deleted group as
+`TELEGRAM_HOME_CHANNEL`, and five of those profiles have running gateways that
+would get a 403 on any post there. This item said *"fix it in the same pass that
+wires the feed."* **That pass happened on 2026-09-09 and did not fix it.** The
+notifier reads the uid from `TELEGRAM_ALLOWED_USERS` and never touches
+`TELEGRAM_HOME_CHANNEL`, so the feed works while the stale value survives
+untouched in seven files.
+
+**Routing around a stale value leaves it more dangerous, not less.** It now
+looks configured, it is referenced by five live gateways, and the one component
+that would have exercised it deliberately does not. **Nothing detects it.** That
+is the primer/runtime divergence of 2.12 in a credential file: a value that reads
+as current, is wrong, and has no reader left to fail loudly against it.
+
+**The fix is still the one this item named** — point the seven files at the uid
+rather than at a new group. It is now outstanding beyond the window this item set
+for it, which is recorded here rather than in a new item because splitting one
+defect across two places is 2.12's own shape.
 
 **Depends on:** 1.21. A feed without a waiting loop is a notification stream nobody reads by noon. **Blocked by:** 1.22 — replies that reach no index are the same loss as reviews that reach no index.
 
