@@ -237,6 +237,36 @@ Flask has no app-level login and Phase 0 (backup safety net) is deferred with ba
 **Evidence:** raised 2 times, 2026-06-01 to 2026-08-29; mining_candidates 15004,3620; full record in `data/mining_archive/MINED_TASKS.md`.
 
 
+### 0.6 ARMING A GUARDRAIL NEEDS AN OVERRIDE POLICY THAT DOES NOT EXIST
+
+2.1 reads as "arm the 23 advisory guardrails." Run
+`run-e70293544935a92e-1787973534` is the counterexample, and it is already in
+this list: `intent_drift` FAILED twice — 0.63 DIVERGED, then 0.42
+SIGNIFICANT_DRIFT — and it was **right**. The run deliberately deviated from a
+spec whose own verification criteria would have certified a falsehood. Had
+`intent_drift` been in BLOCK mode, it would have killed the correct answer.
+
+**So arming is not a switch.** It requires a stated policy for when a guardrail
+that fires CORRECTLY should be overridden, and by whom. Nothing on this list
+defines one. 0.4's open fail-mode half is where that policy belongs: it is the
+same question — what happens when the gate says no — asked of a gate that is
+working rather than one that has failed.
+
+**Scope:** CONTAINER — the guardrail modes and the override plane are both
+repo-level and apply to both pipelines.
+
+**Need:** OPEN — no override policy exists in the code, in `docs/`, or on this
+list.
+
+**Ordering:** this is a **prerequisite to 2.1**, not a sibling. Arming the
+guardrails before the policy exists means the first correct block with no
+sanctioned way past it is the v2.0 deadlock again, in a system that today avoids
+that outcome only because it fails open.
+
+**Related:** 0.4 (the override plane is built and proven; the fail-mode half is
+where this policy lands), 2.1 (the item this gates).
+
+
 # TIER 1 — blocks a run completing end to end
 
 ### 1.1 Prove a run completes past the gate
@@ -1002,7 +1032,25 @@ failed, continues to the next, and exits non-zero with a warning against reading
 a single-lineage result as a dual review. Guarding the transport is not guarding
 the result.
 
-**Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled.
+**EVERY COUNT ABOVE WAS COLLECTED UNDER A MISLABELED PROMPT — recorded 2026-09-09.**
+`advisor_review.sh`'s scope line opened *"You are reviewing a result packet"*
+from the day the script was created. Every packet ever sent under it has been a
+**proposal** — migration 0030 r1, migration 0030 r2, and both reviews of the
+3.21 card, which is all three of the divergence measurements recorded above.
+Corrected 2026-09-09: round 1 now says *"proposal packet — work that has NOT
+been done yet"*, and the result wording moved to round 3, where a result is
+actually what arrives.
+
+**The counts are not retracted.** The findings were substantively about the
+right things — the missing FK, the untested CASCADE, the unverified DEFAULT —
+and none of them depended on the label. What cannot be claimed is that they were
+collected under the prompt this item assumes. A model told it is auditing
+finished work may weigh differently than one told it is auditing a plan, and
+that difference is unmeasured in both directions. **Recorded beside the counts,
+not in place of them.** The third packet this item asks for will be the first
+taken under the corrected label, which makes it worth more than a tiebreaker.
+
+**Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled. 2.41 (the reviews of anything built on a changed assumption are void, which is how the mislabel survived three packets).
 ### 1.21 The loop must stop and wait, not run past Eric
 
 Eric, 2026-09-02: "having the loop waiting on my approval is a lot better for me than physically being locked to a screen watching, reading, understanding and copy pasting every exchange."
@@ -1067,6 +1115,31 @@ the one this item was written about, and it is 1.26.
 The original second half also stands: a direct API call to a gateway writes no
 session file, so advisor exchanges remain invisible to `ingest_sessions.py`. That
 is not a wiring problem either — it needs the loop to write its own record.
+
+**DO NOT READ 2026-09-07 AS CLOSING THAT HALF — corrected 2026-09-08.** The
+evidence looks like closure and is not. Closeout ingested **474 Claude Code rows
+on 2026-09-07**, and both advisor threads from that day did land in the KB:
+`migration-0030` appears **29 times** in `knowledge_messages`, `self-certifying`
+**8 times** — a phrase that did not exist there before that afternoon.
+
+**They arrived from the transcript, not from the spine.**
+Put plainly: why the threads reached the KB is not the mechanism the row counts
+suggest. All 29 rows carry
+`source='claude_code'` and a `source_key` under one Claude Code session id. Zero
+rows in `knowledge_messages` come from `deliberation_rounds` or any
+advisor-sourced root — `SELECT count(*) ... WHERE source LIKE '%delib%'` returns
+**0** against 2.65M rows. The threads reached the corpus because they happened to
+be **quoted inside a session that was ingested**, not because the loop records
+itself.
+
+**So the capture is incidental and breaks silently.** A review run outside a
+Claude Code session, a trimmed transcript, or a session that ends without
+closeout leaves the thread in `deliberation_rounds` and never in the KB. Checked
+the same day: the two `queue-3.21-preflight` reviews return **0 hits** in
+`knowledge_messages` — they exist as rows and as files and have reached no index.
+
+The second half of this item is therefore exactly as open as when it was
+written. What changed on 2026-09-07 is that the failure is now harder to see.
 
 **The one check that settles it:** run a review round, then query the KB for what the reviewer objected to. If it is not there, the loop is lossy and none of the other five items should ship.
 
@@ -1177,10 +1250,19 @@ and every reader in that window degraded to keyword.
 status. **The status read completes; the semantic read defers without failing the
 card.** If the card stalls, the split is not real.
 
+**ORDERING — recorded 2026-09-08. 3.21 comes first.** The status write this
+item splits out needs somewhere to write the status *to*. That target is 3.21's
+queue table, with 2.13 folded into it — 2.13 is what supplies the link from a
+queue item to the run that advanced it, and both advisor lineages independently
+called it a hard prerequisite to 3.21 on 2026-09-08. Building 1.26 before 3.21
+means building the time-critical status write **against markdown**, which is the
+prose-parsing problem 3.21 exists to end. Sequence: **3.21 (2.13 folded in),
+then 1.26.**
+
 **Related:** 0.3 (conditional DONE — correct for batch, not for synchronized),
 1.22 (what gets written, and when), 3.24 (the same contention problem SQLite-side,
 recorded as not-yet-symptomatic), 2.30 (which needs the status half to be
-readable in time to be useful).
+readable in time to be useful), 3.21 and 2.13 (the table the status write needs).
 
 ### 1.24 Brain is fed its own prior attempts, labelled successful, from runs that failed
 
@@ -1205,6 +1287,65 @@ Brain therefore opens its turn reading three near-identical restatements of its 
 **The one check that settles it:** for any run cited in a `Prior Agent Trajectories` block, confirm the run reached a terminal success state, not merely that the quoted phase row says `success`. A trajectory from a run that escalated or timed out should either be excluded or carry what became of it.
 
 **Related:** 1.23 (the code run that has never completed — two of the three runs cited here are its failed attempts), 1.11 and 1.13 (why those two died: an API 402 reported as ambiguous output, and a draft timeout with no cause), 2.13 (runs are not linked to what they advance), and 2.3 / 3.23 for the rest of the payload composition.
+
+
+### 1.27 SIX ITEMS ARE ONE DESIGN: THE SYSTEM CANNOT CLASSIFY A FAILURE
+
+1.3 (no failure routing), 1.4 (a retry policy that retries the non-retryable),
+1.11 (the gateway returns HTTP 200 wrapping an upstream error), 1.13 (a
+timed-out agent reports nothing), 2.10 (445 broad excepts, 62 of them
+`except Exception: pass`), and the five fail-open paths in 0.4 are the same
+defect seen six ways: **nothing in the system distinguishes an infrastructure
+failure from a model failure from a correct refusal.**
+
+The order matters. Fixing retry without fixing classification retries the
+non-retryable more politely. Fixing routing without classification routes on a
+wrong label.
+
+**Demonstrated 2026-09-07.** `tools/advisor_review.sh` guarded a gateway call by
+exit code. The gateway returned HTTP 200 wrapping
+`{"error":{"code":"agent_incomplete"}}`, `docker exec` exited 0, both guards
+passed, and the script died two steps later under `set -e`. That is 1.11
+recurring in new code — written hours after both parties had read 1.11.
+
+**Scope:** CONTAINER — the gateway response handling, the relay's exception
+surface, and the guard patterns in `tools/`.
+
+**Need:** OPEN — all six items are open, and the 2026-09-07 recurrence is new
+code, not legacy.
+
+**How to work it:** as one design, **classification first**. Record the
+grouping; do not merge the items — they are built separately, the same way the
+review loop is.
+
+**Related:** 0.4 (the five fail-open paths), 1.3, 1.4, 1.11, 1.13, 2.10.
+
+### 1.28 1.23 IS GATED ON THE BRIEFING, NOT ONLY ON THE RUN
+
+1.23 (a code run has never completed end to end) is treated as the next
+milestone. 1.12 measures what the operator would actually be approving at the
+end of it: on the one run that did complete, the two reviewers produced 14,608
+characters of analysis and **none of it reached the briefing** —
+`objections_json` empty on every pre-gate round, `decision_trails` zero rows, so
+section 3 rendered "Consensus reached after 4 rounds — no objections were
+recorded."
+
+A code run completing under those conditions means Eric approving a code change
+on the proposer's own account of its own proposal. That is failure mode 3 at the
+one point in the pipeline where a human is supposed to be the check.
+
+**Scope:** CONTAINER — the briefing renderer and the tables it reads.
+
+**Need:** OPEN — 1.12 is open, and nothing has changed in what the briefing
+carries.
+
+**Ordering:** 1.12 is a prerequisite to 1.23 being **MEANINGFUL**, not merely to
+it being pleasant. A run that completes into an empty briefing has proven the
+plumbing and nothing about the judgement.
+
+**Related:** 1.12 (the empty briefing), 1.23 (the milestone this gates), 1.18
+through 1.22 (the review loop, which exists to supply the same missing
+perspective on the other plane).
 
 
 # TIER 2 — blocks trusting what a run produces
@@ -1532,6 +1673,15 @@ point at them.
 DEV-PIVOT at intake, or are repairs marked maintenance? Do not let brain infer
 it. This rescoping establishes what the code does and does not do. It does not
 make that decision and must not be read as having made it.
+
+**FOLDED INTO 3.21 — Eric's decision 2026-09-09.** This item is no longer
+independent. 3.21's queue table answers three of 2.30's four questions and
+cannot answer *did it succeed*, because the link from a queue item to the run
+that advanced it does not exist — which is this item. Both advisor lineages
+identified it as a hard prerequisite to 3.21 on the same packet. **Build them as
+one design;** the ordering and the reasoning are recorded in 3.21, and 1.26 sits
+behind both. The open decision above is unchanged by the fold and is still
+Eric's to make.
 
 ### 2.15 Thirty-three of fifty-one gate scripts have never fired
 **Checked:** 51 gate scripts exist in `enforcement/mwl-proof-v2/gates/`.
@@ -2080,6 +2230,136 @@ must not select its own work), 2.17 (what a silently-wrong write to an audit
 table costs).
 
 
+### 2.39 THE CONFIRM-BEFORE-WORKING STEP IS A HUMAN REMEMBERING
+
+HOW TO WORK THIS LIST says to confirm an item is still not in the code before
+working it, because the items were checked on 2026-08-29 and the code moves.
+Nothing enforces that. It is a human remembering, every time, under no prompt.
+
+**What one session turned up without looking for it.** 2026-09-06/07 produced
+four staleness findings: 1.22's ingest half was already wired by commit
+`e90e598`; 2.5's migrations exist (0011 through 0030) though no tracking table
+does; 3.5's export-gate warning appears resolved — the gate now prints PASS on
+13 artifacts; and 2.13's stated symptom pointed at the wrong table entirely.
+
+Every count and status line in this list carries an implicit timestamp, and most
+of them read 2026-08-29.
+
+**Scope:** REPO — this list and whatever comes to check it.
+
+**Need:** OPEN — nothing compares an item's claims against the code.
+
+**The shape of the fix:** a check that compares an item's claims against the
+code, run **when the item is opened** rather than remembered. Not a periodic
+sweep of every item; the cost belongs at the moment one is picked up.
+
+**Related:** 2.12 (primer/runtime divergence — this is the same defect pointed
+at the queue instead of at the primer), 2.38 (a check derived from the change
+cannot see what the change breaks).
+
+
+### 2.40 THE ADVISOR LOOP RECORDS WHAT WAS SAID, NOT WHETHER IT WAS RIGHT
+
+Every exchange writes a `deliberation_rounds` row: run id, round, signal, and the
+thread in `objections_json` as an array of objects carrying objection, evidence,
+verdict and packet hash. **Nothing records the outcome.**
+
+On migration 0030 the record shows that GLM raised the DEFAULT objection. It does
+not show that GLM was *correct*, twice. It does not show that Qwen's single
+CASCADE finding was the one that would have caught a silently broken dependency
+graph. And on the 3.21 card, 2026-09-08, it does not show that **both lineages
+built their main remedy on a false premise** — live adapter writers to
+`build_plan_nodes` that are two comments, not code — or that one `grep` retracted
+it and collapsed both remedies at once.
+
+The stored thread is identical in all three cases. A reader six weeks from now
+cannot tell the objection that saved a migration from the objection that was
+wrong, because the field that would say so does not exist.
+
+**What this costs.** 1.20's measure is the count of findings only one lineage
+raised, *and which of them mattered*. The first half is countable from the rows.
+The second half is not, so it is recounted by hand every session and lost when
+the session ends — which is the same reason the 2026-08/09 mining pass had to
+recover 4,479 candidates by archaeology.
+
+**The fix, and where it goes.** An outcome written back into the thread after
+execution: the objection was HELD, WITHDRAWN, or **PROVEN WRONG by the result**.
+That value is knowable at exactly one moment — when the result review runs — and
+that is where it should be written. The round-3 result review built on
+2026-09-08 is the hook; it currently records a verdict on the *work* and nothing
+about the *reviews that preceded it*.
+
+**Scope:** REPO — `tools/advisor_review.sh` and the `objections_json` thread it
+writes. No schema change: the outcome is another key in the existing array of
+objects.
+
+**Need:** OPEN — the round-3 verdict field exists as of 2026-09-08 and applies to
+the executed work, not to the prior objections.
+
+**The one check that settles it:** pick any completed card and ask the spine
+which of its objections turned out to be right. The answer is in a human's
+memory or in a transcript, and nowhere in the row.
+
+**Related:** **2.8** — the same shape, one stage earlier. `gate_outcomes` holds
+**4,694 rows** (the item says 4,375, checked 2026-08-29; the drift is 2.39's
+point) read only to display: nothing aggregates across runs and nothing detects a
+guardrail that never fires. The advisor loop is building that shape a second
+time, and it is cheaper to add the field now than to mine it back later. Also
+1.20 (the measure this makes countable), 1.18 and 1.19 (the rounds that produce
+the thread), 1.22 (whether any of it reaches the KB at all).
+
+
+### 2.41 A CHANGE THAT ALTERS AN ASSUMPTION INVALIDATES THE REVIEWS OF EVERYTHING BUILT ON IT
+
+The reply round (1.19) was built and proven on 2026-09-07 with a single lineage
+forced through `CIS_ADVISOR_PROFILE`. Dual lineage landed **the same day**.
+Nothing re-checked round 2 against it.
+
+**Found 2026-09-09, two defects, neither ever executed:**
+
+- In dual-lineage mode round 2 **exits 1 before contacting any gateway.** `PRIOR`
+  is the fixed path `reviews/done/<id>.response.md`, while dual lineage writes
+  `<id>.<profile>.response.md`. The file it needs cannot exist.
+- Had that path resolved, `BODY` was built **once, outside the lineage loop**, so
+  both lineages would have been handed **the same lineage's objection** to
+  answer — a reply round that reads as two independent answers and is one.
+
+Neither was caught because round 2 had only ever run in the mode the defects do
+not appear in.
+
+**What this cost, concretely.** The reply round was recommended to Eric for the
+3.21 review **two turns before the defects were found**. It could not have run.
+And round 3 — the result review — was then written with the identical structure
+and would have inherited both, because the structure was assumed reviewed.
+
+**The rule this item exists to record:** when a change alters an assumption
+another component depends on, the dependent component's review is **void, not
+merely older**. Single-lineage was not a setting; it was the premise round 2 was
+proven under, and dual lineage removed it silently the same afternoon.
+
+**Nothing tracks which reviews rest on which assumptions.** `deliberation_rounds`
+records the packet hash, so a review is bound to the artifact it read — but not
+to the surrounding state that made the artifact true. A packet can hash
+identically and be answering a question that no longer exists.
+
+**Scope:** REPO — the review record in `deliberation_rounds`, and whatever comes
+to invalidate it.
+
+**Need:** OPEN — the two defects were fixed 2026-09-09; the mechanism that let
+them survive was not.
+
+**The one check that settles it:** name a change made in the last month and list
+the reviews it invalidated. There is no query for this, and the answer is
+currently a person remembering.
+
+**Related:** **2.38** — a check derived from the change cannot see what the
+change breaks. This is that failure one layer up: in the *review* rather than in
+the verification. **1.20**, whose three divergence counts were all taken under a
+prompt label that changed underneath them. **2.39** (staleness in the queue) and
+**2.12** (divergence between two copies) are the same defect aimed at documents
+rather than at reviews.
+
+
 # TIER 3 — independent defects, no dependants
 
 - **3.1** `ask_history` does not merge FTS5 with vector search. The relay does;
@@ -2346,7 +2626,35 @@ it is true, no surface can help.
 
 **This item is not UI work.** 2.30 records why it exists.
 
-**Depends on:** nothing. Blocks 4.18 (the card factory needs a table to read) and the UI roadmap.
+**Depends on: 2.13 — folded in, Eric's decision 2026-09-09.** This line read
+*"nothing"* until that date and it was false. Both advisor lineages found it
+independently on the 3.21 pre-flight packet, from opposite directions and with
+no shared prompt beyond the packet itself.
+
+**Why.** 2.30 asks four questions: what is the current item, what does it depend
+on, what was just done, and **did it succeed.** A queue table extracted from the
+markdown answers the first three. The fourth was to be joined at read time from
+`workflow_runs` and `gate_outcomes` — and **there is no join key.** Nothing links
+a build-list item number to a run. That missing link is 2.13. As the advisor put
+it: this is not a gap in the verification, it is a gap in the design.
+
+**The two are one design.** 3.21 supplies the item, its identity and its
+dependencies; 2.13 supplies what became of it. Built alone, 3.21 ships the thing
+2.30 was opened to fix, minus the half it was opened for.
+
+**And the fourth question is the Eric-facing half.** The first three serve a
+stateless agent picking up work. *Did it succeed* is what Eric reads to know
+whether the last thing worked. **A queue that cannot say whether the last thing
+succeeded does not replace him as the integration layer** — it just moves where
+he has to stand to do it himself.
+
+**Note the shape of 2.13 before building.** It was rescoped 2026-09-07: its
+stated symptom pointed at the wrong table, and the fix as originally written
+would have passed its own verification while leaving the symptom untouched.
+Whatever supplies the join key here must be chosen against that correction, not
+against the item's original text.
+
+**Blocks** 4.18 (the card factory needs a table to read) and the UI roadmap.
 
 ### 3.22 Audit token cost per agent against what the role actually needs
 
