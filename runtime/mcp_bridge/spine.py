@@ -434,3 +434,45 @@ def query_dev_pivot_status(status_filter=None, category_filter=None, db_path=Non
         return []
     finally:
         conn.close()
+
+
+def query_queue_item(item_num, db_path=None):
+    """Single unified-build-list item by its number, e.g. '3.21'.
+
+    BUILD LIST 3.21. This is the first reader of queue_items and the reason the
+    table is not sediment (item 2.37).
+
+    DEPENDENCY EDGES ARE DELIBERATELY NOT RETURNED. queue_edges holds 45 rows
+    hand-extracted on 2026-09-05 that nothing regenerates; six items added since
+    have dependency prose and zero edges. Both advisor lineages independently
+    said to omit rather than serve them: returning nothing forces the caller to
+    say "I don't know", returning a stale snapshot lets it say "I know" when it
+    does not. The dependency half arrives with the queue_edges regeneration
+    card, not before.
+
+    Returns dict with item_num, tier, title, form, scope, need_status, need_raw,
+    source_line, source_sha, extracted_at, plus answers_2_30 describing what this
+    row can and cannot tell the caller. Returns None if no matching item.
+    """
+    conn = _connect_readonly(db_path)
+    try:
+        row = conn.execute(
+            """SELECT item_num, tier, title, form, scope, need_status,
+                      need_raw, source_line, source_sha, extracted_at
+                 FROM queue_items
+                WHERE item_num = ?""",
+            (item_num,),
+        ).fetchone()
+        result = _row_to_dict(row)
+        if result is not None:
+            result["answers_2_30"] = {
+                "what_was_just_done": "need_status on this row",
+                "what_is_the_current_item": "NOT AVAILABLE - nothing designates one",
+                "what_does_it_depend_on": "NOT AVAILABLE - queue_edges is not regenerated",
+                "did_it_succeed": "ABSENT BY DECISION - see ADR-3.21-001",
+            }
+        return result
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()

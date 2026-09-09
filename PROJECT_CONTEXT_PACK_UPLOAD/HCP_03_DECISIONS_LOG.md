@@ -1,10 +1,11 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-09-09 04:06 UTC | Run: run-bfc35931eb90
+Generated: 2026-09-09 05:13 UTC | Run: run-2198eb07bf62
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-09-09 | [ADR-3.21-001] queue_items carries no run link and no success field: queue_items answers what an item is and what its st | Dual-lineage advisor review 2026-09-09 (queue-3.21-r2). The join would inherit b | DECIDED | spine record |
 | 2026-06-19 | [ADR-SEED-016] Enforcement Primitive Approved: TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved via dual-review (Claud | Dual-advisor audit passed. Eric approved. Proposal is the authoritative spec for | DECIDED | spine record |
 | 2026-06-19 | [ADR-SEED-015] Enforcement architecture: three-layer process isolation: CIS enforces Hermes via root-owned /opt/cis-cont | 16 failure modes are LLM behavior failures, not future app features. Prompt/SOUL | DECIDED | spine record |
 | 2026-06-16 | [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit: FALSE CLAIM — RES | FALSE CLAIM. Investigation proved prime was never poisoned. BLK-SEED-005 is RESO | DECIDED | spine record |

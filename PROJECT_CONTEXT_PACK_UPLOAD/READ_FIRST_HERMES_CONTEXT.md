@@ -16,6 +16,6 @@ If there is a conflict between this file and any HCP file, prefer the HCP file.
 All HCP files carry the stamp: DO NOT MANUALLY EDIT — regenerate with
 tools/export/generate_hcp.py.
 
-Generated: 2026-09-09 04:06 UTC | Run: run-bfc35931eb90
+Generated: 2026-09-09 05:13 UTC | Run: run-2198eb07bf62
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py

@@ -9,6 +9,7 @@ Defines 14 tools (11 read-only + 3 dispatch) per FD.1 specification:
   Dispatch (3): cis_dispatch_drafter, cis_dispatch_reviewer, cis_dispatch_implementer
 """
 from . import spine
+import re
 import subprocess
 
 # ── Tool definitions ──────────────────────────────────
@@ -30,6 +31,10 @@ TOOLS = [
     {
         "name": "cis_get_build_status",
         "description": (
+            "DEPRECATED for build-list work. Reads build_plan_nodes, which holds "
+            "the COMPLETED June 2026 dependency-graph plan (tiers 0-13), NOT the "
+            "unified build list. For a build-list item like '3.21' use "
+            "cis_get_queue_item instead. "
             "Get the status of a single build_plan_node by its exact label. "
             "Returns status, tier, evidence_path, commit_hash, completed_at, approved_at. "
             "Example label: 'Tier 8 — MCP Bridge'"
@@ -46,6 +51,26 @@ TOOLS = [
                 },
             },
             "required": ["node_label"],
+        },
+    },
+    {
+        "name": "cis_get_queue_item",
+        "description": (
+            "Get a unified-build-list item by its number, e.g. '3.21'. Returns "
+            "tier, title, scope, need_status and the item's prose. Does NOT "
+            "return dependency edges: queue_edges is a 2026-09-05 snapshot that "
+            "nothing regenerates, and serving it would let a caller believe "
+            "stale dependencies are current."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "item_num": {
+                    "type": "string",
+                    "description": "Build-list item number. Example: '3.21'",
+                },
+            },
+            "required": ["item_num"],
         },
     },
     {
@@ -382,14 +407,50 @@ def handle_get_current_phase(arguments):
 
 
 def handle_get_build_status(arguments):
-    """Handler for cis_get_build_status."""
+    """Handler for cis_get_build_status.
+
+    REDIRECTS build-list item numbers. Before 2026-09-09 an agent asking this
+    tool about item '3.21' got "No build_plan_node found with label: 3.21" --
+    a wrong answer delivered silently, because this tool reads the June build
+    plan and the unified list uses dotted item numbers it has never contained.
+    Leaving that live beside a correct tool is build list item 2.12: two queues,
+    and the caller cannot tell which one answered.
+    """
     node_label = arguments.get("node_label", "")
     if not node_label:
         return {"error": "node_label is required"}
+
+    if re.match(r"^[0-9]+\.[0-9]+$", node_label.strip()):
+        item = spine.query_queue_item(node_label.strip())
+        return {
+            "redirected_from": "cis_get_build_status",
+            "reason": (
+                "'{}' is a unified-build-list item number, not a "
+                "build_plan_node label. build_plan_nodes holds the completed "
+                "June 2026 plan and has never contained this item. Answered "
+                "from queue_items instead; call cis_get_queue_item directly."
+            ).format(node_label.strip()),
+            "item": item,
+        }
+
     result = spine.query_build_status(node_label)
     if result is None:
-        return {"error": "No build_plan_node found with label: {}".format(
-            node_label)}
+        return {"error": (
+            "No build_plan_node found with label: {}. Note this tool reads the "
+            "completed June 2026 build plan. For a unified-build-list item, use "
+            "cis_get_queue_item."
+        ).format(node_label)}
+    return result
+
+
+def handle_get_queue_item(arguments):
+    """Handler for cis_get_queue_item — BUILD LIST 3.21's first reader."""
+    item_num = str(arguments.get("item_num", "")).strip()
+    if not item_num:
+        return {"error": "item_num is required, e.g. '3.21'"}
+    result = spine.query_queue_item(item_num)
+    if result is None:
+        return {"error": "No queue_items row for item_num: {}".format(item_num)}
     return result
 
 
@@ -623,6 +684,7 @@ def handle_get_dev_pivot_status(arguments):
 HANDLERS = {
     "cis_get_current_phase": handle_get_current_phase,
     "cis_get_build_status": handle_get_build_status,
+    "cis_get_queue_item": handle_get_queue_item,
     "cis_get_next_actions": handle_get_next_actions,
     "cis_get_recent_runs": handle_get_recent_runs,
     "cis_get_run_detail": handle_get_run_detail,

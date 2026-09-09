@@ -12,6 +12,7 @@
 #         bash tools/advisor_review.sh <id> --result <file>  # round 3: result review
 #         bash tools/advisor_review.sh <id> --pause <stop>   # halt the loop here
 #         bash tools/advisor_review.sh <id> --continue       # release the halt
+#         bash tools/advisor_review.sh <id> --supersede      # card replaced, not approved
 #         reads   reviews/pending/<id>.md
 #         writes  reviews/done/<id>.<profile>.response.md   (round 1)
 #                 reviews/done/<id>.<profile>.reply.md      (round 2)
@@ -150,6 +151,8 @@ if [[ $# -eq 1 ]]; then
     :
 elif [[ $# -eq 2 && "$2" == "--continue" ]]; then
     MODE="continue"
+elif [[ $# -eq 2 && "$2" == "--supersede" ]]; then
+    MODE="supersede"
 elif [[ $# -eq 3 && "$2" == "--reply" ]]; then
     REPLY_FILE="$3"
     [[ -f "$REPLY_FILE" ]] || { echo "no evidence file at $REPLY_FILE" >&2; exit 1; }
@@ -247,18 +250,27 @@ if mode == "set":
         print(what)
     sys.exit(0)
 
-if mode == "release":
+if mode in ("release", "supersede"):
+    verb = "continue" if mode == "release" else "supersede"
     if not open_row:
-        print("no open pause for this id — nothing to continue")
+        print("no open pause for this id — nothing to " + verb)
         sys.exit(0)
     e = entry_of(open_row)
     e["released_at"] = now
+    # CONTINUED means the stop was read and the work proceeds. SUPERSEDED means
+    # the card was replaced and the work never proceeded from here. Both leave
+    # reviewer_signal='CONSENSUS_REACHED' because that column's CHECK allows only
+    # five values and none of them means "abandoned" -- adding one is a schema
+    # change. The distinction that matters therefore lives in `resolution`, and a
+    # reader that only looks at reviewer_signal cannot tell an approved card from
+    # a discarded one. Recorded here rather than papered over.
+    e["resolution"] = "CONTINUED" if mode == "release" else "SUPERSEDED"
     conn.execute(
         "UPDATE deliberation_rounds SET reviewer_signal='CONSENSUS_REACHED', "
         "objections_json=? WHERE run_id=? AND round_number=?",
         (json.dumps([e]), RUN, open_row[0]))
     conn.commit()
-    print("continued from stop: " + e.get("stop", "?"))
+    print(e["resolution"] + " from stop: " + e.get("stop", "?"))
     sys.exit(0)
 
 sys.stderr.write("pause_state: unknown mode " + mode + "\n")
@@ -278,6 +290,11 @@ fi
 
 if [[ "$MODE" == "continue" ]]; then
     pause_state release
+    exit 0
+fi
+
+if [[ "$MODE" == "supersede" ]]; then
+    pause_state supersede
     exit 0
 fi
 

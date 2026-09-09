@@ -2656,6 +2656,56 @@ against the item's original text.
 
 **Blocks** 4.18 (the card factory needs a table to read) and the UI roadmap.
 
+**BUILT 2026-09-09 — migration `0031_queue_items.sql`, one row per item.** No
+count is written here on purpose: the table is regenerated from this file, so any
+number recorded in the file it describes is stale the moment an item is added.
+Adding 3.28 below took it from 119 to 120 within the same card. The extractor
+is `tools/queue/extract_queue_items.py`, the verification
+`tools/queue/verify_queue_items.py`, and the first reader
+`spine.query_queue_item()` behind the MCP tool `cis_get_queue_item`.
+`cis_get_build_status` now redirects on a dotted item number instead of
+answering *"No build_plan_node found with label: 3.21"*. Three advisor packets
+and a round-3 result review are in `reviews/done/queue-3.21-*`.
+
+**What it answers: ONE of 2.30's four questions**, not three. *What was just
+done* — the 10 completion-bearing items. *What is the current item* and *what
+does it depend on* need regenerated edges and are marked NOT AVAILABLE in the
+reader's own response. *Did it succeed* is absent by decision, `ADR-3.21-001`.
+
+**THREE LIMITS STAY OPEN. They are known-uncovered, not oversights.**
+
+1. **The partition can be wrong in a way every check accepts.** Checks 7b, 7c
+   and 7d were added beyond the design and catch a split, a truncation
+   compensated by a neighbour, and a merge that swallowed a marker. GLM gave the
+   case that survives all three: **a preamble line absorbed into the preceding
+   item's body** keeps the ranges contiguous, non-overlapping, and every marker
+   inside a row — and the partition is still wrong. Narrowed, not closed.
+2. **109 of the 119 items share the parser's definition.** The 10 hand-read
+   completion items are the only evidence no parser produced. If the definition
+   of "an item" is wrong, every count agrees with every other count and they are
+   wrong together.
+3. **The test suite never ran** — see the pytest item in Tier 3. The three test
+   files touching these objects were read and their asserted paths fall in the
+   unchanged set. That is inspection, not execution.
+
+**What the round-3 result review caught, recorded because it is the point.**
+Both lineages returned **NOT_ESTABLISHED** on the first live result review. The
+build was sound; the *evidence packet* asserted `ADR-3.21-001` had been written
+and showed no query proving it. The row existed. The claim was unevidenced —
+**failure mode 1, self-reported completion without evidence, found by the
+artifact built to find it.** Check 11 now queries that row, and check 12 resolves
+the dashboard's route without a browser.
+
+**A pre-existing routing collision, found while checking the client side and NOT
+caused by this change.** Two blueprints register `/api/pipeline/status/<...>`:
+`runtime/api/pipeline.py:93` as `<source_id>` and
+`runtime/api/pipeline_views.py:37` as `<path:node_label>`. Werkzeug matches the
+plain converter first, so a single-segment request reaches the *manifest* route
+and `pipeline_views.build_status` is **reachable only for labels containing a
+slash**. `cis_dashboard.html:1672` reads `r.found`, which only the manifest route
+returns — so the dashboard is consistent today, and would silently render
+nothing if the collision were ever resolved the other way. Recorded, not fixed.
+
 ### 3.22 Audit token cost per agent against what the role actually needs
 
 Measured on review2, 2026-09-02: the 79 skills cost 2,193 tokens, 14% of the prompt. Tool schemas cost the rest. `platform_toolsets.api_server` was unset, so all 14 toolsets loaded — including browser, image_gen, vision, cronjob and code_execution, none of which a reviewer uses. The five largest tool schemas were 24KB alone: session_search 5,919 bytes, terminal 5,675, delegate_task 5,573, skill_manage 4,138, memory 2,836.
@@ -2938,6 +2988,38 @@ figure currently in `CLAUDE.md`, off by one. **77.**
 **Related:** 2.12 (the `runtime/spine.db` decoy, and why "the spine" needed
 settling at all), 0.1 (FK enforcement, which pays the traversal cost described
 above), 0.3 (the same contention problem solved for Chroma).
+
+### 3.28 THE TEST SUITE CANNOT BE RUN ON THIS HOST — pytest IS NOT INSTALLED
+
+Checked 2026-09-09 while building 3.21: `import pytest` fails under
+`python3.12`, under `/usr/local/lib/hermes-agent/venv/bin/python`, and under
+`python3`. There is no interpreter on this host that can execute `tests/`.
+
+**This is 2.15's shape pointed at the tests.** 2.15 records thirty-three of
+fifty-one gate scripts that have never fired. A test suite nobody can run is the
+same defect: the artifact exists, it is committed, it is cited in review as
+evidence — and it has never executed. The 3.21 build cited three test files as
+unaffected on the strength of **reading** them.
+
+**What it cost, concretely.** `tools.py` and `spine.py` were both modified on
+2026-09-09. `tests/mcp_bridge/test_tools.py`, `tests/mcp_bridge/test_spine.py`
+and `tests/ui/test_ui_integration.py` all exercise the changed functions. None
+could be run. The change went in on inspection plus a purpose-built verifier,
+which is better than nothing and is not a regression test.
+
+**Scope:** REPO — the host's interpreters, not the container's. Whether the
+container can run them is unchecked and is the first thing to establish.
+
+**Need:** OPEN — no interpreter on the VM has pytest.
+
+**The one check that settles it:** `python -m pytest tests/ -q` from somewhere,
+anywhere, and record which interpreter it was. If the answer is "only inside the
+container", that is the answer and it should be written down.
+
+**Related:** 2.15 (gate scripts that never fire — same defect, different
+artifact), 2.37 (nothing tests the artifacts for whether anything exercises
+them), 3.21 (the build that surfaced it).
+
 
 # TIER 4 — after the infrastructure works
 
