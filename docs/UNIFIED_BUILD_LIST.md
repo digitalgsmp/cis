@@ -1875,6 +1875,12 @@ So: an HTTP POST from the loop script using the bot credentials. No agent on eit
 
 The token being in the root Hermes profile is a credential LOCATION, not a dependency — nothing above changes. The feed is still an HTTP POST that uses a bot token; no Hermes process is involved on either end, so nothing here retires with the VM pipeline. Only the file the token is read from would need to move.
 
+**This item's own status line was unreadable to the extractor until
+2026-09-09** — `BUILT` was not in its vocabulary, so this item was projected into
+`queue_items` as having no status at all. Recorded against 3.21, where the fix
+lives. The spelling below is deliberately unchanged: normalising it would have
+hidden the defect instead of proving the fix.
+
 **Need: BUILT 2026-09-09, ONE-WAY.** `tools/pause_notify.py`, called from the
 three stops in `tools/advisor_review.sh`. Host-side `urllib` POST, no agent on
 either end, exactly as this item settled. Delivered live at all three stops —
@@ -2775,6 +2781,89 @@ one that protects an agent reading the table between sessions.
 
 **Related:** 2.39 (the same defect aimed at the queue), 2.12 (two copies
 drifting is what this prevents, and what it becomes if left alone).
+
+**THE BLIND SPOT WAS DEMONSTRATED WITHIN HOURS — 2026-09-09.** The r3 review
+named it: rule 6 catches unknown **values**, not unknown **shapes**. It was
+recorded as known-uncovered, and then hit the same day by the person who
+recorded it.
+
+Item 2.25's status line read `**Need: BUILT 2026-09-09, ONE-WAY.**` — written by
+me that morning. The extractor's second shape matched only the four literal
+known tokens, so `BUILT` fell through every branch to **NULL**, and 2.25 was
+recorded as *"no status stated"* while plainly stating one. `UNPARSED` never
+fired, because it only triggered on the `**Need:** VALUE` shape with an
+unrecognised value. **All 32 checks passed**, because 57 NULLs is a normal
+outcome and no check knows which items ought to be in that bucket.
+
+**Fixed by making an unrecognised token FAIL rather than fall through.** Both
+`**Need:` shapes now capture any token and validate it; anything outside the
+vocabulary returns UNPARSED, and UNPARSED stops the run without importing.
+Proven by a negative test against a scratch copy: an injected
+`**Need: NONSENSE` exits 1, writes **zero** rows, and names the item. A partial
+queue is not imported.
+
+**`BUILT` is recognised but stored as `DONE`.** `need_status` carries a CHECK
+constraint of five values and `BUILT` is not one of them; storing it literally
+needs a schema change. This follows the `RESOLVED -> DONE` mapping already in
+the same function — the vocabulary is what the parser can READ, the CHECK is
+what the column can HOLD, and `need_raw` preserves the literal either way.
+2.25 now reads `need_status=DONE, need_raw=BUILT`.
+
+**STILL UNCOVERED, and this fix does not touch it:** an item stating its status
+without a `**Need:` marker at all — Qwen's `"Status: BLOCKED on 2.13"` — is
+indistinguishable from an item that genuinely states nothing. Both are NULL and
+nothing fires. **The gap narrowed from "any unrecognised status" to "any status
+not written as a `**Need:` marker", and it did not close.**
+
+**One more property, found by a negative test that first failed to fail.**
+`classify_status` returns on the FIRST marker it finds in an item body, so an
+item carrying two `**Need:` lines only ever reports the earlier one. The first
+attempt at the negative test injected `**Need: NONSENSE` into item 3.28, which
+already had `**Need:** OPEN` above it; the run passed and proved nothing. Not a
+defect today — no item has two — but it is a silent precedence rule with no
+check.
+
+**THE DUPLICATE-MARKER RULE — added 2026-09-09, second pass.** `classify_status`
+returned on the FIRST `**Need:` marker in a body, so an item with two of them
+silently reported the earlier one. **Two status claims in one item is not a
+precedence question — the item's status is ambiguous, and saying so is the only
+honest answer.** A second marker now fires UNPARSED and stops the run.
+
+Detection is anchored to line start, and that detail is load-bearing: **this very
+item discusses `**Need:` markers in its own prose nine times inside backticks.**
+An unanchored count reads those as nine extra markers and fails the run on a
+correct file — a check that cannot survive being written about is not a check.
+Verified: anchored, 61 items carry zero markers, 59 carry exactly one, none
+carries more; and re-classifying all 120 items against the live table produced
+**zero** changes, so the anchoring fixed the counting without moving any status.
+
+**The test that failed to fail, now failing correctly.** Injecting a second
+`**Need:` line into 3.28 — which already carries `**Need:** OPEN` — exits 1,
+names the item, and writes zero rows:
+
+```
+UNPARSED : 1
+  3.28   "2 '**Need:' markers in one item — status ambiguous"
+```
+
+**RESIDUAL GAP — narrowed twice, still open, and deliberately not closed.**
+Status written as prose *outside* any marker — Qwen's `"Status: BLOCKED on
+2.13"` — still lands in the NULL bucket beside items that genuinely say nothing.
+
+**What would close it, and why it is not being done.** Closing it means detecting
+status prose with no marker to key on, which is guessing at natural language.
+**A parser that guesses is worse than one with a stated boundary**: a wrong guess
+writes a confident status nobody checks, while a stated boundary produces a NULL
+that is honest about what it does not know. The boundary IS the fix. The NULL
+bucket is not a gap in the parser; it is the parser declining to invent.
+
+What remains is a convention question, not a parsing one: if statuses must be
+written as `**Need:` markers, that belongs in HOW TO WORK THIS LIST, and the
+extractor already enforces it for every shape it can see.
+
+**2.25's `BUILT` spelling is left unnormalised on purpose.** Rewriting it to
+`DONE` would erase the only live instance of the defect this fix was built
+against, and the next reader would find a fix with nothing to test it on.
 
 **THREE LIMITS STAY OPEN. They are known-uncovered, not oversights.**
 
