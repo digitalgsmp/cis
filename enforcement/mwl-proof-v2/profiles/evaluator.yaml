@@ -1,14 +1,14 @@
 # /etc/hermes/config.yaml — MANAGED SCOPE (root-owned, mode 0644)
 # CIS Evaluator Profile — model config in this file, identity is role-based.
 #
-# PERMANENTLY STRIPPED BY DESIGN — this is NOT dev mode, do not "restore" it.
-# The three blocks at the bottom (skills.platform_disabled, platform_toolsets,
-# mcp_servers.cis-knowledge.enabled: false) are what this role IS. It reasons
-# only from the packet it is handed. An agent that cannot search cannot report
-# that something is absent when it merely could not reach it — the false-absence
-# failure observed 2026-09-02, when an advisor with narrower file access than its
-# subject reported three existing backups as missing under a heading reading
-# WHAT I OBJECT TO. Measured on review2: 15,853 -> 4,502 prompt tokens.
+# READ-ONLY BY DESIGN — this is NOT dev mode, do not "restore" it and do not add
+# write tools. The role has read-shaped measurement instruments only (the
+# cis-knowledge MCP in CIS_MCP_MODE=readonly): read a file, search, query the
+# spine, inspect git, compare hashes. It CANNOT write, edit, dispatch, or execute
+# — skills.platform_disabled and platform_toolsets: [] hold that wall. The
+# instruments fix the false-absence failure observed 2026-09-02, when a reviewer
+# with no access reported existing artifacts as missing. It may now CHECK before
+# it asserts; it still may not ACT.
 model:
   provider: openrouter
   default: qwen/qwen3.7-max
@@ -26,9 +26,13 @@ display:
     it will cost later. Plain language, no jargon he would have to look up.
     Bias to admit: toward agreeing with a confident-sounding proposal. Correct by
     naming the specific thing you checked and the specific thing you did not.
-    You have no tools and no file access. Everything you need is in the message.
-    If something you would need is not here, SAY WHAT IS MISSING. Never report
-    that it does not exist.
+    You have READ-ONLY measurement instruments, not a shell. You may read a file
+    inside the CIS repo, search file contents, query the spine (read-only),
+    inspect git history, and compare hashes. You may NOT write, edit, dispatch,
+    execute, or reach the network. VERIFY a discrepancy before you assert it —
+    cite the exact file, query, commit, or hash you checked. If something is
+    still not reachable through your instruments, SAY WHAT IS MISSING. Never
+    report that it does not exist when you merely could not read it.
     ECONOMY: Say what matters and stop. Verbosity wastes tokens and erodes
     clarity. Be direct, be specific, be done.
 api_server:
@@ -49,13 +53,13 @@ mcp_servers:
     env:
       CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
       PYTHONPATH: /workspace/cis/runtime
-    # REQUIRED, not redundant. An empty platform_toolsets list alone is
-    # re-populated downstream by the non-configurable-toolset recovery block in
-    # hermes_cli/tools_config.py, which would hand this agent cis_dispatch_drafter,
-    # cis_dispatch_reviewer and cis_dispatch_implementer — the ability to start a
-    # pipeline run. That is queue item 2.23. Both settings are needed to reach
-    # zero tools.
-    enabled: false
+      CIS_MCP_MODE: readonly
+      CIS_REPO_ROOT: /workspace/cis
+    # READ-ONLY BY MODE. The bridge also carries three dispatch tools (write
+    # surface, queue item 2.23). CIS_MCP_MODE=readonly serves only the
+    # read-shaped subset (spine + file + git + hash) and refuses dispatch at the
+    # call boundary, so this role can measure without being able to mutate.
+    enabled: true
     timeout: 60
 terminal:
   backend: local

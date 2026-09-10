@@ -9,8 +9,91 @@ Defines 14 tools (11 read-only + 3 dispatch) per FD.1 specification:
   Dispatch (3): cis_dispatch_drafter, cis_dispatch_reviewer, cis_dispatch_implementer
 """
 from . import spine
+import hashlib
+import os
 import re
 import subprocess
+
+# ── Read-only gating (CARD-01: measurement instruments) ─────────────
+# The bridge also carries three dispatch tools (write surface). Reviewers must
+# get the read-shaped subset only, so we tag every read-only tool by name and
+# let the server serve a filtered list when CIS_MCP_MODE=readonly.
+
+READONLY_TOOL_NAMES = {
+    # spine queries + search (all SELECT-only / Chroma reads)
+    "cis_get_current_phase",
+    "cis_get_build_status",
+    "cis_get_queue_item",
+    "cis_get_next_actions",
+    "cis_get_recent_runs",
+    "cis_get_run_detail",
+    "cis_get_open_decisions",
+    "cis_get_open_questions",
+    "cis_get_eric_gate_status",
+    "cis_search_sessions",
+    "cis_search_semantic",
+    "cis_get_similar",
+    "cis_search_knowledge",
+    "cis_get_dev_pivot_status",
+    # read-shaped file / git / hash instruments (CARD-01 DONE-WHEN 1)
+    "cis_read_file",
+    "cis_search_files",
+    "cis_git_log",
+    "cis_git_show",
+    "cis_hash_file",
+}
+
+
+def tools_for_mode(mode):
+    """Tool list for a mode. 'readonly' excludes the dispatch (write) tools."""
+    if mode == "readonly":
+        return [t for t in TOOLS if t["name"] in READONLY_TOOL_NAMES]
+    return TOOLS
+
+
+def _repo_root():
+    """Repo root inside the container (overridable via CIS_REPO_ROOT)."""
+    return os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
+
+
+def _scope_path(path):
+    """Resolve a repo-relative path under the repo root; None on escape.
+
+    Read-shaped by construction: it only ever resolves a path, never writes.
+    """
+    if not isinstance(path, str) or not path:
+        return None
+    root = os.path.realpath(_repo_root())
+    p = os.path.realpath(os.path.join(root, path.lstrip("/")))
+    if p != root and not p.startswith(root + os.sep):
+        return None
+    return p
+
+
+def _run_git(args):
+    """Run a hardcoded read-only git subcommand in the repo root.
+
+    The argument list is assembled here from validated inputs only; the
+    reviewer never supplies a command string, so there is no shell injection
+    surface. Returns (ok, stdout-or-error).
+    """
+    try:
+        r = subprocess.run(
+            ["git"] + args, capture_output=True, text=True,
+            timeout=30, cwd=_repo_root(),
+        )
+        return (r.returncode == 0), (r.stdout or r.stderr or "").strip()
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _repo_rel(sub_path):
+    """Return a repo-relative path for a scoped sub-path (git needs relative)."""
+    sp = _scope_path(sub_path)
+    if sp is None:
+        return None
+    return os.path.relpath(sp, os.path.realpath(_repo_root()))
+
 
 # ── Tool definitions ──────────────────────────────────
 
@@ -396,6 +479,109 @@ TOOLS = [
             "required": [],
         },
     },
+    {
+        "name": "cis_read_file",
+        "description": (
+            "Read a file inside the CIS repo (scoped to the repo root). "
+            "READ-ONLY. Use to verify a discrepancy against the actual source, "
+            "config, log, or evidence file rather than guessing. Cite the path "
+            "and the content you relied on."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Repo-relative path, e.g. 'tools/advisor_review.sh'",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max lines to return (default 400, max 1000)",
+                    "default": 400,
+                },
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "cis_search_files",
+        "description": (
+            "Search file contents inside the CIS repo (git grep, regex). "
+            "READ-ONLY. Use to find where a symbol, string, or claim appears. "
+            "Returns matching lines with file:line references."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Regex pattern to search for",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional sub-path to narrow the search (repo-relative)",
+                },
+            },
+            "required": ["pattern"],
+        },
+    },
+    {
+        "name": "cis_git_log",
+        "description": (
+            "Show git commit history (READ-ONLY). Use to check what changed and "
+            "when, and to cite a commit hash as evidence."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Max commits to return (default 20, max 100)",
+                    "default": 20,
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional repo-relative path to filter history to",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "cis_git_show",
+        "description": (
+            "Show a git commit or the current HEAD diff stat (READ-ONLY). "
+            "Use to inspect what a specific commit changed and cite the hash."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "ref": {
+                    "type": "string",
+                    "description": "Commit hash, branch name, or 'HEAD' (default HEAD)",
+                    "default": "HEAD",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "cis_hash_file",
+        "description": (
+            "Compute the SHA-256 of a file (READ-ONLY). Use to compare an "
+            "expected hash against an observed one and detect drift."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Repo-relative path to hash",
+                },
+            },
+            "required": ["path"],
+        },
+    },
 ]
 
 
@@ -679,6 +865,103 @@ def handle_get_dev_pivot_status(arguments):
     )
 
 
+def handle_read_file(arguments):
+    """Handler for cis_read_file — scoped, read-only file read."""
+    path = arguments.get("path", "")
+    limit = arguments.get("limit", 400)
+    p = _scope_path(path)
+    if p is None:
+        return {"error": "path is outside the CIS repo scope: " + path}
+    try:
+        with open(p, "r", encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except FileNotFoundError:
+        return {"error": "file not found: " + path}
+    except IsADirectoryError:
+        return {"error": "is a directory: " + path}
+    except Exception as exc:
+        return {"error": str(exc)}
+    lines = text.splitlines()
+    try:
+        limit = max(1, min(int(limit), 1000))
+    except (TypeError, ValueError):
+        limit = 400
+    return {
+        "path": path,
+        "total_lines": len(lines),
+        "content": "\n".join(lines[:limit]),
+    }
+
+
+def handle_search_files(arguments):
+    """Handler for cis_search_files — git grep, read-only."""
+    pattern = arguments.get("pattern", "")
+    if not pattern:
+        return {"error": "pattern is required"}
+    args = ["grep", "-n", "-I", "--", pattern]
+    sub = arguments.get("path", "")
+    if sub:
+        rel = _repo_rel(sub)
+        if rel is None:
+            return {"error": "path is outside the CIS repo scope: " + sub}
+        args += ["--", rel]
+    ok, out = _run_git(args)
+    if not ok:
+        return {"error": out or "git grep failed"}
+    return {"pattern": pattern, "matches": out[:20000]}
+
+
+def handle_git_log(arguments):
+    """Handler for cis_git_log — read-only history."""
+    limit = arguments.get("limit", 20)
+    try:
+        limit = max(1, min(int(limit), 100))
+    except (TypeError, ValueError):
+        limit = 20
+    args = ["log", "--oneline", "-n", str(limit)]
+    sub = arguments.get("path", "")
+    if sub:
+        rel = _repo_rel(sub)
+        if rel is None:
+            return {"error": "path is outside the CIS repo scope: " + sub}
+        args += ["--", rel]
+    ok, out = _run_git(args)
+    if not ok:
+        return {"error": out or "git log failed"}
+    return {"commits": out}
+
+
+def handle_git_show(arguments):
+    """Handler for cis_git_show — read-only commit/HEAD inspection."""
+    ref = str(arguments.get("ref", "HEAD") or "HEAD")
+    if not re.match(r"^[A-Za-z0-9._~^/\-]+$", ref):
+        return {"error": "invalid ref: " + ref}
+    ok, out = _run_git(["show", "--stat", "--oneline", ref])
+    if not ok:
+        return {"error": out or "git show failed"}
+    return {"ref": ref, "output": out[:20000]}
+
+
+def handle_hash_file(arguments):
+    """Handler for cis_hash_file — SHA-256 of a scoped file."""
+    path = arguments.get("path", "")
+    p = _scope_path(path)
+    if p is None:
+        return {"error": "path is outside the CIS repo scope: " + path}
+    try:
+        h = hashlib.sha256()
+        with open(p, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                h.update(chunk)
+    except FileNotFoundError:
+        return {"error": "file not found: " + path}
+    except IsADirectoryError:
+        return {"error": "is a directory: " + path}
+    except Exception as exc:
+        return {"error": str(exc)}
+    return {"path": path, "sha256": h.hexdigest()}
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -701,4 +984,9 @@ HANDLERS = {
     "cis_adapter_status": handle_adapter_status,
     "cis_adapter_dispatch": handle_adapter_dispatch,
     "cis_get_dev_pivot_status": handle_get_dev_pivot_status,
+    "cis_read_file": handle_read_file,
+    "cis_search_files": handle_search_files,
+    "cis_git_log": handle_git_log,
+    "cis_git_show": handle_git_show,
+    "cis_hash_file": handle_hash_file,
 }
