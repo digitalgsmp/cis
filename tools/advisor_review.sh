@@ -158,6 +158,8 @@ elif [[ $# -eq 2 && "$2" == "--supersede" ]]; then
     MODE="supersede"
 elif [[ $# -eq 2 && "$2" == "--reconcile" ]]; then
     MODE="reconcile"
+elif [[ $# -eq 2 && "$2" == "--resolve" ]]; then
+    MODE="resolve"
 elif [[ $# -eq 3 && "$2" == "--reply" ]]; then
     REPLY_FILE="$3"
     [[ -f "$REPLY_FILE" ]] || { echo "no evidence file at $REPLY_FILE" >&2; exit 1; }
@@ -178,6 +180,7 @@ else
     echo "       bash tools/advisor_review.sh <id> --reply  <evidence-file>" >&2
     echo "       bash tools/advisor_review.sh <id> --result <evidence-file>" >&2
     echo "       bash tools/advisor_review.sh <id> --reconcile" >&2
+    echo "       bash tools/advisor_review.sh <id> --resolve" >&2
     echo "       bash tools/advisor_review.sh <id> --pause  <card-written|reviews-landed|result-reviewed>" >&2
     echo "       bash tools/advisor_review.sh <id> --continue" >&2
     echo "       expects reviews/pending/<id>.md" >&2
@@ -642,8 +645,172 @@ PY
     } > "$FINAL_RECON"
     echo "wrote final reconciled artifact: $FINAL_RECON"
 
+    exit 0
+fi
+
+# -------------------------------------------------------------- RESOLVE ----
+# The reconciliation round surfaces UNRESOLVED items it could not settle. This
+# round resolves them by triage. Each lineage tags every unresolved item as:
+#   [FACT]       — settlable by checking the repo/spine; it must CHECK it with
+#                  its read-only instruments and cite the evidence.
+#   [AUTHORITY]  — the operator's decision (threat model / scope / risk); it
+#                  states the binary choice but does NOT decide it.
+#   [SPEC]       — the card is underspecified; it names the exact amendment.
+# The harness then aggregates AUTHORITY items into a decision list for Eric and
+# SPEC items into an amendment request for the drafter. This is the resolution
+# the 2026-07-03 design record means by "reconcile any differences" — the
+# differences that remain are routed to whoever can actually settle them.
+RESOLVE_LINE='RESOLVE — you and the other lineage reviewed a card independently, then reconciled. Some items were left UNRESOLVED. Now resolve each one. Begin with exactly one line reading RESOLVE: COMPLETE or RESOLVE: INCOMPLETE. Then go item by item; EACH item on ONE line starting with exactly one of these tags, then the content on the same line: [FACT] — settlable by checking the repo or spine: USE your read-only instruments (cis_read_file, cis_search_files, cis_git_log, cis_git_show, cis_hash_file, or a spine query) to CHECK it now, then state the answer and cite the exact file/query/hash. [AUTHORITY] — the operator'"'"'s decision (threat model, scope, risk tolerance): state the exact binary choice the operator must make, both options, then your recommendation with a one-line reason; do NOT decide it yourself. [SPEC] — the card is underspecified: state the exact clause that must be added or changed, and where in the card. Be concise. Preserve dissent. If a FACT item cannot be checked because it is outside your read scope, mark it [AUTHORITY] and say why.'
+
+if [[ "$MODE" == "resolve" ]]; then
+    FINAL_RECON="$OUTDIR/$ID.reconcile.md"
+    [[ -f "$FINAL_RECON" ]] || {
+        echo "no reconciled artifact at $FINAL_RECON" >&2
+        echo "run: bash tools/advisor_review.sh $ID --reconcile first" >&2
+        exit 1; }
+    RESOLVE_AT="$(date -Iseconds)"
+    echo "resolving UNRESOLVED items from $FINAL_RECON"
+
+    build_resolve_body() {
+        RESOLVE_LINE="$RESOLVE_LINE" MAX_TOKENS="$MAX_TOKENS" RUN_TAG="$RUN_TAG" \
+        python3 - "$PACKET" "$FINAL_RECON" <<'PY'
+import json, os, sys
+packet = open(sys.argv[1], encoding="utf-8").read()
+recon = open(sys.argv[2], encoding="utf-8").read()
+prompt = (
+    os.environ["RESOLVE_LINE"]
+    + "\n\n(Resolve run: " + os.environ["RUN_TAG"] + ")\n\n"
+    + "=== THE PACKET ===\n" + packet
+    + "\n\n=== THE RECONCILED REVIEW (resolve the UNRESOLVED items) ===\n" + recon
+)
+print(json.dumps({
+    "model": "agent",
+    "messages": [{"role": "user", "content": prompt}],
+    "max_tokens": int(os.environ["MAX_TOKENS"]),
+}))
+PY
+    }
+
+    RESOLVE_FAILED=0
+    declare -A RESOLVE_HASH
+    for _lin in "${LINEAGES[@]}"; do
+        PROFILE="${_lin%%:*}"; PORT="${_lin##*:}"
+        OUT_RESOLVE="$OUTDIR/$ID.$PROFILE.resolve.md"
+        echo "--- resolve: $PROFILE on $PORT ---"
+
+        BODY="$(build_resolve_body)" || {
+            echo "FAILED: $PROFILE — could not build resolve body" >&2
+            RESOLVE_FAILED=$((RESOLVE_FAILED+1)); continue; }
+
+        RESP="$(printf '%s' "$BODY" | docker exec -i -u worker "$CONTAINER" \
+            sh -c "$REMOTE_SH" -- "$PROFILE" "$PORT" "$TIMEOUT")" || {
+            echo "FAILED: $PROFILE on $PORT did not answer" >&2
+            RESOLVE_FAILED=$((RESOLVE_FAILED+1)); continue; }
+        if [[ -z "$RESP" ]]; then
+            echo "FAILED: $PROFILE on $PORT returned an empty body" >&2
+            RESOLVE_FAILED=$((RESOLVE_FAILED+1)); continue
+        fi
+
+        ERR="$(printf '%s' "$RESP" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception as e:
+    print("not JSON: " + str(e)[:120]); sys.exit(0)
+if isinstance(d, dict) and d.get("error"):
+    e = d["error"]
+    print((e.get("code","") + ": " + e.get("message","")) if isinstance(e, dict) else str(e)[:200])
+    sys.exit(0)
+if not (isinstance(d, dict) and d.get("choices")):
+    print("no choices in response"); sys.exit(0)
+' 2>/dev/null || echo "response could not be parsed")"
+
+        if [[ -n "$ERR" ]]; then
+            echo "FAILED: $PROFILE on $PORT — $ERR" >&2
+            RESOLVE_FAILED=$((RESOLVE_FAILED+1)); continue
+        fi
+
+        RESP_TMP="$(mktemp)"
+        printf '%s' "$RESP" > "$RESP_TMP"
+
+        ID="$ID" PROFILE="$PROFILE" RUN_TAG="$RUN_TAG" RESOLVE_AT="$RESOLVE_AT" \
+            python3 - "$OUT_RESOLVE" "$RESP_TMP" <<'PY'
+import json, os, sys
+out_path, resp_path = sys.argv[1:3]
+raw = open(resp_path, encoding="utf-8").read()
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError:
+    sys.stderr.write("gateway did not return JSON:\n" + raw[:2000] + "\n"); sys.exit(1)
+if "choices" not in data or not data["choices"]:
+    sys.stderr.write("gateway returned no choices:\n" + raw[:2000] + "\n"); sys.exit(1)
+msg = data["choices"][0].get("message", {})
+content = (msg.get("content") or msg.get("reasoning_content") or "").strip()
+usage = data.get("usage", {})
+pt = usage.get("prompt_tokens", 0); ct = usage.get("completion_tokens", 0); tt = usage.get("total_tokens", 0)
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(f"# Resolution — {os.environ['ID']}\n\n")
+    f.write(f"- lineage: {os.environ['PROFILE']}\n")
+    f.write(f"- run tag: {os.environ['RUN_TAG']}\n")
+    f.write(f"- at: {os.environ['RESOLVE_AT']}\n")
+    f.write(f"- prompt_tokens: {pt}\n- completion_tokens: {ct}\n- total_tokens: {tt}\n\n---\n\n")
+    f.write(content + "\n")
+print(f"wrote {out_path}")
+print(f"prompt_tokens={pt} completion_tokens={ct} total_tokens={tt}")
+PY
+        rm -f "$RESP_TMP"
+        [[ -f "$OUT_RESOLVE" ]] && RESOLVE_HASH["$PROFILE"]="$(sha256sum "$OUT_RESOLVE" | cut -c1-16)"
+    done
+
+    if [[ $RESOLVE_FAILED -gt 0 ]]; then
+        echo ""
+        echo "WARNING: $RESOLVE_FAILED of ${#LINEAGES[@]} lineage(s) failed to resolve."
+        echo "No final resolution artifact written — a half-resolution is not a result."
+        exit 1
+    fi
+
+    # Aggregate. AUTHORITY items become a decision list for Eric; SPEC items an
+    # amendment request for the drafter. Both are extracted from the tagged
+    # lines each lineage produced; both lineages' full resolutions are preserved
+    # verbatim below so dissent is not collapsed.
+    FINAL_RESOLVE="$OUTDIR/$ID.resolve.md"
+    {
+        echo "# Resolution — $ID"
+        echo ""
+        echo "- at: $RESOLVE_AT"
+        echo "- advisor resolve hash: ${RESOLVE_HASH[advisor]:-missing}"
+        echo "- evaluator resolve hash: ${RESOLVE_HASH[evaluator]:-missing}"
+        echo ""
+        echo "## DECISIONS FOR ERIC (authority)"
+        echo ""
+        for _p in advisor evaluator; do
+            _f="$OUTDIR/$ID.$_p.resolve.md"
+            [[ -f "$_f" ]] && { grep -E '^\[AUTHORITY\]' "$_f" 2>/dev/null | sed 's/^\[AUTHORITY\] //' || true; }
+        done
+        echo ""
+        echo "## AMENDMENT REQUEST (spec gaps — drafter)"
+        echo ""
+        for _p in advisor evaluator; do
+            _f="$OUTDIR/$ID.$_p.resolve.md"
+            [[ -f "$_f" ]] && { grep -E '^\[SPEC\]' "$_f" 2>/dev/null | sed 's/^\[SPEC\] //' || true; }
+        done
+        echo ""
+        echo "---"
+        echo ""
+        echo "## advisor (GLM) resolution"
+        echo ""
+        cat "$OUTDIR/$ID.advisor.resolve.md" 2>/dev/null || echo "(missing)"
+        echo ""
+        echo "---"
+        echo ""
+        echo "## evaluator (Qwen) resolution"
+        echo ""
+        cat "$OUTDIR/$ID.evaluator.resolve.md" 2>/dev/null || echo "(missing)"
+    } > "$FINAL_RESOLVE"
+    echo "wrote final resolution artifact: $FINAL_RESOLVE"
+
     pause_state set reviews-landed \
-        "reconciled reviews are in for $ID — read $FINAL_RECON before executing"
+        "resolution is in for $ID — read $FINAL_RESOLVE before executing"
     notify_stop reviews-landed
     exit 0
 fi

@@ -124,6 +124,29 @@ def reconcile_for(item_id):
     return out
 
 
+def resolve_for(item_id):
+    """Read the resolve artifact's DECISIONS FOR ERIC and AMENDMENT REQUEST.
+
+    The resolve round is the final step before Eric: it triages the unresolved
+    items into authority decisions (his call) and spec amendments (drafter's).
+    Returns {section: text} or None if no resolve artifact exists yet.
+    """
+    path = os.path.join(REPO, "reviews", "done", item_id + ".resolve.md")
+    if not os.path.exists(path):
+        return None
+    text = open(path, encoding="utf-8").read()
+    out = {}
+    for section in ("DECISIONS FOR ERIC", "AMENDMENT REQUEST"):
+        m = re.search(
+            r"## " + re.escape(section) + r"[^\n]*\n(.*?)(?=\n## |\n---|\Z)",
+            text, re.S)
+        if m:
+            body = m.group(1).strip()
+            if body:
+                out[section] = body
+    return out or None
+
+
 def first_prose(text, n):
     """The opening of the model's own answer, minus headers and blank lines."""
     body = []
@@ -258,50 +281,67 @@ def render(item_id, stop):
         L += footer(item_id, True, cmd)
 
     elif stop == "reviews-landed":
-        recs = reconcile_for(item_id)
-        if recs:
-            # The reconciliation round. This is what Eric reads now: two
-            # lineages saw each other's frozen round-1 findings and reconciled.
-            # The final artifact preserves dissent rather than forcing consensus.
-            L.append("NEEDS YOU — reviewers reconciled, nothing has run")
+        res = resolve_for(item_id)
+        if res:
+            # The resolve round. This is what Eric decides on: authority
+            # decisions routed to him, spec gaps routed to the drafter.
+            L.append("NEEDS YOU — resolution is in, nothing has run")
             L.append("card: %s" % item_id)
             L.append("")
-            for r in recs:
-                L.append("%s (%s):" % (r["role"], r["reconcile"] or "?"))
-                L.append(first_prose(r["objection"], 220))
+            if "DECISIONS FOR ERIC" in res:
+                L.append("Decisions for you (authority):")
+                L.append(res["DECISIONS FOR ERIC"])
                 L.append("")
-            L.append("")
-            L.append("Full text: reviews/done/%s.reconcile.md" % item_id)
+            if "AMENDMENT REQUEST" in res:
+                L.append("Spec gaps for the drafter:")
+                L.append(res["AMENDMENT REQUEST"])
+                L.append("")
+            L.append("Full text: reviews/done/%s.resolve.md" % item_id)
             L += footer(item_id, True, cmd)
         else:
-            # No reconciliation recorded. Fall back to the round-1 view; this
-            # also covers reviews-landed pauses set by round 1 before the
-            # reconcile round existed.
-            rows = rounds_for(item_id, 1)
-            L.append("NEEDS YOU — reviews are in, nothing has run")
-            L.append("card: %s" % item_id)
-            L.append("")
-            if not rows:
-                L.append("No reviews recorded. Something went wrong; check the terminal.")
-            else:
-                L.append(frame_line(rows))
+            recs = reconcile_for(item_id)
+            if recs:
+                # The reconciliation round. Two lineages saw each other's frozen
+                # round-1 findings and reconciled. Dissent is preserved.
+                L.append("NEEDS YOU — reviewers reconciled, nothing has run")
+                L.append("card: %s" % item_id)
                 L.append("")
-                L += build_context()
-                mismatch = [r for r in rows if r["hash_status"] != "MATCH"]
-                if mismatch:
-                    L.append("*** WARNING: the reviewers did not all see the same card.")
-                if len({r["hash"] for r in rows}) > 1:
-                    L.append("*** WARNING: packet hashes differ.")
-                L.append("")
-                for r in rows:
-                    L.append("%s:" % r["role"])
+                for r in recs:
+                    L.append("%s (%s):" % (r["role"], r["reconcile"] or "?"))
                     L.append(first_prose(r["objection"], 220))
                     L.append("")
-                L.append("Neither reviewer blocks this. They raise points to fix,")
-                L.append("which is normal and does not need your judgement.")
-            L.append("")
-            L.append("Full text: reviews/done/%s.<lineage>.response.md" % item_id)
-            L += footer(item_id, True, cmd)
+                L.append("")
+                L.append("Full text: reviews/done/%s.reconcile.md" % item_id)
+                L += footer(item_id, True, cmd)
+            else:
+                # No reconciliation or resolution recorded. Fall back to the
+                # round-1 view; covers reviews-landed pauses set by round 1
+                # before the reconcile round existed.
+                rows = rounds_for(item_id, 1)
+                L.append("NEEDS YOU — reviews are in, nothing has run")
+                L.append("card: %s" % item_id)
+                L.append("")
+                if not rows:
+                    L.append("No reviews recorded. Something went wrong; check the terminal.")
+                else:
+                    L.append(frame_line(rows))
+                    L.append("")
+                    L += build_context()
+                    mismatch = [r for r in rows if r["hash_status"] != "MATCH"]
+                    if mismatch:
+                        L.append("*** WARNING: the reviewers did not all see the same card.")
+                    if len({r["hash"] for r in rows}) > 1:
+                        L.append("*** WARNING: packet hashes differ.")
+                    L.append("")
+                    for r in rows:
+                        L.append("%s:" % r["role"])
+                        L.append(first_prose(r["objection"], 220))
+                        L.append("")
+                    L.append("Neither reviewer blocks this. They raise points to fix,")
+                    L.append("which is normal and does not need your judgement.")
+                L.append("")
+                L.append("Full text: reviews/done/%s.<lineage>.response.md" % item_id)
+                L += footer(item_id, True, cmd)
 
     elif stop == "result-reviewed":
         rows = rounds_for(item_id, 3)
