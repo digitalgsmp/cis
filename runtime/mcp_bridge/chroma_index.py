@@ -304,18 +304,29 @@ COLLECTION_SCHEMAS = {
 
 
 def _get_chroma_path():
-    """Return Chroma storage path from env or default."""
+    """Return Chroma storage path from env or repo-root-derived default.
+
+    Inside the container the repo root is /workspace/cis (not the host path
+    /mnt/projects/cis), so the default derives from CIS_REPO_ROOT when it is
+    set; CIS_CHROMA_PATH still overrides both.
+    """
     return os.environ.get(
         "CIS_CHROMA_PATH",
-        "/mnt/projects/cis/data/chroma_data",
+        os.path.join(
+            os.environ.get("CIS_REPO_ROOT", "/mnt/projects/cis"),
+            "data", "chroma_data",
+        ),
     )
 
 
 def _get_db_path():
-    """Return spine path from env or default."""
+    """Return spine path from env or repo-root-derived default."""
     return os.environ.get(
         "CIS_SPINE_PATH",
-        "/mnt/projects/cis/data/cis_memory.db",
+        os.path.join(
+            os.environ.get("CIS_REPO_ROOT", "/mnt/projects/cis"),
+            "data", "cis_memory.db",
+        ),
     )
 
 

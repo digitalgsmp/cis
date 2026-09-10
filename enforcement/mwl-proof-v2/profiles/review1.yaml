@@ -42,14 +42,15 @@ mcp_servers:
     env:
       CIS_SPINE_PATH: /workspace/cis/data/cis_memory.db
       PYTHONPATH: /workspace/cis/runtime
-    # Disabled 2026-09-04. Across all six profiles' message stores the only call
-    # to any of cis-knowledge's 13 tools was one `cis_adapter_status` by review2,
-    # a health check — never once used for retrieval. It also carries
-    # cis_dispatch_drafter / _reviewer / _implementer, so any agent holding it can
-    # start a pipeline run (BUILD LIST 2.23). Required alongside
-    # platform_toolsets, not instead of it: a narrowed toolset list is
-    # re-populated by the recovery block in hermes_cli/tools_config.py.
-    enabled: false
+      CIS_MCP_MODE: readonly
+      CIS_REPO_ROOT: /workspace/cis
+    # READ-ONLY BY MODE (2026-09-10). Re-enabled with CIS_MCP_MODE=readonly,
+    # which serves only the read-shaped subset (KB search + spine query + file
+    # read/search + git + hash) and refuses the three cis_dispatch_* tools at
+    # the call boundary. The prior disable (2026-09-04) was over the dispatch
+    # surface (2.23) and the 13-tool bloat; readonly mode removes both while
+    # giving this reviewer the KB retrieval it never had.
+    enabled: true
     timeout: 60
 terminal:
   backend: local

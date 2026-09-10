@@ -41,6 +41,7 @@ READONLY_TOOL_NAMES = {
     "cis_git_log",
     "cis_git_show",
     "cis_hash_file",
+    "cis_list_dir",
 }
 
 
@@ -60,12 +61,20 @@ def _scope_path(path):
     """Resolve a repo-relative path under the repo root; None on escape.
 
     Read-shaped by construction: it only ever resolves a path, never writes.
+    Also rejects credential files — read access is for verifying work, not for
+    reading secrets. That confidentiality boundary is distinct from CARD-02's
+    mutation boundary; both are enforced here at the read surface.
     """
     if not isinstance(path, str) or not path:
         return None
     root = os.path.realpath(_repo_root())
     p = os.path.realpath(os.path.join(root, path.lstrip("/")))
     if p != root and not p.startswith(root + os.sep):
+        return None
+    base = os.path.basename(p).lower()
+    if (base.endswith(".env") or "secrets" in base or base.endswith(".key")
+            or base.endswith(".pem") or base.endswith(".netrc")
+            or base.endswith(".pgpass")):
         return None
     return p
 
@@ -582,6 +591,25 @@ TOOLS = [
             "required": ["path"],
         },
     },
+    {
+        "name": "cis_list_dir",
+        "description": (
+            "List a directory inside the CIS repo (READ-ONLY). Use to DISCOVER "
+            "what files exist before reading them, so you can verify a "
+            "discrepancy without guessing a path."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Repo-relative directory to list (default repo root)",
+                    "default": ".",
+                },
+            },
+            "required": [],
+        },
+    },
 ]
 
 
@@ -962,6 +990,28 @@ def handle_hash_file(arguments):
     return {"path": path, "sha256": h.hexdigest()}
 
 
+def handle_list_dir(arguments):
+    """Handler for cis_list_dir — read-only directory listing."""
+    path = arguments.get("path", "") or "."
+    p = _scope_path(path) if path not in ("", ".") else os.path.realpath(_repo_root())
+    if p is None:
+        return {"error": "path is outside the CIS repo scope: " + path}
+    if not os.path.isdir(p):
+        return {"error": "not a directory: " + path}
+    entries = []
+    for name in sorted(os.listdir(p)):
+        fp = os.path.join(p, name)
+        try:
+            entries.append({
+                "name": name,
+                "type": "dir" if os.path.isdir(fp) else "file",
+                "size": os.path.getsize(fp) if os.path.isfile(fp) else None,
+            })
+        except OSError:
+            entries.append({"name": name, "type": "?", "size": None})
+    return {"path": path, "entries": entries}
+
+
 # ── Handler dispatch map ──────────────────────────────
 
 HANDLERS = {
@@ -989,4 +1039,5 @@ HANDLERS = {
     "cis_git_log": handle_git_log,
     "cis_git_show": handle_git_show,
     "cis_hash_file": handle_hash_file,
+    "cis_list_dir": handle_list_dir,
 }

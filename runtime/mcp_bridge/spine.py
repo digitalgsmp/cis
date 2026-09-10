@@ -340,20 +340,32 @@ def query_search_sessions(query_text, limit=10, db_path=None):
 
 
 def search_knowledge_fts(query_text, limit=10, db_path=None):
-    """FTS5 search across knowledge_messages."""
+    """FTS5 search across knowledge_messages, with LIKE fallback.
+
+    The knowledge_messages_fts index may not exist — the KB ingest has been
+    frozen since 2026-07-24 and its FTS index was never built, while the only
+    FTS tables present are dam_extracted_text_fts and session_closeouts_fts.
+    The FTS path is therefore guarded: when the index is absent (or any FTS
+    error occurs) it falls back to a LIKE scan instead of erroring out. The
+    LIKE fallback that used to run only on zero FTS rows now also runs when
+    the index is missing.
+    """
     conn = _connect_readonly(db_path)
     try:
         safe_query = query_text.replace('"', '').replace("'", "")
-        rows = conn.execute(
-            """SELECT km.id, km.content, km.source, km.role, km.source_key
-               FROM knowledge_messages km
-               JOIN knowledge_messages_fts fts ON km.id = fts.rowid
-               WHERE knowledge_messages_fts MATCH ?
-               ORDER BY rank
-               LIMIT ?""",
-            (safe_query, int(limit)),
-        ).fetchall()
-
+        rows = None
+        try:
+            rows = conn.execute(
+                """SELECT km.id, km.content, km.source, km.role, km.source_key
+                   FROM knowledge_messages km
+                   JOIN knowledge_messages_fts fts ON km.id = fts.rowid
+                   WHERE knowledge_messages_fts MATCH ?
+                   ORDER BY rank
+                   LIMIT ?""",
+                (safe_query, int(limit)),
+            ).fetchall()
+        except Exception:
+            rows = None
         if not rows:
             like = f"%{safe_query}%"
             rows = conn.execute(
@@ -364,32 +376,55 @@ def search_knowledge_fts(query_text, limit=10, db_path=None):
                    LIMIT ?""",
                 (like, int(limit)),
             ).fetchall()
-
         return _rows_to_list(rows)
     finally:
         conn.close()
 
 
 def search_knowledge_semantic(query_text, top_k=10, db_path=None):
-    """Semantic search across knowledge_messages via ChromaDB."""
+    """Semantic search across knowledge_messages via ChromaDB.
+
+    The knowledge_messages collection stores PRE-COMPUTED embeddings (dim 384,
+    all-MiniLM-L6-v2) with NO embedding function configured on the collection
+    (config_json_str={}). Querying by raw text (query_texts) therefore fails —
+    the query must be embedded locally and sent as query_embeddings. Returns []
+    (not an error) when chromadb or the embedding model is unavailable, so the
+    FTS/LIKE path in the caller still stands alone rather than erroring out.
+    """
     try:
         import chromadb
     except ImportError:
         return []
-
-    client = chromadb.PersistentClient(
-        path="/mnt/projects/cis/data/chroma_data"
-    )
     try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        return []
+    repo = os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
+    try:
+        client = chromadb.PersistentClient(
+            path=os.path.join(repo, "data", "chroma_data")
+        )
         collection = client.get_collection("knowledge_messages")
     except Exception:
         return []
-
-    results = collection.query(
-        query_texts=[query_text],
-        n_results=min(top_k, 50),
-        include=["documents", "metadatas", "distances"],
-    )
+    try:
+        # CIS_EMBED_MODEL lets the container name the model by ABSOLUTE PATH;
+        # a repo id would go through the HF cache lookup, which fails without
+        # network. The host resolves the repo id normally.
+        model = SentenceTransformer(
+            os.environ.get("CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
+        )
+        embedding = model.encode([query_text], show_progress_bar=False).tolist()[0]
+    except Exception:
+        return []
+    try:
+        results = collection.query(
+            query_embeddings=[embedding],
+            n_results=min(top_k, 50),
+            include=["documents", "metadatas", "distances"],
+        )
+    except Exception:
+        return []
 
     hits = []
     if results.get("ids") and results["ids"][0]:
@@ -465,9 +500,34 @@ def query_queue_item(item_num, db_path=None):
         ).fetchone()
         result = _row_to_dict(row)
         if result is not None:
+            # The current item, re-checked on every call. A pointer left on
+            # finished work is the DEFAULT failure here, not an edge case --
+            # nothing advances it when the markdown marks an item done. So the
+            # reader refuses to report a DONE item as current and says STALE
+            # instead: an honest admission beats a false assertion, which is
+            # the same standard the unset case already met.
+            cur = "NOT AVAILABLE - nothing designates one"
+            try:
+                ptr = conn.execute(
+                    "SELECT value FROM project_state "
+                    "WHERE key='current_queue_item' AND superseded_at IS NULL"
+                ).fetchone()
+                if ptr:
+                    st = conn.execute(
+                        "SELECT need_status FROM queue_items WHERE item_num=?",
+                        (ptr[0],)).fetchone()
+                    if st is None:
+                        cur = "STALE - pointer names %s, which is not an item" % ptr[0]
+                    elif st[0] == "DONE":
+                        cur = "STALE - pointer names %s, which is DONE" % ptr[0]
+                    else:
+                        cur = ptr[0]
+            except sqlite3.OperationalError:
+                pass
+
             result["answers_2_30"] = {
                 "what_was_just_done": "need_status on this row",
-                "what_is_the_current_item": "NOT AVAILABLE - nothing designates one",
+                "what_is_the_current_item": cur,
                 "what_does_it_depend_on": "NOT AVAILABLE - queue_edges is not regenerated",
                 "did_it_succeed": "ABSENT BY DECISION - see ADR-3.21-001",
             }
