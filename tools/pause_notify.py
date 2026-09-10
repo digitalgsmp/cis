@@ -86,6 +86,39 @@ def rounds_for(item_id, round_number):
             "hash": e.get("packet_hash", ""),
             "hash_status": e.get("packet_hash_status", ""),
             "tokens": e.get("prompt_tokens", 0),
+            "frame": e.get("frame_verdict", ""),
+            "objection": (e.get("objection") or "").strip(),
+        })
+    return out
+
+
+def reconcile_for(item_id):
+    """Both lineages' reconciliation rows, from the cross-feed round.
+    Run_id prefix is advisor-reconcile-<id>-<profile>, distinct from the review
+    thread's advisor-<id>-<profile> so this query never sees round-1 reviews."""
+    conn = sqlite3.connect(DB)
+    try:
+        rows = conn.execute(
+            "SELECT reviewer_role, reviewer_signal, objections_json "
+            "FROM deliberation_rounds "
+            "WHERE run_id LIKE ? AND reviewer_role != 'pause' "
+            "ORDER BY run_id",
+            ("advisor-reconcile-" + item_id + "-%",)).fetchall()
+    except sqlite3.Error:
+        return []
+    finally:
+        conn.close()
+    out = []
+    for role, signal, oj in rows:
+        try:
+            e = json.loads(oj)[0]
+        except Exception:
+            e = {}
+        out.append({
+            "role": role,
+            "reconcile": e.get("reconcile") or "",
+            "own_hash": e.get("own_hash", ""),
+            "peer_hash": e.get("peer_hash", ""),
             "objection": (e.get("objection") or "").strip(),
         })
     return out
@@ -107,81 +140,187 @@ def first_prose(text, n):
     return (joined[:n] + "…") if len(joined) > n else joined
 
 
+
+def other_open_stops(this_id):
+    """Other stops waiting on Eric right now. He cannot see them from one
+    message, and a stop he does not know about is a stop that does not exist."""
+    conn = sqlite3.connect(DB)
+    try:
+        rows = conn.execute(
+            "SELECT run_id, objections_json FROM deliberation_rounds "
+            "WHERE reviewer_role='pause' AND reviewer_signal='PENDING'").fetchall()
+    except sqlite3.Error:
+        return []
+    finally:
+        conn.close()
+    out = []
+    for run_id, oj in rows:
+        card = run_id[len("advisor-"):-len("-pause")]
+        if card == this_id:
+            continue
+        try:
+            stop = json.loads(oj)[0].get("stop", "?")
+        except Exception:
+            stop = "?"
+        out.append((card, stop))
+    return out
+
+
+def frame_line(rows):
+    """The one fact Eric can actually judge: did the reviewers think this is the
+    right work. Everything else in a round-1 record is machinery."""
+    verdicts = {r["frame"] for r in rows if r["frame"]}
+    if not verdicts:
+        return "Reviewers did not answer the frame question."
+    if verdicts == {"RIGHT_WORK"}:
+        return "Both reviewers: this is the RIGHT WORK to do now."
+    if "WRONG_WORK" in verdicts:
+        return "*** A REVIEWER SAYS THIS IS THE WRONG WORK. Read before releasing."
+    if "CANNOT_TELL" in verdicts:
+        return "A reviewer could not tell if this is the right work."
+    return "Frame verdicts: " + ", ".join(sorted(verdicts))
+
+
+def footer(item_id, needs_action, cmd=None):
+    L = ["", "-----"]
+    if needs_action:
+        L.append("TO PROCEED, in the terminal:")
+        L.append("  " + cmd)
+        L.append("IF YOU DO NOTHING: this stays stopped. Nothing runs, nothing is lost.")
+    else:
+        L.append("NOTHING IS WAITING ON YOU. This is for information.")
+    L.append("Replying to this message does nothing — the feed is one-way.")
+    others = other_open_stops(item_id)
+    if others:
+        L.append("")
+        L.append("ALSO WAITING (%d):" % len(others))
+        for card, stop in others:
+            L.append("  %s — %s" % (card, stop))
+    return L
+
+
+def build_context():
+    """The overall-build view, compressed for a phone. Same shape as
+    tools/where_are_we.py, because the operator said a notification that does
+    not place the work in the whole build leaves him more detached than moving
+    cards by hand."""
+    try:
+        sys.path.insert(0, os.path.join(REPO, "tools"))
+        from where_are_we import latest_slate
+        conn = sqlite3.connect(DB)
+        entries = latest_slate(conn)
+        conn.close()
+    except Exception:
+        return []
+    if not entries:
+        return []
+    out = ["WHERE THE BUILD STANDS", ""]
+    for e in entries[:5]:
+        works = e.get("WORKS TODAY", "")
+        head = works.split("\u2014")[0].split("--")[0].strip().rstrip(".").upper()
+        flag = {"YES": "YES", "PARTLY": "PARTLY", "NO": "NO"}.get(head, "?")
+        want = re.sub(r"\s*\[[^\]]*\]", "", e["WANTED"]).strip(" .")
+        if len(want) > 88:
+            want = want[:88].rsplit(" ", 1)[0] + "…"
+        out.append("%-6s %s" % (flag, want))
+    out.append("")
+    return out
+
+
 def render(item_id, stop):
+    """Every message opens by saying whether Eric must do something.
+
+    Rewritten 2026-09-09. The previous version led with state -- 'REVIEWS
+    LANDED', 'signal: OBJECTIONS', token counts and a hash status -- and never
+    said whether he was being asked for anything. Eric read the messages and
+    could not tell if he was supposed to act, which is the whole purpose of the
+    feed failing. `signal: OBJECTIONS` was the worst of it: round 1 is ALWAYS
+    recorded OBJECTIONS by design, so it appeared on every review and meant
+    nothing, while reading as though something were wrong.
+    """
     packet = os.path.join(REPO, "reviews/pending", item_id + ".md")
+    cmd = "bash tools/advisor_review.sh %s --continue" % item_id
     L = []
 
     if stop == "card-written":
-        L.append("CARD WRITTEN — not yet reviewed")
+        L.append("NEEDS YOU — a card is written and not yet reviewed")
         L.append("card: %s" % item_id)
         L.append("")
         if os.path.exists(packet):
             text = open(packet, encoding="utf-8").read()
             title = next((l.lstrip("# ").strip() for l in text.split("\n")
                           if l.startswith("#")), item_id)
-            L.append("What it is: %s" % title)
-            intent = [l.strip() for l in text.split("\n")
-                      if l.strip() and not l.startswith("#")][:3]
-            if intent:
-                L.append("")
-                L.append("Opening: " + first_prose("\n".join(intent), 400))
+            L.append(title)
             L.append("")
-            L.append("Nothing has run. %d KB on disk." % (len(text) // 1024))
+            L.append("Nothing has run. Nothing has been reviewed yet.")
         else:
             L.append("NO PACKET at reviews/pending/%s.md" % item_id)
-        L.append("")
-        L.append("Next: round 1 review by both lineages.")
+        L += footer(item_id, True, cmd)
 
     elif stop == "reviews-landed":
-        rows = rounds_for(item_id, 1)
-        L.append("REVIEWS LANDED — nothing has executed")
-        L.append("card: %s" % item_id)
-        L.append("")
-        if not rows:
-            L.append("No round-1 rows recorded. Check the terminal.")
-        else:
-            hashes = {r["hash"] for r in rows}
-            L.append("Both lineages saw one packet: %s"
-                     % ("YES" if len(hashes) == 1 else "NO — HASHES DIFFER"))
+        recs = reconcile_for(item_id)
+        if recs:
+            # The reconciliation round. This is what Eric reads now: two
+            # lineages saw each other's frozen round-1 findings and reconciled.
+            # The final artifact preserves dissent rather than forcing consensus.
+            L.append("NEEDS YOU — reviewers reconciled, nothing has run")
+            L.append("card: %s" % item_id)
             L.append("")
-            for r in rows:
-                L.append("--- %s" % r["role"])
-                L.append("signal: %s%s" % (
-                    r["signal"], ("  verdict: " + r["verdict"]) if r["verdict"] else ""))
-                L.append("tokens: %s   hash: %s" % (r["tokens"], r["hash_status"]))
-                L.append(first_prose(r["objection"], OBJ_CHARS))
+            for r in recs:
+                L.append("%s (%s):" % (r["role"], r["reconcile"] or "?"))
+                L.append(first_prose(r["objection"], 220))
                 L.append("")
-            L.append("What is unique to each lineage is NOT computed here — "
-                     "it needs both objections read side by side, and a guess "
-                     "at it would be Claude Code's account rather than theirs.")
-        L.append("")
-        L.append("Full text: reviews/done/%s.<lineage>.response.md" % item_id)
-        L.append("Release from the terminal:")
-        L.append("  bash tools/advisor_review.sh %s --continue" % item_id)
+            L.append("")
+            L.append("Full text: reviews/done/%s.reconcile.md" % item_id)
+            L += footer(item_id, True, cmd)
+        else:
+            # No reconciliation recorded. Fall back to the round-1 view; this
+            # also covers reviews-landed pauses set by round 1 before the
+            # reconcile round existed.
+            rows = rounds_for(item_id, 1)
+            L.append("NEEDS YOU — reviews are in, nothing has run")
+            L.append("card: %s" % item_id)
+            L.append("")
+            if not rows:
+                L.append("No reviews recorded. Something went wrong; check the terminal.")
+            else:
+                L.append(frame_line(rows))
+                L.append("")
+                L += build_context()
+                mismatch = [r for r in rows if r["hash_status"] != "MATCH"]
+                if mismatch:
+                    L.append("*** WARNING: the reviewers did not all see the same card.")
+                if len({r["hash"] for r in rows}) > 1:
+                    L.append("*** WARNING: packet hashes differ.")
+                L.append("")
+                for r in rows:
+                    L.append("%s:" % r["role"])
+                    L.append(first_prose(r["objection"], 220))
+                    L.append("")
+                L.append("Neither reviewer blocks this. They raise points to fix,")
+                L.append("which is normal and does not need your judgement.")
+            L.append("")
+            L.append("Full text: reviews/done/%s.<lineage>.response.md" % item_id)
+            L += footer(item_id, True, cmd)
 
     elif stop == "result-reviewed":
         rows = rounds_for(item_id, 3)
-        L.append("RESULT REVIEWED — the work has already run")
+        verdicts = [r["verdict"] for r in rows]
+        bad = "NOT_ESTABLISHED" in verdicts
+        L.append("NEEDS YOU — work has run and been checked")
         L.append("card: %s" % item_id)
         L.append("")
         if not rows:
-            L.append("No round-3 rows recorded. Check the terminal.")
-        else:
-            verdicts = [r["verdict"] for r in rows]
-            if verdicts and all(v == "ESTABLISHED" for v in verdicts):
-                L.append("BOTH LINEAGES: ESTABLISHED")
-            elif "NOT_ESTABLISHED" in verdicts:
-                L.append("*** NOT_ESTABLISHED — the evidence did not carry a claim")
-            L.append("")
-            for r in rows:
-                L.append("--- %s: %s" % (r["role"], r["verdict"] or r["signal"]))
-                L.append(first_prose(r["objection"], OBJ_CHARS))
-                L.append("")
-        L.append("Full text: reviews/done/%s.<lineage>.result.md" % item_id)
-        L.append("Verification output is in the result packet, not inlined here.")
+            L.append("No result review recorded. Check the terminal.")
+        elif bad:
+            L.append("*** THE EVIDENCE DID NOT SUPPORT EVERY CLAIM.")
+            L.append("Something the card said it did was not proven.")
+        elif verdicts and all(v == "ESTABLISHED" for v in verdicts):
+            L.append("Both reviewers: the evidence supports what the card claimed.")
         L.append("")
-        L.append("Release from the terminal:")
-        L.append("  bash tools/advisor_review.sh %s --continue" % item_id)
+        L += build_context()
+        L.append("Full text: reviews/done/%s.<lineage>.result.md" % item_id)
+        L += footer(item_id, True, cmd)
     else:
         L.append("Unknown stop: %s" % stop)
 

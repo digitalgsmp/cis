@@ -8,6 +8,7 @@
 # absence-from-outside-scope variant, observed 2026-09-02).
 #
 # Usage:  bash tools/advisor_review.sh <id>                  # round 1: review
+#         bash tools/advisor_review.sh <id> --reconcile      # cross-feed: reconcile round-1 findings
 #         bash tools/advisor_review.sh <id> --reply <file>   # round 2: answer it
 #         bash tools/advisor_review.sh <id> --result <file>  # round 3: result review
 #         bash tools/advisor_review.sh <id> --pause <stop>   # halt the loop here
@@ -15,6 +16,8 @@
 #         bash tools/advisor_review.sh <id> --supersede      # card replaced, not approved
 #         reads   reviews/pending/<id>.md
 #         writes  reviews/done/<id>.<profile>.response.md   (round 1)
+#                 reviews/done/<id>.<profile>.reconcile.md  (cross-feed)
+#                 reviews/done/<id>.reconcile.md            (final reconciled artifact)
 #                 reviews/done/<id>.<profile>.reply.md      (round 2)
 #                 reviews/done/<id>.<profile>.result.md     (round 3)
 #         records each round in deliberation_rounds as
@@ -139,9 +142,9 @@ MAX_TOKENS="${CIS_ADVISOR_MAX_TOKENS:-2000}"
 # packet it had ever been sent was a proposal. Both lineages were told they were
 # looking at a result and were looking at a design. Round 3 is where the word
 # result now belongs.
-SCOPE_LINE='You are reviewing a proposal packet — work that has NOT been done yet. You have no file access and no tools. Everything you need is in this message. If something you would need is not here, say what is missing — never report that it does not exist.'
+SCOPE_LINE='FRAME FIRST — ANSWER THIS BEFORE ANYTHING ELSE. Is this the right work? Not whether the design is correct — whether this is the right ITEM, at the right TIME, for what this project is for. Begin your reply with exactly one line reading FRAME: RIGHT_WORK or FRAME: WRONG_WORK or FRAME: CANNOT_TELL, then one short paragraph of reasoning. Do not pad that paragraph to look diligent — if the answer is obviously yes, say so in a sentence and move on. If you cannot tell from what you were given, say what you would need. Only then review what follows. You are reviewing a proposal packet — work that has NOT been done yet. You have no file access and no tools. Everything you need is in this message. If something you would need is not here, say what is missing — never report that it does not exist.'
 
-RESULT_LINE='You are reviewing the RESULT of work that has ALREADY been executed. Below is the card that was approved, then the actual command output and diff produced when it ran. You have no file access and no tools; everything is in this message. Answer two questions: does this evidence establish what the card claimed, and what would look like success while still being wrong? Begin your reply with exactly one line reading VERDICT: ESTABLISHED or VERDICT: NOT_ESTABLISHED, then your reasoning. If the evidence is not enough to decide, answer NOT_ESTABLISHED and say what is missing — never treat what you cannot see as absent.'
+RESULT_LINE='FRAME FIRST, AND IT FEEDS THE SLATE. The work below is already done, so this question cannot stop it — it is asked because the answer is what the slate is built from. Was this the right work, and what does the result imply about what should come next? Begin your reply with exactly one line reading FRAME: RIGHT_WORK or FRAME: WRONG_WORK or FRAME: CANNOT_TELL, then one short paragraph. Do not pad it. You are reviewing the RESULT of work that has ALREADY been executed. Below is the card that was approved, then the actual command output and diff produced when it ran. You have no file access and no tools; everything is in this message. Answer two questions: does this evidence establish what the card claimed, and what would look like success while still being wrong? Begin your reply with exactly one line reading VERDICT: ESTABLISHED or VERDICT: NOT_ESTABLISHED, then your reasoning. If the evidence is not enough to decide, answer NOT_ESTABLISHED and say what is missing — never treat what you cannot see as absent. THEN PRODUCE A SLATE, after your verdict. WRITE IT FOR A NON-CODER WHO DOES NOT READ CODE AND DOES NOT REMEMBER COMPONENT NAMES. The reader is the operator who commissions this work. He thinks in exactly one shape: I asked for something -- is it doing that yet -- and if not, what has to happen to make it work. That is what he is choosing from, so that is how you write it. For each candidate, exactly three lines. WANTED: the capability in plain language, as a thing the system should DO for him. No file names, no table names, no function names, no acronyms. WORKS TODAY: yes, partly, or no -- and in ONE sentence what actually happens right now. NEEDED: what has to be built or fixed for it to work, in plain language. Rank them so the one that unblocks the most comes first. Do NOT use an item number as the headline; if you know one, put it in brackets at the end of the WANTED line. Do NOT assume he remembers any previous card, review, or decision -- each entry must stand alone. If the right next work is not on the build list at all, say so as its own entry: a list that only repeats what someone already wrote down cannot surface what is missing.'
 
 REPLY_FILE=""
 RESULT_FILE=""
@@ -153,6 +156,8 @@ elif [[ $# -eq 2 && "$2" == "--continue" ]]; then
     MODE="continue"
 elif [[ $# -eq 2 && "$2" == "--supersede" ]]; then
     MODE="supersede"
+elif [[ $# -eq 2 && "$2" == "--reconcile" ]]; then
+    MODE="reconcile"
 elif [[ $# -eq 3 && "$2" == "--reply" ]]; then
     REPLY_FILE="$3"
     [[ -f "$REPLY_FILE" ]] || { echo "no evidence file at $REPLY_FILE" >&2; exit 1; }
@@ -172,6 +177,7 @@ else
     echo "usage: bash tools/advisor_review.sh <id>" >&2
     echo "       bash tools/advisor_review.sh <id> --reply  <evidence-file>" >&2
     echo "       bash tools/advisor_review.sh <id> --result <evidence-file>" >&2
+    echo "       bash tools/advisor_review.sh <id> --reconcile" >&2
     echo "       bash tools/advisor_review.sh <id> --pause  <card-written|reviews-landed|result-reviewed>" >&2
     echo "       bash tools/advisor_review.sh <id> --continue" >&2
     echo "       expects reviews/pending/<id>.md" >&2
@@ -340,7 +346,7 @@ else
     ROUND=1
 fi
 
-REPLY_LINE='You previously reviewed this packet and raised the objection below. Claude Code has answered it with evidence. Decide: WITHDRAWN if the evidence resolves your objection, HELD if it does not. Begin your reply with exactly one line reading VERDICT: WITHDRAWN or VERDICT: HELD, then a short paragraph of reasoning. If the evidence is not enough to decide, HOLD and say what is missing — never treat what you cannot see as absent.'
+REPLY_LINE='FRAME FIRST — ANSWER THIS BEFORE ANYTHING ELSE. Is this the right work? Not whether the design is correct — whether this is the right ITEM, at the right TIME, for what this project is for. Begin your reply with exactly one line reading FRAME: RIGHT_WORK or FRAME: WRONG_WORK or FRAME: CANNOT_TELL, then one short paragraph of reasoning. Do not pad that paragraph to look diligent — if the answer is obviously yes, say so in a sentence and move on. If you cannot tell from what you were given, say what you would need. Only then review what follows. You previously reviewed this packet and raised the objection below. Claude Code has answered it with evidence. Decide: WITHDRAWN if the evidence resolves your objection, HELD if it does not. Begin your reply with exactly one line reading VERDICT: WITHDRAWN or VERDICT: HELD, then a short paragraph of reasoning. If the evidence is not enough to decide, HOLD and say what is missing — never treat what you cannot see as absent.'
 
 # build_body <prior-file> — rounds 2 and 3 need the prior review from THEIR OWN
 # lineage, so this is called inside the loop. The packet is the same file and
@@ -412,6 +418,235 @@ curl -s -m "$timeout" -X POST "http://127.0.0.1:$port/v1/chat/completions" \
     --data-binary @/tmp/advisor_payload.json
 rm -f /tmp/advisor_payload.json
 '
+
+# ------------------------------------------------------------- RECONCILE ----
+# BUILD LIST 2.3 — the reconciliation phase. Eric's 2026-07-03 design record:
+# "the reviewers have to stop to deliberate and reconcile any differences."
+# Round 1 froze two independent findings sets; until now nothing ever let one
+# lineage see the other's, so `sequential_review` had nothing to guard (2.3:
+# "the phase it belongs to was never built"). This round cross-feeds the frozen
+# round-1 findings and each lineage produces the item-by-item reconciliation
+# CARD-01 DONE-WHEN 4 names: agreements, disagreements, what each missed. The
+# harness then writes ONE reconciled artifact referencing both round-1 hashes,
+# preserving dissent rather than forcing consensus (CARD-01: "side by side is
+# not reconciliation").
+RECONCILE_LINE='RECONCILE — you are one of two reviewer lineages. You already reviewed the packet below in round 1, independently. Your round-1 findings were frozen and hashed. You are now shown, for the first time, the OTHER lineage'"'"'s frozen round-1 findings. Do not re-review the packet from scratch. Deliberate: reconcile your findings with theirs, item by item. Begin with exactly one line reading RECONCILE: COMPLETE or RECONCILE: INCOMPLETE (INCOMPLETE if the other lineage'"'"'s findings are missing or empty). Then produce, item by item: AGREED — findings you both raised, in your own words, citing the specific finding; DISAGREE — findings where you differ, and why; THEY MISSED (I caught) — your findings the other lineage did not raise; I MISSED (they caught) — their findings you did not raise, and whether you now accept each; UNRESOLVED — differences neither of you can settle from the packet alone, and what evidence would settle each. Preserve dissent. Do not invent consensus. If you cannot verify a claim against the packet, say so rather than agreeing. You have no file access and no tools; everything is in this message.'
+
+if [[ "$MODE" == "reconcile" ]]; then
+    if [[ ${#LINEAGES[@]} -ne 2 ]]; then
+        echo "reconcile needs both lineages (unset CIS_ADVISOR_PROFILE / CIS_ADVISOR_PORT)" >&2
+        exit 2
+    fi
+    R1_ADVISOR="$OUTDIR/$ID.advisor.response.md"
+    R1_EVALUATOR="$OUTDIR/$ID.evaluator.response.md"
+    for _f in "$R1_ADVISOR" "$R1_EVALUATOR"; do
+        [[ -f "$_f" ]] || {
+            echo "round 1 missing: $_f" >&2
+            echo "run: bash tools/advisor_review.sh $ID first" >&2
+            exit 1; }
+    done
+    R1_ADVISOR_HASH="$(sha256sum "$R1_ADVISOR" | cut -c1-16)"
+    R1_EVALUATOR_HASH="$(sha256sum "$R1_EVALUATOR" | cut -c1-16)"
+    RECONCILE_AT="$(date -Iseconds)"
+    echo "cross-feed: advisor $R1_ADVISOR_HASH <-> evaluator $R1_EVALUATOR_HASH"
+
+    build_reconcile_body() {
+        RECONCILE_LINE="$RECONCILE_LINE" MAX_TOKENS="$MAX_TOKENS" RUN_TAG="$RUN_TAG" \
+        PEER_NAME="$1" \
+        python3 - "$PACKET" "$2" "$3" <<'PY'
+import json, os, sys
+packet = open(sys.argv[1], encoding="utf-8").read()
+own = open(sys.argv[2], encoding="utf-8").read()
+peer = open(sys.argv[3], encoding="utf-8").read()
+prompt = (
+    os.environ["RECONCILE_LINE"]
+    + "\n\n(Reconcile run: " + os.environ["RUN_TAG"] + ")\n\n"
+    + "=== THE PACKET ===\n" + packet
+    + "\n\n=== YOUR FROZEN ROUND-1 FINDINGS ===\n" + own
+    + "\n\n=== THE OTHER LINEAGE'S FROZEN ROUND-1 FINDINGS ("
+    + os.environ["PEER_NAME"] + ") ===\n" + peer
+)
+print(json.dumps({
+    "model": "agent",
+    "messages": [{"role": "user", "content": prompt}],
+    "max_tokens": int(os.environ["MAX_TOKENS"]),
+}))
+PY
+    }
+
+    RECON_FAILED=0
+    declare -A RECON_HASH
+    for _lin in "${LINEAGES[@]}"; do
+        PROFILE="${_lin%%:*}"; PORT="${_lin##*:}"
+        if [[ "$PROFILE" == "advisor" ]]; then
+            OWN="$R1_ADVISOR"; PEER="$R1_EVALUATOR"; PEER_NAME="evaluator (Qwen)"
+            OWN_HASH="$R1_ADVISOR_HASH"; PEER_HASH="$R1_EVALUATOR_HASH"
+        else
+            OWN="$R1_EVALUATOR"; PEER="$R1_ADVISOR"; PEER_NAME="advisor (GLM)"
+            OWN_HASH="$R1_EVALUATOR_HASH"; PEER_HASH="$R1_ADVISOR_HASH"
+        fi
+        OUT_RECON="$OUTDIR/$ID.$PROFILE.reconcile.md"
+        echo "--- reconcile: $PROFILE on $PORT ---"
+
+        BODY="$(build_reconcile_body "$PEER_NAME" "$OWN" "$PEER")" || {
+            echo "FAILED: $PROFILE — could not build reconcile body" >&2
+            RECON_FAILED=$((RECON_FAILED+1)); continue; }
+
+        RESP="$(printf '%s' "$BODY" | docker exec -i -u worker "$CONTAINER" \
+            sh -c "$REMOTE_SH" -- "$PROFILE" "$PORT" "$TIMEOUT")" || {
+            echo "FAILED: $PROFILE on $PORT did not answer" >&2
+            RECON_FAILED=$((RECON_FAILED+1)); continue; }
+        if [[ -z "$RESP" ]]; then
+            echo "FAILED: $PROFILE on $PORT returned an empty body" >&2
+            RECON_FAILED=$((RECON_FAILED+1)); continue
+        fi
+
+        ERR="$(printf '%s' "$RESP" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception as e:
+    print("not JSON: " + str(e)[:120]); sys.exit(0)
+if isinstance(d, dict) and d.get("error"):
+    e = d["error"]
+    print((e.get("code","") + ": " + e.get("message","")) if isinstance(e, dict) else str(e)[:200])
+    sys.exit(0)
+if not (isinstance(d, dict) and d.get("choices")):
+    print("no choices in response"); sys.exit(0)
+' 2>/dev/null || echo "response could not be parsed")"
+
+        if [[ -n "$ERR" ]]; then
+            echo "FAILED: $PROFILE on $PORT — $ERR" >&2
+            RECON_FAILED=$((RECON_FAILED+1)); continue
+        fi
+
+        RESP_TMP="$(mktemp)"
+        printf '%s' "$RESP" > "$RESP_TMP"
+
+        ID="$ID" PROFILE="$PROFILE" RUN_TAG="$RUN_TAG" PACKET_HASH="$PACKET_HASH" \
+            OWN_HASH="$OWN_HASH" PEER_HASH="$PEER_HASH" PEER_NAME="$PEER_NAME" \
+            RECONCILE_AT="$RECONCILE_AT" \
+            python3 - "$OUT_RECON" "$PACKET" "$RESP_TMP" <<'PY'
+import json, os, sys, datetime, sqlite3
+out_path, packet_path, resp_path = sys.argv[1:4]
+raw = open(resp_path, encoding="utf-8").read()
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError:
+    sys.stderr.write("gateway did not return JSON:\n" + raw[:2000] + "\n"); sys.exit(1)
+if "choices" not in data or not data["choices"]:
+    sys.stderr.write("gateway returned no choices:\n" + raw[:2000] + "\n"); sys.exit(1)
+msg = data["choices"][0].get("message", {})
+content = (msg.get("content") or msg.get("reasoning_content") or "").strip()
+usage = data.get("usage", {})
+pt = usage.get("prompt_tokens", 0); ct = usage.get("completion_tokens", 0); tt = usage.get("total_tokens", 0)
+source = "gateway response usage"
+if pt == 0 and ct == 0:
+    source = "gateway reported 0 — reply served from its response cache, not a fresh measurement"
+
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(f"# Reconciliation — {os.environ['ID']}\n\n")
+    f.write(f"- lineage: {os.environ['PROFILE']}\n")
+    f.write(f"- packet: `{os.path.relpath(packet_path)}`\n")
+    f.write(f"- own round-1 hash: {os.environ['OWN_HASH']}\n")
+    f.write(f"- peer round-1 hash: {os.environ['PEER_HASH']} ({os.environ['PEER_NAME']})\n")
+    f.write(f"- run tag: {os.environ['RUN_TAG']}\n")
+    f.write(f"- at: {os.environ['RECONCILE_AT']}\n")
+    f.write(f"- prompt_tokens: {pt}\n- completion_tokens: {ct}\n- total_tokens: {tt}\n")
+    f.write(f"- token source: {source}\n\n---\n\n")
+    f.write(content + "\n")
+
+head = content.strip().splitlines()[0].upper() if content.strip() else ""
+if "INCOMPLETE" in head:
+    reconcile_ok = "INCOMPLETE"
+elif "COMPLETE" in head:
+    reconcile_ok = "COMPLETE"
+else:
+    reconcile_ok = "UNPARSED"
+
+DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
+# run_id prefix is advisor-reconcile-, NOT advisor-<id>-reconcile-. The review
+# thread already uses advisor-<id>-<profile>, and pause_notify.rounds_for() reads
+# that with LIKE 'advisor-<id>-%'. A reconcile row under the same prefix would be
+# returned as a round-1 review and the notification would double-count lineages.
+run_id = "advisor-reconcile-" + os.environ["ID"] + "-" + os.environ["PROFILE"]
+entry = {
+    "reconcile": reconcile_ok,
+    "own_hash": os.environ["OWN_HASH"],
+    "peer_hash": os.environ["PEER_HASH"],
+    "peer": os.environ["PEER_NAME"],
+    "packet_hash": os.environ["PACKET_HASH"],
+    "objection": content[:4000],
+    "run_tag": os.environ["RUN_TAG"],
+}
+try:
+    conn = sqlite3.connect(DB)
+    conn.execute(
+        "INSERT INTO deliberation_rounds "
+        "(run_id, round_number, drafter_role, drafter_output, reviewer_role, "
+        " reviewer_signal, objections_json, revision_number, "
+        " requires_eric_review, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (run_id, 1, "claude_code", os.environ["PEER_NAME"],
+         os.environ["PROFILE"], "OBJECTIONS", json.dumps([entry]),
+         1, 1, datetime.datetime.now(datetime.timezone.utc).isoformat()))
+    conn.commit(); conn.close()
+    print(f"recorded: {run_id} reconcile={reconcile_ok}")
+except sqlite3.IntegrityError:
+    print(f"NOT recorded: {run_id} already exists (duplicate round for this run_id)")
+except Exception as e:
+    print(f"NOT recorded ({type(e).__name__}: {e}) — artifact on disk stands")
+
+print(f"wrote {out_path}")
+print(f"prompt_tokens={pt} completion_tokens={ct} total_tokens={tt}")
+PY
+        rm -f "$RESP_TMP"
+        [[ -f "$OUT_RECON" ]] && RECON_HASH["$PROFILE"]="$(sha256sum "$OUT_RECON" | cut -c1-16)"
+    done
+
+    if [[ $RECON_FAILED -gt 0 ]]; then
+        echo ""
+        echo "WARNING: $RECON_FAILED of ${#LINEAGES[@]} lineage(s) failed to reconcile."
+        echo "No final reconciled artifact written — a half-reconciliation is not a result."
+        exit 1
+    fi
+
+    # The final reconciled artifact is harness-written, not model-written. It
+    # preserves dissent by keeping BOTH per-lineage reconciliations verbatim and
+    # references both frozen round-1 hashes (CARD-01 DONE-WHEN 4 and 5).
+    FINAL_RECON="$OUTDIR/$ID.reconcile.md"
+    {
+        echo "# Reconciled review — $ID"
+        echo ""
+        echo "- packet hash: $PACKET_HASH"
+        echo "- advisor round-1 hash: $R1_ADVISOR_HASH"
+        echo "- evaluator round-1 hash: $R1_EVALUATOR_HASH"
+        echo "- advisor reconcile hash: ${RECON_HASH[advisor]:-missing}"
+        echo "- evaluator reconcile hash: ${RECON_HASH[evaluator]:-missing}"
+        echo "- at: $RECONCILE_AT"
+        echo ""
+        echo "The two reviewer lineages reviewed the same packet independently (round 1),"
+        echo "then each saw the other's frozen findings and reconciled (round 2)."
+        echo "Dissent is preserved below; nothing here forces consensus."
+        echo ""
+        echo "---"
+        echo ""
+        echo "## advisor (GLM) reconciliation"
+        echo ""
+        cat "$OUTDIR/$ID.advisor.reconcile.md" 2>/dev/null || echo "(missing)"
+        echo ""
+        echo "---"
+        echo ""
+        echo "## evaluator (Qwen) reconciliation"
+        echo ""
+        cat "$OUTDIR/$ID.evaluator.reconcile.md" 2>/dev/null || echo "(missing)"
+    } > "$FINAL_RECON"
+    echo "wrote final reconciled artifact: $FINAL_RECON"
+
+    pause_state set reviews-landed \
+        "reconciled reviews are in for $ID — read $FINAL_RECON before executing"
+    notify_stop reviews-landed
+    exit 0
+fi
 
 # One call per lineage. A failure in one is reported and the other still
 # records -- a half-review that says so beats a silent single review.
@@ -593,7 +828,25 @@ if reply_file:
     except OSError:
         pass
 
+# THE RATIFICATION DETECTOR. Both lineages, 2026-09-09: a gate obeyed as a
+# format instruction is indistinguishable from a gate that functions. The frame
+# verdict is recorded per review so "has this gate EVER fired" is a query rather
+# than an impression. If it reads RIGHT_WORK for N consecutive reviews, the gate
+# has gone decorative and that is a measurable state, not a feeling.
+frame = ""
+for _line in content.strip().splitlines()[:3]:
+    _u = _line.upper()
+    if "FRAME:" in _u:
+        for _v in ("WRONG_WORK", "CANNOT_TELL", "RIGHT_WORK"):
+            if _v in _u:
+                frame = _v
+                break
+        break
+if not frame:
+    frame = "ABSENT"
+
 entry = {
+    "frame_verdict": frame,
     "objection": content[:4000],
     "evidence": evidence_text,
     "verdict": verdict,
@@ -618,7 +871,7 @@ try:
     conn.commit()
     conn.close()
     print(f"recorded: {run_id} round {rnd} signal={signal} "
-          f"verdict={verdict or chr(45)} hash={hash_status}")
+          f"frame={frame} verdict={verdict or chr(45)} hash={hash_status}")
 except sqlite3.IntegrityError:
     print(f"NOT recorded: {run_id} round {rnd} already exists — a duplicate "
           f"round number for this run_id, not a cap. Nothing limits how many "
@@ -637,15 +890,15 @@ if [[ $FAILED -gt 0 ]]; then
     exit 1
 fi
 
-# Stops 2 and 3. Set only when every lineage answered: pausing after a partial
-# review would present half a dual review as the thing to decide on. A failed
-# run leaves no pause, and the operator re-runs it.
+# Stops 2 and 3. Stop 2 (reviews-landed) is set by --reconcile, not round 1:
+# round 1 produces two INDEPENDENT opinions, and Eric's 2026-07-03 design
+# record says the reviewers "stop to deliberate and reconcile any differences"
+# before anything reaches him. Presenting two raw round-1 opinions as the thing
+# to decide on is the "side by side is not reconciliation" failure CARD-01
+# names. Round 3 still sets its own stop. Both are set only when every lineage
+# answered: pausing after a partial review would present half a dual review.
 echo ""
-if [[ "$ROUND" == "1" ]]; then
-    pause_state set reviews-landed \
-        "reviews are in for $ID — read reviews/done/$ID.*.response.md before executing"
-    notify_stop reviews-landed
-elif [[ "$ROUND" == "3" ]]; then
+if [[ "$ROUND" == "3" ]]; then
     pause_state set result-reviewed \
         "result review is in for $ID — read reviews/done/$ID.*.result.md before the next item"
     notify_stop result-reviewed
