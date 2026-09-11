@@ -60,7 +60,7 @@ mcp_servers:
     # read-shaped subset (spine + file + git + hash) and refuses dispatch at the
     # call boundary, so this role can measure without being able to mutate.
     enabled: true
-    timeout: 60
+    timeout: 180
 terminal:
   backend: local
 # THE WALL

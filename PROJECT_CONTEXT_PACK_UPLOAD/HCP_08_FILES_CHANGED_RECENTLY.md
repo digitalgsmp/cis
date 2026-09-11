@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-09-10 22:44 UTC | Run: run-531cf8d15e61
+Generated: 2026-09-11 00:07 UTC | Run: run-151f08965a32
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 6fdeefe fix KB search; add cis_list_dir + secrets exclusion; give pipeline reviewers read instruments
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## enforcement/mwl-proof-v2/profiles/review1.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review2.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/mcp_bridge/chroma_index.py 
+
+## runtime/mcp_bridge/spine.py 
+
+## runtime/mcp_bridge/tools.py 
 
 ## 0c5fbc1 add --resolve triage: route UNRESOLVED items to authority/spec/fact
 
@@ -540,49 +578,5 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/schema/migrations/0030_build_plan_nodes_project_id.sql 
 
 ## runtime/schema/migrations/verify_0030.py 
-
-## tools/advisor_review.sh 
-
-## cc32f41 feat: advisor reply round, loop proven end to end on the 3.6 card
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## reviews/done/fix-3.6-preflight-qwen.response.md 
-
-## reviews/done/fix-3.6-preflight.reply.md 
-
-## reviews/done/fix-3.6-preflight.response.md 
-
-## reviews/pending/fix-3.6-evidence.md 
-
-## reviews/pending/fix-3.6-preflight-qwen.md 
-
-## reviews/pending/fix-3.6-preflight.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## tools/advisor_review.sh 

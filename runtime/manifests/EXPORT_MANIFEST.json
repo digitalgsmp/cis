@@ -1,7 +1,7 @@
 {
-  "run_id": "run-531cf8d15e61",
-  "generated_at": "2026-09-10T22:44:50Z",
-  "git_head": "0c5fbc1",
+  "run_id": "run-151f08965a32",
+  "generated_at": "2026-09-11T00:07:11Z",
+  "git_head": "6fdeefe",
   "generator": "tools/export/generate_all.py",
   "db_path": "/mnt/projects/cis/data/cis_memory.db",
   "source_configs": [
@@ -9,16 +9,16 @@
     "config/hcp_static.yaml"
   ],
   "commands": [
-    "python3 tools/export/generate_agents_md.py --run-id run-531cf8d15e61",
-    "python3 tools/export/generate_hcp.py --run-id run-531cf8d15e61",
-    "python3 tools/export/generate_dev_pivot_manifest.py --run-id run-531cf8d15e61"
+    "python3 tools/export/generate_agents_md.py --run-id run-151f08965a32",
+    "python3 tools/export/generate_hcp.py --run-id run-151f08965a32",
+    "python3 tools/export/generate_dev_pivot_manifest.py --run-id run-151f08965a32"
   ],
   "artifacts": [
     {
       "path": "AGENTS.md",
       "type": "agents_context",
       "generator": "tools/export/generate_agents_md.py",
-      "sha256": "6504c7afe05c3cc967276049f55139861817b988f9e08cf9ad15300099f94dc1",
+      "sha256": "7b2e10b0c9d3a8f15f9fb6c3e642b45ae96b8f9f796453ac1f28bf0dafa1ad60",
       "size_bytes": 18454,
       "char_count": 18388,
       "line_count": 192
@@ -27,7 +27,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "73f2d3bf864586b71f2d18e33481997fb2c9ea0e1cfbdb38f471904a44f6047d",
+      "sha256": "a32d6312fda9f881e73465c4cda2a6feb8f5e86fb5df333d0491310a3ba6857d",
       "size_bytes": 982,
       "char_count": 968,
       "line_count": 21
@@ -36,7 +36,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "b36153bca87eb11952dbadd85e09dd77808584f2ae6c71b6dddfdcacca5942a8",
+      "sha256": "7fd98c6c46c009f8f11c581c9bbf70e39c5a4544cb908a4738fc235d5c8e4767",
       "size_bytes": 2150,
       "char_count": 2140,
       "line_count": 42
@@ -45,7 +45,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "5d9b6813b672d5cd26cfb590f8d09accbfeb723e443253fa645f4dfef6bf7e76",
+      "sha256": "1e50845da1ac5b3d74cf5c9ad0aa0b4a3827503ddb9bf383f7a2a3efad2cb0fc",
       "size_bytes": 31627,
       "char_count": 31053,
       "line_count": 428
@@ -54,7 +54,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "ee63092ce3ab19004a515cf1c38d7e173b0e379ae72615d1d8b7ed59796fb582",
+      "sha256": "a41aa2d684922b4b5b6bcf74316c36793cb6411a92d4d5d79297dbea64a93ed0",
       "size_bytes": 8452,
       "char_count": 8290,
       "line_count": 165
@@ -63,7 +63,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "a242a2e70ca7ea9863d06924be085725125950c8467c18b63cb57ba80e608e23",
+      "sha256": "083214fe297bdba7e3977edb87c1e3149529ebe92decb539a738920d218a43d7",
       "size_bytes": 3870,
       "char_count": 3864,
       "line_count": 24
@@ -72,7 +72,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "0811f368356fe536af18692a91c8214f2e6eb34fbf0c65af89a91edf42424f9f",
+      "sha256": "7186c397a8dfe65d9040d369ef35342b4f9d8bed48deb628b19395de7ef0f08f",
       "size_bytes": 1835,
       "char_count": 1787,
       "line_count": 50
@@ -81,7 +81,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "ed4852e656c36ded2bd9b8a7efc6873c498a7c327e0de036f6389bd4609c242f",
+      "sha256": "ee83f4973433aef0029f3861573bf413a8d8c4cd7418a52eb7f9defe2aafef03",
       "size_bytes": 6802,
       "char_count": 6638,
       "line_count": 99
@@ -90,7 +90,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "92e6c29fba4568eb0a910e376ad67df942cbf54dd53035e9c9e9abc231e0aa9f",
+      "sha256": "a95877ca7735f74a62b70520cedc6573f7841c173cb1a29078d981f4ca79e32c",
       "size_bytes": 9858,
       "char_count": 9802,
       "line_count": 200
@@ -99,7 +99,7 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "c49025bd02c8da1ed58938e2ad4a31b72b29d83dc3000ddfa4af59594318cefc",
+      "sha256": "011476db9bfe558519749c358ae0b0a0c69b7fb133dadb485249f2250e942ca2",
       "size_bytes": 5422,
       "char_count": 5354,
       "line_count": 108
@@ -108,16 +108,16 @@
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "03de65f0245a4f8c8171e30d55de43bf1cfa292fc3b33a5085e9ff0bebe3eac1",
-      "size_bytes": 15627,
-      "char_count": 15623,
-      "line_count": 588
+      "sha256": "9f6123b0b66bee81f076d80c30056996db956e06757f55f4dc0c1dd6dfd8ffa0",
+      "size_bytes": 15528,
+      "char_count": 15524,
+      "line_count": 582
     },
     {
       "path": "PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md",
       "type": "hcp_context",
       "generator": "tools/export/generate_hcp.py",
-      "sha256": "ec9c8327d5497e57b14da5b8c6b8837a9c4817312aa5d9965044cda804380edd",
+      "sha256": "227bff587160d401a17b521af9d73df2590debf39c2a3223514d65fdfec32aa6",
       "size_bytes": 3824,
       "char_count": 3800,
       "line_count": 56
@@ -126,7 +126,7 @@
       "path": "docs/DEV-PIVOT_STATUS.md",
       "type": "dev_pivot_manifest",
       "generator": "tools/export/generate_dev_pivot_manifest.py",
-      "sha256": "e282a385d26a410f961e8e526d0d192704d883ac9e2d80dd814d33f392eda1da",
+      "sha256": "1e03a63e276f2d7ce490a6e523254952b7b489d2f1ae29a9340fef3ea8df9b74",
       "size_bytes": 3749,
       "char_count": 3723,
       "line_count": 96

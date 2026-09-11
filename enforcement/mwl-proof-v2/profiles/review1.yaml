@@ -51,7 +51,7 @@ mcp_servers:
     # surface (2.23) and the 13-tool bloat; readonly mode removes both while
     # giving this reviewer the KB retrieval it never had.
     enabled: true
-    timeout: 60
+    timeout: 180
 terminal:
   backend: local
 # THE WALL

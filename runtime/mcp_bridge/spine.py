@@ -342,13 +342,13 @@ def query_search_sessions(query_text, limit=10, db_path=None):
 def search_knowledge_fts(query_text, limit=10, db_path=None):
     """FTS5 search across knowledge_messages, with LIKE fallback.
 
-    The knowledge_messages_fts index may not exist — the KB ingest has been
-    frozen since 2026-07-24 and its FTS index was never built, while the only
-    FTS tables present are dam_extracted_text_fts and session_closeouts_fts.
-    The FTS path is therefore guarded: when the index is absent (or any FTS
-    error occurs) it falls back to a LIKE scan instead of erroring out. The
-    LIKE fallback that used to run only on zero FTS rows now also runs when
-    the index is missing.
+    The knowledge_messages_fts index is built and populated (verified
+    2026-09-10: 2,650,075 rows, matching the base table; MATCH returns results
+    instantly). The LIKE fallback is retained as a safety net for the case
+    where the index is dropped or a MATCH query errors out (e.g. a stray
+    column-filter token from a query containing ':'). The FTS path is guarded:
+    when the index is absent or any FTS error occurs, it falls back to a LIKE
+    scan instead of erroring out.
     """
     conn = _connect_readonly(db_path)
     try:
@@ -381,39 +381,57 @@ def search_knowledge_fts(query_text, limit=10, db_path=None):
         conn.close()
 
 
+# --- Semantic search singleton cache ---------------------------------------
+# The knowledge_messages collection holds 2.65M precomputed embeddings backed
+# by a 4.4 GB HNSW index + a 19 GB metadata sqlite. Building the client,
+# collection and embedding model fresh on every call re-pays a ~70s cold start
+# (torch import + HNSW index unpickle) per query, which blows the MCP tool
+# timeout. The MCP server is a long-lived stdio process, so we cache the
+# components once and reuse them: the first query pays the cold start, every
+# later query is sub-second.
+_chroma_client = None
+_chroma_collection = None
+_embed_model = None
+
+
+def _semantic_components():
+    """Load (once) and return the cached (collection, model) pair."""
+    global _chroma_client, _chroma_collection, _embed_model
+    import chromadb
+    from sentence_transformers import SentenceTransformer
+
+    if _chroma_client is None:
+        repo = os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
+        _chroma_client = chromadb.PersistentClient(
+            path=os.path.join(repo, "data", "chroma_data")
+        )
+        _chroma_collection = _chroma_client.get_collection("knowledge_messages")
+
+    if _embed_model is None:
+        model_src = os.environ.get("CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
+        _embed_model = SentenceTransformer(model_src)
+
+    return _chroma_collection, _embed_model
+
+
 def search_knowledge_semantic(query_text, top_k=10, db_path=None):
     """Semantic search across knowledge_messages via ChromaDB.
 
     The knowledge_messages collection stores PRE-COMPUTED embeddings (dim 384,
     all-MiniLM-L6-v2) with NO embedding function configured on the collection
     (config_json_str={}). Querying by raw text (query_texts) therefore fails —
-    the query must be embedded locally and sent as query_embeddings. Returns []
-    (not an error) when chromadb or the embedding model is unavailable, so the
-    FTS/LIKE path in the caller still stands alone rather than erroring out.
+    the query must be embedded locally and sent as query_embeddings. The client,
+    collection and model are cached at module scope (the MCP server is a
+    long-lived stdio process), so the ~70s cold start is paid once and
+    subsequent queries are sub-second. Returns [] (not an error) when chromadb
+    or the embedding model is unavailable, so the FTS/LIKE path in the caller
+    still stands alone rather than erroring out.
     """
     try:
-        import chromadb
-    except ImportError:
-        return []
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError:
-        return []
-    repo = os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
-    try:
-        client = chromadb.PersistentClient(
-            path=os.path.join(repo, "data", "chroma_data")
-        )
-        collection = client.get_collection("knowledge_messages")
+        collection, model = _semantic_components()
     except Exception:
         return []
     try:
-        # CIS_EMBED_MODEL lets the container name the model by ABSOLUTE PATH;
-        # a repo id would go through the HF cache lookup, which fails without
-        # network. The host resolves the repo id normally.
-        model = SentenceTransformer(
-            os.environ.get("CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
-        )
         embedding = model.encode([query_text], show_progress_bar=False).tolist()[0]
     except Exception:
         return []
