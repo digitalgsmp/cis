@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-09-11 00:07 UTC | Run: run-151f08965a32
+Generated: 2026-09-11 19:31 UTC | Run: run-2816beddf8c8
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 198fc71 semantic search: cache chroma/model singletons (fix ~70s cold-start timeout); raise reviewer MCP timeout 60->180; correct FTS docstring (index is built)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## enforcement/mwl-proof-v2/profiles/advisor.yaml 
+
+## enforcement/mwl-proof-v2/profiles/evaluator.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review1.yaml 
+
+## enforcement/mwl-proof-v2/profiles/review2.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/mcp_bridge/spine.py 
 
 ## 6fdeefe fix KB search; add cis_list_dir + secrets exclusion; give pipeline reviewers read instruments
 
@@ -534,49 +572,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/export/generate_agents_md.py 
 
 ## tools/export/generate_hcp.py 
-
-## 049cdba fix(3.6): migrate build_plan_nodes.project_id to 'cis' with FK and default
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## reviews/done/migration-0030-r2.advisor.response.md 
-
-## reviews/done/migration-0030-r2.evaluator.response.md 
-
-## reviews/done/migration-0030.evaluator.response.md 
-
-## reviews/pending/migration-0030-r2.md 
-
-## reviews/pending/migration-0030.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/schema/migrations/0030_build_plan_nodes_project_id.sql 
-
-## runtime/schema/migrations/verify_0030.py 
-
-## tools/advisor_review.sh 

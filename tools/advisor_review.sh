@@ -1035,6 +1035,21 @@ try:
         (run_id, rnd, "claude_code", evidence_text,
          os.environ["PROFILE"], signal, json.dumps([entry]),
          1, 1, datetime.datetime.now(datetime.timezone.utc).isoformat()))
+    # BUILD LIST 1.22 — the loop writes its own knowledge record (source
+    # 'advisor_loop'), so the exchange survives without a Claude Code
+    # transcript. One row per round, self-describing, idempotent on
+    # source_key. 'advisor_loop' is distinct from 'claude-external-advisor'
+    # (which arrives by transcript ingestion, not by the loop writing).
+    _ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    _src_key = "advisor/%s/%s/%d" % (os.environ["ID"], os.environ["PROFILE"], rnd)
+    _kb_head = "[advisor %s round %d %s] frame=%s verdict=%s" % (
+        os.environ["ID"], rnd, os.environ["PROFILE"], frame, verdict or "-")
+    _kb_content = _kb_head + "\n" + content[:4000]
+    conn.execute("DELETE FROM knowledge_messages WHERE source_key=?", (_src_key,))
+    conn.execute(
+        "INSERT INTO knowledge_messages (role, content, source, source_key, timestamp) "
+        "VALUES (?,?,?,?,?)",
+        ("assistant", _kb_content, "advisor_loop", _src_key, _ts))
     conn.commit()
     conn.close()
     print(f"recorded: {run_id} round {rnd} signal={signal} "
