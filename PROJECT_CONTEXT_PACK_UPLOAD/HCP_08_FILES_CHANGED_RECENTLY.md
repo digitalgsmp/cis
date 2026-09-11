@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-09-11 19:31 UTC | Run: run-2816beddf8c8
+Generated: 2026-09-11 19:37 UTC | Run: run-23e1465776de
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 4df51dd feat(advisor): loop writes its own knowledge record (BUILD LIST 1.22)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/advisor_review.sh 
+
+## tools/queue/ingest_advisor_rounds.py 
 
 ## 198fc71 semantic search: cache chroma/model singletons (fix ~70s cold-start timeout); raise reviewer MCP timeout 60->180; correct FTS docstring (index is built)
 
@@ -518,57 +550,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/UNIFIED_BUILD_LIST.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 4ff27ee fix: correct 'CIS' project_id literals at 14 sites after migration 0030
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## cis_kernel/source/SESSION_LOG.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/api/dashboard_api.py 
-
-## runtime/api/pipeline.py 
-
-## runtime/app.py 
-
-## runtime/db/build_plan.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/mcp_bridge/spine.py 
-
-## tools/build_plan/seed_build_plan.py 
-
-## tools/build_plan/sync_project_state.py 
-
-## tools/export/generate_agents_md.py 
-
-## tools/export/generate_hcp.py 

@@ -204,22 +204,40 @@ def frame_line(rows):
     return "Frame verdicts: " + ", ".join(sorted(verdicts))
 
 
-def footer(item_id, needs_action, cmd=None):
-    L = ["", "-----"]
-    if needs_action:
-        L.append("TO PROCEED, in the terminal:")
-        L.append("  " + cmd)
-        L.append("IF YOU DO NOTHING: this stays stopped. Nothing runs, nothing is lost.")
-    else:
-        L.append("NOTHING IS WAITING ON YOU. This is for information.")
-    L.append("Replying to this message does nothing — the feed is one-way.")
-    others = other_open_stops(item_id)
-    if others:
-        L.append("")
-        L.append("ALSO WAITING (%d):" % len(others))
-        for card, stop in others:
-            L.append("  %s — %s" % (card, stop))
-    return L
+def card_ask(item_id):
+    """The card's plain-language 'what this is for', for the message.
+
+    notify-format (BUILD LIST 2.25): Eric does not remember card names between
+    sessions. The message names what he asked for, in the card's own words —
+    INTENT line first, then the heading, then the id as a last resort.
+    """
+    path = os.path.join(REPO, "reviews/pending", item_id + ".md")
+    if not os.path.exists(path):
+        return item_id
+    lines = [l.strip() for l in open(path, encoding="utf-8").read().split("\n")]
+    for s in lines:
+        if s.upper().startswith("INTENT:"):
+            v = s.split(":", 1)[1].strip()
+            if v:
+                return v[:160]
+    for i, s in enumerate(lines):
+        if s.startswith("# "):
+            v = s[2:].strip()
+            stripped = re.sub(r"^CARD[-_A-Za-z0-9]*\b\s*[-—:]*\s*", "", v).strip()
+            if stripped:
+                return stripped[:160]
+            # heading is just "CARD-xxx" — the summary is the next non-empty line
+            for nxt in lines[i + 1:]:
+                if nxt and not nxt.startswith("#"):
+                    return nxt[:160]
+            break
+    return item_id
+
+
+def action_lines(item_id, cmd):
+    """The command Eric runs, and what happens if he does nothing."""
+    return ["To proceed, run in the terminal:", "  " + cmd,
+            "Do nothing and it stays stopped. Nothing is lost."]
 
 
 def build_context():
@@ -251,116 +269,70 @@ def build_context():
 
 
 def render(item_id, stop):
-    """Every message opens by saying whether Eric must do something.
+    """Render a pause stop as a phone message Eric can act on.
 
-    Rewritten 2026-09-09. The previous version led with state -- 'REVIEWS
-    LANDED', 'signal: OBJECTIONS', token counts and a hash status -- and never
-    said whether he was being asked for anything. Eric read the messages and
-    could not tell if he was supposed to act, which is the whole purpose of the
-    feed failing. `signal: OBJECTIONS` was the worst of it: round 1 is ALWAYS
-    recorded OBJECTIONS by design, so it appeared on every review and meant
-    nothing, while reading as though something were wrong.
+    notify-format (BUILD LIST 2.25), the reviewers' spec 2026-09-09: every
+    message opens with the action signal (READY TO REVIEW / READY TO RUN /
+    DECISION NEEDED / DONE), names what Eric asked for in plain language, and
+    drops the machinery — the NEEDS YOU banner, card names, reviewer verdicts
+    (UNPARSED / NOT_ESTABLISHED), file paths, and the WANTED/WORKS/NEEDED dump.
+    A message exists only because there is a stop to release; the first line
+    says what the stop is for.
     """
-    packet = os.path.join(REPO, "reviews/pending", item_id + ".md")
     cmd = "bash tools/advisor_review.sh %s --continue" % item_id
     L = []
 
     if stop == "card-written":
-        L.append("NEEDS YOU — a card is written and not yet reviewed")
-        L.append("card: %s" % item_id)
+        L.append("READY TO REVIEW")
         L.append("")
-        if os.path.exists(packet):
-            text = open(packet, encoding="utf-8").read()
-            title = next((l.lstrip("# ").strip() for l in text.split("\n")
-                          if l.startswith("#")), item_id)
-            L.append(title)
-            L.append("")
-            L.append("Nothing has run. Nothing has been reviewed yet.")
-        else:
-            L.append("NO PACKET at reviews/pending/%s.md" % item_id)
-        L += footer(item_id, True, cmd)
+        L.append(card_ask(item_id))
+        L.append("")
+        L.append("Nothing has run yet. To start the review:")
+        L.append("  bash tools/advisor_review.sh %s" % item_id)
+        L.append("Do nothing and it stays here. Nothing is lost.")
 
     elif stop == "reviews-landed":
         res = resolve_for(item_id)
         if res:
-            # The resolve round. This is what Eric decides on: authority
-            # decisions routed to him, spec gaps routed to the drafter.
-            L.append("NEEDS YOU — resolution is in, nothing has run")
-            L.append("card: %s" % item_id)
+            L.append("DECISION NEEDED")
+            L.append("")
+            L.append(card_ask(item_id))
             L.append("")
             if "DECISIONS FOR ERIC" in res:
-                L.append("Decisions for you (authority):")
+                L.append("The reviewers have questions only you can answer:")
                 L.append(res["DECISIONS FOR ERIC"])
                 L.append("")
             if "AMENDMENT REQUEST" in res:
-                L.append("Spec gaps for the drafter:")
+                L.append("For the drafter (not you):")
                 L.append(res["AMENDMENT REQUEST"])
                 L.append("")
-            L.append("Full text: reviews/done/%s.resolve.md" % item_id)
-            L += footer(item_id, True, cmd)
+            L += action_lines(item_id, cmd)
         else:
-            recs = reconcile_for(item_id)
-            if recs:
-                # The reconciliation round. Two lineages saw each other's frozen
-                # round-1 findings and reconciled. Dissent is preserved.
-                L.append("NEEDS YOU — reviewers reconciled, nothing has run")
-                L.append("card: %s" % item_id)
-                L.append("")
-                for r in recs:
-                    L.append("%s (%s):" % (r["role"], r["reconcile"] or "?"))
-                    L.append(first_prose(r["objection"], 220))
-                    L.append("")
-                L.append("")
-                L.append("Full text: reviews/done/%s.reconcile.md" % item_id)
-                L += footer(item_id, True, cmd)
-            else:
-                # No reconciliation or resolution recorded. Fall back to the
-                # round-1 view; covers reviews-landed pauses set by round 1
-                # before the reconcile round existed.
-                rows = rounds_for(item_id, 1)
-                L.append("NEEDS YOU — reviews are in, nothing has run")
-                L.append("card: %s" % item_id)
-                L.append("")
-                if not rows:
-                    L.append("No reviews recorded. Something went wrong; check the terminal.")
-                else:
-                    L.append(frame_line(rows))
-                    L.append("")
-                    L += build_context()
-                    mismatch = [r for r in rows if r["hash_status"] != "MATCH"]
-                    if mismatch:
-                        L.append("*** WARNING: the reviewers did not all see the same card.")
-                    if len({r["hash"] for r in rows}) > 1:
-                        L.append("*** WARNING: packet hashes differ.")
-                    L.append("")
-                    for r in rows:
-                        L.append("%s:" % r["role"])
-                        L.append(first_prose(r["objection"], 220))
-                        L.append("")
-                    L.append("Neither reviewer blocks this. They raise points to fix,")
-                    L.append("which is normal and does not need your judgement.")
-                L.append("")
-                L.append("Full text: reviews/done/%s.<lineage>.response.md" % item_id)
-                L += footer(item_id, True, cmd)
+            L.append("READY TO RUN")
+            L.append("")
+            L.append(card_ask(item_id))
+            L.append("")
+            L.append("Both reviewers checked it. To run it:")
+            L.append("  " + cmd)
+            L.append("Do nothing and it stays stopped. Nothing is lost.")
 
     elif stop == "result-reviewed":
         rows = rounds_for(item_id, 3)
         verdicts = [r["verdict"] for r in rows]
         bad = "NOT_ESTABLISHED" in verdicts
-        L.append("NEEDS YOU — work has run and been checked")
-        L.append("card: %s" % item_id)
+        L.append("DECISION NEEDED" if bad else "DONE")
+        L.append("")
+        L.append(card_ask(item_id))
         L.append("")
         if not rows:
             L.append("No result review recorded. Check the terminal.")
         elif bad:
-            L.append("*** THE EVIDENCE DID NOT SUPPORT EVERY CLAIM.")
-            L.append("Something the card said it did was not proven.")
-        elif verdicts and all(v == "ESTABLISHED" for v in verdicts):
-            L.append("Both reviewers: the evidence supports what the card claimed.")
+            L.append("The work ran, but the evidence did not prove everything the card claimed.")
+        else:
+            L.append("The work ran and the reviewers' evidence supports it.")
         L.append("")
-        L += build_context()
-        L.append("Full text: reviews/done/%s.<lineage>.result.md" % item_id)
-        L += footer(item_id, True, cmd)
+        L += action_lines(item_id, cmd)
+
     else:
         L.append("Unknown stop: %s" % stop)
 
