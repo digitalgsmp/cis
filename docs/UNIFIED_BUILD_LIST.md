@@ -3216,6 +3216,14 @@ artifact), 2.37 (nothing tests the artifacts for whether anything exercises
 them), 3.21 (the build that surfaced it).
 
 
+### 3.29 Cap MCP tool result sizes and match each profile's tool surface to its role
+
+After reviewers were given read-only MCP instruments, one advisor review ballooned to ~1M prompt tokens (advisor 697,334; evaluator 303,099 on queue-framing-v3). The cost is not the schemas (3.22 already trimmed those) — it is the result size plus the semantic tools. cis_get_recent_runs returns ~27K chars, cis_get_open_decisions ~24K, cis_get_eric_gate_status ~34K, cis_get_dev_pivot_status ~18K, and the three semantic tools (cis_search_semantic, cis_get_similar, cis_search_knowledge) each pay a ~70s torch+sentence_transformers+chromadb cold start (~1.6 GB) plus oversized blobs.
+
+**Scope:** CONTAINER — runtime/mcp_bridge/tools.py + spine.py handlers; per-profile MCP and native tool surfaces in enforcement/mwl-proof-v2/profiles/*.yaml.
+
+**Need: HALF DONE.** Reviewer read-only surface already cut: cis_search_semantic / cis_get_similar / cis_search_knowledge removed from READONLY_TOOL_NAMES (20 to 17 tools). Remaining: add hard result-size caps (row limits + char truncation) to the spine-query handlers, then extend 3.22's per-role audit to the MCP surface and the advisor/evaluator profiles.
+
 # TIER 4 — after the infrastructure works
 
 - **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.

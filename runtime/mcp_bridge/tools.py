@@ -20,7 +20,7 @@ import subprocess
 # let the server serve a filtered list when CIS_MCP_MODE=readonly.
 
 READONLY_TOOL_NAMES = {
-    # spine queries + search (all SELECT-only / Chroma reads)
+    # spine queries + search (all SELECT-only)
     "cis_get_current_phase",
     "cis_get_build_status",
     "cis_get_queue_item",
@@ -31,9 +31,6 @@ READONLY_TOOL_NAMES = {
     "cis_get_open_questions",
     "cis_get_eric_gate_status",
     "cis_search_sessions",
-    "cis_search_semantic",
-    "cis_get_similar",
-    "cis_search_knowledge",
     "cis_get_dev_pivot_status",
     # read-shaped file / git / hash instruments (CARD-01 DONE-WHEN 1)
     "cis_read_file",
@@ -42,6 +39,13 @@ READONLY_TOOL_NAMES = {
     "cis_git_show",
     "cis_hash_file",
     "cis_list_dir",
+    # NOTE — cis_search_semantic / cis_get_similar / cis_search_knowledge are
+    # deliberately EXCLUDED from the read-only reviewer surface. They are
+    # KB-exploration tools, not claim-verification tools, and each call pays a
+    # ~70s cold start (torch + sentence_transformers + chromadb, ~1.6 GB) plus
+    # oversized result blobs. A reviewer verifies against files / git / the
+    # spine; it does not need meaning-search. Restore here only if a reviewer
+    # genuinely needs vector search, and only after capping their result size.
 }
 
 

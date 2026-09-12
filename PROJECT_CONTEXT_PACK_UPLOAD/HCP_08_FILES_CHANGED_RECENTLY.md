@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-09-12 03:37 UTC | Run: run-e04e5cd3829d
+Generated: 2026-09-12 19:36 UTC | Run: run-c6f5f908704f
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 3f7359c feat(front-door): intent_bridge.py — the clarify->confirm->gate->route artifact
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/intent_bridge.py 
 
 ## 16a30bf feat(queue): deterministic item classifier feeding selection (BUILD LIST queue-authority phase 2)
 
@@ -480,69 +510,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/advisor_review.sh 
 
 ## tools/pause_notify.py 
-
-## a6e1a80 feat(3.21): queue_items in the spine, with its first reader
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## reviews/done/queue-3.21-build.advisor.result.md 
-
-## reviews/done/queue-3.21-build.evaluator.result.md 
-
-## reviews/done/queue-3.21-r2.advisor.response.md 
-
-## reviews/done/queue-3.21-r2.evaluator.response.md 
-
-## reviews/done/queue-3.21-r3.advisor.response.md 
-
-## reviews/done/queue-3.21-r3.evaluator.response.md 
-
-## reviews/pending/queue-3.21-build.md 
-
-## reviews/pending/queue-3.21-r2.md 
-
-## reviews/pending/queue-3.21-r3.md 
-
-## reviews/pending/queue-edges-disposition.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/mcp_bridge/spine.py 
-
-## runtime/mcp_bridge/tools.py 
-
-## runtime/schema/migrations/0031_queue_items.sql 
-
-## tools/advisor_review.sh 
-
-## tools/queue/extract_queue_items.py 
-
-## tools/queue/verify_queue_items.py 
