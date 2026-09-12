@@ -1,12 +1,14 @@
 """
 tools.py - MCP tool definitions and handler functions for the CIS MCP Bridge.
 
-Defines 14 tools (11 read-only + 3 dispatch) per FD.1 specification:
-  Read-only (11): cis_get_current_phase, cis_get_build_status, cis_get_next_actions,
-  cis_get_recent_runs, cis_get_run_detail, cis_get_open_decisions,
-  cis_get_open_questions, cis_get_eric_gate_status, cis_search_sessions,
-  cis_search_semantic, cis_get_similar
-  Dispatch (3): cis_dispatch_drafter, cis_dispatch_reviewer, cis_dispatch_implementer
+TOOLS defines the full CIS MCP toolset. CIS_MCP_MODE selects the served surface:
+  - "full"     — every TOOLS entry (spine reads + file/git/hash + 3 dispatch).
+  - "readonly" — the READONLY_TOOL_NAMES subset: spine reads + file/git/hash
+                 instruments. Excludes the 3 dispatch tools (write surface) and
+                 the 3 semantic-search tools (cis_search_semantic, cis_get_similar,
+                 cis_search_knowledge — heavy ~1.6GB cold start, KB exploration
+                 not claim-verification). See READONLY_TOOL_NAMES for the exact
+                 read-only set.
 """
 from . import spine
 import hashlib
