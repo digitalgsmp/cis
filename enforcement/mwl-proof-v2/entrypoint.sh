@@ -91,8 +91,8 @@ TG_TOKENS=(
     "${CIS_TG_REVIEW2_TOKEN:-}"
     "${CIS_TG_MENTER_TOKEN:-}"
     "${CIS_TG_VERIFY_TOKEN:-}"
-    ""
-    ""
+    "${CIS_TG_ADVISOR_TOKEN:-}"
+    "${CIS_TG_EVALUATOR_TOKEN:-}"
 )
 
 for i in "${!PROFILES[@]}"; do

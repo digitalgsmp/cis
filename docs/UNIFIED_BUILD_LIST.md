@@ -3224,6 +3224,14 @@ After reviewers were given read-only MCP instruments, one advisor review balloon
 
 **Need: HALF DONE.** Reviewer read-only surface already cut: cis_search_semantic / cis_get_similar / cis_search_knowledge removed from READONLY_TOOL_NAMES (20 to 17 tools). Remaining: add hard result-size caps (row limits + char truncation) to the spine-query handlers, then extend 3.22's per-role audit to the MCP surface and the advisor/evaluator profiles.
 
+### 3.30 Persist review output + token counts to the spine (append-only); fix overwrite bugs
+
+Round-1 review of spine-baseline-discipline confirmed the gap: a before/after claim (e.g. "prompt_tokens 5,118 → 303,099") is unverifiable because the BEFORE lives only in an ephemeral gateway log and the rerun overwrites the response file. deliberation_rounds already has reviewer1_output/reviewer2_output (migrations 0015/0016) but advisor_review.sh never populates them — it writes only reviewer_signal. Token columns do not exist on deliberation_rounds.
+
+**Scope:** runtime/schema/migrations (new numbered migration for prompt_tokens/completion_tokens); tools/advisor_review.sh (write output + tokens, append-only, unique run_id per invocation); runtime/orchestrator.py:306 (INSERT OR REPLACE → append); runtime/mcp_bridge/spine.py:312 (cis_search_sessions sc.created_at bug).
+
+**Need: OPEN.** Card reviews/pending/spine-baseline-discipline.md is V2 (RIGHT_WORK, objections addressed). Not yet implemented.
+
 # TIER 4 — after the infrastructure works
 
 - **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.
