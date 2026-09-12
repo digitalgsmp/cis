@@ -94,6 +94,41 @@ def parse_items(text):
     return items
 
 
+TIER_NUM_RE = re.compile(r"^# TIER\s+([0-9]+)")
+
+
+def parse_sections(text):
+    """Return (preamble, tier_headers) — the non-item content the item parser
+    drops. preamble is everything before the first '# TIER' header (the intro
+    frame). tier_headers is [(tier_num, content)] where content is the raw
+    '# TIER N — ...' header plus whatever precedes the first item of that tier
+    (normally one blank line). Same line-slice convention as body_md, so the
+    render can concatenate preamble + tier_header + items to reproduce the file.
+    """
+    lines = text.split("\n")
+    marks = []  # (line_idx, kind, tier_or_None)
+    for i, line in enumerate(lines):
+        if HEADING_RE.match(line) or BULLET_RE.match(line):
+            marks.append((i, "item", None))
+        elif TIER_RE.match(line):
+            m = TIER_NUM_RE.match(line)
+            marks.append((i, "tier", int(m.group(1)) if m else None))
+
+    if not marks:
+        return text, []
+
+    first_mark = marks[0][0]
+    preamble = "\n".join(lines[:first_mark])
+
+    tier_headers = []
+    for k, (i, kind, tier) in enumerate(marks):
+        if kind != "tier":
+            continue
+        end = marks[k + 1][0] if k + 1 < len(marks) else len(lines)
+        tier_headers.append((tier, "\n".join(lines[i:end]), i + 1))
+    return preamble, tier_headers
+
+
 def _normalise(raw):
     """'HALF DONE 2026-09-04.' -> HALF_DONE;  'BUILT 2026-09-09,' -> BUILT."""
     words = [w.strip(":.,;)—") for w in raw.split() if w.strip(":.,;)—")]
@@ -178,9 +213,32 @@ def extract_scope(body):
 
 
 def main():
+    # STEP 3A — the extractor is locked. After the flip the table is the
+    # authority and the markdown is generated FROM it; re-extracting would
+    # overwrite authority (status_changed_at + queue_item_events) with a copy.
+    if "--force" not in sys.argv:
+        print("LOCKED — the queue is no longer extracted from the markdown.")
+        print("")
+        print("queue_items (the spine) is the authority. The markdown")
+        print("docs/UNIFIED_BUILD_LIST.md is GENERATED from the table by")
+        print("tools/queue/render_build_list.py. Re-extracting here would")
+        print("overwrite the authority — and any status_changed_at /")
+        print("queue_item_events history — with a copy of the generated file.")
+        print("")
+        print("Run with --force only to rebuild the table from a hand-edited")
+        print("markdown during recovery, then re-render the markdown.")
+        return 1
+
     text = open(SRC, encoding="utf-8").read()
+    # Strip leading DO-NOT-EDIT banner comment lines. A --force recovery from a
+    # file the render already wrote would otherwise ingest the banner into the
+    # preamble (and then the render would add it a second time on top).
+    while text.startswith("<!--"):
+        nl = text.find("\n")
+        text = text[nl + 1:] if nl != -1 else ""
     sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
     items = parse_items(text)
+    preamble, tier_headers = parse_sections(text)
 
     rows, unparsed = [], []
     for it in items:
@@ -206,6 +264,7 @@ def main():
     print("source            : %s" % SRC)
     print("source_sha        : %s" % sha)
     print("items parsed      : %d" % len(rows))
+    print("tier headers      : %d" % len(tier_headers))
     print("UNPARSED          : %d" % len(unparsed))
 
     # RULE 6 — the only condition that fails the run.
@@ -225,11 +284,19 @@ def main():
             "INSERT INTO queue_items (item_num, tier, title, body_md, form, "
             "scope, need_status, need_raw, source_line, source_sha) "
             "VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+        # non-item structure: preamble (seq 0) + tier headers (seq tier+1)
+        conn.execute("DELETE FROM queue_sections")
+        section_rows = [(0, "preamble", preamble, None, 1, sha)]
+        section_rows += [(tier + 1, "tier_header", content, tier, src_line, sha)
+                         for tier, content, src_line in tier_headers]
+        conn.executemany(
+            "INSERT INTO queue_sections (seq, kind, content, tier, source_line, source_sha) "
+            "VALUES (?,?,?,?,?,?)", section_rows)
         conn.commit()
     finally:
         conn.close()
 
-    print("\nwrote %d rows to queue_items" % len(rows))
+    print("\nwrote %d rows to queue_items, %d sections" % (len(rows), len(section_rows)))
     return 0
 
 
