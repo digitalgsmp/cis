@@ -3232,6 +3232,14 @@ Round-1 review of spine-baseline-discipline confirmed the gap: a before/after cl
 
 **Need: OPEN.** Card reviews/pending/spine-baseline-discipline.md is V2 (RIGHT_WORK, objections addressed). Not yet implemented.
 
+### 3.31 Two-way report: verdict to Eric's phone, reply releases the stop
+
+pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates poller is a terminal-tied process the row-based pause 1.21 avoids). Advisor/evaluator bots are now wired (TG1). TG2 makes the report two-way from inside the container: a stop is pushed to Eric's phone, and his "go" reply releases it via the existing --continue path.
+
+**Scope:** tools/pause_notify.py (container-scoped mirror); a reply-consumer process started in enforcement/mwl-proof-v2/entrypoint.sh; advisor_review.sh pause path.
+
+**Need: OPEN.** Card reviews/pending/tg2-two-way-report.md is V2 (spec in review). Not yet implemented.
+
 # TIER 4 — after the infrastructure works
 
 - **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.
