@@ -11,6 +11,7 @@ Tables read:
 """
 import os
 import sqlite3
+import threading
 
 
 def _get_db_path():
@@ -274,26 +275,39 @@ def query_eric_gate_status(db_path=None):
         conn.close()
 
 
-def check_eric_gate_approval(run_id, db_path=None):
-    """
-    Check whether a workflow_run has a current Eric Gate APPROVE decision.
+def query_eric_gate_approval_for_run(run_id, db_path=None):
+    """Return the current Eric Gate decision row for a workflow_run, or None.
 
-    Queries eric_gate_approvals for decision='APPROVE', is_current=1.
-    Returns True if a matching row exists, False otherwise (including
-    when run_id does not exist or approval is not current).
+    Replaces the old bool-only check_eric_gate_approval(). Returns dict(row)
+    with every eric_gate_approvals column for the current (is_current=1) row —
+    including `decision` (APPROVE/VETO/RETURN_TO_DRAFT), decided_at,
+    decided_by, rationale, etc. Returns None when no current decision exists.
+
+    Callers MUST check row["decision"] == "APPROVE" explicitly; a non-None
+    return is not itself approval.
     """
     conn = _connect_readonly(db_path)
     try:
         row = conn.execute(
-            """SELECT 1 FROM eric_gate_approvals
+            """SELECT * FROM eric_gate_approvals
                WHERE workflow_run_id = ?
-                 AND decision = 'APPROVE'
-                 AND is_current = 1""",
+                 AND is_current = 1
+               ORDER BY decided_at DESC LIMIT 1""",
             (run_id,),
         ).fetchone()
-        return row is not None
+        return _row_to_dict(row)
     finally:
         conn.close()
+
+
+def check_eric_gate_approval(run_id, db_path=None):
+    """DEPRECATED bool wrapper — prefer query_eric_gate_approval_for_run().
+
+    Kept only for backward compatibility with tests/test_mcp_dispatch.py.
+    Returns True iff the current decision row is APPROVE.
+    """
+    row = query_eric_gate_approval_for_run(run_id, db_path)
+    return bool(row and row.get("decision") == "APPROVE")
 
 
 def query_search_sessions(query_text, limit=10, db_path=None):
@@ -394,24 +408,55 @@ _chroma_collection = None
 _embed_model = None
 
 
+_semantic_lock = threading.Lock()
+
+
 def _semantic_components():
-    """Load (once) and return the cached (collection, model) pair."""
+    """Load (once) and return the cached (collection, model) pair.
+
+    Thread-safe: the pre-warm thread (started at server boot) and the first
+    query thread can race to load. The lock serializes them so the heavy
+    torch/model load happens exactly once and both callers get the cached pair.
+    """
     global _chroma_client, _chroma_collection, _embed_model
-    import chromadb
-    from sentence_transformers import SentenceTransformer
+    if _chroma_collection is not None and _embed_model is not None:
+        return _chroma_collection, _embed_model
 
-    if _chroma_client is None:
-        repo = os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
-        _chroma_client = chromadb.PersistentClient(
-            path=os.path.join(repo, "data", "chroma_data")
-        )
-        _chroma_collection = _chroma_client.get_collection("knowledge_messages")
+    with _semantic_lock:
+        if _chroma_collection is not None and _embed_model is not None:
+            return _chroma_collection, _embed_model
+        import chromadb
+        from sentence_transformers import SentenceTransformer
 
-    if _embed_model is None:
-        model_src = os.environ.get("CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
-        _embed_model = SentenceTransformer(model_src)
+        if _chroma_client is None:
+            repo = os.environ.get("CIS_REPO_ROOT", "/workspace/cis")
+            _chroma_client = chromadb.PersistentClient(
+                path=os.path.join(repo, "data", "chroma_data")
+            )
+            _chroma_collection = _chroma_client.get_collection("knowledge_messages")
+
+        if _embed_model is None:
+            model_src = os.environ.get("CIS_EMBED_MODEL", "all-MiniLM-L6-v2")
+            _embed_model = SentenceTransformer(model_src)
 
     return _chroma_collection, _embed_model
+
+
+def prewarm_semantic():
+    """Load the embedding model + Chroma in a background thread at MCP server
+    startup, so the first semantic-search call does not pay the ~70s cold start.
+
+    Called from server.run() before the stdio loop. The thread is a daemon so it
+    never blocks shutdown; on failure semantic search still falls back to the
+    FTS/LIKE path in its caller (search_knowledge_semantic returns []).
+    """
+    def _load():
+        try:
+            _semantic_components()
+        except Exception:
+            pass
+
+    threading.Thread(target=_load, daemon=True, name="semantic-prewarm").start()
 
 
 def search_knowledge_semantic(query_text, top_k=10, db_path=None):

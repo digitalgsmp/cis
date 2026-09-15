@@ -342,7 +342,13 @@ def render(item_id, stop):
 
 def send(text):
     env = read_env(ENV_FILE)
-    token = os.environ.get("CIS_TG_TOKEN") or env.get("TELEGRAM_BOT_TOKEN", "")
+    # Prefer the dedicated notify-reply bot (TG2) so the push and the reply
+    # consumer use the SAME token — Eric's "go"/"hold" reply must land on the
+    # bot the consumer polls. Falls back to the host bot for legacy one-way push.
+    token = (os.environ.get("CIS_TG_NOTIFY_TOKEN")
+             or read_env("/mnt/projects/cis/secrets.env").get("CIS_TG_NOTIFY_TOKEN", "")
+             or os.environ.get("CIS_TG_TOKEN")
+             or env.get("TELEGRAM_BOT_TOKEN", ""))
     # TELEGRAM_HOME_CHANNEL names the group deleted 2026-09-02 and 403s.
     chat = (os.environ.get("CIS_TG_CHAT_ID")
             or env.get("TELEGRAM_ALLOWED_USERS", "").split(",")[0].strip())

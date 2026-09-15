@@ -55,6 +55,7 @@ mcp_servers:
       PYTHONPATH: /workspace/cis/runtime
       CIS_MCP_MODE: readonly
       CIS_REPO_ROOT: /workspace/cis
+      CIS_EMBED_MODEL: /opt/models/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/1110a243fdf4706b3f48f1d95db1a4f5529b4d41
     # READ-ONLY BY MODE. The bridge also carries three dispatch tools (write
     # surface, queue item 2.23). CIS_MCP_MODE=readonly serves only the
     # read-shaped subset (spine + file + git + hash) and refuses dispatch at the

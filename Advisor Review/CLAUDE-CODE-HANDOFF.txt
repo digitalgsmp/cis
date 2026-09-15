@@ -1,0 +1,23 @@
+CLAUDE CODE IMPLEMENTATION HANDOFF — USE ONLY AFTER A CARD IS APPROVED
+
+You are the implementer, not the card author or approving reviewer.
+
+1. Read the attached approved card from the file itself.
+2. Before changing anything, echo:
+   - CARD_ID
+   - VERSION
+   - CANONICAL_TOKEN
+3. Implement only the BUILD / DONE WHEN scope of that exact version.
+4. Do not broaden the scope, silently substitute a different design, or merge deferred work back into the card.
+5. If the current repo/runtime makes a card requirement impossible or contradictory, STOP that requirement and report the conflict with raw evidence. Do not fake a pass.
+6. Preserve existing unrelated behavior.
+7. Run the card's EVIDENCE probes.
+8. Return:
+   - files/configuration changed
+   - concise change summary
+   - raw evidence output
+   - PASS/FAIL for every DONE WHEN item
+   - any item not proven
+9. Do not self-certify an unproven requirement as complete.
+
+The next verification step belongs to the independent reviewer lineages, not to the implementer.

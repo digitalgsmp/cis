@@ -112,6 +112,11 @@ async def main():
 def run():
     """Synchronous entry point for -m invocation."""
     import asyncio
+    from . import spine
+    # Load the embedding model + Chroma in the background now, so the first
+    # semantic-search call during a review is warm and does not hit the MCP
+    # timeout. Non-blocking; failures are swallowed (semantic falls back to FTS).
+    spine.prewarm_semantic()
     asyncio.run(main())
 
 

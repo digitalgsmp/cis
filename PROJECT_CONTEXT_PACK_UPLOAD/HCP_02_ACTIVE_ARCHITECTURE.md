@@ -1,5 +1,5 @@
 # Active Architecture — Hermes Harness / CIS
-Generated: 2026-09-13 09:16 UTC | Run: run-8d5054b07c34
+Generated: 2026-09-15 02:16 UTC | Run: run-72bb4ae7dba6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -31,7 +31,7 @@ terminal.cwd in config.yaml does not currently replace TERMINAL_CWD for context 
 | hermes-gateway-v4pro | Draft | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro |
 | hermes-gateway-r1 | Review1 | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max |
 | unknown | Review2 | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 |
-| hermes-gateway-v4impl | Menter | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro |
+| unknown | Menter | n/a (kernel sandbox) | n/a | claude-code (sandboxed coder) |
 | unknown | Verify | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 |
 | hermes-gateway | Prime/Chat | 8642 | /home/eric/.hermes | deepseek-v4-pro |
 | nemo-fast | NeMo Guardrails | 8800 | — | — |

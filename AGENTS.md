@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-13 09:16 UTC | Run: run-8d5054b07c34 | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-15 02:16 UTC | Run: run-72bb4ae7dba6 | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -39,7 +39,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 | Draft | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Review1 | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Review2 | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Menter | hermes-v4impl | 8646 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Menter | sandboxed-claude-code | n/a (kernel sandbox) | claude-code (sandboxed coder) | n/a | No | Sandboxed — dispatched via tools/run_claude_sandbox.sh (R1, menter-reviewer-connection) |
 | Verify | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Prime/Chat | hermes-prime | 8642 | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
 

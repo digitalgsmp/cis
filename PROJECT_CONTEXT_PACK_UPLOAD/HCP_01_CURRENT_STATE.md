@@ -1,11 +1,11 @@
 # CIS Current State
 Version: 2.8
-Date: 2026-09-13
+Date: 2026-09-15
 Authority: Eric (Architect)
 Status: Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Qwen Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).
 Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
 
-Generated: 2026-09-13 09:16 UTC | Run: run-8d5054b07c34
+Generated: 2026-09-15 02:16 UTC | Run: run-72bb4ae7dba6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -15,7 +15,7 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 **Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Qwen Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).**
 
-**HEAD:** `d6bc889`.
+**HEAD:** `60703c8`.
 
 **AGENTS.md-native context architecture.**
 AGENTS.md serves Hermes-native internal context for all 4 active gateways.
@@ -187,7 +187,7 @@ does not satisfy Eric. No direct execution authority.
 | Draft (hermes-v4pro) | 8645 | /home/eric/.hermes-v4pro | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Review1 (hermes-r1) | 8643 | /home/eric/.hermes-r1 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Review2 (hermes-glm-reviewer) | 8647 | /home/eric/.hermes-glm-reviewer | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Menter (hermes-v4impl) | 8646 | /home/eric/.hermes-v4impl | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Menter (sandboxed-claude-code) | n/a (kernel sandbox) | n/a | claude-code (sandboxed coder) | n/a | No | Sandboxed — dispatched via tools/run_claude_sandbox.sh (R1, menter-reviewer-connection) |
 | Verify (hermes-glm-verifier) | 8648 | /home/eric/.hermes-glm-verifier | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
 | Prime/Chat (hermes-prime) | 8642 | /home/eric/.hermes | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
 
@@ -408,7 +408,7 @@ NeMo path: `/mnt/projects/cis/runtime/rails/` (venv at `.venv`, configs at `conf
 | Table | Rows |
 |-------|------|
 | workflow_runs | 105 |
-| deliberation_rounds | 436 |
+| deliberation_rounds | 446 |
 | project_decisions | 17 |
 | open_questions | 14 |
 | next_actions | 20 |

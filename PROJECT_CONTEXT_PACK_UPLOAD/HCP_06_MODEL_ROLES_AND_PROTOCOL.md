@@ -1,5 +1,5 @@
 # Model Roles and Protocol — CIS Advisor Loop
-Generated: 2026-09-13 09:16 UTC | Run: run-8d5054b07c34
+Generated: 2026-09-15 02:16 UTC | Run: run-72bb4ae7dba6
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -62,7 +62,7 @@ profiles regardless of which profile receives the session start signal.
 | Draft | hermes-v4pro | 8645 | Proposal author. Drafts, does not build |
 | Review1 | hermes-r1 | 8643 | Adversarial challenge. OBJECTIONS or CONSENSUS_REACHED |
 | Review2 | hermes-glm-reviewer | 8647 | — |
-| Menter | hermes-v4impl | 8646 | Executes FINAL_DIRECTIVE only. No deliberation |
+| Menter | sandboxed-claude-code | n/a (kernel sandbox) | — |
 | Verify | hermes-glm-verifier | 8648 | — |
 | Prime/Chat | hermes-prime | 8642 | Evidence firewall (NeMo) + topic grounding |
 

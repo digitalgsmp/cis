@@ -1,0 +1,29 @@
+# Implementation review — s14-evidence-capture
+- reviewer: review2 (GLM)
+- at: 2026-09-13T09:27:53.194127+00:00
+
+---
+
+I now have enough evidence to render a verdict. Let me summarize what I verified against each DONE-WHEN criterion.
+
+**DONE-WHEN criteria vs. what I found:**
+
+1. **"Disposable test root created with root-owned control/ and separate eric-owned workspace/, with stat + realpath evidence"** — FAIL. I ran `ls -la /mnt/cache/catalog/override-plane-test/` and the directory does not exist. No disposable test root was created. No `stat` or `realpath` evidence exists on disk. The coder's evidence never mentions creating this structure.
+
+2. **"Docker wall test shows 'Read-only file system' and no host breach file"** — PARTIALLY ADDRESSED but wrong path. The coder's item 4 tests `/repo/.breach_test_ro` not `/mnt/projects/cis/breach.txt` as the card specifies. No evidence the specific disposable container mount configuration was used. This is an ad-hoc test against some other container, not the §14 item 2 test against the disposable root.
+
+3. **"All 9 §7 steps run against the disposable root with raw output captured"** — FAIL. The coder provides 5 ad-hoc items, not 9 steps. None of the 9 steps from §7 Parts A+B are present. There is no container restart step, no sentinel visibility step, no override-honored-while-sentinel-present step, no wall-re-engages-after-removal step. The script `tools/override_plane_test.sh` exists in the repo (276 lines, all 9 steps) but was never executed — no `raw_evidence.log` exists on disk.
+
+4. **"Final result PASS per Amendment 1 §8 (conditions a–f)"** — FAIL. No final result of PASS/FAIL/BLOCKED is presented in the Amendment 1 §8 format. The coder's "Conclusion" is prose, not the structured COMMAND/OUTPUT/EXIT/INTERPRETATION format required. Conditions (d) "override honored when sentinel present" and (f) "wall re-engages after sentinel removal and restart" are never tested at all.
+
+5. **"Evidence captured as artifacts and presented to Eric for approval"** — FAIL. No artifact file exists on disk. The coder's evidence is inline prose in the build report itself. The historical record (synthesis_input.jsonl) shows a prior June 2026 run that also struggled with this — the advisor repeatedly flagged that only summaries were provided, never the raw log contents.
+
+6. **"No production /opt/cis-control, hooks, or compiler created"** — I verified `/opt/cis-control` exists on disk but contains only pre-existing files (entrypoint.sh, gate/, launch_profiles.sh) dated July/Sep, not created by this card. This criterion is likely met, but it's the only one.
+
+**Additional critical issue:** The coder's item 5 reveals the repo mount is currently READ-WRITE, which the coder frames as "the gap the sandbox must fix." But this is not evidence for the §14 gate — it's an observation about current state. The card requires proving the walls work in the disposable test rig, not diagnosing the current container's mount flags.
+
+The coder's evidence is fundamentally a prose self-report (5 ad-hoc items) substituted for the required raw 9-step test output. Per ADR-SEED-002, self-reported verification is never evidence. The test script exists but was never run. The disposable test root was never created. The 9 steps were never executed.
+
+```json
+{"role":"reviewer","status":"OBJECTIONS","summary":"The coder provided 5 ad-hoc prose items instead of the required 9-step raw-evidence test. The disposable test root was never created (directory absent on disk), the test script was never executed (no raw_evidence.log exists), and none of the 9 §7 steps were run. The evidence is self-reported prose, not raw terminal output — the exact failure mode ADR-SEED-002 forbids.","objections":["Disposable test root /mnt/cache/catalog/override-plane-test/ does not exist on disk — verified via ls. No stat or realpath evidence of root-owned control/ and separate workspace/ was captured.","No 9-step test was run. The coder provides 5 ad-hoc items, not the 9 §7 Parts A+B steps. The test script tools/override_plane_test.sh exists but was never executed — no raw_evidence.log on disk.","No raw terminal output captured as artifacts. The coder's evidence is inline prose self-report, which ADR-SEED-002 explicitly disqualifies as evidence.","Conditions (d) override-honored-while-sentinel-present and (f) wall-re-engages-after-removal-and-restart are never tested at all. No container restart step exists in the evidence.","Docker wall test (item 4) tests /repo/.breach_test_ro in some unspecified container, not /mnt/projects/cis/breach.txt in the disposable container with the required mount configuration per Amendment 1 §4.","No final result in PASS/FAIL/BLOCKED format per Amendment 1 §8. No COMMAND/OUTPUT/EXIT/INTERPRETATION structure per command as required by §8 condition 5.","The operator/worker privilege boundary was not demonstrated under the real privilege boundary. The current user is 'worker' (uid 1000), not 'eric'. The card requires operator steps run by Eric or a named executor with sudo — no evidence of who ran the sudo steps or that the boundary was real."],"evidence_cited":"1. ls /mnt/cache/catalog/override-plane-test/ → 'No such file or directory' (disposable test root absent). 2. find for raw_evidence.log on disk → not found (only referenced in chat history synthesis_input.jsonl). 3. tools/override_plane_test.sh exists (276 lines, read via cis_read_file) — script has all 9 steps but was never executed. 4. Amendment 1 §8 read from docs/TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1_AMENDMENT_1.md — requires 7 conditions including stat/realpath/docker inspect evidence, 9-step test, COMMAND/OUTPUT/EXIT/INTERPRETATION format, PASS/FAIL/BLOCKED result. 5. whoami → worker (uid 1000), not eric — operator boundary not demonstrated. 6. /opt/cis-control exists with pre-existing files but no new enforcement artifacts created by this card."}
+```

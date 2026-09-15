@@ -4,14 +4,13 @@ tools.py - MCP tool definitions and handler functions for the CIS MCP Bridge.
 TOOLS defines the full CIS MCP toolset. CIS_MCP_MODE selects the served surface:
   - "full"     — every TOOLS entry (spine reads + file/git/hash + 3 dispatch).
   - "readonly" — the READONLY_TOOL_NAMES subset: spine reads + file/git/hash
-                 instruments. Excludes the 3 dispatch tools (write surface) and
-                 the 3 semantic-search tools (cis_search_semantic, cis_get_similar,
-                 cis_search_knowledge — heavy ~1.6GB cold start, KB exploration
-                 not claim-verification). See READONLY_TOOL_NAMES for the exact
-                 read-only set.
+                 instruments + KB retrieval (FTS5 + vector) + guarded read-only
+                 SQL. Excludes only the 3 dispatch tools (write surface). See
+                 READONLY_TOOL_NAMES for the exact read-only set.
 """
 from . import spine
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -34,6 +33,16 @@ READONLY_TOOL_NAMES = {
     "cis_get_eric_gate_status",
     "cis_search_sessions",
     "cis_get_dev_pivot_status",
+    # KB retrieval (FTS5 + vector) — reviewers judge ALIGNMENT against Eric's
+    # intent history, so they need meaning-search over the KB, not just point
+    # queries. Cost is bounded at retrieval (top_k, 500-char slices), not by
+    # withholding access.
+    "cis_search_semantic",
+    "cis_get_similar",
+    "cis_search_knowledge",
+    # guarded read-only SQL — schema introspection + aggregates, so reviewers
+    # can verify migrations / counts themselves without a middleman.
+    "cis_query",
     # read-shaped file / git / hash instruments (CARD-01 DONE-WHEN 1)
     "cis_read_file",
     "cis_search_files",
@@ -41,13 +50,6 @@ READONLY_TOOL_NAMES = {
     "cis_git_show",
     "cis_hash_file",
     "cis_list_dir",
-    # NOTE — cis_search_semantic / cis_get_similar / cis_search_knowledge are
-    # deliberately EXCLUDED from the read-only reviewer surface. They are
-    # KB-exploration tools, not claim-verification tools, and each call pays a
-    # ~70s cold start (torch + sentence_transformers + chromadb, ~1.6 GB) plus
-    # oversized result blobs. A reviewer verifies against files / git / the
-    # spine; it does not need meaning-search. Restore here only if a reviewer
-    # genuinely needs vector search, and only after capping their result size.
 }
 
 
@@ -369,6 +371,34 @@ TOOLS = [
         },
     },
     {
+        "name": "cis_query",
+        "description": (
+            "Run a read-only SQL query (SELECT / WITH / PRAGMA / EXPLAIN only) "
+            "directly against the CIS spine database. Use to verify schema "
+            "(PRAGMA table_info), counts and aggregates (COUNT / GROUP BY), or "
+            "row state the point-query tools do not expose. Write statements "
+            "are blocked; results are row-capped and cell-truncated. Cite the "
+            "raw output as evidence."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "Read-only SQL (SELECT/WITH/PRAGMA/EXPLAIN).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max rows returned (default 50, max 200). Appended as LIMIT if absent.",
+                    "default": 50,
+                    "minimum": 1,
+                    "maximum": 200,
+                },
+            },
+            "required": ["sql"],
+        },
+    },
+    {
         "name": "cis_dispatch_drafter",
         "description": (
             "Start the CIS Drafter pipeline for a crystallized topic. "
@@ -426,8 +456,13 @@ TOOLS = [
                     "type": "string",
                     "description": "The workflow_run ID to implement",
                 },
+                "card_scope": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "REQUIRED: JSON list of repo-relative path globs the build may touch (enforced by the apply gate)",
+                },
             },
-            "required": ["run_id"],
+            "required": ["run_id", "card_scope"],
         },
     },
     {
@@ -796,19 +831,24 @@ def handle_dispatch_implementer(arguments):
     run_id = arguments.get("run_id", "")
     if not run_id:
         return {"error": "run_id is required"}
-    approved = spine.check_eric_gate_approval(run_id)
-    if not approved:
+    card_scope = arguments.get("card_scope", [])
+    if not isinstance(card_scope, list) or not card_scope:
+        return {"error": "card_scope is required (a JSON list of repo-relative path globs)"}
+    gate_row = spine.query_eric_gate_approval_for_run(run_id)
+    if not gate_row or gate_row.get("decision") != "APPROVE":
         return {"error": "Eric Gate approval required",
                 "gate_status": "UNAPPROVED", "run_id": run_id}
     try:
+        scope_json = json.dumps(card_scope)
         result = subprocess.run(
-            ["bash", "tools/pipeline/pipeline_dispatch.sh", run_id],
+            ["python3", "tools/pipeline/menter_dispatch.py",
+             "--run-id", run_id, "--card-scope", scope_json],
             capture_output=True, text=True, timeout=300,
             cwd="/mnt/projects/cis",
         )
         if result.returncode != 0:
-            return {"error": "dispatch failed", "stderr": result.stderr}
-        return {"run_id": run_id, "status": "DISPATCHED",
+            return {"error": "menter dispatch failed", "stderr": result.stderr}
+        return {"run_id": run_id, "status": "DISPATCHED_TO_MENTER",
                 "gate_status": "APPROVED"}
     except Exception as exc:
         return {"error": str(exc)}
@@ -852,6 +892,58 @@ def handle_search_knowledge(arguments):
         results.append({"error": f"Semantic search failed: {e}"})
 
     return {"query": query, "results": results, "total": len(results)}
+
+
+def handle_query(arguments):
+    """Handler for cis_query — guarded read-only SQL against the spine."""
+    sql = (arguments.get("sql", "") or "").strip()
+    if not sql:
+        return {"error": "sql is required"}
+
+    s = sql.lstrip().upper()
+    if not s.startswith(("SELECT", "WITH", "PRAGMA", "EXPLAIN")):
+        return {"error": "only SELECT / WITH / PRAGMA / EXPLAIN allowed"}
+
+    # Defense-in-depth: reject write keywords even if the prefix check is
+    # bypassed (e.g. a WITH ... INSERT). The read-only mode=ro connection is
+    # the real wall; this is a second, fail-fast layer.
+    for kw in ("INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
+               "ATTACH", "DETACH", "VACUUM", "REINDEX", "GRANT", "REVOKE"):
+        if re.search(r"\b" + kw + r"\b", s):
+            return {"error": "write statement blocked: " + kw}
+
+    limit = int(arguments.get("limit", 50))
+    limit = max(1, min(limit, 200))
+
+    # Append LIMIT if it is a plain SELECT without one, so a reviewer cannot
+    # accidentally drag the whole KB into its context. Request one extra row so
+    # we can truthfully report whether results were truncated.
+    if s.startswith("SELECT") and "LIMIT" not in s:
+        sql = sql.rstrip().rstrip(";") + " LIMIT {}".format(limit + 1)
+
+    try:
+        conn = spine._connect_readonly()
+        conn.execute("PRAGMA query_only = ON")
+        cur = conn.cursor()
+        cur.execute(sql)
+        rows = cur.fetchmany(limit + 1)
+        truncated = len(rows) > limit
+        rows = rows[:limit]
+        cols = [d[0] for d in cur.description] if cur.description else []
+        data = []
+        for r in rows:
+            d = {}
+            for i, c in enumerate(cols):
+                v = r[i]
+                if isinstance(v, str) and len(v) > 2000:
+                    v = v[:2000] + "...[truncated]"
+                d[c] = v
+            data.append(d)
+        conn.close()
+        return {"columns": cols, "rows": data, "row_count": len(data),
+                "truncated": truncated}
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 def handle_adapter_status(arguments):
@@ -1037,6 +1129,7 @@ HANDLERS = {
     "cis_dispatch_reviewer": handle_dispatch_reviewer,
     "cis_dispatch_implementer": handle_dispatch_implementer,
     "cis_search_knowledge": handle_search_knowledge,
+    "cis_query": handle_query,
     "cis_adapter_status": handle_adapter_status,
     "cis_adapter_dispatch": handle_adapter_dispatch,
     "cis_get_dev_pivot_status": handle_get_dev_pivot_status,

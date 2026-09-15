@@ -54,6 +54,13 @@ case "${1:-start}" in
         exit 1
     fi
 
+    # Load tokens/keys from secrets.env so the bare -e flags below carry real
+    # values. The host shell does not export these; the entrypoint also sources
+    # this file, but passing them explicitly here makes token delivery robust.
+    set -a
+    source "$SECRETS_FILE"
+    set +a
+
     # The source entrypoint.sh in the repo is authoritative; the baked image
     # may be stale. Volume-mount the correct version so fixes take effect
     # without a full image rebuild.
@@ -113,7 +120,9 @@ case "${1:-start}" in
     sg docker -c "docker run $DETACH_FLAG \
         --name $CONTAINER_NAME \
         -p 5000:5000 \
-        -v $CIS_REPO:/workspace/cis \
+        -v $CIS_REPO:/workspace/cis:ro \
+        -v $CIS_REPO/data:/workspace/cis/data:rw \
+        -v $CIS_REPO/state:/workspace/cis/state:rw \
         -v cis-claude-creds:/home/worker/.claude \
         -v /mnt/projects/swa-app:/workspace/swa-app:rw \
         -v /mnt/projects/swa:/workspace/swa:rw \
@@ -149,6 +158,7 @@ case "${1:-start}" in
         -e CIS_TG_REVIEW2_TOKEN \
         -e CIS_TG_MENTER_TOKEN \
         -e CIS_TG_VERIFY_TOKEN \
+        -e CIS_TG_NOTIFY_TOKEN \
         -e CIS_TG_HOME_CHANNEL \
         --restart unless-stopped \
         $IMAGE"

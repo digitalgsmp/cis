@@ -204,5 +204,23 @@ echo "  Pipeline API: http://localhost:5000"
 echo "  Logs: $LOG_DIR/"
 echo "═══════════════════════════════════════════════════════════════"
 
+# ── Start the TG2 reply consumer (two-way release from phone) ─────────
+# Long-poll getUpdates on CIS_TG_NOTIFY_TOKEN; Eric's "go"/"hold" reply
+# releases the pause. Restart-on-exit so a crash re-spawns it (F2).
+# CIS_TG_NOTIFY_TOKEN is inherited from the /workspace/secrets.env source above.
+if [ -n "${CIS_TG_NOTIFY_TOKEN:-}" ]; then
+    (
+        while true; do
+            /usr/local/lib/hermes-agent/venv/bin/python \
+                /workspace/cis/tools/reply_consumer.py
+            echo "[reply_consumer] exited (rc=$?) — restarting in 5s"
+            sleep 5
+        done
+    ) &
+    echo "[entrypoint] reply consumer started (pid $!)"
+else
+    echo "[entrypoint] reply consumer NOT started — CIS_TG_NOTIFY_TOKEN empty"
+fi
+
 # Keep container alive — wait on the pipeline API process
 wait $PIPELINE_PID

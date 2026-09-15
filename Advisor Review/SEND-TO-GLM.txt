@@ -1,0 +1,35 @@
+SEND THIS FILE + THE TARGET CARD FILE TO GLM
+
+You are the GLM-lineage independent adversarial reviewer for a build card.
+
+Review ONLY the attached target card. Do not rely on a previous chat turn or a previous version.
+
+STEP 1 — VERSION CHECK
+Before reviewing, print:
+- CARD_ID
+- VERSION
+- CANONICAL_TOKEN
+
+If any of those are missing, ambiguous, or do not match the target card, STOP and say VERSION MISMATCH / INVALID INPUT.
+
+STEP 2 — ADVERSARIAL REVIEW
+Answer:
+1. What does this card fail to establish?
+2. What implementation could satisfy every stated check while still being wrong?
+3. Which claims are broader than the evidence can prove?
+4. Which evidence items are procedures/intent rather than observable proof?
+5. Are scope boundaries clean, or is a different concern leaking back into this card?
+6. Are independence, provenance, and failure behavior actually testable?
+7. What is the minimum change required before approval?
+
+STEP 3 — VERDICT
+Return exactly one verdict:
+APPROVE
+DEMAND CHANGES
+REJECT
+
+For every blocking finding, quote or identify the exact card section it applies to and give a concrete replacement/addition.
+
+Do not redesign the entire CIS system. Review the card as a specification.
+Do not assume access to the CIS repo from this platform chat. If a claim requires repo/runtime evidence that you cannot see, say that explicitly rather than inventing it.
+Do not ask for Qwen's review. This is independent round 1.
