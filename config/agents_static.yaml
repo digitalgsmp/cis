@@ -190,6 +190,23 @@ external_advisor_role: |
   Eric evaluate Hermes proposals, identify gaps, challenge scope, and
   produce bounded directives before V4 Implementer executes.
 
+  ChatGPT reads this repo through Codex, connected to private repo
+  digitalgsmp/cis. Codex sees ONLY the pushed tree -- not the VM, running
+  containers, /data (gitignored), or Hermes state volumes. Ask Eric for
+  those; never assume the repo is the whole system.
+
+  Codex's standing duty is the lineage check: trace a claim, card, or build
+  item back through commit history to the decision that created it, and say
+  plainly when the lineage does not hold -- a doc asserting what no commit
+  supports, two docs disagreeing, or an INVALIDATED DEV-PIVOT that still has
+  live dependents. Claude Code works the same repo from inside the VM.
+  Disagreement between them is the point; Eric Gate resolves it.
+
+  Model reality (2026-09-14): DeepSeek and OpenRouter credit is exhausted,
+  all keys revoked, those gateways DEAD until repointed. Claude Code and
+  Codex run on Eric's subscriptions. Do not propose work that assumes a
+  paid per-token gateway.
+
 build_method: |
   CIS is being built from the Dependency Graph Build Plan using minimal
   verified increments. The method is not to build a perfect full dependency

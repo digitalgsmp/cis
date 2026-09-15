@@ -240,6 +240,12 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
         lines.append(startup)
         lines.append("")
 
+    advisor = static.get("external_advisor_role", "").strip()
+    if advisor:
+        lines.append("## 11.6. External Advisor Role")
+        lines.append(advisor)
+        lines.append("")
+
     lines.append("## 12. Seed Intent — Eric's Own Words")
     si = static.get("seed_intent", {})
     lines.append(si.get("instruction", ""))

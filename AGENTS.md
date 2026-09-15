@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-15 02:16 UTC | Run: run-72bb4ae7dba6 | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-15 02:32 UTC | Run: run-94e9370f1a5e | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -125,6 +125,32 @@ execution instruction, such as PROCEED, IMPLEMENT, FINAL_DIRECTIVE, or an unambi
 approval to perform a specific action. The required startup response ends with
 'Standing by' and no next action is executed. This rule applies to all active Hermes
 profiles regardless of which profile receives the session start signal.
+
+## 11.6. External Advisor Role
+Until CIS is self-reliant, ChatGPT and Claude function as external
+advisor-deliberators for the build. They temporarily provide the
+proposal/review challenge layer that the internal DRAFT → REVIEW loop
+is intended to automate later. They do not execute, do not maintain
+canonical state, and do not bypass Eric Gate. Their role is to help
+Eric evaluate Hermes proposals, identify gaps, challenge scope, and
+produce bounded directives before V4 Implementer executes.
+
+ChatGPT reads this repo through Codex, connected to private repo
+digitalgsmp/cis. Codex sees ONLY the pushed tree -- not the VM, running
+containers, /data (gitignored), or Hermes state volumes. Ask Eric for
+those; never assume the repo is the whole system.
+
+Codex's standing duty is the lineage check: trace a claim, card, or build
+item back through commit history to the decision that created it, and say
+plainly when the lineage does not hold -- a doc asserting what no commit
+supports, two docs disagreeing, or an INVALIDATED DEV-PIVOT that still has
+live dependents. Claude Code works the same repo from inside the VM.
+Disagreement between them is the point; Eric Gate resolves it.
+
+Model reality (2026-09-14): DeepSeek and OpenRouter credit is exhausted,
+all keys revoked, those gateways DEAD until repointed. Claude Code and
+Codex run on Eric's subscriptions. Do not propose work that assumes a
+paid per-token gateway.
 
 ## 12. Seed Intent — Eric's Own Words
 Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim.
