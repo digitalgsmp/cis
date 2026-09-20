@@ -96,6 +96,21 @@ tell whether it worked.
 - docs/UNIFIED_BUILD_LIST.md is the task queue. It is the only one.
   Work it in tier order. Confirm an item is still not in the code before
   building it, and record build/adapt/drop with the reason.
+- WB.1C host continuity: before planning/implementing/evaluating a queue
+  item and before dependent work proceeds, use tools/development/cli.py
+  (prepare/publish/check) — see tools/development/cli.py's module docstring.
+  It records the during-work record a queue item's body_md does not carry;
+  it is not a second queue.
+- CARD 3/4 discovered-work discipline: no invisible debt. A consequential
+  discovery found mid-task gets one of exactly three dispositions —
+  RESOLVED_NOW, BEFORE_STAGE_CLOSEOUT, or EXPLICITLY_DEFERRED — recorded via
+  `discovery-record`, never left only in chat prose or a completion note.
+  Close a stage through `close-task` (it calls the deterministic
+  `closeout-check` gate and refuses, writing nothing, if a blocker exists —
+  the host enforces this, not model self-report). `verify-closeout`
+  independently re-derives whether a task's closeout is still actually
+  clean, rather than trusting a past claim. See
+  tools/development/discovery.py and tools/development/card_contract.py.
 - docs/NEXT_SESSION.md is standing context only — how to work here, the goal,
   decisions to protect. No tasks, no priorities, no status. Rewrite it, never
   append, and never let a task list grow back in it. Two queues drift, and

@@ -207,6 +207,8 @@ external_advisor_role: |
   Codex run on Eric's subscriptions. Do not propose work that assumes a
   paid per-token gateway.
 
+  Host continuity: tools/development/cli.py (see CLAUDE.md for detail).
+
 build_method: |
   CIS is being built from the Dependency Graph Build Plan using minimal
   verified increments. The method is not to build a perfect full dependency
