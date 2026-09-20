@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-15 02:32 UTC | Run: run-94e9370f1a5e | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-20 18:59 UTC | Run: run-64d658bbdda8 | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -151,6 +151,8 @@ Model reality (2026-09-14): DeepSeek and OpenRouter credit is exhausted,
 all keys revoked, those gateways DEAD until repointed. Claude Code and
 Codex run on Eric's subscriptions. Do not propose work that assumes a
 paid per-token gateway.
+
+Host continuity: tools/development/cli.py (see CLAUDE.md for detail).
 
 ## 12. Seed Intent — Eric's Own Words
 Do not summarize, rephrase, or replace with model interpretation. Reproduce verbatim.

@@ -47,6 +47,110 @@ reading content, not filenames), and 9 defects found by running commands on
 
 ---
 
+### WB.1 — CURRENT PRIORITY: conversation-first pipeline workbench
+**Need: OPEN.** Eric prioritized this on 2026-09-17. Work through the pipeline top to bottom. This item precedes previous tier ordering for the workbench build; existing tasks remain intact.
+
+**Goal:** A fresh, simple iPad-friendly work surface where Eric starts a project, talks with Braingate, and sees and interacts with each stage. Retire experimental pages from active use; preserve them as reference. No decorative working-state claims.
+
+**Requirements recovered:** queue item 1.10 and docs/CIS_PIPELINE_VISIBLE_PORTAL_SPEC.md (historical draft: use behavioral requirements, not its unconfirmed layout); KB rows 300459 and 889678 (transparency/work surface); Braingate references 753852/753878. Eric's current instructions override the old interface experiments.
+
+**Ordered build and acceptance:**
+1. Project + conversation: create a named project without filesystem knowledge; persist conversation server-side; reconnect after reload; send to the real Braingate adapter; show explicit provider failure and prevent duplicate submissions. Show retrieved sources and a bounded context window. This is the current implementation slice.
+2. Clarified direction: editable statement, explicit confirmation recorded separately from execution authorization; subsequent conversation invalidates stale confirmation. Prove conversation alone cannot start work.
+3. Reviewed work card: show proposed scope, dependencies, rationale and acceptance evidence; expose objections, revisions and Eric's decision before dispatch. Connect only after backend behavior is verified.
+4. Execution visibility: display actual stage/actor/events, tool/gate outcomes, blockers and user requests. Wire pause/redirect/resume with acknowledgements; never label an interjection as a pause.
+5. Verification + outcome: implementation claims and independent evidence side-by-side in plain language; unresolved objections stay visible; persist accepted outcome and next recommendation.
+6. Recovery: reload/restart resumes the right project/run with no duplicate execution; iPad touch/keyboard and narrow-screen checks; distinguish disconnected, idle, blocked and completed states.
+
+**Scope rule:** Complete one connected slice at a time. No new agent orchestration, knowledge mining, health repair, or legacy dashboard renovation under this card. Existing model/provider funding can block real responses; show it honestly. No pipeline dispatch merely from the chat UI.
+
+**Retirement:** previous active React source/public/build preserved at data/ui_archive/workbench-20260917. Old host-only pages remain historical and are not served by the new workbench entry point.
+
+
+#### 2026-09-19 — Proposed host-side development continuity step
+
+**Status: Corrected development scope recorded at Eric’s request; mechanism not yet implemented or verified. This correction does not dispatch agents or resume paused work.** Recorded from the Codex conversation investigating PROJECT-KNOWLEDGE-MODEL-RESEARCH-HANDOFF.md and Eric's subsequent continuity questions. Preserve WB.1 as the parent outcome: a usable conversation-first Braingate/card-factory workbench. Auth implementation and C4 activation remain paused. Historical card text below is not renewed authorization.
+
+**Eric's current problem (verbatim excerpts):** “What is needed is to somehow turn the kb/db into the queue.” “Right now these latest insights a those from earlier in this session are only in this session chat.” “so what mechanism could support that in the un contained env in order to build the contained env?”
+
+**Eric’s scope corrections (verbatim):** “Your framing includes reviewers, this mechanism we are trying to build is for Claude and Chatgtp, still the external developers of the pipeline where the reviewers live.” “Make the corrections so we can implement and return to the work of building on the interfaces connection to braingate and the card factory, followed by developing the rest of the pipeline using the kb instead of relying on my memory.” His preceding correction identifies stale information when activity is not recorded until closeout. Therefore updates during work are required; startup and closeout are recovery/completeness checks, not the publication mechanism.
+
+**Recovered findings, not new implementation claims:** Projects and knowledge have overlapping, evolving roles. Original evidence supports reusable references, unaffiliated knowledge, promotion/demotion without knowledge loss, project branching/merging, and output feedback. Single-project permission inheritance is not an approved consequence. Private/shared multi-user access must be reconciled with these relationships before resuming auth; transport and app authorization are distinct. Evidence: KB 41270 (Eric requests demotion), 41971–41979 (DAM/promotion/demotion), 48639–48644 (project evolution), 48687–48698 (Blender production/knowledge feedback), 694535–694536 (Eric's life/creation intent), 694558–694563 (concept spines), 530637–530642 (SWA overlapping workflow relationships). Original workbook /mnt/archive/WIAS/0admin/WIAS Project Manager.xlsx, projects rows 4–7, repeats idea/research references across distinct project IDs. Cardinality, identity-through-promotion, ownership/grant inheritance, derivative access and revocation remain unresolved. ADR-SEED-010 concerns per-repository runtime spines; its relationship to application-level sharing requires explicit reconciliation.
+
+**Existing lineage to recover before building:** docs/SPEC_KNOWLEDGE_SURFACE_AGENT.md and docs/SPEC_INTENTION_DRIVEN_CIS_KNOWLEDGE_SURFACE.md (historical proposals); docs/PROPOSAL_SESSION_TO_SPINE_WRITE_PATH.md (historical proposal identifying session/context propagation failure); docs/cards/CARD_0.1_inventory_prior_mining_(INVESTIGATE).md; CARD_2.2_PASS_2:_reasoning_that_implies_a_task_(SEMANTIC).md; CARD_4.2_merge_against_the_build_list_(BUILD).md; CARD_5.1_one_card_per_task_(BUILD).md. Existing tools/index_themes_to_sources.py and tools/link_cards_to_themes.py are leads; their output coverage/usefulness has not been verified. Do not rerun mining by default or execute old proposed SQL.
+
+**Observed integration gap (source inspection, not live audit):** runtime/workbench_app.py searches current message terms, takes five FTS results and sends 200 characters per hit; returns source category without stable message IDs and converts search errors to no results. runtime/card_factory_app.py supplies ask plus optional proposal fields to the bounded generator. cards/GENERATOR_PROMPT.txt and tools/card_gate.py constrain direct asks and quotations; they do not establish reconciliation with prior reasoning. Implementation read-scope restrictions mean recovery belongs before card finalization.
+
+**Bounded next development task:** Establish host-side continuity for Claude Code and ChatGPT/Codex as the external developers building CIS. This mechanism is outside the unfinished container and independent of its internal reviewers, gateways and activation. It connects the existing queue, original KB evidence and a continuously maintained development record to the external developers’ actual working sessions. Claude implements; ChatGPT/Codex scopes, coordinates and independently evaluates evidence within the authorized workflow. Eric directs outcomes and resolves genuine product choices; he must not supply forgotten search terms, relay accessible records, or manually reconstruct dependencies.
+
+**Reuse and authority:** First identify the active queue reader/writer, applicable development-record stores and existing session-to-KB import path. Retain this queue as task authority; reuse existing retrieval/source readers and recording paths where adequate. Do not introduce a second queue or assume historical scripts are working integrations. Task-specific context packets are derived views, tied to source and queue/card revisions. Label Eric’s instructions, original discussion, recovered evidence, model proposals, accepted decisions and verified implementation separately. Preserve source excerpts and reasoning, not summaries alone. Persist full exchanges through an identified import path with source identity, authorship and deduplication; identify unavailable transcripts honestly rather than claiming that a summary or this queue entry imported the chat.
+
+**During-work publication:** Record consequential discoveries, changed requirements, proposals/decisions, card revisions, implementation progress/evidence, objections and unresolved blockers when they arise, before dependent work proceeds. Include actor, affected task, source/evidence references and revision. Represent unfinished, unverified and superseded work explicitly. A model’s proposed interpretation is not an accepted decision. Both external developers must be able to discover changes without waiting for session closeout or asking Eric to relay them. This is event-based publication, not capture of every keystroke or a claim of instantaneous visibility.
+
+**Use and freshness:** Before either external developer plans, implements or evaluates work, load the current parent outcome, exact task, protected decisions, blockers, relevant original KB evidence and return point. Bind the task/handoff and any evaluation to the revisions actually read. If relevant shared information changes during a task, expose the change and reconcile its impact before the result is accepted or dependent work proceeds; do not silently reuse an outdated assessment. Concurrent updates must preserve both writers’ contributions, identify conflicts, and avoid last-writer loss. A missing or failed publication/read must be visible, not treated as an up-to-date record. These checks concern the external development workflow, not implementation of internal pipeline reviewer behavior.
+
+**KB recovery and scope continuity:** At task preparation and consequential design changes, derive bounded searches from the intended behavior and affected concepts, follow prior terminology and references to original discussions, and reconcile preserve/adapt/conflict/unknown. Classify discoveries as blockers, constraints within the active task, or later work with a reason. Discovery alone neither makes a prerequisite nor authorizes implementation. Keep the original WB.1 outcome visible throughout. Startup restores the latest shared record; closeout checks that events and evidence were captured and the next permitted action is recoverable. Neither may defer during-work updates.
+
+**Control boundary:** Standing instructions guide direct interactive sessions. Host preparation/publication/freshness checks can enforce requirements for launches and handoffs routed through them; they cannot guarantee compliance by unrestricted agents outside that path or prove semantic completeness. Inspect the actual external Codex/Claude launch and session interfaces before choosing wiring; do not assume one model can push into every active conversation. Changes may be pulled at defined work boundaries, provided freshness is checked before consequential dependent action. Use existing subscription-backed sessions; no new paid gateway, automatic dispatch, background mining or internal reviewer integration is implied. Do not hand-edit generated AGENTS.md; use its source if a change is subsequently required and authorized.
+
+**Acceptance:**
+- With no inherited chat, an external developer recovers this investigation, WB.1 as parent, the auth/C4 pause, active task and original evidence without Eric retelling them.
+- While the originating session remains open and no closeout has occurred, it records a consequential change; the other external developer’s next preparation/freshness check receives that change with its revision and source.
+- A task/evaluation begun on an earlier relevant revision cannot authorize dependent work until the later change is reconciled. Unrelated updates do not force needless restarts.
+- Concurrent updates retain both contributions or surface an explicit conflict; publication/retrieval failure is distinct from an empty result or a current record.
+- A representative remote-access request retrieves Cloudflare and studio/field distinctions without product names supplied by Eric. Recovered proposals remain distinguishable from decisions and live implementation.
+- A new discovery is recorded and classified without silently replacing the active objective. Full source reasoning remains accessible; generated context is traceable to original evidence.
+- Startup and closeout recover/check the same during-work record. Closeout is unnecessary for the cross-session visibility test.
+
+**Stop and return:** Once the bounded external-development mechanism passes these checks, return to the existing WB.1 interface connection to Braingate and the card factory, using its current implementation evidence and the KB to identify the next unfinished slice. Continue subsequent pipeline development through the same mechanism and existing queue. Do not redo verified interface work or expand this continuity step into a universal knowledge platform. Auth implementation and C4 activation remain paused pending their own reconciled scope and authorization; returning to WB.1 does not bypass those pauses. No corpus-wide re-mining, new queue, internal reviewer changes, or assertion that all historical requirements are resolved.
+
+#### Active implementation card: WB.1A
+Assigned to Claude Code. Full dispatch card: `data/agent_handoffs/WB-1A-workbench/CARD.md`. Completion claims: `completion.json`; raw evidence: `evidence.md`; independent review: `verification.json` in that same directory. No completion is accepted from self-report.
+
+# WB.1A — Fresh workbench: project and Braingate conversation
+Parent and priority: WB.1, first in the existing queue.
+Owner: Claude Code implements. Codex acts as Braingate and independent reviewer.
+Status: ASSIGNED. No self-certification of completion.
+
+## Eric's instruction
+Retire previous experimental UI from active use and start a fresh simplified workbench where he can begin a project and converse with Braingate. Build pipeline functionality from beginning to end, exposing its actual behavior and allowing interaction at each step. Keep token use focused. Claude implements; Codex scopes, coordinates, and verifies. Eric must not relay messages between agents.
+
+## This card's deliverable
+One simple, usable, iPad-friendly workbench page with:
+- Named project creation without requiring repository paths or other technical choices. Persist projects server-side; distinguish planning projects from provisioned application repositories.
+- A project-scoped conversation with the actual configured Brain/Braingate gateway. Persist messages and replies across reloads and project switches. Show pending, failed, interrupted and completed response states honestly; prevent accidental duplicate submission. Never present provider failure text as a successful answer.
+- A compact context panel showing the source excerpts actually sent with the request, their available stable identifiers and retrieval limitations. Reuse existing KB facilities without a corpus mining/reindexing project. Use existing secret redaction before sources/results reach the page.
+- A clear current stage: exploration. Keep execution/approval/agent work visibly unconnected until implemented; no placeholder progress, invented evidence, or implicit dispatch. No start-pipeline controls in this slice. Braingate's role is clarification, not execution. Inspect and report the existing gateway's tool permissions; a prompt alone is not a deterministic execution gate. Do not claim containment that is not enforced.
+- A readable conversation-first layout, touch-sized controls, responsive behavior, keyboard submission, loading/error states, and reload recovery. Keep error drafts recoverable. Avoid decorative dashboards and giant technical panels.
+- Optional small editable direction note if straightforward; do not add an authorization workflow or mark an intent approved without a durable, reviewed gate.
+
+## Starting state — checked by Codex
+Repo /mnt/projects/cis is mounted at /workspace/cis inside cis-pipeline. The old built UI is still serving from runtime/ui/dist; source directory runtime/ui/src is currently EMPTY because retirement/archive succeeded before implementation was interrupted. Old public/cis-container-dashboard.html was also removed. Complete original src/public/dist/index.html and entrypoint backups are at data/ui_archive/workbench-20260917/runtime/ and .../enforcement/ respectively. Restore/reuse build plumbing as needed but do not reuse the experimental screen design.
+Neither runtime/workbench_app.py nor runtime/schema/migrations/0035_workbench.sql exists; the interrupted implementation command did not create them. Independently check schema before choosing a migration number.
+Existing runtime/ui has React/Vite package.json, package-lock.json, vite.config.js, node_modules. Use installed dependencies; avoid a framework migration.
+Existing brain/chat endpoint: runtime/api/relay.py around 1340, returns brain_response and kb_context. The old UI incorrectly expected response/references. Existing brain/start is NOT a confirmed-intent gate and must not be wired into this page.
+The old project registration API requires filesystem paths and uses INSERT OR REPLACE. Do not expose that destructive/upsert contract as new-project creation or fabricate repo paths. Implement a small durable planning-project/conversation mapping with explicit additive migration if needed; do not refactor the whole spine.
+The old gateway uses port 8644. Model API credits have previously been exhausted. Implement truthful unavailable/error behavior; do not substitute a fake model or silently switch provider. No paid-model calls in your automated tests.
+
+## Scope and reference budget
+Read CLAUDE.md/AGENTS.md for applicable instructions, but Eric's current request supersedes old instructions that would make him relay work or stop after each file write. Complete this bounded card.
+Relevant behavioral references: queue item 1.10; docs/CIS_PIPELINE_VISIBLE_PORTAL_SPEC.md is a historical DRAFT, not an approved layout. Requirements: stay in conversation; clarify before execution; eventually show stages, objections, gates and evidence; allow intervention. KB source IDs 300459 and 889678 support transparency/work-surface intent. Do not re-mine histories or investigate other queue items.
+Allowed implementation scope: runtime/ui; a narrowly scoped workbench server/API module; an additive schema migration and necessary tests; minimal serving/entrypoint wiring staged for review. Do not modify pipeline_relay.py, change mounts, run the pipeline, restart/recreate the live container, touch secrets, fix health probes, commit/push, or perform unrelated cleanup. No subagents.
+Preserve unrelated dirty files. Pending unaccepted health changes already exist in runtime/container_app.py and runtime/chroma_health.py; do not accidentally deploy or overwrite them. Prefer an isolated workbench entrypoint or propose the minimal activation change for Codex review. Old host-only UI experiments may remain historical; ensure the proposed active workbench serves none of them. Archive before overwriting existing files.
+
+## Acceptance evidence
+1. Build succeeds using existing UI tooling.
+2. Tests using a temporary database and mock gateway show create/reopen project, persistence, isolation between two projects, successful reply/context rendering contract, provider failure, malformed input, and duplicate-send behavior. No tests mutate the real KB or call paid models.
+3. Show that this workbench exposes no pipeline-start action. Explain any remaining gateway-side execution-permission limitation explicitly.
+4. A browser check if locally available, otherwise an honest untested label: desktop and iPad-sized page, project creation, sending, failure display, reload. Do not install a browser stack just to do this.
+5. Record exact commands, exit codes, raw output and changed files. State what is mock-tested versus live-tested. Do not claim the running service has loaded staged changes.
+6. Provide a short activation/rollback procedure accounting for the actual live container and pending unrelated edits; Codex will review before activation. Keep the broader WB.1 item open.
+
+## Evidence handoff (no user copy/paste)
+Shared directory: /mnt/projects/cis/data/agent_handoffs/WB-1A-workbench (container /workspace/cis/data/agent_handoffs/WB-1A-workbench).
+Save source preimages under backups/. Write evidence.md with implementation claims, commands/results and limitations. Write completion.json LAST: card_id='WB.1A', status='READY_FOR_VERIFICATION' or 'BLOCKED', changed_files, tests, evidence_path, remaining_limitations, activation_steps. Never label your own work VERIFIED. If blocked, preserve progress and report the exact blocker; do not expand scope.
+Your final response is automatically captured here. Codex reads this location directly.
+
 # TIER 0 — trust preconditions
 
 ### 0.1 Foreign-key enforcement is off almost everywhere
@@ -2457,6 +2561,46 @@ rather than at reviews.
 - **3.3** Container pre-flight checks are partial. **Checked:** `run_container.sh`
   has 3 file/directory tests — one hand-written case for the secrets file being a
   directory. No systematic mount verification, and mounts were added today.
+
+### Assigned repair: container-kb-health-20260917
+
+# Container knowledge-health repair
+
+Card ID: container-kb-health-20260917
+Parent queue item: 3.3 (partial container pre-flight checks)
+Assigned to: Claude Code
+Independent verifier: Codex
+State: ASSIGNED; all implementation claims require independent verification.
+
+## User authorization
+Eric asked: "Run the readiness check. When you identify the task, I what you to create the card somewhere Claude can know it landed and proceed with the work. Then paste it’s evidence claims somewhere you can know it’s finished so you can verify the evidence and I don’t have to copy paste".
+The current development team is Claude Code and Codex. This is a bounded development repair, not permission to start the paid-model pipeline.
+
+## One behavior
+The container system-health endpoint must truthfully report the readability of the actual embedded knowledge store, without depending on a nonexistent Chroma HTTP server or creating a replacement database.
+
+## Observed failure
+GET /api/relay/system/health returns ChromaDB healthy=false, url=localhost:8000. runtime/mcp_bridge/chroma_index.py explicitly uses chromadb.PersistentClient (embedded). The live container's CIS_CHROMA_PATH is /workspace/cis/data/chroma_data. Its existing chroma.sqlite3 has collection knowledge_messages; an actual tools/ask_history.py search completed successfully during this check. Thus the current HTTP-server probe is the wrong probe.
+
+## Scope
+Inspect runtime/container_app.py and relevant storage configuration. Replace only the Chroma health probe with a cheap read-only embedded-store check. Keep the response's existing services shape and healthy boolean compatible with the UI. Make the name/detail explicit that success means embedded store/knowledge collection readable, not model-provider availability, semantic retrieval quality, or a completed pipeline. Honor CIS_CHROMA_PATH; fallback should follow the existing repo-root convention and work from /workspace/cis and /mnt/projects/cis. Do not silently fall back if an explicitly configured path is invalid.
+Do not instantiate a Chroma client, load embeddings, download models, call paid APIs, ingest, mutate schema/data, or create a missing store in this polling endpoint. Use short timeouts and close connections. Do not expose secrets or stack traces in HTTP output.
+Limit implementation to runtime/container_app.py, an optional narrowly scoped helper under runtime/, and focused tests. No UI redesign. Do not fix unrelated SQLite/gateway/llama-server checks, change mounts, modify pipeline_relay.py, restart/recreate services, commit, or push. Preserve pre-existing dirty files.
+
+## Acceptance evidence
+1. Reproduce the before-state from the existing source/record.
+2. A real temporary embedded Chroma metadata SQLite fixture with knowledge_messages gives healthy=true and embedded/readability wording, without contacting port 8000.
+3. Missing directory, missing database, invalid/corrupt database, and missing knowledge_messages collection give healthy=false with useful bounded details; missing paths remain absent. Test actual read-only behavior and ensure polling does not create data or alter fixture contents.
+4. Explicit configured path wins; no host-only fallback or accidental new store. Test relevant path resolution.
+5. Exercise the Flask health endpoint with unrelated gateway checks mocked, asserting the existing response contract and new embedded result. Do not let mocks make the storage failure cases vacuous.
+6. Run focused tests, report exact commands, exit codes, and output. Record changed files and diffs. A test-client check is not a claim that the already-running Flask process has loaded the change.
+7. Codex will independently re-run tests and inspect the actual container. Do not mark parent queue item 3.3 DONE; this repairs only its knowledge-health subtask.
+
+## Handoff and completion
+This file is a dispatch snapshot of the card attached to queue_items[3.3], not a second queue. Shared host directory: /mnt/projects/cis/data/agent_handoffs/container-kb-health-20260917 ; same container directory: /workspace/cis/data/agent_handoffs/container-kb-health-20260917 .
+Before editing an existing source file save its preimage under this directory/backups/, preserving relative paths. Explain the proof then carry out this one bounded card; Eric's current instruction authorizes the complete implementation and evidence handoff rather than stopping after each file write.
+Write evidence.md here with commands, raw results, limitations and claimed acceptance outcomes. Write completion.json here LAST, with card_id, status (READY_FOR_VERIFICATION or BLOCKED), changed_files, tests, evidence_path, and remaining_limitations. Never label your own result VERIFIED. If permissions or account limits prevent completion, report BLOCKED accurately. The supervising Codex process captures your final response and exit status automatically; Eric should not relay anything.
+
 - **3.4** Two manifest directories, canonical status unresolved.
   `logs/manifests/` vs `runtime/manifests/`, with an unenforced "do not write
   there".
@@ -3582,3 +3726,183 @@ them (63%) invisible to any filename search.** Tool:
 
 The gate scripts and `guardrails.py` are the parts I would defend. The document
 corpus is sampled, not exhausted.
+
+### 4.20 Contained-pipeline deterministic-enforcement capability set
+
+**Eric/ChatGPT, 2026-09-20 (CARD 5).** The host-side tooling built in WB.1C
+and its Cards 1–4 (`tools/development/`: continuity events, packet
+freshness, queue-reference following, discovered-work disposition,
+stage-closeout gates, card contracts) proves these controls work for the
+EXTERNAL developers (Claude Code, ChatGPT/Codex) building CIS from outside
+the container. The contained pipeline itself — the internal DRAFT →
+REVIEW → MENTER → VERIFY loop, `card_runner.py`'s own dispatch, the
+in-container agents — does not yet have equivalent deterministic
+enforcement. This item is the authoritative record of that gap, grouped
+rather than split into ten flat top-level items because all ten are one
+coherent capability set with one shared governing principle: **never rely
+on model compliance where the host can deterministically enforce, reject,
+detect, or verify the rule instead.**
+
+**Sequencing, already on the record (4.7):** agents/role theory comes
+after deterministic workflows are stable. This item does not reorder that
+— it is future work, explicitly not scheduled ahead of the pipeline's own
+deterministic layer.
+
+**Scope:** CONTAINED PIPELINE — everything below is about the in-container
+system, not the host-side tooling that already exists and is out of scope
+here (that work is done, see WB.1C/Cards 1–4 evidence in
+`data/agent_handoffs/WB-1C-host-continuity/`).
+
+**Need: OPEN** — none of the ten sub-capabilities below exist inside the
+contained pipeline today; each was checked against `runtime/card_runner.py`,
+`runtime/abstraction/pipeline_relay.py`, and `runtime/container_app.py`
+before this item was written, not assumed absent.
+
+1. **Deterministic discovered-work registry.** The contained pipeline's
+   own agents (draft/review/menter/verify) have no structural way to
+   record a consequential mid-run discovery — it currently only exists in
+   model output/logs. Host precedent: `tools/development/discovery.py`
+   (Card 3) — same shape, different environment.
+
+2. **Stage-closeout gate.** No deterministic check currently prevents a
+   contained-pipeline stage from being marked complete while blocking
+   discovered work remains open. Host precedent: `discovery.check_closeout()`
+   / `close-task` (Cards 3–4).
+
+3. **Pipeline advancement gate.** `card_runner.py` dispatches on request;
+   nothing currently requires the PRIOR stage's own closeout to have
+   succeeded before the next stage starts. A model stating "the prior step
+   is done" is not currently checked by the host.
+
+4. **Machine-readable work-card contract.** Contained-pipeline cards are
+   prose files (`CARD.md`) today, the same as the host-side cards this
+   session has been executing. Host precedent:
+   `tools/development/card_contract.py` (Card 4) — declares scope,
+   forbidden areas, required checks/evidence, closeout requirement, next
+   return point, but does not yet verify actual changes against the
+   declaration (see sub-item 5).
+
+5. **Deterministic scope verification.** *(Carries forward WB.1C-R1
+   addendum item A, from Card 4's evidence.)* Neither the host tooling nor
+   the contained pipeline currently compares actual changed
+   files/resources against a card's declared allowed scope, forbidden
+   areas, or expected outputs. Required future behavior, where practical:
+   compare changed files to allowed scope; fail on forbidden-subsystem
+   changes; identify unexpected files; verify required outputs are
+   present; produce machine-readable evidence. Not a full sandbox — bounded
+   comparison against a git diff / file-list, not process isolation (that
+   already exists separately via `runtime/card_runner.py`'s sandboxing for
+   dispatched runs).
+
+6. **Production-vs-fixture boundary enforcement.** The host tooling
+   already does this for itself (`continuity_store.ProductionGuardError`,
+   `mode=ro` reads throughout `tools/development/`) — the contained
+   pipeline's own agents have no equivalent explicit, machine-verifiable
+   boundary between production and fixture/test state.
+
+7. **Structured deferral.** *(Carries forward WB.1C-R1 addendum item D.)*
+   The host-side `discovery.py` (Card 3) already requires
+   `EXPLICITLY_DEFERRED` records to carry reason/destination/trigger/
+   blocking — but does NOT validate that a stated `destination` is a real,
+   existing authoritative task. Checked during Card 5: implementing that
+   validation now in `discovery.py` would couple it to queue-lookup logic
+   and would reject the many currently-valid free-text destinations
+   already in use and tested (e.g. "WB.2" as a loose forward reference,
+   not yet a real item) — judged improper coupling for a narrow queue-
+   creation card. Captured here instead: the contained pipeline's own
+   structured-deferral mechanism (when built) should validate destination
+   references against the THEN-authoritative task system from the start,
+   rather than retrofitting validation onto references that predate it.
+
+8. **Continuity/freshness inside contained agents.** Bring the host
+   mechanism's core property — revision-bound context, stale-state
+   detection, explicit reconciliation, no silent overwrite of another
+   agent's assumption — into the contained pipeline's own DRAFT/REVIEW/
+   MENTER/VERIFY agents, which currently share state without any of this.
+
+9. **Deterministic acceptance evidence.** *(Relates to WB.1C-R1 addendum
+   item B, from Card 4's evidence.)* The contained pipeline should capture
+   real execution evidence (exact command, exit status, changed resources,
+   fingerprints) rather than accepting a model's self-reported completion
+   — the same principle `close-task`/`verify-closeout` (Card 4) already
+   enforce host-side. A minimal, bounded version of the CONSUMER half of
+   this — checking a completion artifact against `verify-closeout`'s real
+   answer before trusting it — was implemented host-side in this same
+   Card 5 pass (`tools/development/cli.py verify-completion`, see Card 5
+   evidence); the contained pipeline's own equivalent remains open.
+
+10. **Independent acceptance / separation of implementation and review.**
+    The component that implemented a change should not be the sole
+    authority declaring it accepted — already the working pattern for
+    THIS session's own host-side cards (Codex/ChatGPT independently
+    reviewing Claude Code's work), but not yet a structural property of
+    the contained pipeline's own internal review loop, which currently
+    relies on the same models across roles rather than a deterministic
+    gate or a genuinely separate reviewer.
+
+**Related and already on the record:** 4.6 (a Hermes agent in these
+working sessions), 4.7 (role theory sequencing — already answers "not yet,
+not until the deterministic layer is stable," which this item does not
+contest), 4.10 (the harness self-improvement loop — a different, larger
+proposal; this item is about enforcement primitives, not self-modification).
+
+**Evidence:** WB.1C (host mechanism, independently ChatGPT-reviewed PASS,
+2026-09-19/20), Cards 1–4 (migration 0039 activated in production, Card 1–2
+evidence; discovered-work/closeout, Card 3 evidence, 29/29 tests; workflow
+integration/card contracts, Card 4 evidence, 22/22 tests) — all in
+`data/agent_handoffs/WB-1C-host-continuity/`. Created via
+`tools/queue/queue_add.py` (Card 5), not a raw SQL insert — see
+`queue_item_events` for this item's creation record.
+
+### 4.26 Restore AGENTS.md generator headroom
+
+**Discovered during CARD 4 (2026-09-20), carried forward per the CARD 5
+addendum.** `tools/export/generate_agents_md.py` enforces a hard
+20,000-character ceiling on generated `AGENTS.md` and refuses to write
+past it (`ERROR: Output is N chars, exceeds 20000 limit.`, confirmed live
+this session). After Card 4's own necessary addition, the file generates
+at 19,997 characters — **3 characters of remaining headroom.** Any future
+addition to `config/agents_static.yaml`'s prose, by any card or any
+session, will now need to trim something else first merely to fit, not
+because the new content is unimportant.
+
+**Need: OPEN.**
+
+**Do NOT** simply delete existing directives to make room, and **do NOT**
+weaken the generator's hard-limit enforcement — both explicitly ruled out
+by the card that raised this.
+
+**Preferred solutions (from the originating card, recorded verbatim as
+the requirement, not yet chosen between):**
+- remove redundant generated prose;
+- move detailed workflow documentation out of the bounded instruction
+  artifact and reference a canonical project document instead;
+- reduce duplication between generated instructions and other maintained
+  sources (`CLAUDE.md`, `docs/`);
+- establish a compact generated directive layer with linked detailed
+  documentation;
+- otherwise increase capacity only if the 20,000-character ceiling is not
+  itself an intentional host/platform boundary (unconfirmed either way as
+  of this item's creation — the ceiling's own rationale was not
+  re-derived by Card 4 or Card 5, only its enforcement behavior).
+
+**Required result:** meaningful headroom restored, AND the canonical
+durable development rules stay discoverable by future host models — not a
+trade of one for the other.
+
+**Why not resolved in Card 4 or Card 5:** both cards' own scope is
+narrower (workflow integration/documentation-regeneration; queue-creation
+mechanism, respectively) than an audit of ~20,000 characters of existing,
+Eric-authored `config/agents_static.yaml` content to judge what is safely
+redundant — that judgment call deserves its own bounded pass, not a
+rushed trim under a different card's time pressure.
+
+**Evidence:** `python3 tools/export/generate_agents_md.py --dry-run` on
+the pre-Card-4 content already showed 19,999/20,000; a first Card 4 draft
+addition pushed it to 20,021 and was correctly refused
+(`ERROR: Output is 20021 chars, exceeds 20000 limit.`); the final,
+twice-trimmed Card 4 addition generates at 19,997. See
+`data/agent_handoffs/WB-1C-host-continuity/card4-workflow-integration/EVIDENCE.md`.
+A `BEFORE_STAGE_CLOSEOUT` discovery record naming this item as its
+destination is filed against task `WB.1` in `dev_continuity_events`
+(Card 5) — see `data/agent_handoffs/WB-1C-host-continuity/card5-queue-mechanism/EVIDENCE.md`.
