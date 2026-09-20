@@ -167,8 +167,14 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
     lines.append("")
 
     lines.append("## 4. Active Decisions")
+    lines.append(
+        "Full text/reasoning of any decision: `project_decisions` table in "
+        "the spine DB — `sqlite3 data/cis_memory.db \"SELECT * FROM "
+        "project_decisions WHERE id='<ID>'\"`. This table is the canonical "
+        "source; the list below is an index, not a summary."
+    )
     for d in decisions:
-        lines.append(f"- [{d['id']}] {d['label']}: {d['decision']}")
+        lines.append(f"- [{d['id']}] {d['label']}")
     lines.append("")
 
     lines.append("## 5. Open Questions")

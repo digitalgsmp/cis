@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-20 20:23 UTC | Run: run-652409160c3a | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-20 22:13 UTC | Run: run-bb08641fa129 | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -50,21 +50,22 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 - /home/eric/.hermes/hermes-agent/agent/usage_pricing.py:731 — Added completion_tokens_details.reasoning_tokens fallback
 
 ## 4. Active Decisions
-- [ADR-SEED-016] Enforcement Primitive Approved: TASK_CONTRACT_ENFORCEMENT_PRIMITIVE_V1.md approved via dual-review (Claude + ChatGPT audit) + Eric approval. Three-layer process isolation: CIS control plane → Hermes worker in Docker container with RO /opt/cis-control. 15 acceptance tests (A–O). No implementation until §14 raw-evidence plan executed.
-- [ADR-SEED-015] Enforcement architecture: three-layer process isolation: CIS enforces Hermes via root-owned /opt/cis-control mounted read-only into Docker worker. Worker writes only to /mnt/cache/catalog/<run_id>/. Two enforcement walls: kernel (Docker RO mount) + policy hook (pre_tool_call). Trust root: constrained agent cannot author its own contract. Override plane (.GATE_DISABLED) built/tested before hook is trusted. See DEV-PIVOT-17 for full text.
-- [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit: FALSE CLAIM — RESOLVED (verified 2026-06-16). Investigation found prime was never actively poisoned. The --replace process was the managed systemd service with correct HERMES_HOME (/home/eric/.hermes). BLK-SEED-005 closed as false positive. ROOT CAUSE (documented for audit trail): get_default_hermes_root() in hermes_constants.py (line 71) returns sibling HERMES_HOME paths like ~/.hermes-r1 as the default root — the fallthrough logic treats any HERMES_HOME outside ~/.hermes/ as a Docker/custom home and returns it verbatim. _profile_suffix() then sees home == default, collapses suffix to empty string, derives service name hermes-gateway (the DEFAULT/prime unit), and refresh_systemd_unit_if_needed() can overwrite the prime systemd unit with a non-prime HERMES_HOME. Verified against source and live empirical test. The collapse bug is a LATENT architectural risk, not an active runtime issue on prime. Fix: relocate sibling homes into ~/.hermes/profiles/ layout, or apply Patch#7.
-- [ADR-SEED-012] Orchestrator validation contract: Orchestrator validates state-transition signals only via FINAL_JSON block. Freeform model body is stored as documentation and never parsed for routing. Every Drafter and Reviewer response must end with a FINAL_JSON block containing role, status, summary, recommendation, next_action. Role-scoped status values: Drafter emits PROPOSAL_READY or REVISION_READY only. Reviewer emits CONSENSUS_REACHED, OBJECTIONS, or ESCALATE only. If FINAL_JSON is missing or malformed, orchestrator issues one repair prompt then falls back to constrained text-scanning. Markdown heading presence (### Summary, ### Recommendation) must never cause validation failure.
-- [ADR-SEED-013] Retire Kanban as required pipeline transport: Kanban is no longer required for router, orchestrator, gate, or closeout execution. workflow_runs is the authoritative in-flight work object. deliberation_rounds stores per-round Drafter/Reviewer history. Router creates a workflow_runs row and returns run_id. Orchestrator accepts --run-id and reads topic from workflow_runs. Gates verify from SQLite. Kanban code paths are commented out and preserved as legacy. kanban_card_id is null on all new pipeline runs.
-- [ADR-SEED-010] Project isolation model: --project-root: Each CIS-managed project has its own git repo / project root. The CIS toolchain (generators, gates, database layer, static config templates) may be copied or bootstrapped into a new project repo. Projects do not share one runtime spine. Projects do not import a central CIS repo as a live dependency for generated context or state. Cross-project contamination is avoided through filesystem and repo isolation. A second project initializes its own repo with its own spine, static config, and generated outputs. The --project-root model requires no database schema migration, no generator refactoring, and no multi-project routing logic. It is a zero-implementation decision.
-- [ADR-SEED-006] Spine migration strategy: spine_schema.sql is the verified Tier 4.1 two-table minimum. Extensions use numbered migration files under runtime/schema/migrations/. Verified artifacts are never rewritten.
-- [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional: Retired at Tier 5.3 after AGENTS.md canary passes all 4 active profiles. Not before.
-- [ADR-SEED-004] Browser role enforcement at router layer: Role badge derived from gateway endpoint/profile only. Implementation directives route only to hermes-v4impl port 8646. Drafter and Reviewer endpoints blocked from execution actions. Enforced at Tier 7.
-- [ADR-SEED-003] Role identity must be runtime-derived: Hermes role identity must come from HERMES_HOME and gateway endpoint, not from briefing text or model self-description. Terminal sessions must print HERMES_HOME before any FINAL_DIRECTIVE.
-- [ADR-SEED-002] Verification-hardening rule: V4 Implementer self-report is not a source of truth. Completion accepted only after deterministic evidence: git diff, test output, DB queries, endpoint responses, service health, browser/UI state, independent reviewer pass/fail.
-- [ADR-SEED-001] Dependency graph build order: CIS is built tier by tier per CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md. Nothing built before its dependencies exist.
-- [ADR-SEED-009] HCP export is currently CIS-scoped: generate_hcp.py assumes the CIS infrastructure project, including CIS-specific static config, output packet location, and current single-project spine structure. Before CIS manages a second project, HCP export must be refactored to project-agnostic parameterization. The refactor is gated on a project isolation model decision: per-project repos/project roots with separate spines versus one shared spine with project_id filtering.
-- [ADR-SEED-008] External advisor packet remains permanent: PROJECT_CONTEXT_PACK_UPLOAD/HCP_* remains the canonical external-model context packet for ChatGPT, Claude, and other frontier-model escalation after Tier 5. AGENTS.md serves Hermes-native context; HCP serves external advisor context.
-- [ADR-SEED-007] AGENTS.md gateway loading mechanism: AGENTS.md is loaded from cwd or TERMINAL_CWD in gateway mode, not automatically from git root. Gateway processes require TERMINAL_CWD=/mnt/projects/cis to load CIS AGENTS.md. CLI sessions may load CIS AGENTS.md when launched from the CIS repo root.
+Full text/reasoning of any decision: `project_decisions` table in the spine DB — `sqlite3 data/cis_memory.db "SELECT * FROM project_decisions WHERE id='<ID>'"`. This table is the canonical source; the list below is an index, not a summary.
+- [ADR-SEED-016] Enforcement Primitive Approved
+- [ADR-SEED-015] Enforcement architecture: three-layer process isolation
+- [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit
+- [ADR-SEED-012] Orchestrator validation contract
+- [ADR-SEED-013] Retire Kanban as required pipeline transport
+- [ADR-SEED-010] Project isolation model: --project-root
+- [ADR-SEED-006] Spine migration strategy
+- [ADR-SEED-005] HERMES_CIS_BRIEFING_PATH is transitional
+- [ADR-SEED-004] Browser role enforcement at router layer
+- [ADR-SEED-003] Role identity must be runtime-derived
+- [ADR-SEED-002] Verification-hardening rule
+- [ADR-SEED-001] Dependency graph build order
+- [ADR-SEED-009] HCP export is currently CIS-scoped
+- [ADR-SEED-008] External advisor packet remains permanent
+- [ADR-SEED-007] AGENTS.md gateway loading mechanism
 
 ## 5. Open Questions
 - [OQ-SEED-006] deliberation_rounds schema is lossy: no reviewer_output column exists, only reviewer_signal. Reviewer reasoning and full output are discarded at the spine layer — they exist only in orchestrator stdout. This undercuts the project goal of preserving actual reasoning. Schema needs a reviewer_output TEXT column to durably persist reviewer deliberation content.
