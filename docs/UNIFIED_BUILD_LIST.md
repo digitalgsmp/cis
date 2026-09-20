@@ -3953,7 +3953,7 @@ mechanism (Card 5), so the deferred record now points at something authoritative
 **Discovered during CARD 6 (2026-09-20), reclassified BEFORE_STAGE_CLOSEOUT
 by CARD 6R (2026-09-20).**
 
-**Need: OPEN.**
+**Need: DONE.**
 
 **Problem:** `data/agent_handoffs/{WB-1A-workbench,WB-1B-1-backend,WB-1B-2-runner}/`
 each carry only a self-reported `READY_FOR_VERIFICATION` `completion.json` —
