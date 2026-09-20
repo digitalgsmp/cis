@@ -3866,7 +3866,7 @@ addition to `config/agents_static.yaml`'s prose, by any card or any
 session, will now need to trim something else first merely to fit, not
 because the new content is unimportant.
 
-**Need: OPEN.**
+**Need: DONE.**
 
 **Do NOT** simply delete existing directives to make room, and **do NOT**
 weaken the generator's hard-limit enforcement — both explicitly ruled out
