@@ -1,7 +1,73 @@
 # Files Changed Recently
-Generated: 2026-09-20 19:11 UTC | Run: run-3b32206b12c2
+Generated: 2026-09-20 20:23 UTC | Run: run-652409160c3a
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 81cf49f WB.1C / Cards 1-5: host development-continuity mechanism
+
+## AGENTS.md 
+
+## CLAUDE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/agents_static.yaml 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/schema/migrations/0039_dev_continuity.sql 
+
+## tools/development/__init__.py 
+
+## tools/development/card_contract.py 
+
+## tools/development/cli.py 
+
+## tools/development/continuity_store.py 
+
+## tools/development/discovery.py 
+
+## tools/development/kb_read.py 
+
+## tools/development/launcher.py 
+
+## tools/development/packet.py 
+
+## tools/development/queue_refs.py 
+
+## tools/development/tests/test_card5_verify_completion.py 
+
+## tools/development/tests/test_continuity.py 
+
+## tools/development/tests/test_discovery.py 
+
+## tools/development/tests/test_workflow_integration.py 
+
+## tools/development/transcript_import.py 
+
+## tools/queue/queue_add.py 
+
+## tools/queue/tests/test_queue_add.py 
 
 ## 8512935 WB.1B: workbench backend, card runner, card factory, dispatch UI
 
@@ -818,35 +884,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/mcp_bridge/spine.py 
 
 ## runtime/mcp_bridge/tools.py 
-
-## 0c5fbc1 add --resolve triage: route UNRESOLVED items to authority/spec/fact
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/advisor_review.sh 
-
-## tools/pause_notify.py 

@@ -3906,3 +3906,79 @@ twice-trimmed Card 4 addition generates at 19,997. See
 A `BEFORE_STAGE_CLOSEOUT` discovery record naming this item as its
 destination is filed against task `WB.1` in `dev_continuity_events`
 (Card 5) — see `data/agent_handoffs/WB-1C-host-continuity/card5-queue-mechanism/EVIDENCE.md`.
+
+### 4.27 Codex transcript import — blocked on an inspectable Codex transcript source
+
+**Discovered during WB.1C (2026-09-19), carried forward through CARD 5,
+corrected in scope by CARD 6R (2026-09-20).**
+
+**Need: OPEN** — genuinely open work, currently blocked on an external
+precondition this project does not control, not on missing design or effort.
+
+**What already exists:** `runtime/schema/migrations/0039_dev_continuity.sql`'s
+`dev_continuity_transcripts` table and `tools/development/transcript_import.py`
+already support explicit transcript import for `source='claude_code'` (reuses
+`tools/ingest_claude_code_sessions.py`'s JSONL parser, verified with a real
+fixture, 46/46 `test_continuity.py` checks). `source='codex'` deliberately
+raises `UnsupportedFormatError` rather than guessing a structure.
+
+**What is blocking this item:** no live Codex chat transcript export/file was
+available to inspect during WB.1C, Card 5, or this audit. Building a parser
+against a guessed or fabricated format was explicitly ruled out by the card
+that discovered this (`data/agent_handoffs/WB-1C-host-continuity/CARD.md`) and
+reaffirmed by CARD 6 and CARD 6R.
+
+**Do NOT** invent, guess, or reverse-engineer a Codex transcript format to
+close this item. That would produce a parser with no basis for correctness.
+
+**Trigger:** Codex exposes a documented, inspectable transcript export format
+(a real file this project can read and structurally verify against). When that
+exists, extend `transcript_import.py`'s `source='codex'` branch the same way
+`source='claude_code'` was built — inspect a real fixture first, write the
+parser against it, then test.
+
+**Why this is a real queue item and not just a discovery-record destination:**
+CARD 6R found that dev_continuity_events revision 5 (task WB.1) recorded this
+as `EXPLICITLY_DEFERRED` with a destination of "future queue item, not yet
+created" — a non-authoritative placeholder, inconsistent with the rule (queue
+item 4.20 sub-item 7) that a deferred destination should be a real task. This
+item is that real task, created via the sanctioned `tools/queue/queue_add.py`
+mechanism (Card 5), so the deferred record now points at something authoritative.
+
+**Evidence:** `data/agent_handoffs/WB-1C-host-continuity/card6r-remediation/AUDIT-REPORT.md`
+(Part B1); original discovery at `dev_continuity_events` task=WB.1 revision 5.
+
+### 4.28 Independent review pass for WB.1A, WB.1B-1, WB.1B-2
+
+**Discovered during CARD 6 (2026-09-20), reclassified BEFORE_STAGE_CLOSEOUT
+by CARD 6R (2026-09-20).**
+
+**Need: OPEN.**
+
+**Problem:** `data/agent_handoffs/{WB-1A-workbench,WB-1B-1-backend,WB-1B-2-runner}/`
+each carry only a self-reported `READY_FOR_VERIFICATION` `completion.json` —
+no standalone independent reviewer `verification.json` of their own. Their
+introduced files were later re-reviewed and passed, but only incidentally, as
+part of WB.1B-2A's/WB.1B-2B's/WB.1B-3's own narrower, focused re-reviews (see
+`WB-1B-4-activate/evidence.md`'s sha256 cross-check table) — never as a
+deliberate independent review of WB.1A/C1/C2 judged on their own original
+claims. CLAUDE.md's standing rule ("No completion is accepted from
+self-report") and the pattern already used for WB.1B-2A/2B/3 and WB.1C
+(R1/R2) both require this before their work is trusted.
+
+**Scope:** An independent reviewer (Codex, matching the WB.1B-2A/2B/3
+pattern) reads WB.1A's, WB.1B-1's, and WB.1B-2's own cards, evidence.md and
+completion.json, and the files each introduced (per their own `changed_files`
+lists), and issues a real PASS/FAIL `verification.json` in each card's own
+output folder — not a re-review of what WB.1B-2A/2B/3 already covered a
+second time, only the parts of C1/C2/WB.1A's original claims those later
+passes did not exercise.
+
+**Blocking classification:** blocks WB.1 stage closeout (this item, per CARD
+6R) and separately blocks WB.1B activation (already recorded as a
+precondition in the WB-1B-4-AUTH-successor activation card).
+
+**Evidence:** directory listings confirmed absent `verification.json` for
+these three cards, CARD 6 (2026-09-20) and reconfirmed CARD 6R (2026-09-20);
+`data/agent_handoffs/WB-1C-host-continuity/card6r-remediation/AUDIT-REPORT.md`
+Part B3.
