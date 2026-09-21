@@ -3982,3 +3982,141 @@ precondition in the WB-1B-4-AUTH-successor activation card).
 these three cards, CARD 6 (2026-09-20) and reconfirmed CARD 6R (2026-09-20);
 `data/agent_handoffs/WB-1C-host-continuity/card6r-remediation/AUDIT-REPORT.md`
 Part B3.
+
+### 4.29 Single authoritative CIS state contract (read-model consolidation)
+
+**Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
+at his direction, registered here by Claude Code.**
+
+**Need: OPEN.**
+
+**Problem:** CIS currently has several independently-generated "current
+state" artifacts — AGENTS.md, the HCP packet, the rendered
+`docs/UNIFIED_BUILD_LIST.md`, and ad hoc operating-state reports — with no
+single enforced authority between them. A live inspection on 2026-09-20/21
+already found one instance of drift: CLAUDE.md's documented spine-DB table
+count does not match the live database. Building further UI (Braingate,
+Card Factory) on top of this risks compounding that drift.
+
+**Scope:** Full spec:
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_01_SINGLE_AUTHORITY_CONTRACT.md`.
+Inventory existing DB-backed authority (queue/discovery/decision/closeout
+tables), implement one canonical host-side read model over it (no new
+authority table unless a hard gap is proven and documented), and make
+AGENTS.md/HCP/build-list/any operating-state markdown explicit projections
+of it, never independent truth. No UI in this card.
+
+**Sequencing:** First of a 4-card sequence (4.29-4.32, see
+`README_CARD_SEQUENCE.md`). Must independently PASS review before 4.30
+starts.
+
+**Blocking classification:** Explicitly precedes resumption of
+Braingate/Card Factory UI work (WB.1's remaining slices) — Eric's own
+prioritization decision, recorded here rather than left only in chat.
+
+**Evidence:**
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/README_CARD_SEQUENCE.md`,
+`CARD_01_SINGLE_AUTHORITY_CONTRACT.md`.
+
+### 4.30 External recovery packet from canonical CIS state
+
+**Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
+at his direction, registered here by Claude Code.**
+
+**Need: OPEN.**
+
+**Problem:** There is currently no single, deterministic, bounded packet an
+external advisor (ChatGPT, or Claude in a fresh subscription session) can
+be given to diagnose/repair CIS when internal pipeline/container pieces are
+down. Today Eric manually uploads the separately-generated HCP packet,
+which is not guaranteed to reflect the same authority as 4.29's read model.
+
+**Scope:** Full spec:
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_02_EXTERNAL_RECOVERY_PACKET.md`.
+Build one host-side recovery-packet generator (full and issue-focused
+variants) that draws only from 4.29's canonical read model, works with
+Braingate/Card Factory/Card Runner/pipeline gateways unavailable, and
+either makes HCP consume this same layer or has this packet supersede
+HCP's current-state/next-action portions. No UI in this card.
+
+**Sequencing:** Second of the 4-card sequence (4.29-4.32). Requires 4.29
+independently PASS-reviewed and accepted first; must reverify 4.29's
+interface still matches its reviewed revision before starting.
+
+**Blocking classification:** Same as 4.29 — precedes Braingate/Card Factory
+UI resumption.
+
+**Evidence:**
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_02_EXTERNAL_RECOVERY_PACKET.md`.
+
+### 4.31 Workbench System Context / Recovery UI
+
+**Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
+at his direction, registered here by Claude Code.**
+
+**Need: OPEN.**
+
+**Problem:** Eric has no screen today where he can see, in plain English,
+what CIS is doing, what is blocked, what just completed, and what to hand
+an external advisor — he currently relies on Claude Code producing an ad
+hoc report on request.
+
+**Scope:** Full spec:
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_03_WORKBENCH_SYSTEM_CONTEXT_UI.md`.
+Add one Workbench panel ("System Context / Recovery") that calls 4.29's
+read model and 4.30's packet generator only — no separate UI-specific
+state queries. Must clearly separate authoritative state from observed
+live runtime health, degrade honestly on partial failure, and provide
+copy/export of the recovery packet. Explicitly excludes resuming Braingate
+conversation or Card Factory feature work, dispatching agents from this
+screen, or broadening auth.
+
+**Activation note:** unlike 4.29/4.30, this card needs the Workbench UI
+shell reachable in a browser to be usable — but only enough to serve this
+one panel, not Braingate's chat feature or Card Factory. See conversation
+2026-09-21: this is also the natural seam where multi-user
+access/authentication (tier 2: workbench control plane + user access,
+including the paused Cloudflare/session auth proposal and the
+Sunshine+Moonlight+Tailscale remote-access thread) resurfaces — that is
+explicitly out of scope for this card and not yet a queued item.
+
+**Sequencing:** Third of the 4-card sequence (4.29-4.32). Requires 4.29 and
+4.30 independently PASS-reviewed and accepted first.
+
+**Blocking classification:** Same as 4.29 — precedes Braingate/Card Factory
+UI resumption.
+
+**Evidence:**
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_03_WORKBENCH_SYSTEM_CONTEXT_UI.md`.
+
+### 4.32 Recovery drill, authority audit, and closeout
+
+**Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
+at his direction, registered here by Claude Code.**
+
+**Need: OPEN.**
+
+**Problem:** Verification/closeout only — proves 4.29-4.31 did not create a
+second source of truth and that the recovery path actually works during
+partial failure, before returning to feature work.
+
+**Scope:** Full spec:
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_04_RECOVERY_DRILL_AND_CLOSEOUT.md`.
+Single-authority audit across DB/read-model/packet/HCP/build-list/UI;
+failure-mode recovery drill (Braingate/Card Factory/pipeline-worker/stale
+HCP/dirty git tree/failing health probe) without destructive changes;
+generate one real recovery packet and check it's usable by a fresh
+external-advisor session; confirm freshness/regeneration behavior; close
+via the existing discovery/closeout mechanism. Does not start new feature
+work.
+
+**Sequencing:** Fourth and last of the 4-card sequence. Requires 4.29-4.31
+independently PASS-reviewed and accepted first.
+
+**Return point:** explicitly recorded in the card itself — after this
+closes, the next development return point is resuming Workbench user
+workflow work (Braingate conversation first, then Card Factory, then
+execution/review/results), not starting automatically.
+
+**Evidence:**
+`data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_04_RECOVERY_DRILL_AND_CLOSEOUT.md`.
