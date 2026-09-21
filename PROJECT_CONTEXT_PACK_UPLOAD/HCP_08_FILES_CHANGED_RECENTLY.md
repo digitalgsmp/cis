@@ -1,7 +1,37 @@
 # Files Changed Recently
-Generated: 2026-09-21 14:22 UTC | Run: run-bc366caa8c65
+Generated: 2026-09-21 18:47 UTC | Run: run-d6a3f0250d1b
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## bb70bf9 Queue: add items 4.29-4.32 (CIS Workbench Recovery / Single-Authority sequence)
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 1656911 Queue 4.28: mark DONE — WB.1 independent-review gap fully closed
 
@@ -830,43 +860,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/schema/migrations/0033_check_class.sql 
 
 ## tools/queue/classify_check.py 
-
-## 0869c97 feat(queue): database becomes the queue's authority (BUILD LIST queue-authority phase 1)
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/schema/migrations/0032_queue_authority.sql 
-
-## tools/queue/apply_migration_0032.py 
-
-## tools/queue/extract_queue_items.py 
-
-## tools/queue/queue_set.py 
-
-## tools/queue/render_build_list.py 

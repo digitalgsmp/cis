@@ -18,16 +18,32 @@ import os
 import re
 import sqlite3
 import sys
+from pathlib import Path
 
 DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
 SRC = os.environ.get("CIS_QUEUE_SRC",
                      "/mnt/projects/cis/docs/UNIFIED_BUILD_LIST.md")
 
-BANNER = (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "state"))
+import canonical_state  # noqa: E402
+
+BANNER_STATIC = (
     "<!-- DO NOT EDIT — generated from queue_items (the spine). -->\n"
     "<!-- Change a status with tools/queue/queue_set.py; this file "
     "regenerates on commit. -->"
 )
+
+
+def banner(conn):
+    """This file is a projection of the spine (CARD_01_SINGLE_AUTHORITY_
+    CONTRACT.md, queue 4.29): stamp the same canonical state_revision the
+    other exports (EXPORT_MANIFEST.json) carry, so staleness relative to
+    the DB -- not just relative to this file's own last render -- is
+    checkable without needing to re-render first. Deterministic: unchanged
+    whenever the DB content it's derived from is unchanged, so --verify's
+    byte-exact comparison still holds at baseline."""
+    rev = canonical_state.compute_state_revision(conn)
+    return BANNER_STATIC + f"\n<!-- state_revision: {rev} -->"
 
 
 def rewrite_status(body_md, need_status):
@@ -76,7 +92,7 @@ def render(conn):
         "FROM queue_items ORDER BY source_line"
     ).fetchall()
 
-    blocks = [BANNER]
+    blocks = [banner(conn)]
     # preamble comes first, before the first tier header
     preamble = next((c for k, c, t, sl in sections if k == "preamble"), "")
     blocks.append(preamble)

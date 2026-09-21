@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import uuid
@@ -20,6 +21,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = REPO_ROOT / "data" / "cis_memory.db"
 MANIFEST_PATH = REPO_ROOT / "runtime" / "manifests" / "EXPORT_MANIFEST.json"
+
+sys.path.insert(0, str(REPO_ROOT / "tools" / "state"))
+import canonical_state  # noqa: E402
 
 GENERATE_AGENTS = REPO_ROOT / "tools" / "export" / "generate_agents_md.py"
 GENERATE_HCP = REPO_ROOT / "tools" / "export" / "generate_hcp.py"
@@ -103,12 +107,26 @@ def run_generator(command, label):
         return False, ""
 
 
-def build_manifest(run_id, artifacts, git_head, db_path):
+def get_state_revision(db_path):
+    """The canonical state revision (CARD_01_SINGLE_AUTHORITY_CONTRACT.md,
+    queue 4.29) this run's artifacts were generated against. Lets a caller
+    compare a stored manifest's state_revision to a freshly-computed one
+    (canonical_state.compute_state_revision) to detect staleness relative
+    to the DB, not just relative to this manifest's own git_head/run_id."""
+    conn = sqlite3.connect(db_path)
+    try:
+        return canonical_state.compute_state_revision(conn)
+    finally:
+        conn.close()
+
+
+def build_manifest(run_id, artifacts, git_head, db_path, state_revision):
     """Construct the export manifest dict."""
     return {
         "run_id": run_id,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "git_head": git_head,
+        "state_revision": state_revision,
         "generator": "tools/export/generate_all.py",
         "db_path": str(db_path),
         "source_configs": [
@@ -238,7 +256,8 @@ def main():
             "line_count": lines,
         })
 
-    manifest = build_manifest(run_id, artifacts, git_head, db_path)
+    state_revision = get_state_revision(db_path)
+    manifest = build_manifest(run_id, artifacts, git_head, db_path, state_revision)
 
     # ── Step 5: Write manifest ──
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
+<!-- state_revision: 28171be259126647 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -3988,7 +3989,7 @@ Part B3.
 **Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
 at his direction, registered here by Claude Code.**
 
-**Need: OPEN.**
+**Need: DONE.**
 
 **Problem:** CIS currently has several independently-generated "current
 state" artifacts — AGENTS.md, the HCP packet, the rendered
