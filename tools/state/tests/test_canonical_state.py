@@ -450,6 +450,148 @@ def test_discovery_delegation_against_real_spine_readonly():
         conn.close()
 
 
+def test_current_focus_pointer_is_latest_project_state_row():
+    """Card 04 R1 correction: current_focus.current_queue_item_pointer must
+    be the latest project_state row with key='current_queue_item' by
+    created_at, never a hardcoded/inferred 'next item'."""
+    tmp, path, conn = make_scratch_db()
+    try:
+        conn.execute(
+            "INSERT INTO queue_items (item_num, tier, title, body_md, form, "
+            "need_status, source_line, source_sha) VALUES "
+            "('OLD.1', 1, 'old', '### old', 'heading', 'OPEN', 1, 'x')"
+        )
+        conn.execute(
+            "INSERT INTO queue_items (item_num, tier, title, body_md, form, "
+            "need_status, source_line, source_sha) VALUES "
+            "('WB.1', 0, 'current work', '### WB.1 current work\\n\\nReturn point: "
+            "do not resume automatically.', 'heading', 'OPEN', 2, 'x')"
+        )
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES "
+            "('current_queue_item', 'OLD.1', 'manual', '2026-01-01T00:00:00Z')"
+        )
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES "
+            "('current_queue_item', 'WB.1', 'manual', '2026-06-01T00:00:00Z')"
+        )
+        conn.commit()
+        focus = cs.get_current_focus(conn)
+        check("current_focus picks the LATEST current_queue_item pointer by created_at, "
+              "not the first/oldest row",
+              focus["current_queue_item_pointer"]["value"] == "WB.1", focus["current_queue_item_pointer"])
+        check("current_focus resolves the pointer's own queue_items detail (need_status, body_md)",
+              focus["current_queue_item_detail"]["need_status"] == "OPEN"
+              and "do not resume automatically" in focus["current_queue_item_detail"]["body_md"],
+              focus["current_queue_item_detail"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_current_focus_recent_activity_surfaces_task_not_named_by_pointer():
+    """The exact usability gap this fixes: a full/pointer-only view can lose
+    a task (e.g. 4.32) that isn't the current_queue_item pointer but has the
+    most recent authoritative activity. recent_task_activity must surface it
+    by recency alone, and recent_task_queue_items must carry its real
+    OPEN/DONE status and body_md alongside that activity."""
+    tmp, path, conn = make_scratch_db()
+    try:
+        conn.execute(
+            "INSERT INTO queue_items (item_num, tier, title, body_md, form, "
+            "need_status, source_line, source_sha) VALUES "
+            "('WB.1', 0, 'pointer target', '### WB.1', 'heading', 'OPEN', 1, 'x')"
+        )
+        conn.execute(
+            "INSERT INTO queue_items (item_num, tier, title, body_md, form, "
+            "need_status, source_line, source_sha) VALUES "
+            "('4.32', 4, 'recovery drill', '### 4.32 recovery drill\\n\\nReturn point: "
+            "resuming feature work is not automatic.', 'heading', 'OPEN', 2, 'x')"
+        )
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES "
+            "('current_queue_item', 'WB.1', 'manual', '2026-01-01T00:00:00Z')"
+        )
+        conn.execute(
+            "INSERT INTO dev_continuity_events (task, revision, kind, status, actor, summary, "
+            "body, created_at) VALUES ('4.32', 1, 'user_instruction', 'authorized', 'codex', "
+            "'do the correction', 'directive body', '2026-09-22 15:00:00')"
+        )
+        conn.commit()
+        focus = cs.get_current_focus(conn)
+        check("recent_task_activity includes task 4.32 purely from its own recent event, "
+              "even though the pointer names WB.1",
+              any(r["task"] == "4.32" for r in focus["recent_task_activity"]), focus["recent_task_activity"])
+        check("recent_task_queue_items['4.32'] carries its real OPEN status and return-point body_md",
+              focus["recent_task_queue_items"]["4.32"]["need_status"] == "OPEN"
+              and "not automatic" in focus["recent_task_queue_items"]["4.32"]["body_md"],
+              focus["recent_task_queue_items"].get("4.32"))
+        check("a fetch handle for full per-task history is named explicitly",
+              "cli.py" in focus["recent_task_activity_fetch_handle"] or
+              "cli" in focus["recent_task_activity_fetch_handle"],
+              focus["recent_task_activity_fetch_handle"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_current_focus_absent_pointer_is_none_not_fabricated():
+    tmp, path, conn = make_scratch_db()
+    try:
+        focus = cs.get_current_focus(conn)
+        check("no project_state current_queue_item row yields pointer=None, "
+              "never a fabricated/default value",
+              focus["current_queue_item_pointer"] is None
+              and focus["current_queue_item_detail"] is None,
+              focus)
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_active_blockers_included_honestly_with_dormancy():
+    tmp, path, conn = make_scratch_db()
+    try:
+        conn.execute(
+            "INSERT INTO active_blockers (id, description, status, created_at) VALUES "
+            "('B1', 'a dormant but still active blocker', 'ACTIVE', datetime('now', '-90 days'))"
+        )
+        conn.commit()
+        freshness = cs.table_freshness(conn)
+        check("a table whose only row is 90 days old is itself flagged dormant",
+              freshness["active_blockers"]["dormant"] is True, freshness["active_blockers"])
+        blockers = cs.get_active_blockers(conn, freshness["active_blockers"]["dormant"])
+        check("only ACTIVE blockers are returned",
+              [b["id"] for b in blockers] == ["B1"], blockers)
+        check("a dormant active blocker is still returned, tagged dormant, not dropped",
+              blockers[0]["source_dormant"] is True, blockers)
+
+        conn.execute(
+            "INSERT INTO active_blockers (id, description, status, created_at) VALUES "
+            "('B2', 'a resolved blocker', 'RESOLVED', datetime('now'))"
+        )
+        conn.commit()
+        blockers2 = cs.get_active_blockers(conn, freshness["active_blockers"]["dormant"])
+        check("a resolved blocker is not returned even when present in the table",
+              [b["id"] for b in blockers2] == ["B1"], blockers2)
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_canonical_state_includes_current_focus_and_active_blockers():
+    tmp, path, conn = make_scratch_db()
+    try:
+        conn.close()
+        state = cs.get_canonical_state(db_path=path)
+        check("get_canonical_state() output includes current_focus",
+              "current_focus" in state, state.keys())
+        check("get_canonical_state() output includes active_blockers",
+              "active_blockers" in state, state.keys())
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def run():
     test_revision_deterministic_and_stable()
     test_revision_changes_with_authoritative_state()
@@ -462,6 +604,11 @@ def run():
     test_artifact_freshness_checks_still_work_against_real_repo()
     test_dormant_sources_flagged_not_dropped()
     test_live_source_not_flagged_dormant()
+    test_current_focus_pointer_is_latest_project_state_row()
+    test_current_focus_recent_activity_surfaces_task_not_named_by_pointer()
+    test_current_focus_absent_pointer_is_none_not_fabricated()
+    test_active_blockers_included_honestly_with_dormancy()
+    test_canonical_state_includes_current_focus_and_active_blockers()
     test_observed_health_does_not_mutate_any_table()
     test_state_derived_purely_from_db_not_from_generated_files()
     test_get_canonical_state_end_to_end_shape()

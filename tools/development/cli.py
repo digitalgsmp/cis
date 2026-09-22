@@ -299,22 +299,23 @@ def _cmd_handoff(a):
         with open(a.directive_file, encoding="utf-8") as f:
             directive_text = f.read()
         try:
-            path, pkt, authorization = launcher.build_execution_handoff(
-                conn, task=a.task, actor=a.actor, out_dir=a.out,
+            # launch_execution_handoff is the one guarded path: it builds
+            # the packet/payload AND rechecks authorization + freshness
+            # immediately before the subprocess is invoked, rather than
+            # this CLI calling build + launch as two separate,
+            # uncoordinated steps with a validation-to-send gap between
+            # them.
+            result = launcher.launch_execution_handoff(
+                conn, a.tool, task=a.task, actor=a.actor, out_dir=a.out,
                 directive_text=directive_text,
                 authorization_revision=a.authorization_revision,
                 concept_queries=a.query or [], kb_ids=a.kb_id or [],
                 expected_request_hash=a.authorization_request_hash,
+                dry_run=False, timeout=a.timeout,
             )
         except launcher.AuthorizationError as e:
             print(f"BLOCKED: {e}", file=sys.stderr)
             return 2
-        result = launcher.launch(a.tool, path, dry_run=False, timeout=a.timeout)
-        result["handoff_path"] = path
-        result["authorization"] = {
-            "revision": authorization["revision"], "kind": authorization["kind"],
-            "actor": authorization["actor"], "created_at": authorization["created_at"],
-        }
     else:
         path, pkt = launcher.build_handoff(
             conn, task=a.task, actor=a.actor, out_dir=a.out,

@@ -303,6 +303,93 @@ def get_discoveries_requiring_attention(conn, db_path=None):
     return get_unresolved_discoveries(conn, db_path=db_path)
 
 
+def get_active_blockers(conn, dormant_flag):
+    """Currently-ACTIVE rows from active_blockers, tagged with the same
+    dormancy signal table_freshness already computes for this table --
+    included honestly even when dormant (a blocker going quiet is not the
+    same as it being resolved), never silently dropped."""
+    rows = [_row_to_dict(r) for r in conn.execute(
+        """SELECT id, description, status, created_at FROM active_blockers
+           WHERE status = 'ACTIVE' ORDER BY created_at DESC"""
+    ).fetchall()]
+    for r in rows:
+        r["source_dormant"] = dormant_flag
+    return rows
+
+
+RECENT_TASK_ACTIVITY_LIMIT = 20  # kept under recovery_packet._CAP (25)
+
+
+def _item_detail(conn, item_num):
+    row = conn.execute(
+        "SELECT item_num, tier, title, need_status, body_md, status_changed_at "
+        "FROM queue_items WHERE item_num = ?", (item_num,)
+    ).fetchone()
+    return _row_to_dict(row)
+
+
+def get_current_focus(conn):
+    """The one place 'where are we right now' is answered from live
+    authority, for a Card 04 packet reader to actually locate current work
+    -- never inferred from queue tier order or generated-file prose.
+
+    - current_queue_item_pointer: the latest project_state row with
+      key='current_queue_item' -- the same row an operator sets via
+      queue_set.py/set_current_item.py. Whichever row has the newest
+      created_at wins; this table is not superseded_at-maintained in
+      practice (older pointer rows are simply left with superseded_at
+      NULL), so recency by timestamp is the real signal, not a flag.
+    - current_queue_item_detail: that pointer's own queue_items row
+      (title, need_status, full body_md -- which is where an item's own
+      recorded scope/return-point language actually lives).
+    - recent_task_activity: the most recent dev_continuity_events rows
+      across ALL tasks (not just the pointer task), so whichever task has
+      truly recent work -- e.g. 4.32's Card 04 correction rounds -- shows
+      up on its own recency, with no task named here in advance.
+    - recent_task_queue_items: the queue_items row (status/title/body_md)
+      for every distinct task named in recent_task_activity, so a task's
+      own recorded OPEN/DONE status and return-point text travel with its
+      activity instead of requiring a second lookup.
+    - a named fetch handle for the full per-task history this is bounded
+      from, so a capped view never silently implies there is nothing more.
+    """
+    pointer_row = conn.execute(
+        "SELECT id, key, value, source, created_at FROM project_state "
+        "WHERE key = 'current_queue_item' ORDER BY created_at DESC, id DESC LIMIT 1"
+    ).fetchone()
+    pointer = _row_to_dict(pointer_row)
+    pointer_detail = _item_detail(conn, pointer["value"]) if pointer else None
+
+    recent_activity = [_row_to_dict(r) for r in conn.execute(
+        "SELECT id, task, revision, kind, status, actor, summary, created_at "
+        "FROM dev_continuity_events ORDER BY id DESC LIMIT ?",
+        (RECENT_TASK_ACTIVITY_LIMIT,),
+    ).fetchall()]
+    recent_tasks = sorted({r["task"] for r in recent_activity})
+    recent_task_queue_items = {t: _item_detail(conn, t) for t in recent_tasks}
+
+    return {
+        "current_queue_item_pointer": pointer,
+        "current_queue_item_detail": pointer_detail,
+        "recent_task_activity": recent_activity,
+        "recent_task_activity_fetch_handle": (
+            "python3 -m tools.development.cli events <task>  -- full event "
+            "history for any task named in recent_task_activity above"
+        ),
+        "recent_task_queue_items": recent_task_queue_items,
+        "note": (
+            "current_queue_item_pointer is read straight from the latest "
+            "project_state row with key='current_queue_item' -- never "
+            "advanced, inferred, or defaulted by this module. "
+            "recent_task_activity is the most recent dev_continuity_events "
+            "rows across all tasks, ordered by id, capped at "
+            f"{RECENT_TASK_ACTIVITY_LIMIT}; a task's own queue_items row "
+            "(need_status, body_md) is looked up for each distinct task "
+            "named there."
+        ),
+    }
+
+
 def get_observed_runtime_health():
     """Live, NON-authoritative observations. Never persisted to any table
     merely by being observed -- callers that want a fact remembered must
@@ -412,7 +499,9 @@ def get_canonical_state(db_path=None):
             "recent_verified_closed": get_recent_verified_closed(conn),
             "active_decisions": get_active_decisions(conn),
             "open_questions": get_open_questions(conn, freshness["open_questions"]["dormant"]),
+            "active_blockers": get_active_blockers(conn, freshness["active_blockers"]["dormant"]),
             "discoveries_requiring_attention": get_discoveries_requiring_attention(conn, db_path=db_path),
+            "current_focus": get_current_focus(conn),
             "source_table_freshness": freshness,
             "generated_artifact_freshness": get_artifact_freshness(conn, revision),
             "observed_runtime_health": get_observed_runtime_health(),

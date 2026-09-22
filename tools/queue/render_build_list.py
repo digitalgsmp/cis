@@ -20,11 +20,23 @@ import sqlite3
 import sys
 from pathlib import Path
 
-DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
-SRC = os.environ.get("CIS_QUEUE_SRC",
-                     "/mnt/projects/cis/docs/UNIFIED_BUILD_LIST.md")
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "state"))
+# Portable by construction (Card 04 R1 correction): derive both defaults
+# from this module's own location instead of a hardcoded host path. The
+# host repo lives at /mnt/projects/cis; cis-pipeline bind-mounts the same
+# repo at /workspace/cis -- a hardcoded host path made the container's
+# --verify report the build list missing even at an identical DB revision
+# (reproduced: only setting CIS_QUEUE_SRC=/workspace/cis/... by hand fixed
+# it). Path(__file__).resolve() already reflects wherever this file
+# actually is, so parents[2] is the right project root in either
+# environment with no override needed. Explicit CIS_SPINE_PATH/
+# CIS_QUEUE_SRC env overrides are still honored first, unchanged.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB = os.environ.get("CIS_SPINE_PATH", str(PROJECT_ROOT / "data" / "cis_memory.db"))
+SRC = os.environ.get("CIS_QUEUE_SRC",
+                     str(PROJECT_ROOT / "docs" / "UNIFIED_BUILD_LIST.md"))
+
+sys.path.insert(0, str(PROJECT_ROOT / "tools" / "state"))
 import canonical_state  # noqa: E402
 
 BANNER_STATIC = (
