@@ -14,10 +14,27 @@
     python3 -m tools.development.cli discover  <executable_name>
     python3 -m tools.development.cli init-dev-schema --db PATH   # refuses production path
     python3 -m tools.development.cli handoff  <task> {claude|codex} --actor NAME --out DIR
-                                                [--query Q ...] [--kb-id N ...] [--execute]
-                                                # dry-run by default; --execute actually sends
-                                                # the packet via that tool's real CLI contract
-                                                # (stdin), never as a positional file path.
+                                                [--query Q ...] [--kb-id N ...] [--execute
+                                                --directive-file PATH --authorization-revision N
+                                                [--authorization-request-hash H]]
+                                                # Dry-run by default: builds and previews a
+                                                # CONTEXT-ONLY packet, sends nothing.
+                                                # --execute requires BOTH --directive-file (a
+                                                # file containing the explicit execution prose)
+                                                # and --authorization-revision (the exact
+                                                # dev_continuity_events revision, of
+                                                # kind='user_instruction', that authorizes this
+                                                # send) — re-validated live against the database;
+                                                # missing/wrong-kind/hash-mismatched/superseded
+                                                # authorization is refused (exit 2), nothing is
+                                                # sent. Directive prose renders BEFORE the
+                                                # labeled reference packet in what is actually
+                                                # sent, via that tool's real CLI contract
+                                                # (stdin), never as a positional file path. A
+                                                # subprocess launching and returning 0 is
+                                                # reported as transport-only (see
+                                                # completion_status in the output) — never as
+                                                # completed/accepted work.
     python3 -m tools.development.cli discovery-record <task> --actor NAME --summary S
                                                 --disposition {RESOLVED_NOW|BEFORE_STAGE_CLOSEOUT|EXPLICITLY_DEFERRED}
                                                 --expect-revision N [disposition-specific flags]
@@ -259,18 +276,52 @@ def _cmd_verify_completion(a):
 
 
 def _cmd_handoff(a):
-    """Build a fresh packet + handoff file for `tool`, and (only with
-    --execute) actually send it. Default is dry-run: shows the derived
-    tool-specific invocation, sends nothing (WB.1C-R1 remediation 5)."""
+    """Build a handoff for `tool`. Dry-run (default) builds a CONTEXT-ONLY
+    packet and previews the derived tool-specific invocation, sending
+    nothing (WB.1C-R1 remediation 5). --execute is a real dispatch and
+    requires explicit directive prose (--directive-file) plus a live
+    authorization reference (--authorization-revision) — see
+    launcher.build_execution_handoff / resolve_execution_authorization for
+    what is validated. Never falls back to the context-only packet for a
+    real send; a caller that omits either flag with --execute is refused
+    (exit 2), not silently downgraded to a context-only dispatch."""
     conn = cs.connect(a.db)
-    path, pkt = launcher.build_handoff(
-        conn, task=a.task, actor=a.actor, out_dir=a.out,
-        concept_queries=a.query or [], kb_ids=a.kb_id or [],
-    )
-    result = launcher.launch(
-        a.tool, path, dry_run=not a.execute, timeout=a.timeout,
-    )
-    result["handoff_path"] = path
+    if a.execute:
+        if not a.directive_file or a.authorization_revision is None:
+            print(
+                "BLOCKED: --execute requires --directive-file and "
+                "--authorization-revision (explicit directive prose + a "
+                "live user_instruction authorization reference); refusing "
+                "to send a bare context packet as if it were a directive.",
+                file=sys.stderr,
+            )
+            return 2
+        with open(a.directive_file, encoding="utf-8") as f:
+            directive_text = f.read()
+        try:
+            path, pkt, authorization = launcher.build_execution_handoff(
+                conn, task=a.task, actor=a.actor, out_dir=a.out,
+                directive_text=directive_text,
+                authorization_revision=a.authorization_revision,
+                concept_queries=a.query or [], kb_ids=a.kb_id or [],
+                expected_request_hash=a.authorization_request_hash,
+            )
+        except launcher.AuthorizationError as e:
+            print(f"BLOCKED: {e}", file=sys.stderr)
+            return 2
+        result = launcher.launch(a.tool, path, dry_run=False, timeout=a.timeout)
+        result["handoff_path"] = path
+        result["authorization"] = {
+            "revision": authorization["revision"], "kind": authorization["kind"],
+            "actor": authorization["actor"], "created_at": authorization["created_at"],
+        }
+    else:
+        path, pkt = launcher.build_handoff(
+            conn, task=a.task, actor=a.actor, out_dir=a.out,
+            concept_queries=a.query or [], kb_ids=a.kb_id or [],
+        )
+        result = launcher.launch(a.tool, path, dry_run=True, timeout=a.timeout)
+        result["handoff_path"] = path
     print(json.dumps(result, indent=2))
     return 0 if (result.get("dry_run") or result.get("launched")) else 1
 
@@ -357,7 +408,18 @@ def build_parser():
     sp.add_argument("--kb-id", action="append", type=int)
     sp.add_argument("--out", required=True)
     sp.add_argument("--execute", action="store_true",
-                     help="Actually run the tool (default: dry-run only).")
+                     help="Actually run the tool (default: dry-run only). "
+                          "Requires --directive-file and --authorization-revision.")
+    sp.add_argument("--directive-file", default=None,
+                     help="Path to a file containing explicit execution directive prose. "
+                          "Required with --execute.")
+    sp.add_argument("--authorization-revision", type=int, default=None,
+                     help="dev_continuity_events revision (kind='user_instruction') that "
+                          "authorizes this execution. Required with --execute; re-validated "
+                          "live against the database (missing/wrong-kind/stale is refused).")
+    sp.add_argument("--authorization-request-hash", default=None,
+                     help="Optional: also require the authorization row's request_hash to "
+                          "match exactly, binding the directive to a specific request.")
     sp.add_argument("--timeout", type=int, default=30)
     sp.set_defaults(func=_cmd_handoff)
 

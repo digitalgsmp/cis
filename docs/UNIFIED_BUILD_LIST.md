@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: 28171be259126647 -->
+<!-- state_revision: 4af380785a33d3d1 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -4024,7 +4024,7 @@ prioritization decision, recorded here rather than left only in chat.
 **Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
 at his direction, registered here by Claude Code.**
 
-**Need: OPEN.**
+**Need: DONE.**
 
 **Problem:** There is currently no single, deterministic, bounded packet an
 external advisor (ChatGPT, or Claude in a fresh subscription session) can
@@ -4055,7 +4055,7 @@ UI resumption.
 **Proposed 2026-09-21 — Eric's own prioritization; cards drafted by ChatGPT
 at his direction, registered here by Claude Code.**
 
-**Need: OPEN.**
+**Need: DONE.**
 
 **Problem:** Eric has no screen today where he can see, in plain English,
 what CIS is doing, what is blocked, what just completed, and what to hand
