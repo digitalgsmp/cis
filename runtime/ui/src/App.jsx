@@ -11,6 +11,7 @@ import {
 import { getRequestId, clearRequestId } from "./requestId";
 import ProposalPanel from "./ProposalPanel";
 import CardFactory from "./CardFactory";
+import SystemContext from "./SystemContext";
 
 const LAST_PROJECT_KEY = "cis-workbench-last-project";
 const draftKey = (projectId) => `cis-workbench-draft-${projectId}`;
@@ -383,6 +384,10 @@ export default function App() {
     return <CardFactory onBack={() => setView("conversation")} />;
   }
 
+  if (view === "recovery") {
+    return <SystemContext onBack={() => setView("conversation")} />;
+  }
+
   return (
     <div className="workbench">
       <header className="stage-banner">
@@ -390,7 +395,10 @@ export default function App() {
         <span className="stage-detail">
           Braingate can clarify and propose here. Nothing runs until you explicitly approve it.
         </span>
-        <button className="link-btn" onClick={() => setView("cardfactory")} style={{ marginLeft: "auto" }}>
+        <button className="link-btn" onClick={() => setView("recovery")} style={{ marginLeft: "auto" }}>
+          System Context / Recovery →
+        </button>
+        <button className="link-btn" onClick={() => setView("cardfactory")}>
           Card Factory (direct requests) →
         </button>
       </header>

@@ -169,3 +169,19 @@ export function editCard(cardId, cardText) {
 export function regateCard(cardId) {
   return cardFactoryRequest(`/cards/${cardId}/regate`, { method: "POST" });
 }
+
+// ── System Context / Recovery (Card 03) ─────────────────────────────────
+// Thin GET wrappers over runtime/api/system_context.py, itself a thin
+// wrapper over tools/state/canonical_state.py + recovery_packet.py (Cards
+// 01-02). Read-only — neither call can mutate anything.
+
+export function getSystemContext() {
+  return workbenchRequest("/system-context");
+}
+
+// issue: one of recovery_packet.py's ISSUE_AREAS, or omitted for the full
+// packet. An unrecognized issue is rejected by the server with a 400.
+export function getRecoveryPacket(issue) {
+  const qs = issue ? `?issue=${encodeURIComponent(issue)}` : "";
+  return workbenchRequest(`/system-context/recovery-packet${qs}`);
+}

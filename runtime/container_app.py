@@ -26,6 +26,14 @@ app = Flask(__name__, static_folder=None)
 from api.relay import relay_bp
 app.register_blueprint(relay_bp)
 
+# ── Workbench System Context / Recovery (Card 03, queue 4.30) ──────────────────
+# Read-only wrapper over tools/state/canonical_state.py + recovery_packet.py.
+# Self-contained (see runtime/api/system_context.py docstring) so it carries
+# none of the legacy runtime/api/* host-path baggage container_app.py
+# otherwise avoids importing.
+from api.system_context import system_context_bp
+app.register_blueprint(system_context_bp)
+
 # ── Run start (lean, unconditional) ──────────────────────────────────────────
 # Lean counterpart to POST /api/relay/start (api/relay.py:167): no mwl-proof-v2
 # pre-flight, no 1-hour idempotency window. Every call creates a fresh
