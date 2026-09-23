@@ -17,7 +17,13 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
+# Auth is fail-CLOSED (runtime/workbench_auth.py): an unset CIS_PIPELINE_API_KEY
+# denies every request with 503 rather than granting anonymous access. This
+# suite therefore configures a real key and presents it as a real caller would
+# (see client.environ_base below). It is deliberately NOT set to "" — a blank
+# key is "server not configured", not "authenticated".
+TEST_API_KEY = "test-workbench-key"
+os.environ["CIS_PIPELINE_API_KEY"] = TEST_API_KEY
 
 MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "schema", "migrations")
 MIGRATION_PATH = os.path.join(MIGRATIONS_DIR, "0035_workbench.sql")
@@ -71,6 +77,10 @@ def run():
     app = Flask(__name__)
     app.register_blueprint(workbench_app.workbench_bp)
     client = app.test_client()
+    # Every request from this client carries the configured credential, so the
+    # existing checks below exercise authenticated behavior. Fail-closed auth
+    # itself is covered by test_braingate_conversation_boundary.py.
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {TEST_API_KEY}"
 
     orig_gateway = workbench_app._call_brain_gateway
 

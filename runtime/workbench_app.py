@@ -25,6 +25,8 @@ from flask import Blueprint, jsonify, request
 
 import httpx
 
+from workbench_auth import check_auth
+
 from card_factory_app import (
     card_factory_bp,
     submit_ask_core,
@@ -57,7 +59,11 @@ workbench_bp.register_blueprint(card_runner_bp)
 # ── Config ───────────────────────────────────────────────────────────────
 
 DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
-API_KEY = os.environ.get("CIS_PIPELINE_API_KEY", "")
+# NOTE: the module-level API_KEY constant was REMOVED deliberately. Auth now
+# reads CIS_PIPELINE_API_KEY per request via workbench_auth.check_auth(), so
+# nothing can blank it out after import. Anything still assigning
+# workbench_app.API_KEY (several tests used to, to obtain anonymous access)
+# must fail loudly rather than silently have no effect.
 BRAIN_GATEWAY_URL = os.environ.get(
     "CIS_WORKBENCH_BRAIN_URL", "http://127.0.0.1:8644/v1/chat/completions"
 )
@@ -139,12 +145,12 @@ REVISE_PROPOSAL_TEMPLATE = (
 
 
 def _check_auth():
-    if not API_KEY:
-        return None
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer ") and auth[7:].strip() == API_KEY:
-        return None
-    return jsonify({"error": "Unauthorized", "detail": "Invalid or missing API key"}), 401
+    """Delegates to the shared fail-CLOSED contract (runtime/workbench_auth.py).
+
+    Previously this was fail-open: an unset CIS_PIPELINE_API_KEY returned None
+    and every route became anonymous. See workbench_auth's docstring for why
+    that is now a 503 rather than an implicit allow."""
+    return check_auth()
 
 
 def _db(db_path: str = None) -> sqlite3.Connection:

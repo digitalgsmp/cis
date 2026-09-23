@@ -49,6 +49,22 @@ vi.mock("./api", () => {
   }
 
   return {
+    // OIDC browser session. These existing tests exercise the authenticated
+    // app, so the default session check answers "authenticated" with a real
+    // identity — the sign-in gate and its failure modes have their own suite
+    // (SignIn.test.jsx). There is deliberately no login() to mock: sign-in is
+    // a redirect to the identity provider, not a call this bundle can make.
+    refreshSession: vi.fn(async () => ok({
+      authenticated: true,
+      csrf_token: "test-csrf",
+      identity: { subject: "auth0|eric", email: "eric@example.com",
+                  name: "Eric Shelton", role: "owner" },
+    })),
+    beginSignIn: vi.fn(),
+    logout: vi.fn(async () => ok({ authenticated: false, provider_logout_url: null })),
+    getCsrfToken: vi.fn(() => "test-csrf"),
+    setCsrfToken: vi.fn(),
+
     listProjects: vi.fn(async () => ok({ projects: [{ id: "p1", name: "Test Project", direction_note: "" }] })),
     createProject: vi.fn(async (name) => ok({ project: { id: "p2", name, direction_note: "" } })),
     updateDirectionNote: vi.fn(async (id, note) => ok({ project: { id, name: "Test Project", direction_note: note } })),

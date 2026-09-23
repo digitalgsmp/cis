@@ -26,6 +26,12 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+# Auth is fail-CLOSED (runtime/workbench_auth.py): an unset CIS_PIPELINE_API_KEY
+# denies every request with 503 rather than granting anonymous access. A real
+# key is configured and presented below, exactly as a real caller would.
+TEST_API_KEY = "test-workbench-key"
+os.environ["CIS_PIPELINE_API_KEY"] = TEST_API_KEY
+
 REPO_SRC = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MIGRATION_0036 = os.path.join(REPO_SRC, "runtime", "schema", "migrations", "0036_card_factory.sql")
 MIGRATION_0037 = os.path.join(REPO_SRC, "runtime", "schema", "migrations", "0037_card_runner.sql")
@@ -136,12 +142,15 @@ def run():
     card_runner.REVIEW_RULES_PATH = os.path.join(cards_dir, "REVIEW_RULES.md")
     card_runner.HANDOFFS_DIR = handoffs_dir
     card_runner.LOG_DIR = log_dir
-    card_runner.API_KEY = ""
+    # card_runner.API_KEY = "" removed: the module constant no longer exists
+    # and blanking it would no longer disable auth anyway. Credentials are
+    # presented on the client instead (below).
 
     from flask import Flask
     app = Flask(__name__)
     app.register_blueprint(card_runner.card_runner_bp)
     client = app.test_client()
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {TEST_API_KEY}"
 
     # ── DB fixture helpers: real card_factory_asks/card_factory_cards rows,
     # exactly what card_factory_app.py itself would have written. ──

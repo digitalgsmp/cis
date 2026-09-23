@@ -73,12 +73,16 @@ import uuid
 
 from flask import Blueprint, jsonify, request
 
+from workbench_auth import check_auth
+
 # ── Config ───────────────────────────────────────────────────────────────
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
-API_KEY = os.environ.get("CIS_PIPELINE_API_KEY", "")
+# NOTE: the module-level API_KEY constant was REMOVED deliberately — see the
+# matching note in workbench_app.py. Auth reads the environment per request via
+# workbench_auth.check_auth().
 
 CARDS_DIR = os.environ.get("CIS_CARD_RUNNER_CARDS_DIR", os.path.join(REPO_ROOT, "cards"))
 EXECUTION_RULES_PATH = os.path.join(CARDS_DIR, "EXECUTION_RULES.md")
@@ -172,12 +176,12 @@ def _db(db_path: str = None) -> sqlite3.Connection:
 
 
 def _check_auth():
-    if not API_KEY:
-        return None
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer ") and auth[7:].strip() == API_KEY:
-        return None
-    return jsonify({"error": "Unauthorized", "detail": "Invalid or missing API key"}), 401
+    """Delegates to the shared fail-CLOSED contract (runtime/workbench_auth.py).
+
+    Previously fail-open, which mattered most here: /api/cardrunner/dispatch
+    spawns a real agent subprocess. An unset CIS_PIPELINE_API_KEY is now a 503,
+    not an implicit allow."""
+    return check_auth()
 
 
 def _run_dict(row: sqlite3.Row) -> dict:

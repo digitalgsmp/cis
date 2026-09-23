@@ -7,11 +7,14 @@ import {
   updateDirectionNote,
   listProposals,
   listRuns,
+  refreshSession,
+  logout as logoutOfWorkbench,
 } from "./api";
 import { getRequestId, clearRequestId } from "./requestId";
 import ProposalPanel from "./ProposalPanel";
 import CardFactory from "./CardFactory";
 import SystemContext from "./SystemContext";
+import SignIn from "./SignIn";
 
 const LAST_PROJECT_KEY = "cis-workbench-last-project";
 const draftKey = (projectId) => `cis-workbench-draft-${projectId}`;
@@ -26,6 +29,29 @@ function StatusBadge({ status }) {
   const [label, cls] = map[status] || [status, ""];
   if (!label) return null;
   return <span className={`status-badge ${cls}`}>{label}</span>;
+}
+
+/**
+ * Who is signed in, and with what role.
+ *
+ * Shown so a normal user can tell at a glance which individual this browser is
+ * acting as — the whole point of replacing a shared password. Both fields come
+ * from the server's session response, which carries exactly subject, email,
+ * name and role: no ID token, no access token, no API key, nothing that could
+ * be lifted out of the DOM and reused.
+ *
+ * The role here is a label, not a permission. Nothing in this bundle decides
+ * what an owner may do; the server does, on every request.
+ */
+function SignedInAs({ identity }) {
+  if (!identity) return null;
+  const who = identity.name || identity.email;
+  const role = identity.role === "owner" ? "Owner" : "Collaborator";
+  return (
+    <span className="signed-in-as" title={identity.email}>
+      {who} — {role}
+    </span>
+  );
 }
 
 function ContextPanel({ kbContext, limitations }) {
@@ -211,6 +237,15 @@ function UsageTotals({ project }) {
 }
 
 export default function App() {
+  // "checking" until the server has answered. Nothing is rendered or fetched
+  // on the strength of an assumption about authentication.
+  // state: "checking" | "authenticated" | "anonymous" | "signedOut"
+  //      | "unauthorized" (signed in with the provider, not on CIS's allowlist)
+  //      | "unavailable"  (the server has no sign-in configured)
+  // identity: { subject, email, name, role } from the server, never from here.
+  const [auth, setAuth] = useState({
+    state: "checking", detail: null, identity: null, providerLogoutUrl: null,
+  });
   const [view, setView] = useState("conversation");
   const [projects, setProjects] = useState(null);
   const [activeId, setActiveId] = useState(() => localStorage.getItem(LAST_PROJECT_KEY) || null);
@@ -226,6 +261,7 @@ export default function App() {
   async function loadProjects(selectId) {
     const result = await listProjects();
     if (!result.ok) {
+      if (noteAuthFailure(result)) return;
       setLoadError(result.error);
       return;
     }
@@ -249,6 +285,7 @@ export default function App() {
     }
     const result = await listMessages(projectId);
     if (!result.ok) {
+      if (noteAuthFailure(result)) return;
       setMessagesError(result.error);
       return;
     }
@@ -275,22 +312,86 @@ export default function App() {
     });
   }
 
+  // Any request can come back 401 once a session expires mid-use. That drops
+  // the UI straight back to the sign-in state rather than leaving a page that
+  // looks live but can no longer do anything. No stored password exists, so
+  // there is deliberately no automatic re-login.
+  function noteAuthFailure(result) {
+    if (result?.authUnavailable) {
+      setAuth({ state: "unavailable", detail: result.data?.detail || result.error,
+                identity: null, providerLogoutUrl: null });
+      return true;
+    }
+    if (result?.unauthenticated) {
+      setAuth({ state: "anonymous", detail: null, identity: null,
+                providerLogoutUrl: null });
+      return true;
+    }
+    // A 403 from an application route is the CSRF check, not an authorization
+    // verdict on the person — deliberately NOT treated as a sign-out. The
+    // "this account is not allowed" 403 comes from the session route and is
+    // handled in checkSession().
+    return false;
+  }
+
+  async function checkSession() {
+    const result = await refreshSession();
+    const base = { detail: null, identity: null, providerLogoutUrl: null };
+    if (result.authUnavailable) {
+      setAuth({ ...base, state: "unavailable",
+                detail: result.data?.detail || result.error });
+    } else if (result.forbidden) {
+      // Authenticated by the provider, refused by CIS's allowlist. Told apart
+      // from "signed out" because the two need different things from the user.
+      setAuth({ ...base, state: "unauthorized",
+                detail: result.data?.detail || result.error });
+    } else if (result.ok && result.data?.authenticated) {
+      setAuth({ ...base, state: "authenticated",
+                identity: result.data.identity || null });
+    } else {
+      setAuth({ ...base, state: "anonymous",
+                detail: result.data?.detail || null });
+    }
+  }
+
+  async function handleSignOut() {
+    const result = await logoutOfWorkbench();
+    setAuth({
+      state: "signedOut",
+      detail: null,
+      identity: null,
+      // Offered as a link on the signed-out screen, never followed for the
+      // user: the provider session is theirs to end, not the Workbench's.
+      providerLogoutUrl: result?.data?.provider_logout_url || null,
+    });
+  }
+
   useEffect(() => {
-    loadProjects();
+    checkSession();
   }, []);
 
   useEffect(() => {
+    if (auth.state !== "authenticated") return;
+    loadProjects();
+  }, [auth.state]);
+
+  useEffect(() => {
+    if (auth.state !== "authenticated") return;
     if (activeId) localStorage.setItem(LAST_PROJECT_KEY, activeId);
     loadMessages(activeId);
     loadProposals(activeId);
     setDraft(localStorage.getItem(draftKey(activeId)) || "");
-  }, [activeId]);
+  }, [activeId, auth.state]);
 
   useEffect(() => {
+    // Gated on auth for the same reason the restore above is: while the
+    // session check is still in flight, `draft` is its initial "" and writing
+    // that through would erase a stored draft before the restore ever ran.
+    if (auth.state !== "authenticated") return;
     if (!activeId) return;
     if (draft) localStorage.setItem(draftKey(activeId), draft);
     else localStorage.removeItem(draftKey(activeId));
-  }, [draft, activeId]);
+  }, [draft, activeId, auth.state]);
 
   // Reload recovery for a reply still 'pending' when the page was closed:
   // poll briefly after a fresh load if the last message is pending.
@@ -341,6 +442,10 @@ export default function App() {
     if (!result.ok) {
       setSendError(result.error);
       if (mode === "chat") setDraft(text); // recoverable draft — nothing typed is lost on failure
+      // An expired session drops back to sign-in with the draft and the
+      // request_id both preserved: the send did not happen, and after signing
+      // in again the same retry is still available. Nothing is auto-resent.
+      if (noteAuthFailure(result)) return result;
       await loadMessages(activeId);
       return result; // request_id kept in storage — a retry reuses it
     }
@@ -380,6 +485,21 @@ export default function App() {
     proposalByAnchor[Math.max(...ids)] = p;
   }
 
+  // Authentication gate. Nothing below this point renders — and no Workbench
+  // data is fetched — until the server has confirmed an authenticated session.
+  if (auth.state === "checking") {
+    return <div className="login-pane"><div className="muted">Checking sign-in…</div></div>;
+  }
+  if (auth.state !== "authenticated") {
+    return (
+      <SignIn
+        state={auth.state}
+        detail={auth.detail}
+        providerLogoutUrl={auth.providerLogoutUrl}
+      />
+    );
+  }
+
   if (view === "cardfactory") {
     return <CardFactory onBack={() => setView("conversation")} />;
   }
@@ -397,6 +517,10 @@ export default function App() {
         </span>
         <button className="link-btn" onClick={() => setView("recovery")} style={{ marginLeft: "auto" }}>
           System Context / Recovery →
+        </button>
+        <SignedInAs identity={auth.identity} />
+        <button className="link-btn" onClick={handleSignOut}>
+          Sign out
         </button>
         <button className="link-btn" onClick={() => setView("cardfactory")}>
           Card Factory (direct requests) →

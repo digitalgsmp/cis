@@ -24,7 +24,11 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
+# Auth is fail-CLOSED (runtime/workbench_auth.py): an unset CIS_PIPELINE_API_KEY
+# denies every request with 503 rather than granting anonymous access. A real
+# key is configured and presented below, exactly as a real caller would.
+TEST_API_KEY = "test-workbench-key"
+os.environ["CIS_PIPELINE_API_KEY"] = TEST_API_KEY
 
 MIGRATION_PATH = os.path.join(
     os.path.dirname(__file__), "..", "schema", "migrations", "0036_card_factory.sql"
@@ -115,6 +119,7 @@ def run():
     app = Flask(__name__)
     app.register_blueprint(card_factory_app.card_factory_bp)
     client = app.test_client()
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {TEST_API_KEY}"
 
     orig_generator = card_factory_app._call_generator
     orig_subprocess_run = subprocess.run

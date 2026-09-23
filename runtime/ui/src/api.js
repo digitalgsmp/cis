@@ -2,12 +2,53 @@ const WORKBENCH_BASE = "/api/workbench";
 const CARDRUNNER_BASE = "/api/cardrunner";
 const CARDFACTORY_BASE = "/api/cardfactory";
 
+// The OIDC authentication lifecycle. Sign-in is a full-page redirect to the
+// identity provider, NOT a fetch: the browser has to actually visit Auth0
+// Universal Login, and the callback has to arrive as a navigation so the
+// server can set the session cookie on it.
+export const AUTH_LOGIN_URL = `${WORKBENCH_BASE}/auth/login`;
+
+const CSRF_HEADER = "X-CIS-Workbench-CSRF";
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+// This session's CSRF token, held in module memory ONLY.
+//
+// Deliberately not localStorage/sessionStorage: it is a session-bound secret,
+// and browser storage is readable by any script on the origin and outlives the
+// tab. Losing it on reload costs nothing — the HttpOnly session cookie
+// survives, so GET /session hands the same token back (see refreshSession).
+//
+// The server API key never appears here, or anywhere else in this bundle. The
+// browser has no access to it by design.
+let csrfToken = null;
+
+export function getCsrfToken() {
+  return csrfToken;
+}
+
+export function setCsrfToken(token) {
+  csrfToken = token || null;
+}
+
 async function request(base, path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+
+  // Attached automatically so no individual call site can forget it. Harmless
+  // on a Bearer-authenticated deployment: the server only requires CSRF for
+  // browser-session-authenticated mutations and ignores the header otherwise.
+  if (MUTATING_METHODS.has(method) && csrfToken) {
+    headers[CSRF_HEADER] = csrfToken;
+  }
+
   let resp;
   try {
     resp = await fetch(`${base}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      // Same-origin only: the session cookie goes to this server and nowhere
+      // else, and no cross-origin request ever carries it.
+      credentials: "same-origin",
       ...options,
+      headers,
     });
   } catch (e) {
     // Network failure (offline, gateway down before it even reached Flask).
@@ -21,9 +62,55 @@ async function request(base, path, options = {}) {
     return { ok: false, error: `Bad response from server (status ${resp.status})` };
   }
   if (!resp.ok) {
-    return { ok: false, error: body?.error || `Request failed (status ${resp.status})`, status: resp.status, data: body };
+    return {
+      ok: false,
+      error: body?.error || `Request failed (status ${resp.status})`,
+      status: resp.status,
+      data: body,
+      // Lets callers distinguish "sign in again" (401), "you signed in but
+      // this account is not on this Workbench's list" (403 from the session
+      // route) and "the server has no sign-in configured" (503) from an
+      // ordinary request failure. A 403 on an application route is the CSRF
+      // check, which is why `forbidden` is reported separately rather than
+      // being collapsed into either of the others.
+      unauthenticated: resp.status === 401,
+      forbidden: resp.status === 403,
+      authUnavailable: resp.status === 503,
+    };
   }
   return { ok: true, data: body, status: resp.status };
+}
+
+// ── Workbench: OIDC session ─────────────────────────────────────────────
+//
+// There is no login() any more, and that absence is the point. This bundle
+// never sees, holds, transmits or stores anyone's password: the password is
+// typed at Auth0 Universal Login, on Auth0's origin, and CIS is told only the
+// verified result. Nothing here can be given a credential to mishandle.
+
+/** Start sign-in by handing the browser to the identity provider. */
+export function beginSignIn() {
+  window.location.assign(AUTH_LOGIN_URL);
+}
+
+export async function refreshSession() {
+  const result = await request(WORKBENCH_BASE, "/auth/session");
+  if (result.ok && result.data?.authenticated) {
+    setCsrfToken(result.data.csrf_token);
+  } else {
+    setCsrfToken(null);
+  }
+  return result;
+}
+
+export async function logout() {
+  const result = await request(WORKBENCH_BASE, "/auth/logout", { method: "POST" });
+  // Cleared locally regardless of the server's answer — a token we can no
+  // longer use must not linger in memory. Note that this ends the CIS session
+  // only; the server reports separately, in provider_logout_url, whether the
+  // identity provider offers its own sign-out.
+  setCsrfToken(null);
+  return result;
 }
 
 const workbenchRequest = (path, options) => request(WORKBENCH_BASE, path, options);

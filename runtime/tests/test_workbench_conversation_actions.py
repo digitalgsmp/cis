@@ -28,7 +28,11 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
+# Auth is fail-CLOSED (runtime/workbench_auth.py): an unset CIS_PIPELINE_API_KEY
+# denies every request with 503 rather than granting anonymous access. A real
+# key is configured and presented below, exactly as a real caller would.
+TEST_API_KEY = "test-workbench-key"
+os.environ["CIS_PIPELINE_API_KEY"] = TEST_API_KEY
 
 REPO_SRC = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MIGRATIONS_DIR = os.path.join(REPO_SRC, "runtime", "schema", "migrations")
@@ -161,7 +165,9 @@ def run():
 
     for mod in (workbench_app, card_factory_app, card_runner):
         mod.DB_PATH = db_path
-        mod.API_KEY = ""
+        # mod.API_KEY = "" removed: the module constant no longer exists and
+        # blanking it would no longer disable auth anyway. Credentials are
+        # presented on the client instead (below).
     card_factory_app.CARDS_INBOX_DIR = inbox_dir
     card_factory_app.CARDS_HISTORY_DIR = history_dir
     card_runner.REPO_ROOT = repo_root
@@ -175,6 +181,7 @@ def run():
     app = Flask(__name__)
     app.register_blueprint(workbench_app.workbench_bp)
     client = app.test_client()
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {TEST_API_KEY}"
 
     orig_gateway = workbench_app._call_brain_gateway
     orig_generator = card_factory_app._call_generator
