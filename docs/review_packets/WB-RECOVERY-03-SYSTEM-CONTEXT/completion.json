@@ -1,0 +1,102 @@
+{
+  "packet_id": "WB-RECOVERY-03-SYSTEM-CONTEXT",
+  "card_id": "CARD_03_WORKBENCH_SYSTEM_CONTEXT_UI",
+  "queue_item": "4.31",
+  "purpose": "Repair a repository-history gap: Card 03's runtime and UI implementation was completed and independently accepted, but never committed to Git. WB.1 depends on it.",
+  "baseline_sha": "353738753dc082cb0fad88007f121d8a35c428ae",
+  "card03_runtime_sha": "9e0a749fc700451bdf3e44beeb183f037b44e54b",
+  "card03_evidence_sha": "SEE_GIT_LOG_THIS_PACKET_IS_THAT_COMMIT",
+  "status": "CARD03_DEPENDENCY_RESTORED",
+  "independent_review_required": true,
+
+  "history_finding": {
+    "what_happened": "Card 04 (353738753dc082cb0fad88007f121d8a35c428ae, 'card 04: activate recovery fixes and close recovery sequence') committed only closeout projections and documentation — AGENTS.md, the HCP_* pack, docs/UNIFIED_BUILD_LIST.md and runtime/manifests/EXPORT_MANIFEST.json. It committed no runtime code. Card 03's runtime and UI slice was therefore never committed and survived only as an uncommitted working-tree layer.",
+    "corroboration": "data/agent_handoffs/WB-RECOVERY-04-recovery-drill-closeout/evidence.md line 26 records contemporaneously that Cards 01-03 deliverables were still untracked at Card 04 time.",
+    "cards_01_02_status": "already tracked at the baseline — tools/state/canonical_state.py and tools/state/recovery_packet.py, including the Card 04 R1 get_current_focus corrections",
+    "classification": "pre-existing repository-history omission, NOT a WB.1 implementation defect"
+  },
+
+  "wb1_dependency": {
+    "why_wb1_could_not_be_committed_alone": "WB.1's authentication work was developed on top of the uncommitted Card 03 layer and hard-depends on it.",
+    "hard_dependencies": [
+      "runtime/ui/src/App.jsx imports ./SystemContext — a fresh clone without SystemContext.jsx fails the production build on an unresolved import",
+      "runtime/ui/src/api.js carries the System Context GET wrappers that SystemContext.jsx calls",
+      "runtime/tests/test_braingate_conversation_boundary.py check 10b asserts container_app.py still exposes /api/workbench/system-context",
+      "runtime/container_app.py imports runtime/api/system_context.py"
+    ]
+  },
+
+  "files_committed": {
+    "exact_card03_pass_content": [
+      {"path": "runtime/api/system_context.py", "status": "added", "sha256": "5f7f86621b46538accc3da4b37bb728cf4b192cce5820c0649ae649468a72d0d"},
+      {"path": "runtime/tests/test_system_context_api.py", "status": "added", "sha256": "13ea50af0ec061d84242daed12d7d0754ef7a947a1df88a7c234289917c42435"},
+      {"path": "runtime/ui/src/App.jsx", "status": "modified", "sha256": "4abe55945e32ea2be180622909d7be4ded3ff6ad8f1a56a771ccfefe5d0d7b80"},
+      {"path": "runtime/ui/src/api.js", "status": "modified", "sha256": "e2d767a34d6af4144e9c5210b9890b9f3d8fc622be10f6e97189847da617c7ab"},
+      {"path": "runtime/ui/src/index.css", "status": "modified", "sha256": "d2fcc8513cb1b57046dc3bfcff7934389c750c3629e7c12cc44a344c6d6b9b63"}
+    ],
+    "requires_new_independent_review": [
+      {"path": "runtime/ui/src/SystemContext.jsx", "status": "added", "sha256": "bdab848fc8356e0adcad28134f087522dfe49d221b8c9a7e9ba3869f8b0fb50f", "card03_pass_sha256": "0036ba1641bdbbc0a0361a77085af769e0152f3673bff5f9d995a7c80daf967d", "reason": "Card 04 correction-R1 post-image (current_focus rendering); R1 is still READY_FOR_CODEX_REVIEW"},
+      {"path": "runtime/ui/src/SystemContext.test.jsx", "status": "added", "sha256": "d30f4b0654fdf43e9b2f6f065ecb715b551285a70e0537b24cf7225dd42960a2", "card03_pass_sha256": "7c9aa1fafba4f876e40af0a6180f654ad3a09562e6bac990ee6e451c2598c474", "reason": "Card 04 correction-R1 post-image; 8 tests vs Card 03's 7"},
+      {"path": "runtime/container_app.py", "status": "modified", "sha256": "51029675cb969e8a09136fa6dbdb7c5ae0f328a19147dfdd3626fe572c4314cd", "card03_pass_sha256": "71ca874d29f3cac44286be51d4560a1c5db9f6f7751bbf6d6c03bef24ebadb27", "reason": "Card 03's hash also contained the unrelated Chroma embedded-health stream, which depends on the still-uncommitted runtime/chroma_health.py. Only the System Context blueprint registration was staged; the baseline Chroma check is retained."}
+    ],
+    "auto_staged_deterministic_projections": {
+      "count": 14,
+      "generated_by": "repository .git/hooks/pre-commit, from the authoritative spine DB",
+      "substantive_delta": "generation timestamp, generator run id, DB state revision, recorded HEAD",
+      "in_review_scope": false
+    }
+  },
+
+  "reconstruction": {
+    "method": "Card 03 content rebuilt deterministically from baseline 3537387 plus the isolated Card 03 hunks, then hash-verified against the Card 03 evidence BEFORE staging",
+    "staging": "Git index only (git hash-object -w + git update-index --cacheinfo); the developer working tree was never overwritten and still carries the full WB.1 implementation",
+    "no_backup_snapshot_existed": "every *.HEAD-preimage file in the WB.1 bundles is a copy of the Git HEAD version, not the Card 03 working tree — confirmed because workbench_auth.py.HEAD-preimage is 0 bytes, that file being untracked at HEAD",
+    "nothing_invented": "content that could not be established from evidence was not fabricated; it is committed as-found and explicitly marked REQUIRES NEW INDEPENDENT REVIEW"
+  },
+
+  "tests_run_fresh": {
+    "runtime/tests/test_system_context_api.py": "39/39 passed, exit 0 (real spine)",
+    "tools/state/tests/test_canonical_state.py": "32/32 passed (real spine)",
+    "tools/state/tests/test_recovery_packet.py": "46/46 passed (real spine)",
+    "runtime/ui vitest": "24/24 passed, 2 files (isolated worktree at 9e0a749)",
+    "runtime/ui vite build": "27 modules transformed, exit 0 (isolated worktree at 9e0a749)",
+    "note": "fresh runs, not historical numbers; raw output in test_output.txt"
+  },
+
+  "fresh_checkout_coherence_verified": {
+    "python_imports_resolve": true,
+    "system_context_backend_module_exists": true,
+    "api_tests_import_implementation": true,
+    "react_imports_resolve": true,
+    "no_unresolved_SystemContext_import_in_build": true,
+    "ui_test_resolves_component": true,
+    "container_app_imports_no_absent_module": true,
+    "system_context_routes_exposed": ["/api/workbench/system-context", "/api/workbench/system-context/recovery-packet"],
+    "forbidden_routes_absent": ["/api/cardfactory", "/api/cardrunner", "/api/workbench/projects", "confirm-direction", "approve"]
+  },
+
+  "non_activation": {
+    "migrations_applied": "none — 0035, 0036, 0037, 0038 all untouched",
+    "braingate_registered": false,
+    "card_factory_exposed": false,
+    "card_runner_exposed": false,
+    "auth0_configured": false,
+    "cloudflare_changed": false,
+    "cis_pipeline_restarted": false,
+    "paid_model_call": false,
+    "agent_subprocess": false,
+    "live_db_mutation": false
+  },
+
+  "wb1_status": "OPEN — unchanged by this repair",
+  "discoveries_unchanged": [20, 26, 27, 28],
+
+  "remaining_blockers": [
+    "The three files listed under requires_new_independent_review have never been independently reviewed at their committed content.",
+    "Card 04 correction-R1 remains READY_FOR_CODEX_REVIEW; that review is still outstanding and covers the SystemContext.jsx/.test.jsx content committed here.",
+    "runtime/chroma_health.py and its container_app.py integration remain uncommitted, a separate stream out of scope for this repair.",
+    "WB.1's own implementation is still uncommitted; it is unblocked by this commit but not yet frozen."
+  ],
+
+  "next_action": "WB.1 — Freeze, Commit, and Publish OIDC Review Evidence, against this repaired baseline"
+}

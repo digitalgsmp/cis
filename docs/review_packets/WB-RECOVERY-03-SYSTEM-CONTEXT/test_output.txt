@@ -1,0 +1,93 @@
+CARD 03 SYSTEM CONTEXT — TEST OUTPUT
+Captured: 2026-09-23T20:12:43Z
+Commit under review: 9e0a749fc700451bdf3e44beeb183f037b44e54b
+
+NOTE: backend suites are run against the real spine DB (data/cis_memory.db,
+gitignored, ~5.9GB). They are read-only; Card 03 proved non-mutation via
+test_no_mutation_from_repeated_reads. Frontend suites/build were additionally
+run against an isolated worktree checked out from the exact committed tree.
+
+########## runtime/tests/test_system_context_api.py ##########
+$ python3 runtime/tests/test_system_context_api.py
+GET /api/workbench/system-context returns 200: PASS
+route revision matches direct canonical_state.get_canonical_state() call: PASS
+route queue_focus matches direct call: PASS
+route observed_runtime_health section present and separate from authority: PASS
+GET recovery-packet (full) returns 200: PASS
+full packet's state_revision matches direct generator call: PASS
+full packet's authority_statement matches direct generator call: PASS
+full packet's queue_focus matches direct generator call: PASS
+GET recovery-packet?issue=braingate returns 200: PASS
+focused packet (braingate) matches direct generator call: PASS
+GET recovery-packet?issue=card_factory returns 200: PASS
+focused packet (card_factory) matches direct generator call: PASS
+GET recovery-packet?issue=closeout returns 200: PASS
+focused packet (closeout) matches direct generator call: PASS
+GET recovery-packet?issue=container returns 200: PASS
+focused packet (container) matches direct generator call: PASS
+GET recovery-packet?issue=database returns 200: PASS
+focused packet (database) matches direct generator call: PASS
+GET recovery-packet?issue=gateway returns 200: PASS
+focused packet (gateway) matches direct generator call: PASS
+GET recovery-packet?issue=queue returns 200: PASS
+focused packet (queue) matches direct generator call: PASS
+GET recovery-packet?issue=runtime returns 200: PASS
+focused packet (runtime) matches direct generator call: PASS
+GET recovery-packet?issue=ui returns 200: PASS
+focused packet (ui) matches direct generator call: PASS
+GET recovery-packet?issue=workbench returns 200: PASS
+focused packet (workbench) matches direct generator call: PASS
+unknown ?issue is rejected with 400, not a silent full packet: PASS
+400 response names the known issue areas: PASS
+canonical_state failure -> 503, not 500: PASS
+503 body carries an error field naming the exception type: PASS
+recovery_packet failure -> 503, not 500: PASS
+503 body carries an error field naming the exception type: PASS
+a 'db' query param is silently ignored, not honored as a path override: PASS
+no authority table row count changed after hitting every route: PASS
+state revision is unchanged by view/copy reads: PASS
+system-context succeeds with no pipeline/gateway processes running: PASS
+every gateway observation is a plain bool, not an error: PASS
+
+39/39 passed.
+exit=0
+
+########## tools/state/tests/test_canonical_state.py ##########
+$ python3 tools/state/tests/test_canonical_state.py
+get_canonical_state() returns the full suggested output shape: PASS
+empty scratch DB with no dev_continuity_events yields no discoveries (no CLI subprocess needed/invoked): PASS
+CLI --revision output matches the library function's own computation: PASS
+get_closeout_status()['WB.1'] matches `cli closeout-check WB.1` directly: PASS
+
+32/32 passed.
+
+########## tools/state/tests/test_recovery_packet.py ##########
+$ python3 tools/state/tests/test_recovery_packet.py
+current_focus present regardless of issue_focus='workbench': PASS
+active_blockers present regardless of issue_focus='workbench', includes the fixture row: PASS
+current_focus present regardless of issue_focus='database': PASS
+active_blockers present regardless of issue_focus='database', includes the fixture row: PASS
+
+46/46 passed.
+
+########## FRONTEND — isolated worktree at committed tree 9e0a749 ##########
+$ npx vitest run   (from runtime/ui/)
+ RUN  v5.0.1 /tmp/claude-1000/-home-eric/6abf7abf-9f8f-4169-bf18-da65ddd4ea63/scratchpad/verify-r1b/runtime/ui
+
+
+ Test Files  2 passed (2)
+      Tests  24 passed (24)
+   Start at  15:13:46
+   Duration  10.76s (tests 91%, environment 6%, transform 2%, import 1%, setup 1%)
+
+
+$ npx vite build   (from runtime/ui/)
+vite v8.0.13 building client environment for production...
+[2Ktransforming...✓ 27 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.68 kB │ gzip:  0.44 kB
+dist/assets/index-P3orjc3Y.css   12.08 kB │ gzip:  2.59 kB
+dist/assets/index-6Yk5uzN9.js   242.17 kB │ gzip: 73.32 kB
+
+✓ built in 89ms

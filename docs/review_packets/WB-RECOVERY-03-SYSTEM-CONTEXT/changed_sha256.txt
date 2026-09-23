@@ -1,0 +1,58 @@
+CARD 03 SYSTEM CONTEXT — SHA-256 OF EVERY FILE IN COMMIT 9e0a749
+Commit: 9e0a749fc700451bdf3e44beeb183f037b44e54b
+Baseline before it: 353738753dc082cb0fad88007f121d8a35c428ae
+
+Hashes are of the COMMITTED blob content, reproducible with:
+  git cat-file -p 9e0a749:<path> | sha256sum
+
+── GROUP A — EXACT Card 03 independent-PASS content ────────────────────
+Each hash below appears verbatim in the Card 03 evidence bundle
+(completion.json "sha256_new_review_files", and for api.js also in
+CARD_03_verification_PASS.json "reviewed_sha256"). The historical PASS
+applies to this exact content.
+
+5f7f86621b46538accc3da4b37bb728cf4b192cce5820c0649ae649468a72d0d  runtime/api/system_context.py
+13ea50af0ec061d84242daed12d7d0754ef7a947a1df88a7c234289917c42435  runtime/tests/test_system_context_api.py
+4abe55945e32ea2be180622909d7be4ded3ff6ad8f1a56a771ccfefe5d0d7b80  runtime/ui/src/App.jsx
+e2d767a34d6af4144e9c5210b9890b9f3d8fc622be10f6e97189847da617c7ab  runtime/ui/src/api.js
+d2fcc8513cb1b57046dc3bfcff7934389c750c3629e7c12cc44a344c6d6b9b63  runtime/ui/src/index.css
+
+── GROUP B — REQUIRES NEW INDEPENDENT REVIEW ───────────────────────────
+Not covered by the Card 03 PASS. See INTEGRATION_REVIEW_REQUIRED.md.
+
+bdab848fc8356e0adcad28134f087522dfe49d221b8c9a7e9ba3869f8b0fb50f  runtime/ui/src/SystemContext.jsx
+d30f4b0654fdf43e9b2f6f065ecb715b551285a70e0537b24cf7225dd42960a2  runtime/ui/src/SystemContext.test.jsx
+51029675cb969e8a09136fa6dbdb7c5ae0f328a19147dfdd3626fe572c4314cd  runtime/container_app.py
+
+── Card 03 hashes NOT matched, and why ─────────────────────────────────
+0036ba1641bdbbc0a0361a77085af769e0152f3673bff5f9d995a7c80daf967d  runtime/ui/src/SystemContext.jsx      (Card 03 PASS; superseded by Card 04 R1)
+7c9aa1fafba4f876e40af0a6180f654ad3a09562e6bac990ee6e451c2598c474  runtime/ui/src/SystemContext.test.jsx (Card 03 PASS; superseded by Card 04 R1)
+71ca874d29f3cac44286be51d4560a1c5db9f6f7751bbf6d6c03bef24ebadb27  runtime/container_app.py              (Card 03 PASS; also contained the unrelated Chroma stream — deliberately not committed)
+
+── Upstream prerequisites, ALREADY committed at the 3537387 baseline ───
+Unchanged by this commit; listed so a reviewer can confirm the dependency
+chain Database -> canonical_state.py -> recovery_packet.py -> UI is whole.
+
+8320e956fdcff11b12faeb79e1cb62e611079fff33bf0fa2a4521cd9d39ac8af  tools/state/canonical_state.py
+c0f9efebc9bcaf134ff953453f5c79c9f0ac6c1730e4a6e15dd2e557e449a83d  tools/state/recovery_packet.py
+
+── AUTO-STAGED DETERMINISTIC PROJECTIONS ───────────────────────────────
+The repository pre-commit hook regenerated and auto-staged 14 export files
+from the authoritative spine DB. They are not part of the Card 03 review
+scope. Their only substantive deltas are generation timestamp, generator
+run id, DB state revision, and recorded HEAD:
+
+  AGENTS.md
+  PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md
+  PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md
+  docs/UNIFIED_BUILD_LIST.md
+  runtime/manifests/EXPORT_MANIFEST.json

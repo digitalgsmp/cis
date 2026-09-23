@@ -1,0 +1,19 @@
+{
+  "card_id": "CARD_03_WORKBENCH_SYSTEM_CONTEXT_UI",
+  "queue_item": "4.31",
+  "status": "PASS",
+  "review_scope": "Independent review of backend, frontend integration, stale/failure behavior, packet copy/export path, scope isolation, and final missing frontend files.",
+  "reviewed_sha256": {
+    "runtime/ui/src/api.js": "e2d767a34d6af4144e9c5210b9890b9f3d8fc622be10f6e97189847da617c7ab",
+    "runtime/ui/src/SystemContext.test.jsx": "7c9aa1fafba4f876e40af0a6180f654ad3a09562e6bac990ee6e451c2598c474"
+  },
+  "accepted_findings": [
+    "Backend routes are read-only thin wrappers over canonical_state.py and recovery_packet.py.",
+    "Observed runtime health remains clearly non-authoritative in the UI.",
+    "Refresh failures preserve last-good state and mark it stale.",
+    "Recovery packet copy/download uses the backend generator output, not browser-side reconstruction.",
+    "System Context is integrated into the existing Workbench shell without registering the dormant workbench_bp.",
+    "No Braingate/Card Factory/Card Runner feature work was activated by Card 03.",
+    "Process/container identity confusion is not a Card 03 blocker; record it as a discovery for Card 04/closeout."
+  ]
+}

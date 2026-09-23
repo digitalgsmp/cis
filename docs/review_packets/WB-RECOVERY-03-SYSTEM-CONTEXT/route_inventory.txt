@@ -1,0 +1,62 @@
+CARD 03 SYSTEM CONTEXT — ROUTE INVENTORY
+Generated from the committed tree at 9e0a749 (isolated worktree).
+Command: python3 -c "import container_app; ...url_map"
+
+LIVE container_app.app URL MAP (46 rules):
+   /
+   /api/health
+   /api/ping
+   /api/projects
+   /api/projects
+   /api/relay/<run_id>
+   /api/relay/<run_id>/answer
+   /api/relay/<run_id>/children
+   /api/relay/<run_id>/decompose
+   /api/relay/<run_id>/errors
+   /api/relay/<run_id>/feed
+   /api/relay/<run_id>/gate
+   /api/relay/<run_id>/interject
+   /api/relay/<run_id>/interjections
+   /api/relay/<run_id>/trace
+   /api/relay/<run_id>/verify
+   /api/relay/brain/chat
+   /api/relay/brain/history/<session_id>
+   /api/relay/brain/start
+   /api/relay/dlq
+   /api/relay/guardrails
+   /api/relay/health
+   /api/relay/kb/decisions
+   /api/relay/kb/search
+   /api/relay/metrics
+   /api/relay/ping
+   /api/relay/project/<project_id>/build-plan
+   /api/relay/project/<project_id>/overview
+   /api/relay/run
+   /api/relay/runs
+   /api/relay/start
+   /api/relay/system/health
+   /api/relay/system/logs/<container>
+   /api/relay/system/restart
+   /api/relay/system/restart-all
+   /api/relay/system/security
+   /api/workbench/system-context
+   /api/workbench/system-context/recovery-packet
+   /dashboard/
+   /health
+   /system/health
+   /system/logs/<container>
+   /system/restart
+   /system/restart-all
+   /ui/
+   /ui/<path:filename>
+
+SYSTEM CONTEXT ROUTES ADDED BY CARD 03:
+   /api/workbench/system-context
+   /api/workbench/system-context/recovery-packet
+
+FORBIDDEN SURFACES — must be absent at this stage:
+   /api/cardfactory                 ABSENT
+   /api/cardrunner                  ABSENT
+   /api/workbench/projects          ABSENT
+   confirm-direction                ABSENT
+   approve                          ABSENT
