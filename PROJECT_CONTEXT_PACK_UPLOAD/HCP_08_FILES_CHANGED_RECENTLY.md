@@ -1,7 +1,39 @@
 # Files Changed Recently
-Generated: 2026-09-24 13:31 UTC | Run: run-d529357a8b4a
+Generated: 2026-09-24 15:24 UTC | Run: run-c7ffcef28503
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## bde3c98 workbench: prepare stable cloudflare origin
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/CLOUDFLARE_CONNECTIONS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## 13b5a2b workbench: prove oidc activation readiness
 
@@ -588,115 +620,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/queue/queue_add.py 
 
 ## tools/queue/tests/test_queue_add.py 
-
-## 8512935 WB.1B: workbench backend, card runner, card factory, dispatch UI
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## cards/EXECUTION_RULES.md 
-
-## cards/REVIEW_RULES.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/card_factory_app.py 
-
-## runtime/card_runner.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/schema/migrations/0035_workbench.sql 
-
-## runtime/schema/migrations/0036_card_factory.sql 
-
-## runtime/schema/migrations/0037_card_runner.sql 
-
-## runtime/schema/migrations/0038_workbench_action_proposals.sql 
-
-## runtime/tests/test_card_factory_app.py 
-
-## runtime/tests/test_card_runner.py 
-
-## runtime/tests/test_workbench_app.py 
-
-## runtime/tests/test_workbench_conversation_actions.py 
-
-## runtime/ui/dist-workbench-staging/assets/index-DYG3d7YF.css 
-
-## runtime/ui/dist-workbench-staging/assets/index-F1GBqcEx.js 
-
-## runtime/ui/dist-workbench-staging/index.html 
-
-## runtime/ui/package-lock.json 
-
-## runtime/ui/package.json 
-
-## runtime/ui/public/cis-container-dashboard.html 
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/App.test.jsx 
-
-## runtime/ui/src/BrainChat.jsx 
-
-## runtime/ui/src/CardFactory.jsx 
-
-## runtime/ui/src/CardPanel.jsx 
-
-## runtime/ui/src/DispatchForm.jsx 
-
-## runtime/ui/src/PipelineLive.jsx 
-
-## runtime/ui/src/ProjectCenter.jsx 
-
-## runtime/ui/src/ProposalPanel.jsx 
-
-## runtime/ui/src/RunPanel.jsx 
-
-## runtime/ui/src/RunsList.jsx 
-
-## runtime/ui/src/SystemDashboard.jsx 
-
-## runtime/ui/src/Workbench.jsx 
-
-## runtime/ui/src/api.js 
-
-## runtime/ui/src/caps.js 
-
-## runtime/ui/src/hash.js 
-
-## runtime/ui/src/id.js 
-
-## runtime/ui/src/index.css 
-
-## runtime/ui/src/main.jsx 
-
-## runtime/ui/src/requestId.js 
-
-## runtime/ui/src/test/setup.js 
-
-## runtime/ui/vite.config.js 
-
-## runtime/workbench_app.py 
