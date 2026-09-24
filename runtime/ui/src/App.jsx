@@ -243,8 +243,14 @@ export default function App() {
   //      | "unauthorized" (signed in with the provider, not on CIS's allowlist)
   //      | "unavailable"  (the server has no sign-in configured)
   // identity: { subject, email, name, role } from the server, never from here.
+  // capabilities: which Workbench surfaces the SERVER says it registered, from
+  // GET /auth/session. Absent until the server answers, and absent entirely
+  // from a server that does not report them — in both cases every downstream
+  // capability reads false (see `can` below), so the UI offers a control only
+  // once the server has affirmatively said the route behind it exists.
   const [auth, setAuth] = useState({
     state: "checking", detail: null, identity: null, providerLogoutUrl: null,
+    capabilities: null,
   });
   const [view, setView] = useState("conversation");
   const [projects, setProjects] = useState(null);
@@ -294,7 +300,11 @@ export default function App() {
   }
 
   async function loadProposals(projectId) {
-    if (!projectId) {
+    // Not merely hidden — not requested. At the Braingate conversation stage
+    // /proposals is not a registered route, and polling it every project switch
+    // would put a steady trickle of 404s in the log for a feature nobody asked
+    // for, burying the failures that matter.
+    if (!projectId || !can("proposals")) {
       setProposals([]);
       return;
     }
@@ -336,7 +346,9 @@ export default function App() {
 
   async function checkSession() {
     const result = await refreshSession();
-    const base = { detail: null, identity: null, providerLogoutUrl: null };
+    const base = {
+      detail: null, identity: null, providerLogoutUrl: null, capabilities: null,
+    };
     if (result.authUnavailable) {
       setAuth({ ...base, state: "unavailable",
                 detail: result.data?.detail || result.error });
@@ -347,7 +359,8 @@ export default function App() {
                 detail: result.data?.detail || result.error });
     } else if (result.ok && result.data?.authenticated) {
       setAuth({ ...base, state: "authenticated",
-                identity: result.data.identity || null });
+                identity: result.data.identity || null,
+                capabilities: result.data.capabilities || null });
     } else {
       setAuth({ ...base, state: "anonymous",
                 detail: result.data?.detail || null });
@@ -485,6 +498,20 @@ export default function App() {
     proposalByAnchor[Math.max(...ids)] = p;
   }
 
+  // Does the server say this capability's route is registered?
+  //
+  // Unknown reads as NO. A missing `capabilities` object, a missing key, or
+  // anything that is not exactly `true` all mean "do not offer it". The failure
+  // this prevents is offering Card Factory against a server that never
+  // registered it, where every click is a 404 the user cannot act on.
+  //
+  // Hiding is not the boundary. Restoring these flags in a debugger reveals
+  // buttons whose routes still do not exist, and the Braingate mode guard still
+  // refuses a downstream payload on the one conversation route that does.
+  function can(capability) {
+    return auth.capabilities?.[capability] === true;
+  }
+
   // Authentication gate. Nothing below this point renders — and no Workbench
   // data is fetched — until the server has confirmed an authenticated session.
   if (auth.state === "checking") {
@@ -500,7 +527,10 @@ export default function App() {
     );
   }
 
-  if (view === "cardfactory") {
+  // Checked here as well as on the button, so a stale `view` left over from a
+  // server that used to register Card Factory cannot strand the user in a
+  // screen whose every request 404s.
+  if (view === "cardfactory" && can("card_factory")) {
     return <CardFactory onBack={() => setView("conversation")} />;
   }
 
@@ -513,7 +543,13 @@ export default function App() {
       <header className="stage-banner">
         <span className="stage-label">Stage: Exploration</span>
         <span className="stage-detail">
-          Braingate can clarify and propose here. Nothing runs until you explicitly approve it.
+          {can("proposals")
+            ? "Braingate can clarify and propose here. Nothing runs until you explicitly approve it."
+            /* Said plainly rather than by omission. The previous wording
+               promised proposing and approving, which this stage cannot do —
+               a user who reads it and then cannot find the button concludes
+               the UI is broken rather than early. */
+            : "Braingate can clarify and discuss here. Proposing actions, generating cards and running them are later stages and are not available yet."}
         </span>
         <button className="link-btn" onClick={() => setView("recovery")} style={{ marginLeft: "auto" }}>
           System Context / Recovery →
@@ -522,9 +558,11 @@ export default function App() {
         <button className="link-btn" onClick={handleSignOut}>
           Sign out
         </button>
-        <button className="link-btn" onClick={() => setView("cardfactory")}>
-          Card Factory (direct requests) →
-        </button>
+        {can("card_factory") && (
+          <button className="link-btn" onClick={() => setView("cardfactory")}>
+            Card Factory (direct requests) →
+          </button>
+        )}
       </header>
 
       {loadError && <div className="banner-error">Could not load projects: {loadError}</div>}
@@ -560,7 +598,10 @@ export default function App() {
                     return r;
                   })}
                 />
-                <UsageTotals project={activeProject} />
+                {/* Reads Card Runner's /runs. Without that route registered it
+                    renders "Usage totals unavailable" on every project — an
+                    error about a stage the user has not reached yet. */}
+                {can("card_runner") && <UsageTotals project={activeProject} />}
               </div>
 
               {messagesError && (
@@ -602,7 +643,7 @@ export default function App() {
                           <ContextPanel kbContext={m.kb_context} limitations={m.kb_limitations} />
                         )}
                       </div>
-                      {proposalByAnchor[m.id] && (
+                      {can("proposals") && proposalByAnchor[m.id] && (
                         <ProposalPanel
                           proposal={proposalByAnchor[m.id]}
                           sending={sending}
@@ -634,14 +675,16 @@ export default function App() {
                   >
                     {sending ? "Sending…" : "Send"}
                   </button>
-                  <button
-                    className="propose-btn"
-                    onClick={() => handleSend(draft.trim(), { mode: "draft_proposal" })}
-                    disabled={sending || !draft.trim()}
-                    title="Ask Braingate to propose a concrete next action from this"
-                  >
-                    Send &amp; propose action
-                  </button>
+                  {can("proposals") && (
+                    <button
+                      className="propose-btn"
+                      onClick={() => handleSend(draft.trim(), { mode: "draft_proposal" })}
+                      disabled={sending || !draft.trim()}
+                      title="Ask Braingate to propose a concrete next action from this"
+                    >
+                      Send &amp; propose action
+                    </button>
+                  )}
                 </div>
               </div>
             </>

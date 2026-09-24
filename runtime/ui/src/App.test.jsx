@@ -32,7 +32,32 @@ vi.mock("./api", () => {
   }
   const state = freshState();
   globalThis.__fakeApiState = state;
-  globalThis.__resetFakeApiState = () => Object.assign(state, freshState());
+
+  // GET /auth/session's `capabilities` — which Workbench surfaces the server
+  // says it registered (runtime/workbench_oidc.py CAPABILITY_PROBES). These
+  // existing tests exercise the fully-registered Workbench, so the default is
+  // every capability present and their assertions are unchanged. The
+  // Braingate-only stage is a separate describe block that sets the other set.
+  const FULL_CAPABILITIES = {
+    projects: true, project_create: true, conversation: true,
+    proposals: true, proposal_actions: true, execution: true,
+    card_factory: true, card_runner: true,
+  };
+  let capabilities = { ...FULL_CAPABILITIES };
+  globalThis.__FULL_CAPABILITIES = FULL_CAPABILITIES;
+  // What braingate_conversation_bp alone produces: the six conversation routes
+  // are bound, and nothing downstream of them is.
+  globalThis.__BRAINGATE_ONLY_CAPABILITIES = {
+    projects: true, project_create: true, conversation: true,
+    proposals: false, proposal_actions: false, execution: false,
+    card_factory: false, card_runner: false,
+  };
+  globalThis.__setCapabilities = (next) => { capabilities = next; };
+
+  globalThis.__resetFakeApiState = () => {
+    Object.assign(state, freshState());
+    capabilities = { ...FULL_CAPABILITIES };
+  };
 
   function ok(data) { return { ok: true, data: clone(data) }; }
 
@@ -59,6 +84,7 @@ vi.mock("./api", () => {
       csrf_token: "test-csrf",
       identity: { subject: "auth0|eric", email: "eric@example.com",
                   name: "Eric Shelton", role: "owner" },
+      capabilities: clone(capabilities),
     })),
     beginSignIn: vi.fn(),
     logout: vi.fn(async () => ok({ authenticated: false, provider_logout_url: null })),
@@ -572,5 +598,107 @@ describe("conversation-first workbench", () => {
 
     await user.click(screen.getByRole("button", { name: /Back to conversation/ }));
     await screen.findByRole("heading", { name: "Test Project" });
+  });
+});
+
+// ── Braingate-only stage ────────────────────────────────────────────────
+//
+// WB.1's current activation stage registers braingate_conversation_bp and the
+// OIDC authentication surface, and nothing else. Card Factory, Card Runner and
+// every proposal route are unregistered, so the UI must stop offering them.
+//
+// The server is the boundary, not this. These tests assert only that the UI
+// stops ADVERTISING what the server did not register — the matching assertion
+// that the routes genuinely do not exist, and that a hand-crafted request
+// cannot reach them, is runtime/tests/test_braingate_conversation_boundary.py.
+describe("Braingate-only stage (server reports no downstream capabilities)", () => {
+  beforeEach(() => {
+    globalThis.__setCapabilities(globalThis.__BRAINGATE_ONLY_CAPABILITIES);
+  });
+
+  it("offers no Card Factory navigation", async () => {
+    await renderAppOnProject();
+    expect(screen.queryByRole("button", { name: /Card Factory/ })).toBeNull();
+  });
+
+  it("offers no proposal generation control", async () => {
+    await renderAppOnProject();
+    expect(screen.queryByRole("button", { name: /propose action/i })).toBeNull();
+  });
+
+  it("never requests proposals for a project", async () => {
+    await renderAppOnProject();
+    // Not merely hidden — never fetched. /proposals is not a registered route
+    // at this stage and asking for it would be a 404 per project switch.
+    const api = await import("./api");
+    expect(api.listProposals).not.toHaveBeenCalled();
+  });
+
+  it("shows no proposal, confirmation, approval or dispatch controls after a chat turn", async () => {
+    const user = await renderAppOnProject();
+    const box = screen.getByPlaceholderText(/Talk to Braingate/);
+    await user.type(box, "What should we do about the export path?");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("Got it.");
+
+    for (const name of [
+      /Confirm direction/i,
+      /Approve/i,
+      /Dispatch/i,
+      /Send correction/i,
+      /Request review of this run/i,
+    ]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+  });
+
+  it("shows no Card Runner usage totals", async () => {
+    await renderAppOnProject();
+    const api = await import("./api");
+    expect(screen.queryByRole("button", { name: /usage totals/i })).toBeNull();
+    expect(api.listRuns).not.toHaveBeenCalled();
+  });
+
+  it("does not promise proposing or approving in the stage banner", async () => {
+    await renderAppOnProject();
+    expect(screen.getByText(/not available yet/i)).toBeTruthy();
+    expect(screen.queryByText(/Nothing runs until you explicitly approve it/)).toBeNull();
+  });
+
+  it("still allows ordinary Braingate conversation", async () => {
+    const user = await renderAppOnProject();
+    const box = screen.getByPlaceholderText(/Talk to Braingate/);
+    await user.type(box, "Hello Braingate");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("Hello Braingate");
+    await screen.findByText("Got it.");
+    const api = await import("./api");
+    expect(api.sendMessage).toHaveBeenCalled();
+    expect(api.sendMessage.mock.calls[0][3]).toMatchObject({ mode: "chat" });
+  });
+
+  it("still allows project selection and creation", async () => {
+    const user = await renderAppOnProject();
+    await user.click(screen.getByRole("button", { name: /New project/i }));
+    await user.type(screen.getByPlaceholderText(/Project name/i), "Second Project");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    const api = await import("./api");
+    await waitFor(() => expect(api.createProject).toHaveBeenCalledWith("Second Project"));
+  });
+
+  it("still shows the signed-in identity and a sign-out control", async () => {
+    await renderAppOnProject();
+    expect(screen.getByText(/Eric Shelton/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+  });
+
+  it("keeps downstream controls hidden when the server reports no capabilities at all", async () => {
+    // An older or unknown server that does not send `capabilities`. The UI must
+    // fail closed: unknown is not permission to advertise.
+    globalThis.__setCapabilities(undefined);
+    await renderAppOnProject();
+    expect(screen.queryByRole("button", { name: /Card Factory/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /propose action/i })).toBeNull();
+    expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
   });
 });

@@ -47,6 +47,48 @@ RUN /usr/local/lib/hermes-agent/venv/bin/python -m ensurepip --upgrade \
 # --- install Flask + httpx for the pipeline API and relay ---
 RUN /usr/local/lib/hermes-agent/venv/bin/python -m pip install flask httpx pyyaml
 
+# --- Workbench OIDC browser authentication (WB.1, 2026-09-23) ---
+# runtime/workbench_oidc.py imports requests, jwt (PyJWT), jwt.PyJWKClient and
+# oauthlib.oauth2.WebApplicationClient. Every one of them was already importable
+# in this image before this line existed — and not one of them was declared.
+# They arrived as somebody else's transitive dependency:
+#
+#   requests       <- huggingface_hub, kubernetes, hermes-agent, tokenizers, ...
+#   PyJWT[crypto]  <- hermes-agent's own pin, and mcp
+#   cryptography   <- hermes-agent, PyJWT[crypto], google-auth
+#   oauthlib       <- chromadb -> kubernetes -> requests-oauthlib -> oauthlib
+#
+# That last chain is the reason this block is not redundant. oauthlib is
+# required by exactly one installed distribution, requests-oauthlib, which is
+# pulled in only because chromadb depends on the Kubernetes client. Nothing
+# about CIS asks for Kubernetes. Bump chromadb to a release that drops that
+# dependency, or remove the semantic-search block above, and oauthlib silently
+# disappears — at which point every browser sign-in raises ImportError at
+# request time, in production, with no build failure to warn anyone. The same
+# argument applies to PyJWT: it is currently a pin inside a vendored agent
+# runtime installed by `curl | bash`, not a CIS application dependency.
+#
+# Declaring them here costs nothing (pip resolves them as already-satisfied)
+# and converts four silent runtime dependencies into build-time facts.
+#
+# Versions are pinned to what was proven working in cis-hermes:pipeline on
+# 2026-09-23 (python 3.11.15). PyJWT carries the [crypto] extra deliberately:
+# without it PyJWT has no asymmetric algorithms at all and ID-token signature
+# verification fails closed against every RS*/PS*/ES* key the provider offers.
+RUN /usr/local/lib/hermes-agent/venv/bin/python -m pip install \
+        'requests==2.33.0' \
+        'PyJWT[crypto]==2.13.0' \
+        'oauthlib==3.3.1' \
+        'cryptography==46.0.7' \
+ && /usr/local/lib/hermes-agent/venv/bin/python -c "\
+import sys, jwt, requests; \
+from jwt import PyJWKClient; \
+from oauthlib.oauth2 import WebApplicationClient; \
+need = {'RS256','RS384','RS512','PS256','PS384','PS512','ES256','ES384','ES512'}; \
+missing = sorted(need - set(jwt.api_jws.get_default_algorithms())); \
+sys.exit('OIDC asymmetric algorithms missing: %s' % missing) if missing \
+else print('WORKBENCH_OIDC_DEPS_OK')"
+
 # --- semantic KB search inside the container (2026-08-29) ---
 # Until now the pipeline could only do FTS5 keyword search: chromadb and
 # sentence-transformers were absent and pipeline_relay.py never touched Chroma.

@@ -726,6 +726,50 @@ def run():
               owner.get(workbench_oidc.SESSION_PATH).get_json()["expires_at"]
               > int(time.time()))
 
+        # ── 7A. Stage capabilities in the session body ────────────────────
+        #
+        # This test app registers exactly what the current stage registers:
+        # the OIDC surface and braingate_conversation_bp. So the capabilities
+        # it reports ARE the Braingate stage's, computed from this app's own
+        # url_map rather than asserted by hand.
+        caps = owner.get(workbench_oidc.SESSION_PATH).get_json()["capabilities"]
+        check("7A-a. the session reports stage capabilities",
+              isinstance(caps, dict) and set(caps) == set(workbench_oidc.CAPABILITY_PROBES),
+              str(caps))
+        check("7A-b. conversation and projects are reported available",
+              caps["conversation"] and caps["projects"] and caps["project_create"],
+              str(caps))
+        check("7A-c. every downstream surface is reported unavailable",
+              not any(caps[k] for k in ("proposals", "proposal_actions", "execution",
+                                        "card_factory", "card_runner")),
+              str(caps))
+        check("7A-d. capabilities are booleans only — no URL, name or value that "
+              "could describe a secret", all(isinstance(v, bool) for v in caps.values()),
+              str(caps))
+
+        # The flags track registration rather than a hardcoded stage string: an
+        # app that DOES register the downstream surfaces reports them true, from
+        # the same function, with no stage constant edited anywhere.
+        full_app = Flask(__name__)
+        full_app.register_blueprint(workbench_oidc.workbench_oidc_bp)
+        full_app.register_blueprint(workbench_app.workbench_bp)
+        full_app.logger.disabled = True
+        with full_app.test_request_context("/"):
+            full_caps = workbench_oidc.stage_capabilities()
+        check("7A-e. the same probe reports downstream AVAILABLE once "
+              "workbench_bp is registered — the report follows the url_map, "
+              "not a stage constant",
+              all(full_caps[k] for k in ("proposals", "proposal_actions", "execution",
+                                         "card_factory", "card_runner")),
+              str(full_caps))
+
+        # An unauthenticated caller is told nothing about the stage. The flags
+        # describe what a signed-in person may be offered; they are not a public
+        # inventory of this server's routes.
+        anon_body = app.test_client().get(workbench_oidc.SESSION_PATH).get_json()
+        check("7A-f. an anonymous session response carries no capabilities block",
+              "capabilities" not in anon_body, str(sorted(anon_body)))
+
         check("7e. an OIDC session authorizes a GET",
               owner.get("/api/workbench/projects").status_code == 200)
         r = owner.post("/api/workbench/projects", json={"name": "No CSRF"})

@@ -405,6 +405,86 @@ def run():
         finally:
             workbench_app.DB_PATH = db_path
 
+        # ── 13. Stage capabilities are presentation, not enforcement ────────
+        #
+        # The UI hides Card Factory, proposals and execution at this stage by
+        # reading `capabilities` from GET /auth/session
+        # (runtime/workbench_oidc.py stage_capabilities). That is a UX fix for
+        # advertising features the server did not register — it is NOT the
+        # boundary, and this section is what says so in code.
+        #
+        # The question under test is the one an attacker asks: if I flip those
+        # flags in a debugger, or skip the UI entirely and call the route, does
+        # anything change? It must not, because the flags are derived FROM the
+        # url_map rather than consulted BY it.
+        import workbench_oidc
+
+        cap_app = Flask(__name__)
+        cap_app.register_blueprint(braingate_conversation.braingate_conversation_bp)
+        cap_app.register_blueprint(workbench_oidc.workbench_oidc_bp)
+        with cap_app.test_request_context("/"):
+            caps = workbench_oidc.stage_capabilities()
+
+        check("13a. capabilities report conversation and projects AVAILABLE at "
+              "the Braingate stage",
+              caps["conversation"] and caps["projects"] and caps["project_create"],
+              str(caps))
+        check("13b. capabilities report every downstream surface UNAVAILABLE",
+              not any(caps[k] for k in ("proposals", "proposal_actions",
+                                        "execution", "card_factory",
+                                        "card_runner")),
+              str(caps))
+
+        # The routes behind the false flags genuinely are not bound — the flag
+        # is reporting reality, not creating it.
+        cap_rules = {str(r.rule) for r in cap_app.url_map.iter_rules()}
+        downstream_rules = (
+            "/api/workbench/projects/<project_id>/proposals",
+            "/api/workbench/proposals/<int:proposal_id>/confirm-direction",
+            "/api/workbench/proposals/<int:proposal_id>/approve",
+            "/api/cardfactory/cards",
+            "/api/cardrunner/dispatch",
+        )
+        check("13c. none of those downstream rules exist in the url_map",
+              not any(r in cap_rules for r in downstream_rules),
+              str(sorted(cap_rules & set(downstream_rules))))
+
+        # Frontend manipulation proof. A browser that sets every capability to
+        # true and then calls the routes it just "unlocked" reaches 404s: the
+        # flags live in the browser's own memory and the server never reads
+        # them back.
+        cap_client = cap_app.test_client()
+        cap_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {TEST_API_KEY}"
+        forged = []
+        for method, path in (
+            ("GET", "/api/workbench/projects/p1/proposals"),
+            ("POST", "/api/workbench/proposals/1/confirm-direction"),
+            ("POST", "/api/workbench/proposals/1/approve"),
+            ("GET", "/api/cardfactory/cards"),
+            ("POST", "/api/cardrunner/dispatch"),
+        ):
+            resp = cap_client.open(path, method=method, json={})
+            forged.append((method, path, resp.status_code))
+        check("13d. forging capabilities client-side does not make any downstream "
+              "route exist — every one is 404",
+              all(code == 404 for _, _, code in forged), str(forged))
+
+        # And the one route that DOES exist still refuses a downstream payload,
+        # so "unlock the button" does not become "reach the capability".
+        forged_send = cap_client.post(
+            "/api/workbench/projects/p1/messages",
+            json={"message": "go", "mode": "draft_proposal", "request_id": "cap-forge"})
+        check("13e. the registered conversation route still refuses draft_proposal "
+              "after a client-side capability forge",
+              forged_send.status_code == 403
+              and forged_send.get_json().get("refused") == "mode",
+              f"{forged_send.status_code} {forged_send.get_json()}")
+
+        check("13f. the capability report names no secret and no value",
+              set(caps) == set(workbench_oidc.CAPABILITY_PROBES)
+              and all(isinstance(v, bool) for v in caps.values()),
+              str(caps))
+
         check("12. FINAL: no generator, dispatch or subprocess call occurred anywhere "
               "in this suite", calls["generator"] == 0 and calls["dispatch"] == 0
               and calls["subprocess"] == 0, str(calls))

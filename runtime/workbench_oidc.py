@@ -68,8 +68,8 @@ During development that origin is a Cloudflare Quick Tunnel URL
 tunnel is recreated; when that happens, Auth0's Allowed Callback/Logout/Origin
 entries must be updated to the new exact URL. That is a property of temporary
 development hosting, and the answer to it is never a wildcard redirect URI or
-a relaxed redirect check — see tools/development/quick_tunnel.py, which prints
-the exact values to paste.
+a relaxed redirect check — see tools/development/oidc_preview.py, whose
+`tunnel` and `run` subcommands print the exact values to paste.
 """
 import base64
 import hashlib
@@ -82,7 +82,7 @@ from urllib.parse import urlencode, urlsplit
 
 import jwt
 import requests
-from flask import Blueprint, jsonify, make_response, redirect, request
+from flask import Blueprint, current_app, jsonify, make_response, redirect, request
 from jwt import PyJWKClient
 from oauthlib.oauth2 import WebApplicationClient
 
@@ -267,6 +267,56 @@ def configuration_problems():
 
 def oidc_configured() -> bool:
     return not configuration_problems()
+
+
+# ── Stage capabilities ───────────────────────────────────────────────────
+
+# What the UI is allowed to OFFER, derived from what this server actually
+# REGISTERED. Not a stage name, and deliberately not a constant: a hand-written
+# "stage": "braingate_conversation" string is a second source of truth that can
+# disagree with the url_map, and the disagreement is silent in both directions
+# — a UI hiding a feature that works, or offering one that 404s.
+#
+# Each capability is probed by asking the live url_map whether the route that
+# capability would have to call is bound. If braingate_conversation_bp is the
+# only conversation surface registered, `proposals`, `proposal_actions`,
+# `execution`, `card_factory` and `card_runner` are all absent, and the UI is
+# told so without anyone maintaining a list of stages.
+#
+# THIS IS PRESENTATION, NOT ENFORCEMENT. It exists so the UI stops advertising
+# controls that cannot work. A browser that lies to itself about these flags
+# gains exactly nothing: the routes are not registered, so they 404, and the
+# Braingate mode guard refuses a downstream payload on the one route that is.
+# The server boundary is in braingate_conversation.py and workbench_auth.py —
+# never here.
+CAPABILITY_PROBES = {
+    "projects": ("/api/workbench/projects", "GET"),
+    "project_create": ("/api/workbench/projects", "POST"),
+    "conversation": ("/api/workbench/projects/<project_id>/messages", "POST"),
+    "proposals": ("/api/workbench/projects/<project_id>/proposals", "GET"),
+    "proposal_actions": (
+        "/api/workbench/proposals/<int:proposal_id>/confirm-direction", "POST"),
+    "execution": ("/api/workbench/proposals/<int:proposal_id>/approve", "POST"),
+    "card_factory": ("/api/cardfactory/cards", "GET"),
+    "card_runner": ("/api/cardrunner/dispatch", "POST"),
+}
+
+
+def stage_capabilities() -> dict:
+    """{capability: bool} for the app currently handling this request."""
+    try:
+        url_map = current_app.url_map
+    except RuntimeError:
+        # No application context — only reachable from a direct unit call.
+        return {name: False for name in CAPABILITY_PROBES}
+    bound = set()
+    for rule in url_map.iter_rules():
+        for method in rule.methods or ():
+            bound.add((str(rule.rule), method))
+    return {
+        name: (rule, method) in bound
+        for name, (rule, method) in CAPABILITY_PROBES.items()
+    }
 
 
 # ── Provider metadata ────────────────────────────────────────────────────
@@ -832,6 +882,10 @@ def session_status():
         "csrf_token": session["csrf"],
         "csrf_header": CSRF_HEADER,
         "expires_at": session["exp"],
+        # Which Workbench surfaces this server actually registered, so the UI
+        # can stop offering controls for routes that are not there. Presentation
+        # only — see CAPABILITY_PROBES.
+        "capabilities": stage_capabilities(),
     }
     misconfigured = misconfigured_owner_emails()
     if misconfigured:
