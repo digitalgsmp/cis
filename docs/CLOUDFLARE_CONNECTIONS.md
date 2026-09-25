@@ -4,15 +4,15 @@ Authoritative inventory of every Cloudflare connection CIS depends on: the
 zone, the tunnels, every public hostname, what each one points at, and which
 Access policy guards it.
 
-Last verified **2026-09-24** against the live system (WB.1 tunnel-durability
-card; supersedes the stable-origin card earlier the same day).
+Last verified **2026-09-25** against the live system (WB.1 tunnel-durability
+card; supersedes the stable-origin card of 2026-09-24).
 
 Discovery status as of this revision:
 
 | Discovery | State |
 |---|---|
 | 43 (CF-D1) — tunnel crash durability | **RESOLVED** — `Restart=always`/`RestartSec=5`, proven by a controlled `SIGKILL` recovery test (§7) |
-| 44 (CF-D2) — no HTTP→HTTPS redirect on Workbench | **OPEN** — blocked on a Cloudflare dashboard action; credentials on this host cannot create the rule (§8) |
+| 44 (CF-D2) — no HTTP→HTTPS redirect on Workbench | **RESOLVED** — hostname-scoped `308` Redirect Rule; zone-wide `Always Use HTTPS` still OFF (§8) |
 | 45 (CF-D3) — preview origin does not survive reboot | **EXPLICITLY DEFERRED** — temporary dev listener by design (§6) |
 
 **This file contains no credentials.** No API token, tunnel credential, origin
@@ -36,11 +36,12 @@ not. When a value is genuinely needed, name the variable and keep the value in
 Because the wildcard covers every subdomain, a new hostname needs **no**
 certificate work — only a DNS record and an ingress rule.
 
-> **Not enabled: Always Use HTTPS.** Plain `http://` is served with a 200 and no
-> redirect. Re-verified 2026-09-24. The fix should be a *hostname-scoped*
-> Redirect Rule for `workbench.*`, **not** the zone-wide toggle, which would
-> also change `api.*` and `mcp.*` for existing machine clients. See §8.
-> Tracked as discovery 44 (CF-D2), still open.
+> **Still not enabled: Always Use HTTPS.** The zone-wide toggle remains OFF, and
+> deliberately so — turning it on would also change `api.*` and `mcp.*` for
+> existing machine clients. HTTPS on the Workbench hostname is instead enforced
+> by a *hostname-scoped* `308` Redirect Rule. Verified 2026-09-25; discovery 44
+> (CF-D2) resolved. See §8, including how the toggle's state is established
+> behaviourally rather than assumed.
 
 ---
 
@@ -337,99 +338,137 @@ effect of another task.
 
 ---
 
-## 8. HTTP → HTTPS on the Workbench hostname (discovery 44, OPEN)
+## 8. HTTP → HTTPS on the Workbench hostname (discovery 44, RESOLVED)
 
-**Current behaviour, verified 2026-09-24:** plain HTTP to the Workbench
-hostname is *served*, not redirected.
+**Resolved 2026-09-25.** Plain HTTP to the Workbench hostname now redirects to
+HTTPS. Previously it was *served* — `200 text/html` at `/`, no `Location`
+header — which is what discovery 44 recorded.
 
-| Request | Response |
+### The rule
+
+A **hostname-scoped wildcard Single Redirect**, created in the Cloudflare
+dashboard (Rules → Redirect Rules), named `workbench-https-only`:
+
+| Field | Value |
 |---|---|
-| `http://workbench.creative-intelligence-system.com/` | `200 text/html` |
-| `http://workbench.creative-intelligence-system.com/api/workbench/auth/session` | `503 application/json` |
-| `http://workbench.creative-intelligence-system.com/login?next=%2Fcards` | `200 text/html` |
+| Match | `http://workbench.creative-intelligence-system.com/*` |
+| Target | `https://workbench.creative-intelligence-system.com/${1}` |
+| Status | `308` Permanent Redirect |
+| Preserve query string | ON |
 
-No `301`/`308`, no `Location:`. HTTPS itself is healthy — HTTP/2, Let's Encrypt
-`YE2` wildcard `*.creative-intelligence-system.com`, valid to 2026-11-14,
-`openssl` verify return code `0 (ok)`, `curl` `ssl_verify_result=0`, and no
-`-k` anywhere in the evidence.
+`308` rather than `301` is the better choice here: it preserves the request
+method and body, so a `POST` to an OIDC endpoint over HTTP is replayed as a
+`POST` over HTTPS rather than being silently downgraded to a `GET`.
 
-**The zone-wide `Always Use HTTPS` toggle is unchanged and was never touched by
-this card.** Its state could not even be read with the credentials on this host
-(see below), so nothing here should be taken as a claim about it.
+### Verified behaviour
 
-### Why this is not fixed yet
+Every case below returns `308` with the scheme swapped and everything else
+intact:
 
-The only Cloudflare API credential on this machine is the token embedded in the
-ARGO TUNNEL TOKEN block of `~/.cloudflared/cert.pem`. There is no
-`CLOUDFLARE_API_TOKEN` / `CF_API_TOKEN` in the environment, the repo or `$HOME`,
-and neither `wrangler` nor `flarectl` is installed.
-
-That token is valid and active, but scoped to what `cloudflared` needs:
-
-| Cloudflare API | Result |
+| Request path | `Location` |
 |---|---|
-| `GET zones/<zone>` | allowed |
-| `GET zones/<zone>/dns_records` | allowed |
-| `GET accounts/<acct>/cfd_tunnel` | allowed |
-| `GET accounts/<acct>/access/apps` | allowed |
-| `GET zones/<zone>/rulesets` | **denied** |
-| `GET .../rulesets/phases/http_request_dynamic_redirect/entrypoint` | **denied** |
-| `GET zones/<zone>/pagerules` | **denied** |
-| `GET zones/<zone>/workers/routes` | **denied** |
-| `GET zones/<zone>/settings`, `.../settings/always_use_https` | **denied** |
+| `/` | `https://workbench.…/` |
+| `/api/workbench/auth/session` | `https://workbench.…/api/workbench/auth/session` |
+| `/login?next=%2Fcards` | `https://workbench.…/login?next=%2Fcards` |
+| `/a/b/c/deep/path` | preserved |
+| `/x?a=1&b=2&c=hello%20world` | preserved, multi-param |
+| `/p%C3%A4th/%C3%BCnicode` | preserved, percent-encoding intact |
+| `/trailing/` | trailing slash intact |
+| `/?onlyquery=1` | query-only intact |
 
-So every mechanism that could enforce the redirect — Redirect Rule, Page Rule,
-Worker route, zone setting — is out of reach from this host. Discovery 44 is
-therefore **not** resolved, and must not be recorded as resolved.
+`HEAD` and `POST` both redirect and keep their method. Following the redirect
+lands on the right place with valid TLS — `num_redirects=1`, `http_version=2`,
+`ssl_verify_result=0`, no `curl -k` anywhere:
 
-An origin-side redirect inside `tools/development/oidc_preview` was considered
-and rejected: the preview is explicitly temporary (discovery 45), so a redirect
-living there would vanish the moment the production runtime replaces it.
+```
+http://workbench.…/                          -> 200  https://workbench.…/
+http://workbench.…/login?next=%2Fcards       -> 200  https://workbench.…/login?next=%2Fcards
+http://workbench.…/api/workbench/auth/session-> 503  https://workbench.…/api/workbench/auth/session
+```
 
-### What Eric needs to do in the dashboard
+(The `503` is the preview reporting OIDC unconfigured — discovery 39 — not a
+redirect fault.) No redirect leaves the domain, and none lands on Cloudflare
+Access.
 
-Hostname-scoped, so `api.*` and `mcp.*` keep their current behaviour:
+### Scope: the zone-wide toggle is still OFF
 
-1. Cloudflare dashboard → zone **creative-intelligence-system.com**
-2. **Rules → Redirect Rules → Create rule**
-3. Rule name: `workbench-https-only`
-4. **When incoming requests match → Custom filter expression**, edit as
-   expression:
-   ```
-   (http.host eq "workbench.creative-intelligence-system.com" and not ssl)
-   ```
-5. **Then… → Type: Dynamic**, Expression:
-   ```
-   concat("https://workbench.creative-intelligence-system.com", http.request.uri)
-   ```
-   `http.request.uri` is path **and** query, so `/login?next=%2Fcards` survives.
-6. **Status code: 301**, **Preserve query string: on**
-7. Deploy.
+**`Always Use HTTPS` was not enabled, and this work never enabled it.** That is
+not an assumption — the zone settings API is denied to the only credential on
+this host, so it is established behaviourally:
 
-Do **not** enable zone-wide `Always Use HTTPS` as a substitute. It would change
-`api.*` and `mcp.*` for existing machine clients, which this card's scope rule
-forbids without separate proof.
+All four hostnames in the zone are proxied (from the DNS API, which the token
+*can* read: apex, `api.*`, `mcp.*`, `workbench.*`, all `proxied=True`).
+`Always Use HTTPS` is a zone-wide edge redirect applied to every proxied
+hostname before origin resolution, so if it were on, the apex would `301`
+instead of reaching an origin error. It does not:
 
-Verify afterwards (no `-k`):
+```
+http://creative-intelligence-system.com/   ->  530  (origin error 1016), no Location
+```
+
+A proxied hostname that reaches an origin error over plain HTTP proves the
+zone-wide redirect is not running. The toggle is off.
+
+### `api.*` and `mcp.*` — what is and is not known
+
+Both now answer plain HTTP with `301` to their **own** HTTPS host:
+
+```
+http://api.../zzz?k=v  ->  301  https://api.../zzz?k=v
+http://mcp.../zzz?k=v  ->  301  https://mcp.../zzz?k=v
+```
+
+**This is not the Workbench rule.** That rule rewrites to a literal
+`workbench.*` URL; anything it matched would be sent there. These preserve each
+hostname's own host, and they answer `301` where the Workbench rule answers
+`308` — a different layer (they also carry `alt-svc: h3=":443"`, which the
+Workbench `308` does not).
+
+**Honest gap:** no plain-HTTP baseline for `api.*` or `mcp.*` was ever captured
+— not by this card's first pass, which compared HTTPS responses only, and not
+anywhere else in the repo. So it cannot be *proven* from evidence whether that
+`301` predates the Workbench rule. What is proven is that it is neither the
+Workbench rule nor the zone-wide toggle, and that both hostnames still end at
+their established protected responses:
+
+```
+http://api.*  -L  ->  cis-live.cloudflareaccess.com/cdn-cgi/access/login/…  (200)
+http://mcp.*  -L  ->  https://mcp.*  403
+https://api.*     ->  302 Access      (identical to the pre-rule baseline)
+https://mcp.*     ->  403             (identical to the pre-rule baseline)
+```
+
+The likely explanation is Cloudflare Access, which forces HTTPS on the
+hostnames it protects because its session cookies are `Secure`-only. §4 of this
+document records exactly the right split: `api.*` has the "Eric only" Allow
+application and `mcp.*` has the MCP Service Token application, while
+`workbench.*` has **no** Access application at all. The two hostnames that
+`301` are precisely the two with Access in front; the one that did not redirect
+until a rule was added is precisely the one without. That asymmetry *is*
+discovery 44.
+
+If you want this closed off completely, confirm in the dashboard that
+SSL/TLS → Edge Certificates → **Always Use HTTPS** reads OFF and that Redirect
+Rules contains `workbench-https-only` and nothing targeting `api.*` or `mcp.*`.
+
+### If the rule ever needs rebuilding
+
+Re-verify with (no `-k`):
 
 ```bash
 curl -sS -D - -o /dev/null http://workbench.creative-intelligence-system.com/
 curl -sS -D - -o /dev/null 'http://workbench.creative-intelligence-system.com/login?next=%2Fcards'
-# expect: HTTP/1.1 301, location: https://workbench.creative-intelligence-system.com/...
 curl -sSL -o /dev/null -w '%{http_code} ssl_verify=%{ssl_verify_result}\n' \
   http://workbench.creative-intelligence-system.com/
 ```
 
-### Alternative: a scoped API token
+Expect `308` with `Location` on the same host and path, then `200 ssl_verify=0`.
 
-If this should be automatable in future, a token with **Zone → Rules →
-Ruleset:Edit** on this zone only, stored outside the repo, would let a card
-create the rule via
-`PUT /zones/<zone>/rulesets/phases/http_request_dynamic_redirect/entrypoint`.
-That is a deliberate credential decision for Eric, not something a card should
-mint for itself.
+No credential on this host can create or read that rule: the cloudflared origin
+certificate's embedded token is denied on Rulesets, Page Rules, Worker routes
+and Zone Settings. Changing it is a dashboard action, or needs a token scoped to
+Zone → Rules → Ruleset:Edit stored outside the repo.
 
----
 
 ## 9. Access remains off the Workbench hostname
 
