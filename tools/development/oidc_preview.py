@@ -51,6 +51,10 @@ import time
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 RUNTIME_DIR = os.path.join(REPO_ROOT, "runtime")
 UI_DIST = os.path.join(RUNTIME_DIR, "ui", "dist")
+# Vite's build.assetsDir default, and what the compiled index.html references
+# under base '/ui/'. A miss inside this directory is a build or cache fault,
+# never a client-side route — see the ui() docstring.
+UI_ASSET_DIR = "assets"
 
 DEFAULT_PORT = 5055
 LOOPBACK = "127.0.0.1"
@@ -72,6 +76,7 @@ def build_preview_app():
     """The preview Flask app. Authentication surface only."""
     _import_runtime()
     from flask import Flask, jsonify, send_from_directory
+    from werkzeug.security import safe_join
 
     import workbench_auth
     import workbench_oidc
@@ -98,6 +103,35 @@ def build_preview_app():
             "identity": getattr(g, "cis_identity", None),
             "role": getattr(g, "cis_role", None),
             "note": "Preview-only endpoint. It reads and writes nothing.",
+        }), 200
+
+    @app.route("/api/workbench/preview/echo", methods=["POST"])
+    def echo():
+        """A test-only STATE-CHANGING-SHAPED endpoint that changes no state.
+
+        It exists for one reason: CSRF enforcement lives in
+        workbench_auth.check_auth() and only engages for POST/PATCH/PUT/DELETE,
+        and every other route on this preview is a GET. Without a POST here
+        there is no way to demonstrate the CSRF boundary against a REAL browser
+        session without registering a real downstream route — which is exactly
+        what this preview exists to avoid.
+
+        It is the narrowest thing that can prove the control: it takes the same
+        check_auth() path every Workbench route takes, so the rejection is the
+        production code path and not a re-implementation, and on success it
+        reads nothing, writes nothing, calls no model, touches no database and
+        returns no input back to the caller. A request that gets past CSRF has
+        accomplished nothing except being told so.
+        """
+        from flask import g
+        auth_error = workbench_auth.check_auth()
+        if auth_error:
+            return auth_error
+        return jsonify({
+            "ok": True,
+            "auth_method": getattr(g, "cis_auth_method", None),
+            "role": getattr(g, "cis_role", None),
+            "note": "Preview-only. CSRF passed. Nothing was read, written or dispatched.",
         }), 200
 
     @app.route("/api/workbench/preview/status", methods=["GET"])
@@ -129,15 +163,79 @@ def build_preview_app():
     @app.route("/", methods=["GET"])
     @app.route("/<path:asset>", methods=["GET"])
     def ui(asset="index.html"):
-        """The compiled UI, or index.html for any client-side route."""
+        """The compiled UI, or index.html for any client-side route.
+
+        The bundle is built by Vite with `base: '/ui/'` (runtime/ui/vite.config.js)
+        because production serves it under /ui/ — so the compiled index.html asks
+        for /ui/assets/index-<hash>.js. This preview serves dist/ at the ROOT, and
+        without the prefix strip below that request misses, falls through to the
+        SPA fallback, and the browser is handed text/html for a
+        `<script type="module">`. Strict MIME checking then refuses to execute it,
+        #root is never populated, and the page renders completely blank with no
+        visible error — which is exactly what it did during the WB.1 Auth0 login
+        proof before this was found.
+
+        Stripping the prefix here, rather than rebuilding with a different base,
+        keeps the preview serving the SAME bytes production serves: one build,
+        verified once. It adds no route — /<path:asset> already matches — so the
+        registered surface asserted by test_oidc_preview_boundary.py is unchanged.
+
+        CONFINEMENT COMES BEFORE EXISTENCE, DELIBERATELY
+
+        send_from_directory() would refuse to serve a file outside UI_DIST on
+        its own, so the bytes were never at risk. The ordering below guards a
+        subtler thing: the os.path.isfile() that CHOOSES between the asset and
+        the SPA fallback. Handed an unchecked "../../etc/passwd", that call
+        would stat a path outside the bundle, and the branch it picked would
+        differ depending on whether that outside file existed — turning the
+        response into a yes/no oracle for arbitrary paths on this host, without
+        ever serving a byte of them.
+
+        So safe_join() proves confinement FIRST and returns None when the path
+        escapes; only a path already inside UI_DIST is ever stat-ed. An escape
+        attempt takes the ordinary SPA fallback and is therefore indistinguish-
+        able from any other unknown client-side route.
+
+        A MISSED ASSET MUST 404, NOT FALL BACK TO THE SHELL
+
+        The SPA fallback is correct for /some/client/route. It is actively
+        harmful for /ui/assets/index-<hash>.css, because it answers a
+        stylesheet request with 200 text/html. Chrome's strict MIME checking
+        then refuses the stylesheet, the page loses --text and color-scheme,
+        body text falls back to black, and over a dark-themed browser canvas
+        the result is black on black: unreadable until selected, with no error
+        anywhere. That is the same failure that made the page blank when the
+        JS asset missed, and it is worse for CSS because the page still
+        renders and so looks like a styling bug rather than a 404.
+
+        It also PERSISTS. Cloudflare edge-caches by extension and the browser
+        caches too, so one wrong-MIME 200 is remembered for hours against a
+        URL that is supposed to be immutable. A 404 is not cached that way and
+        fails loudly, so a stale or renamed bundle reference can never again be
+        stored as a false success.
+        """
         if not os.path.isdir(UI_DIST):
             return jsonify({
                 "error": "The UI has not been built",
                 "detail": f"{UI_DIST} does not exist. Run `npm run build` in "
                           "runtime/ui first.",
             }), 503
-        target = asset if os.path.isfile(os.path.join(UI_DIST, asset)) else "index.html"
-        return send_from_directory(UI_DIST, target)
+        # /ui/assets/x.js and /assets/x.js both mean dist/assets/x.js here.
+        candidate = asset[3:] if asset.startswith("ui/") else asset
+        confined = safe_join(UI_DIST, candidate)   # None if it escapes UI_DIST
+        if confined and os.path.isfile(confined):
+            return send_from_directory(UI_DIST, candidate)
+        if candidate.split("/", 1)[0] == UI_ASSET_DIR:
+            # Deliberately not the shell: see "A MISSED ASSET MUST 404" above.
+            # Escaping paths land here too, and answer identically whether or
+            # not the file they point at exists, so this discloses nothing.
+            return jsonify({
+                "error": "No such compiled asset",
+                "detail": f"{candidate} is not in the build. The page is "
+                          "probably referencing a stale bundle — hard-reload, "
+                          "or re-run `npm run build` in runtime/ui.",
+            }), 404
+        return send_from_directory(UI_DIST, "index.html")
 
     return app
 
