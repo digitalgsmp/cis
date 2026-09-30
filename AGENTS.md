@@ -1,5 +1,5 @@
 # CIS — AGENTS.md
-Generated: 2026-09-25 01:46 UTC | Run: run-b20268c87fe6 | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-09-30 04:55 UTC | Run: none | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
@@ -51,6 +51,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 4. Active Decisions
 Full text/reasoning of any decision: `project_decisions` table in the spine DB — `sqlite3 data/cis_memory.db "SELECT * FROM project_decisions WHERE id='<ID>'"`. This table is the canonical source; the list below is an index, not a summary.
+- [ADR-SEED-017] Development phase rule — functionality first, refactor deliberately
 - [ADR-SEED-016] Enforcement Primitive Approved
 - [ADR-SEED-015] Enforcement architecture: three-layer process isolation
 - [ADR-SEED-014] BLK-SEED-005 refresh-bug root cause: get_default_hermes_root collapses onto prime unit
@@ -219,3 +220,40 @@ requires operator-only credentials, or an external advisor
 explicitly requests independent human verification.
 The Verification Hardening Rule (Section 9) is the V4 Implementer-
 specific application of this general principle.
+
+## 15. Development Phase Rule — Functionality First, Refactor Deliberately
+CIS is in a FUNCTIONALITY-FIRST implementation phase.
+The three-layer architecture — Layer 1 UI/control plane, Layer 2 CIS
+abstraction layer, Layer 3 Hermes backend — remains the governing design
+direction and constrains the direction of all new work.
+Planned architecture is a DESTINATION and a design constraint. It is not a
+claim that current file placement, module size, naming, or configuration
+layout already conforms to the final refactored form.
+New work must not introduce new Layer 1 to Hermes coupling. Hermes-specific
+ports, profiles, dispatch, and compatibility logic belong in Layer 2.
+Classify existing structural debt before acting on it:
+  1. FUNCTIONAL_BLOCKER — current work cannot proceed safely or correctly
+     until it is fixed. Normally fix now.
+  2. ARCHITECTURAL_BOUNDARY_VIOLATION — fix now only if the current feature
+     would significantly deepen it, or it creates immediate material
+     correctness/security/recovery risk. Otherwise record and defer.
+  3. REFACTOR_DEBT — record and defer. Do not convert a feature card into an
+     opportunistic cleanup project.
+REFACTOR_DEBT, not blockers: large modules such as pipeline_relay.py;
+historical naming drift; duplicate configuration; .bak files; stale generated
+artifacts; imperfect directory organization; dead/non-functional historical
+provider credentials absent evidence of an active credential problem.
+The five-install/shared-venv Hermes topology is ARCHITECTURAL_BOUNDARY_VIOLATION
+debt because it weakens Hermes-update isolation, but it must not interrupt
+unrelated feature work unless it blocks or materially endangers that feature.
+Broad cleanup, refactoring, and repository reorganization are an explicit
+later project phase, not in-scope for feature cards.
+Auditors and reviewers must not convert every discrepancy between architecture
+documentation and current code layout into a development or release blocker.
+This rule never excuses broken functionality, unsafe behavior, missing
+verification, or a skipped gate. The Verification Hardening Rule and the
+Evidence-Backed Response Rule remain in full force; functionality proof is
+still required.
+Deferred debt must stay visible and traceable so the later cleanup phase has
+an inventory.
+Authority: ADR-SEED-017.

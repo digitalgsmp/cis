@@ -62,6 +62,30 @@ hcp_00:
     Do not reopen decisions marked complete.
     Ask Eric before changing direction.
 
+    Development phase rule (ADR-SEED-017). CIS is currently being built
+    FUNCTIONALITY FIRST. The final three-layer architecture — Layer 1 UI/control
+    plane, Layer 2 CIS abstraction layer, Layer 3 Hermes backend — is a
+    DESTINATION and a design constraint on direction, not a claim that the
+    current physical repository structure is already fully refactored. Module
+    size, naming consistency, configuration consolidation, and directory layout
+    are not expected to match the final form yet.
+    Classify every finding as one of: FUNCTIONAL_BLOCKER (current work cannot
+    proceed safely or correctly until fixed); ARCHITECTURAL_BOUNDARY_VIOLATION
+    (fix during feature work only if the feature would significantly deepen it or
+    it creates immediate material correctness/security/recovery risk); or
+    REFACTOR_DEBT (record and defer).
+    Do not let opportunistic cleanup displace active feature development unless
+    the debt blocks the current feature, materially endangers it, or would be
+    significantly deepened by it. Do not convert every discrepancy between
+    architecture documentation and current code layout into a development or
+    release blocker.
+    Deferred refactor never excuses broken functionality, unsafe behavior,
+    missing verification, or skipped gates. Functionality proof is still
+    required and the Evidence-Backed Response Rule remains in full force.
+    Full rule text: config/agents_static.yaml key development_phase_rule,
+    projected to AGENTS.md section 15. Spine record: project_decisions
+    ADR-SEED-017.
+
   reading_order:
     - "Read HCP_01_CURRENT_STATE.md first"
     - "Read HCP_05_NEXT_ACTIONS.md"

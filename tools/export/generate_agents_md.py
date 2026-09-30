@@ -286,6 +286,13 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
     lines.append(static.get("evidence_rule", "").strip())
     lines.append("")
 
+    dev_phase = static.get("development_phase_rule", "").strip()
+    if dev_phase:
+        lines.append("## 15. Development Phase Rule — Functionality First, "
+                     "Refactor Deliberately")
+        lines.append(dev_phase)
+        lines.append("")
+
     return "\n".join(lines)
 
 
