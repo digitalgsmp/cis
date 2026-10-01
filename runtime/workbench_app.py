@@ -201,10 +201,95 @@ def _kb_search(conn: sqlite3.Connection, query: str, limit: int = 5) -> list:
     return [{"content": _redact(r[0][:500]), "source": r[1]} for r in rows]
 
 
+# ── Brain gateway failure envelope (WB1-D16) ─────────────────────────────
+#
+# The Brain/Hermes gateway answers HTTP 200 even when upstream generation
+# FAILED, and puts the provider's error text where a model answer would go.
+# Observed live 2026-10-01 against an invalid upstream provider credential:
+#
+#   HTTP 200
+#   choices[0].finish_reason = "error"
+#   choices[0].message.content = "HTTP 401: Authentication Fails, ..."
+#   hermes = {"completed": false, "partial": false, "failed": true,
+#             "error": "HTTP 401: ...", "error_code": "agent_error"}
+#
+# So "HTTP 2xx and nonempty content" cannot distinguish a real answer from a
+# failure report. Checking only that — as this function used to — is how an
+# upstream provider outage got persisted as a completed role='brain'
+# conversational turn whose content was the provider's error string. A
+# conversation surface that reports someone else's failure as its own answer
+# is worse than one that reports nothing.
+#
+# These checks read the gateway's OWN machine-readable fields. They
+# deliberately do not match provider error prose ("Authentication Fails",
+# "rate limit", ...): that prose is the upstream vendor's, varies per
+# provider, is localized and unversioned, and a string-matching boundary
+# silently reopens this hole the first time a provider rewords a message.
+#
+# Absence of the indicators is NOT failure. A plain OpenAI-compatible gateway
+# with no `hermes` key, or a finish_reason of "stop"/"length", is a success —
+# "length" is a truncated but genuine generation, not an error. Only an
+# explicit, positive failure signal fails the call closed.
+GATEWAY_ERROR_FINISH_REASONS = ("error",)
+
+
+def _brain_envelope_failure(data) -> Optional[str]:
+    """Inspect a Brain gateway response envelope for the gateway's own
+    failure indicators. Returns a human-readable failure description if the
+    envelope reports a failed generation, or None if it reports a genuine
+    one. See the GATEWAY_ERROR_FINISH_REASONS comment above for why these
+    specific fields and not the provider's error prose."""
+    if not isinstance(data, dict):
+        return "Brain gateway returned a %s where a response object was expected" % type(data).__name__
+
+    indicators = []
+
+    # Hermes' own generation-outcome block. `failed` is the positive signal;
+    # `completed` is the same fact stated the other way round, and is checked
+    # with `is False` so a gateway that simply omits the field is not treated
+    # as having failed.
+    hermes = data.get("hermes")
+    if isinstance(hermes, dict):
+        if hermes.get("failed") is True:
+            indicators.append("hermes.failed=true")
+        if hermes.get("completed") is False:
+            indicators.append("hermes.completed=false")
+
+    # OpenAI-compatible per-choice terminal state.
+    choices = data.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        finish_reason = choices[0].get("finish_reason")
+        if finish_reason in GATEWAY_ERROR_FINISH_REASONS:
+            indicators.append("finish_reason=%r" % finish_reason)
+
+    if not indicators:
+        return None
+
+    # Several indicators normally fire together on one underlying failure
+    # (the live case above raises all three). They are reported as one error
+    # naming every indicator seen, so the envelope stays diagnosable without
+    # turning one upstream failure into several application errors.
+    detail = ""
+    if isinstance(hermes, dict):
+        code = hermes.get("error_code")
+        text = hermes.get("error")
+        if code:
+            detail += " error_code=%s;" % code
+        if text:
+            detail += " upstream reported: %s" % str(text).strip()
+    return ("Brain gateway reported a failed generation (%s).%s"
+            % (", ".join(indicators), detail)).strip()
+
+
 def _call_brain_gateway(messages: list, timeout: float = 60.0):
     """Call the configured Brain gateway. Returns (content, error) — exactly
     one of the two is not None. Never fabricates a response and never
-    substitutes another model on failure."""
+    substitutes another model on failure.
+
+    Fails CLOSED on an upstream failure envelope (WB1-D16): a gateway
+    response that reports a failed generation returns an error even when the
+    HTTP status is 200 and the body carries text, so the caller can never
+    persist someone else's failure as a successful Brain turn."""
     key = os.environ.get(BRAIN_API_KEY_ENV, "")
     headers = {"Content-Type": "application/json"}
     if key:
@@ -214,6 +299,11 @@ def _call_brain_gateway(messages: list, timeout: float = 60.0):
         resp = httpx.post(BRAIN_GATEWAY_URL, json=payload, headers=headers, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
+        # Checked BEFORE reading content, so failure text is never returned
+        # as an answer.
+        envelope_error = _brain_envelope_failure(data)
+        if envelope_error:
+            return None, envelope_error
         content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
         if not content:
             return None, "Brain gateway returned an empty response"
