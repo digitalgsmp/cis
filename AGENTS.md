@@ -1,11 +1,11 @@
 # CIS — AGENTS.md
-Generated: 2026-09-30 04:55 UTC | Run: none | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-10-01 03:11 UTC | Run: run-69c5a952ac42 | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Phase PD CLOSED. Phase 0 CLOSED (loop-breaker deployed, BLK-SEED-006 RESOLVED). Current: Control Plane Observation Pipeline — spec phase REVISION 3, 4 review rounds complete. Pipeline team: Brainstorm (8644), Drafter (8645), Qwen Reviewer (8643), GLM Reviewer (8647), Implementer (8646), GLM Verifier (8648).
-Direction: Phase 0: Close the loop-breaker gap. Enforcement primitive proven (5 walls held, all passes). Loop-breaker root cause: successful repeated identical tool calls not caught by guardrail. First test config-only (hard_stop_enabled + same_tool threshold). Build target: counter for identical ToolCallSignature regardless of success/failure.
+Contained-pipeline build, phase P0 of the P0-P6 sequence (ADR-PIPE-001). WB.1 Slice 1 activation in progress. Braingate conversation, Card Factory and Card Runner are BUILT_BUT_DORMANT - independently reviewed, not registered (ADR-PIPE-005). The apparatus plane (queue-in-spine, continuity ledger, canonical-state read model, recovery packet - queue items 4.29-4.32) is adequate to resume contained-pipeline development, not finished.
+Direction: P0 - finish and activate WB.1 Slice 1 (Braingate conversation). Close WB1-D10 (the frontend capability guard), resolve the deployment / environment-injection / listener seam, apply migrations 0035 + 0038 only, register braingate_conversation_bp + workbench_oidc_bp only, activate narrowly and prove the live path, then resolve continuity revisions R20/R27 on evidence. Do NOT activate Card Factory or Card Runner; 0036 and 0037 stay unapplied until P3 and P4 respectively. Authority: ADR-PIPE-001.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -51,6 +51,7 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 4. Active Decisions
 Full text/reasoning of any decision: `project_decisions` table in the spine DB — `sqlite3 data/cis_memory.db "SELECT * FROM project_decisions WHERE id='<ID>'"`. This table is the canonical source; the list below is an index, not a summary.
+- [ADR-SEED-018] Layer ownership — what is CIS Layer 2 and what is Hermes Layer 3
 - [ADR-SEED-017] Development phase rule — functionality first, refactor deliberately
 - [ADR-SEED-016] Enforcement Primitive Approved
 - [ADR-SEED-015] Enforcement architecture: three-layer process isolation
