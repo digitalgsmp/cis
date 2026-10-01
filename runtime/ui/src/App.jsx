@@ -265,6 +265,18 @@ export default function App() {
   const pollRef = useRef(null);
 
   async function loadProjects(selectId) {
+    // Not merely hidden — not requested, for the same reason loadProposals is
+    // not. Route absence is the security boundary; this is the presentation
+    // side of it. At a stage where the server has not registered /projects,
+    // asking for it falls through to the SPA/404 fallback and surfaces "Could
+    // not load projects: Bad response from server (status 404)" — an error
+    // about a stage the user has not reached, phrased as though something they
+    // did had failed.
+    if (!can("projects")) {
+      setProjects([]);
+      setActiveId(null);
+      return;
+    }
     const result = await listProjects();
     if (!result.ok) {
       if (noteAuthFailure(result)) return;
@@ -390,6 +402,11 @@ export default function App() {
 
   useEffect(() => {
     if (auth.state !== "authenticated") return;
+    // A project id remembered from a later stage must not resurrect the
+    // project surface on a server that no longer registers it: activeId is
+    // restored from localStorage before any capability is known, so without
+    // this the stored id alone would fire a per-project request.
+    if (!can("projects")) return;
     if (activeId) localStorage.setItem(LAST_PROJECT_KEY, activeId);
     loadMessages(activeId);
     loadProposals(activeId);
@@ -569,7 +586,14 @@ export default function App() {
 
       <div className="workbench-body">
         <aside className="sidebar">
-          {projects === null ? (
+          {!can("projects") ? (
+            /* Said plainly rather than left as a permanent "Loading projects…"
+               that never resolves, or as a switcher offering to create one
+               against a route that does not exist. */
+            <div className="muted">
+              Projects are not available yet at this stage.
+            </div>
+          ) : projects === null ? (
             <div className="muted">Loading projects…</div>
           ) : (
             <ProjectSwitcher
@@ -585,7 +609,9 @@ export default function App() {
         <main className="conversation-pane">
           {!activeProject ? (
             <div className="empty-state">
-              {projects === null ? "" : "Create a project to start a conversation with Braingate."}
+              {!can("projects")
+                ? "Projects and conversations are not available yet. This server has not enabled them."
+                : projects === null ? "" : "Create a project to start a conversation with Braingate."}
             </div>
           ) : (
             <>

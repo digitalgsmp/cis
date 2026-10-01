@@ -27,6 +27,18 @@ vi.mock("./api", () => {
       signInRedirects: 0,
       providerLogoutUrl: null,
       projectsUnauthenticated: false,
+      // What GET /auth/session reports about the surfaces this server
+      // registered (runtime/workbench_oidc.py stage_capabilities, which always
+      // answers with every key for an authenticated session — only an
+      // anonymous response omits the block). This suite is about getting
+      // signed in, not about staging, so it stands in for a fully-registered
+      // Workbench; the capability=false and capability=missing contracts are
+      // App.test.jsx's "WB1-D10 projects capability boundary" block.
+      capabilities: {
+        projects: true, project_create: true, conversation: true,
+        proposals: true, proposal_actions: true, execution: true,
+        card_factory: true, card_runner: true,
+      },
     };
   }
   const state = freshState();
@@ -64,6 +76,7 @@ vi.mock("./api", () => {
         authenticated: true,
         csrf_token: state.csrfToken,
         identity: state.identity,
+        capabilities: state.capabilities,
       });
     }),
 

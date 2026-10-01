@@ -278,6 +278,17 @@ async function renderAppOnProject() {
   return user;
 }
 
+// The authenticated shell, without requiring that any project surface exists.
+// The signed-in identity comes from the session alone, so this settles once the
+// session check has been answered — which is the only thing a stage reporting
+// projects=false can be expected to render.
+async function renderAppAuthenticated() {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByText(/Eric Shelton/);
+  return user;
+}
+
 async function draftProposal(user, { noScope = false } = {}) {
   const box = screen.getByPlaceholderText(/Talk to Braingate/);
   await user.type(box, noScope ? "Let's mock up a dashboard NO_SCOPE" : "Let's mock up a dashboard");
@@ -695,10 +706,160 @@ describe("Braingate-only stage (server reports no downstream capabilities)", () 
   it("keeps downstream controls hidden when the server reports no capabilities at all", async () => {
     // An older or unknown server that does not send `capabilities`. The UI must
     // fail closed: unknown is not permission to advertise.
+    //
+    // Note what is asserted and what is not. This case reports no `projects`
+    // capability either, so per WB1-D10 the project surface itself must stay
+    // shut — there is no composer to find, and looking for one here would be
+    // asserting the very defect D10 fixed. The authenticated shell is what
+    // remains, and the capability=missing block below states that contract
+    // directly.
     globalThis.__setCapabilities(undefined);
-    await renderAppOnProject();
+    await renderAppAuthenticated();
     expect(screen.queryByRole("button", { name: /Card Factory/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /propose action/i })).toBeNull();
-    expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+  });
+});
+
+// ── WB1-D10: the projects capability boundary ───────────────────────────
+//
+// The defect: the authenticated app loaded projects on the strength of
+// authentication alone, so a server reporting projects=false still received
+// GET /api/workbench/projects. At a stage where that route is deliberately
+// unregistered the request falls through to the SPA/404 fallback, and the user
+// is shown "Could not load projects: …" — an error about a stage they have not
+// reached, worded as though their own action failed.
+//
+// The contract proven here: only a capability the server positively reports as
+// available may be advertised or requested. False, absent, null and malformed
+// all read as unavailable.
+//
+// This is presentation, not authorization. The matching proof that the route
+// genuinely does not exist, and that forging these flags reaches nothing, is
+// runtime/tests/test_braingate_conversation_boundary.py section 13.
+describe("WB1-D10 projects capability boundary", () => {
+  const WITHOUT_PROJECTS = {
+    ...globalThis.__BRAINGATE_ONLY_CAPABILITIES,
+    projects: false, project_create: false, conversation: false,
+  };
+
+  // Test A — capability true: unchanged behavior.
+  it("requests projects when the server positively reports the capability", async () => {
+    globalThis.__setCapabilities(globalThis.__FULL_CAPABILITIES);
+    const api = await import("./api");
+    await renderAppOnProject();
+    expect(api.listProjects).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Test Project" })).toBeTruthy();
+    expect(screen.getByPlaceholderText(/Talk to Braingate/)).toBeTruthy();
+  });
+
+  it("requests projects at the Braingate stage, which reports the capability true", async () => {
+    // The stage this card precedes. `projects` is one of the capabilities
+    // braingate_conversation_bp does register, so the guard must not shut the
+    // surface the activation card is about to turn on.
+    globalThis.__setCapabilities(globalThis.__BRAINGATE_ONLY_CAPABILITIES);
+    const api = await import("./api");
+    await renderAppOnProject();
+    expect(api.listProjects).toHaveBeenCalled();
+  });
+
+  // Test B — capability false: no request, no misleading error.
+  it("never requests projects when the server reports the capability false", async () => {
+    globalThis.__setCapabilities(WITHOUT_PROJECTS);
+    const api = await import("./api");
+    await renderAppAuthenticated();
+
+    expect(api.listProjects).not.toHaveBeenCalled();
+    expect(api.createProject).not.toHaveBeenCalled();
+  });
+
+  it("shows no project-load failure when the capability is false", async () => {
+    globalThis.__setCapabilities(WITHOUT_PROJECTS);
+    await renderAppAuthenticated();
+
+    // The 404-shaped error this card exists to remove, in either of the two
+    // wordings api.js can produce for an unregistered route.
+    expect(screen.queryByText(/Could not load projects/i)).toBeNull();
+    expect(screen.queryByText(/status 404/i)).toBeNull();
+    expect(screen.queryByText(/Bad response from server/i)).toBeNull();
+    // And not a spinner that never resolves in place of the error, either.
+    expect(screen.queryByText(/Loading projects/i)).toBeNull();
+    // Said plainly instead: the stage is stated, not a failure.
+    expect(screen.getByText(/Projects are not available yet at this stage/i)).toBeTruthy();
+    expect(screen.getByText(/Projects and conversations are not available yet/i)).toBeTruthy();
+  });
+
+  it("does not advertise project functionality when the capability is false", async () => {
+    globalThis.__setCapabilities(WITHOUT_PROJECTS);
+    await renderAppAuthenticated();
+
+    expect(screen.queryByRole("button", { name: /New project/i })).toBeNull();
+    expect(screen.queryByPlaceholderText(/Project name/i)).toBeNull();
+    expect(screen.queryByPlaceholderText(/Talk to Braingate/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+  });
+
+  it("makes no per-project request from a project id remembered at a later stage", async () => {
+    // The stored-selection path. activeId is restored from localStorage before
+    // any capability is known, so a browser that used the Workbench when the
+    // routes existed must not replay a per-project request against a server
+    // that no longer registers them.
+    localStorage.setItem("cis-workbench-last-project", "p1");
+    globalThis.__setCapabilities(WITHOUT_PROJECTS);
+    const api = await import("./api");
+    await renderAppAuthenticated();
+
+    expect(api.listProjects).not.toHaveBeenCalled();
+    expect(api.listMessages).not.toHaveBeenCalled();
+    expect(api.listProposals).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Could not load conversation/i)).toBeNull();
+  });
+
+  // Test C — capability missing/unknown/malformed: fail closed.
+  it.each([
+    ["no capabilities block at all", undefined],
+    ["a null capabilities block", null],
+    ["an empty capabilities block", {}],
+    ["the projects key explicitly null", { projects: null }],
+    ["a string 'true' instead of a boolean", { projects: "true" }],
+    ["a 1 instead of a boolean", { projects: 1 }],
+    ["a truthy non-boolean object", { projects: {} }],
+  ])("never requests projects given %s", async (_label, caps) => {
+    // Authentication is not permission. Each of these is a session that is
+    // fully authenticated and reports no POSITIVE projects capability.
+    globalThis.__setCapabilities(caps);
+    const api = await import("./api");
+    await renderAppAuthenticated();
+
+    expect(api.listProjects).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Could not load projects/i)).toBeNull();
+  });
+
+  // Test D — the authentication contract is untouched.
+  it("leaves the authenticated session intact when the capability is false", async () => {
+    globalThis.__setCapabilities(WITHOUT_PROJECTS);
+    const api = await import("./api");
+    await renderAppAuthenticated();
+
+    // Still signed in as a named individual with a role, still able to leave.
+    expect(screen.getByText(/Eric Shelton/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+    // Not mistaken for a sign-out or an authorization failure.
+    expect(screen.queryByRole("button", { name: /Sign in/i })).toBeNull();
+    expect(screen.queryByText(/Sign in to continue/i)).toBeNull();
+    expect(api.logout).not.toHaveBeenCalled();
+  });
+
+  it("still shows the sign-in gate for an unauthenticated session", async () => {
+    // The capability guard must not have become a second, softer gate: an
+    // unauthenticated session is still refused the whole app, capabilities or
+    // not, and no Workbench data is fetched.
+    const api = await import("./api");
+    api.refreshSession.mockResolvedValueOnce({ ok: true, data: { authenticated: false } });
+    render(<App />);
+
+    await screen.findByText(/Sign in to continue/i);
+    expect(api.listProjects).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Eric Shelton/)).toBeNull();
   });
 });
