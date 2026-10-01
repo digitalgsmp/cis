@@ -1,10 +1,13 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-01 03:15 UTC | Run: run-9c14b7476565
+Generated: 2026-10-01 16:43 UTC | Run: run-384368157b1c
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-01 | [ADR-XDEV-001] External-developer work is not durable until independently verified from the remote: For repository-chang | Reached during independent review and previously resident only in ChatGPT/Claude | DECIDED | spine record |
+| 2026-10-01 | [ADR-XDEV-002] Repository checkpoint status must be visible in the recovery chain: The external recovery path must surfa | A rule that is persisted but never surfaced still depends on someone going looki | DECIDED | spine record |
+| 2026-10-01 | [ADR-PIPE-006] Roadmap and queue are separate authorities; triage reconciles, it does not merge: Clarifies the relations | Reached during independent review. ADR-PIPE-001 fixes the phase order and ADR-PI | DECIDED | spine record |
 | 2026-09-30 | [ADR-SEED-018] Layer ownership — what is CIS Layer 2 and what is Hermes Layer 3: Clarifies the layer assignment named bu | A reviewed pipeline overview mislabelled pipeline_relay.py / dispatch.py / guard | DECIDED | spine record |
 | 2026-09-30 | [ADR-PIPE-001] Contained-pipeline forward sequence P0 through P6: Canonical forward sequence for contained-pipeline deve | Persists the reviewed reorientation of 2026-09-30 so future cards, queue orderin | DECIDED | spine record |
 | 2026-09-30 | [ADR-PIPE-002] Legacy workflow_runs.status values are quarantined, never rewritten: Historical workflow_runs.status valu | Historical rows are evidence. Rewriting them to satisfy a later enum would destr | DECIDED | spine record |

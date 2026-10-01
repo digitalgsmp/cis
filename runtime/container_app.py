@@ -34,6 +34,61 @@ app.register_blueprint(relay_bp)
 from api.system_context import system_context_bp
 app.register_blueprint(system_context_bp)
 
+# ── WB.1 Slice 1 — Braingate conversation stage, ACTIVATED ────────────────────
+# Activated by the WB.1 Braingate live-activation card. Exactly two blueprints
+# register here, and together they are the whole P0 surface:
+#
+#   workbench_oidc_bp          authentication/session only. It answers "who is
+#                              using the currently registered stage", never
+#                              "which stages exist", so registering it grants
+#                              sign-in and nothing else.
+#   braingate_conversation_bp  the conversation-only project/message surface:
+#                              GET/POST /api/workbench/projects,
+#                              GET/PATCH  .../projects/<project_id>,
+#                              GET/POST   .../projects/<project_id>/messages.
+#                              Its POST .../messages is the guarded view that
+#                              permits mode='chat' and refuses every
+#                              downstream-stage mode and payload key outright.
+#
+# The governing capability of this stage: conversation may occur; downstream
+# generation and execution may not. That boundary is ROUTE ABSENCE, enforced
+# here by what is not registered — not by frontend hiding, and not by a model
+# instruction.
+#
+# What must NEVER be registered here while WB.1 is at this stage:
+#   - workbench_app.workbench_bp — it nests card_factory_bp and card_runner_bp
+#     AND carries confirm-direction (paid generation) and approve (agent
+#     dispatch) routes of its own. Deleting its two nested register_blueprint
+#     lines would NOT be sufficient, which is exactly why
+#     braingate_conversation.py exists as a separate blueprint that binds
+#     workbench_app's reviewed conversation views by direct reference.
+#   - card_factory_app.card_factory_bp — /generate spends real money.
+#   - card_runner.card_runner_bp — /dispatch spawns a real agent subprocess.
+# test_braingate_conversation_boundary.py asserts this app's live URL map
+# contains the conversation + auth routes and none of those downstream ones.
+#
+# workbench_oidc.stage_capabilities() reports this surface to the browser by
+# probing THIS app's live url_map, so the capability response cannot drift from
+# what is actually registered — there is no second capability source to keep in
+# step, and a client that forges a capability flag still meets 404.
+#
+# Runtime configuration, none of it committed (see /workspace/secrets.env,
+# sourced by enforcement/mwl-proof-v2/entrypoint.sh with `set -a`):
+# CIS_WORKBENCH_OIDC_ISSUER, CIS_WORKBENCH_OIDC_CLIENT_ID,
+# CIS_WORKBENCH_OIDC_CLIENT_SECRET, CIS_WORKBENCH_PUBLIC_ORIGIN,
+# CIS_WORKBENCH_SESSION_SECRET, CIS_WORKBENCH_ALLOWED_EMAILS and
+# CIS_WORKBENCH_OWNER_EMAILS. Incomplete configuration is fail-closed: sign-in
+# answers 503 and an empty allowlist authorizes nobody, by design. Schema
+# prerequisite is migrations 0035 AND 0038 on the live spine (0035 alone breaks
+# chat duplicate-replay, which queries workbench_action_proposals); 0036/0037
+# must NOT be applied, and 0038 defining the proposals table is schema
+# availability, never route activation.
+from workbench_oidc import workbench_oidc_bp
+app.register_blueprint(workbench_oidc_bp)
+
+from braingate_conversation import braingate_conversation_bp
+app.register_blueprint(braingate_conversation_bp)
+
 # ── Run start (lean, unconditional) ──────────────────────────────────────────
 # Lean counterpart to POST /api/relay/start (api/relay.py:167): no mwl-proof-v2
 # pre-flight, no 1-hour idempotency window. Every call creates a fresh

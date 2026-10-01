@@ -353,17 +353,47 @@ def run():
               and "confirm-direction" in wb_paths and "approve" in wb_paths,
               wb_paths)
 
-        # ── 10. container_app registers none of the forbidden routes ───────
+        # ── 10. container_app is the ACTIVATED WB.1 Slice 1 surface ────────
+        # WB.1 Slice 1 activation registered workbench_oidc_bp and
+        # braingate_conversation_bp in container_app.py. So this check is now
+        # two-sided: the conversation and auth routes MUST be present (an
+        # activation that silently stops being live is a regression too), and
+        # every downstream route MUST still be absent. The downstream-absence
+        # list is unchanged apart from /api/workbench/projects, which moved from
+        # the forbidden side to the required side because activating it is what
+        # this stage is; nothing was removed from the absence contract.
         try:
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
             import container_app
-            ca_paths = " ".join(str(r.rule) for r in container_app.app.url_map.iter_rules())
-            for forbidden in ("/api/cardfactory", "/api/cardrunner", "/api/workbench/projects",
-                              "confirm-direction", "approve"):
+            ca_rules = {str(r.rule) for r in container_app.app.url_map.iter_rules()}
+            ca_paths = " ".join(sorted(ca_rules))
+            for forbidden in ("/api/cardfactory", "/api/cardrunner",
+                              "confirm-direction", "approve", "/proposals"):
                 check(f"10a. live container_app exposes no {forbidden!r} route",
                       forbidden not in ca_paths, ca_paths[:300])
             check("10b. live container_app still exposes System Context",
-                  "/api/workbench/system-context" in ca_paths)
+                  "/api/workbench/system-context" in ca_rules)
+            for required in ("/api/workbench/projects",
+                             "/api/workbench/projects/<project_id>",
+                             "/api/workbench/projects/<project_id>/messages"):
+                check(f"10c. live container_app exposes Braingate {required!r}",
+                      required in ca_rules, ca_paths[:300])
+            for required in ("/api/workbench/auth/login",
+                             "/api/workbench/auth/callback",
+                             "/api/workbench/auth/session",
+                             "/api/workbench/auth/logout"):
+                check(f"10d. live container_app exposes OIDC {required!r}",
+                      required in ca_rules, ca_paths[:300])
+            # The conversation POST must be the GUARDED view, not
+            # workbench_app.send_message bound directly — otherwise the mode
+            # and payload refusals would not run on the live surface.
+            msg_post = [r for r in container_app.app.url_map.iter_rules()
+                        if str(r.rule) == "/api/workbench/projects/<project_id>/messages"
+                        and "POST" in (r.methods or ())]
+            check("10e. the live POST .../messages is the guarded Braingate view",
+                  len(msg_post) == 1
+                  and msg_post[0].endpoint.endswith("send_conversation_message"),
+                  str([(r.endpoint, sorted(r.methods or ())) for r in msg_post]))
         except Exception as e:
             check("10. container_app import", False, f"{type(e).__name__}: {e}")
 
