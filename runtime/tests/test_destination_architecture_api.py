@@ -680,8 +680,14 @@ def test_current_build_state_is_unchanged(before_fingerprint):
         phase = conn.execute(
             "SELECT value FROM project_state WHERE key = 'build_phase' "
             "ORDER BY created_at DESC, id DESC LIMIT 1").fetchone()[0]
+        # Every project_state key EXCEPT external_dev_checkpoint: the checkpoint
+        # row is supposed to describe what was pushed (ADR-XDEV-002 makes that
+        # visibility a requirement), so naming WIASW there is correct. Anywhere
+        # else in project_state would mean the destination architecture had been
+        # written into build state, which is the thing being guarded against.
         wiasw_rows = conn.execute(
-            "SELECT COUNT(*) FROM project_state WHERE value LIKE '%WIASW%'").fetchone()[0]
+            "SELECT COUNT(*) FROM project_state WHERE value LIKE '%WIASW%' "
+            "AND key != 'external_dev_checkpoint'").fetchone()[0]
         queue_wiasw = conn.execute(
             "SELECT COUNT(*) FROM queue_items WHERE title LIKE '%WIASW%' "
             "OR COALESCE(body_md, '') LIKE '%WIASW%'").fetchone()[0]
@@ -692,7 +698,7 @@ def test_current_build_state_is_unchanged(before_fingerprint):
           roadmap[:60])
     check("24c. build_phase still reports P0, not a destination phase",
           "Phase P0" in phase and "WIASW" not in phase, phase[:80])
-    check("24d. no project_state row was given WIASW content",
+    check("24d. no project_state row outside the push checkpoint was given WIASW content",
           wiasw_rows == 0, wiasw_rows)
     check("24e. no queue item was created for WIASW",
           queue_wiasw == 0, queue_wiasw)
