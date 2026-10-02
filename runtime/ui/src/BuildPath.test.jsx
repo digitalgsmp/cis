@@ -4,14 +4,24 @@ import userEvent from "@testing-library/user-event";
 import BuildPath from "./BuildPath";
 
 // In-memory fake of runtime/api/build_path.py's single GET route — no real
-// fetch, no network, no model call. The mock deliberately exposes ONLY
-// getBuildPath: if BuildPath.jsx ever reached for a mutating api.js function,
-// it would be undefined here, which is itself the guard that this screen stays
-// read-only.
-const state = { handler: null, mermaidThrows: false, renderCalls: [] };
+// fetch, no network, no model call. The mock deliberately exposes ONLY the two
+// read-only GETs the Build Path screen's two tabs use: if BuildPath.jsx ever
+// reached for a mutating api.js function, it would be undefined here, which is
+// itself the guard that this screen stays read-only.
+//
+// getDestinationArchitecture is present because the destination tab's component
+// is imported by this screen, and counted because the two tabs must not fetch
+// each other's model: every test below runs on the default Current Build tab,
+// and daCalls staying at 0 proves the destination read model is not touched
+// there (and vice versa, in DestinationArchitecture.test.jsx).
+const state = { handler: null, mermaidThrows: false, renderCalls: [], daCalls: 0 };
 
 vi.mock("./api", () => ({
   getBuildPath: (...args) => state.handler(...args),
+  getDestinationArchitecture: async () => {
+    state.daCalls += 1;
+    return { ok: true, data: { present: false, note: "not asked for in these tests" } };
+  },
 }));
 
 // Mermaid does real layout measurement, which jsdom has no engine for. Stubbed
@@ -258,6 +268,7 @@ beforeEach(() => {
   cleanup();
   state.mermaidThrows = false;
   state.renderCalls = [];
+  state.daCalls = 0;
   state.handler = vi.fn(async () => ok(fullModel()));
 });
 
@@ -446,5 +457,45 @@ describe("BuildPath (read-only build path visualization)", () => {
     await waitFor(() => expect(screen.getByText("Current phase")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: /Back to conversation/ }));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  // ── the two tabs stay two tabs ──────────────────────────────────────────
+  //
+  // The destination architecture is a DIFFERENT graph with a DIFFERENT
+  // authority. These prove the screen keeps them apart: the current build is
+  // the default view, its content is the roadmap's, and nothing on it reaches
+  // for the destination read model.
+
+  it("opens on Current Build and does not touch the destination read model", async () => {
+    render(<BuildPath onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByText("Current phase")).toBeInTheDocument());
+    const [current, destination] = screen.getAllByRole("tab");
+    expect(current).toHaveAttribute("aria-selected", "true");
+    expect(destination).toHaveAttribute("aria-selected", "false");
+    expect(state.daCalls).toBe(0);
+  });
+
+  it("swaps the whole view when the destination tab is selected, keeping no phase content", async () => {
+    const user = userEvent.setup();
+    render(<BuildPath onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByText("Current phase")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: /Destination Architecture/ }));
+
+    // The destination view is now mounted and reading its own model …
+    await waitFor(() => expect(state.daCalls).toBe(1));
+    expect(screen.getByTestId("da-scope-banner").textContent)
+      .toMatch(/NOT CURRENTLY ACTIVATED IMPLEMENTATION WORK/);
+    // … and no part of the P0–P6 build view is still on screen, so a phase
+    // status can never be read as a destination status.
+    expect(screen.queryByText("Current phase")).not.toBeInTheDocument();
+    expect(screen.queryByText("P0 → P6 sequence")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bp-diagram")).not.toBeInTheDocument();
+    // The build path model was fetched once, on mount, and not again.
+    expect(state.handler).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("tab", { name: /Current Build/ }));
+    await waitFor(() => expect(screen.getByText("Current phase")).toBeInTheDocument());
+    expect(screen.queryByTestId("da-scope-banner")).not.toBeInTheDocument();
   });
 });

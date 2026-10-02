@@ -1,7 +1,65 @@
 # Files Changed Recently
-Generated: 2026-10-02 02:07 UTC | Run: run-8fe8e65eed9a
+Generated: 2026-10-02 06:19 UTC | Run: run-cf820d8bed23
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## c91ef08 workbench: add build path roadmap visualization
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/api/build_path.py 
+
+## runtime/container_app.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/tests/test_build_path_api.py 
+
+## runtime/ui/package-lock.json 
+
+## runtime/ui/package.json 
+
+## runtime/ui/src/App.jsx 
+
+## runtime/ui/src/BuildPath.jsx 
+
+## runtime/ui/src/BuildPath.test.jsx 
+
+## runtime/ui/src/BuildPathMermaid.test.jsx 
+
+## runtime/ui/src/api.js 
+
+## runtime/ui/src/index.css 
+
+## tools/state/build_path.py 
 
 ## 383b404 workbench: fail closed on Brain generation errors
 
@@ -504,55 +562,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## docs/UNIFIED_BUILD_LIST.md 
 
 ## runtime/manifests/EXPORT_MANIFEST.json 
-
-## 663dd41 card 04: correct recovery audit findings
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/development/cli.py 
-
-## tools/development/launcher.py 
-
-## tools/development/process_identity.py 
-
-## tools/development/tests/test_launcher_execution.py 
-
-## tools/development/tests/test_process_identity.py 
-
-## tools/export/tests/test_generate_hcp_current_state.py 
-
-## tools/queue/render_build_list.py 
-
-## tools/state/canonical_state.py 
-
-## tools/state/recovery_packet.py 
-
-## tools/state/tests/test_canonical_state.py 
-
-## tools/state/tests/test_recovery_packet.py 

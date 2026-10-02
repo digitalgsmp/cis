@@ -1,10 +1,13 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-02 02:07 UTC | Run: run-8fe8e65eed9a
+Generated: 2026-10-02 06:19 UTC | Run: run-cf820d8bed23
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-02 | [ADR-WIASW-001] WIASW destination architecture — Word, Image, Action, Sound, Web: Records the long-range destination/pro | The long-range product architecture was clarified in conversation and existed no | DECIDED | spine record |
+| 2026-10-02 | [ADR-WIASW-002] CIS is the deterministic substrate beneath WIASW, not the destination: Records CIS's destination role un | ADR-WIASW-001 records what the destination is; without this record the substrate | DECIDED | spine record |
+| 2026-10-02 | [ADR-WIASW-003] Deterministic validation and perceptual review are different evidence: Applies to the WIASW destination  | The 16 failure modes CIS exists to prevent are all about trust in technical clai | DECIDED | spine record |
 | 2026-10-01 | [ADR-XDEV-001] External-developer work is not durable until independently verified from the remote: For repository-chang | Reached during independent review and previously resident only in ChatGPT/Claude | DECIDED | spine record |
 | 2026-10-01 | [ADR-XDEV-002] Repository checkpoint status must be visible in the recovery chain: The external recovery path must surfa | A rule that is persisted but never surfaced still depends on someone going looki | DECIDED | spine record |
 | 2026-10-01 | [ADR-PIPE-006] Roadmap and queue are separate authorities; triage reconciles, it does not merge: Clarifies the relations | Reached during independent review. ADR-PIPE-001 fixes the phase order and ADR-PI | DECIDED | spine record |

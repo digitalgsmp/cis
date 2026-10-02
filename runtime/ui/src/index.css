@@ -1054,3 +1054,129 @@ button, input, textarea {
   font-size: 0.78rem;
   word-break: break-all;
 }
+
+/* ── Build Path tabs ───────────────────────────────────────────────────── */
+/* The two tabs answer two different questions over two different read models
+   (see runtime/ui/src/BuildPath.jsx). The styling difference is deliberate:
+   the destination tab must never read as another progress view. */
+
+.bp-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.bp-tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--muted);
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.bp-tab:hover { color: var(--text); }
+
+.bp-tab.active {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+/* ── Destination Architecture view ─────────────────────────────────────── */
+/* Reuses the .sc-* and .bp-* vocabulary above. What is added here is only what
+   separates destination architecture from activated work: a dashed violet
+   treatment that appears nowhere in the current-build view, so the two cannot
+   be confused at a glance. */
+
+.da-body { max-width: 1040px; }
+
+.da-scope-banner {
+  border-color: #6f5fb3;
+  background: #221d33;
+  color: #d8d0f2;
+  letter-spacing: 0.01em;
+}
+
+.da-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 4px;
+}
+
+.da-level-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.da-level-tab {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.da-level-tab.active {
+  color: #e6e0fb;
+  border-color: #6f5fb3;
+  background: #2a2340;
+}
+
+.da-level-question {
+  font-size: 0.86rem;
+  margin-bottom: 8px;
+}
+
+.da-kind-heading {
+  text-transform: capitalize;
+  color: var(--muted);
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.da-node {
+  border-left: 3px dashed #6f5fb3;
+}
+
+.da-node-TRACKED_ELSEWHERE {
+  border-left-style: solid;
+  border-left-color: var(--border);
+}
+
+.da-node-unknown {
+  border-left-color: var(--danger);
+}
+
+.da-badge-destination {
+  border-color: #6f5fb3;
+  color: #d8d0f2;
+}
+
+.da-edge-list {
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
+.da-rel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: var(--accent);
+}
+
+.da-provenance { opacity: 0.8; }
+
+.da-decision + .da-decision {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}

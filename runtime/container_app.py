@@ -45,6 +45,20 @@ app.register_blueprint(system_context_bp)
 from api.build_path import build_path_bp
 app.register_blueprint(build_path_bp)
 
+# ── Workbench Destination Architecture view (read-only) ────────────────────────
+# Read-only wrapper over tools/state/destination_architecture.py: one GET route,
+# /api/workbench/destination-architecture, returning the WIASW destination
+# architecture parsed from the ADR-WIASW-* decision rows (WIASW -> uses -> CIS
+# -> controls -> execution backends, the five media domains, the horizontal
+# applications, relationship semantics, activation state, provenance, generated
+# Mermaid per zoom level). A DIFFERENT question from build_path_bp's: that one
+# answers "what are we building now" from the P0..P6 roadmap authority, this one
+# answers "what is CIS ultimately being built to support". Registering it grants
+# a view and nothing else — no mutating route, and the read model opens the
+# spine read-only.
+from api.destination_architecture import destination_architecture_bp
+app.register_blueprint(destination_architecture_bp)
+
 # ── WB.1 Slice 1 — Braingate conversation stage, ACTIVATED ────────────────────
 # Activated by the WB.1 Braingate live-activation card. Exactly two blueprints
 # register here, and together they are the whole P0 surface:

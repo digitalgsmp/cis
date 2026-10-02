@@ -282,3 +282,16 @@ export function getRecoveryPacket(issue) {
 export function getBuildPath() {
   return workbenchRequest("/build-path");
 }
+
+// ── Destination Architecture view ───────────────────────────────────────
+// Thin GET wrapper over runtime/api/destination_architecture.py, itself a thin
+// wrapper over tools/state/destination_architecture.py. Read-only and
+// parameterless, same as getBuildPath — the browser supplies no architecture
+// input, so nothing the UI sends can change what the destination says. A
+// separate function for a separate route because it answers a separate
+// question: not "what are we building now" but "what is CIS ultimately being
+// built to support".
+
+export function getDestinationArchitecture() {
+  return workbenchRequest("/destination-architecture");
+}

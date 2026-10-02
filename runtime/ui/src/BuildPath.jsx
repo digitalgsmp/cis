@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getBuildPath } from "./api";
+import MermaidDiagram from "./MermaidDiagram";
+import DestinationArchitecture from "./DestinationArchitecture";
 
 // Read-only screen over GET /api/workbench/build-path (runtime/api/build_path.py
 // -> tools/state/build_path.py). Every value shown here is rendered straight
@@ -9,7 +11,21 @@ import { getBuildPath } from "./api";
 //
 // The diagram is NOT drawn here either — the server sends Mermaid source
 // generated from the same `phases` array the cards below render, so the picture
-// and the panel cannot disagree. This component only asks Mermaid to lay it out.
+// and the panel cannot disagree. MermaidDiagram only asks Mermaid to lay it out.
+//
+// TWO TABS, TWO DIFFERENT QUESTIONS, ONE SCREEN:
+//
+//   Current Build            "what are we building now?"
+//                            the P0–P6 chronological sequence, from
+//                            project_state.pipeline_roadmap + ADR-PIPE-001
+//   Destination Architecture "what is CIS ultimately being built to support?"
+//                            the WIASW architecture, from the ADR-WIASW-*
+//                            decisions (DestinationArchitecture.jsx)
+//
+// They are deliberately NOT merged. The current-build graph and the destination
+// graph have different authorities, different node kinds and different edge
+// semantics, and only one of them has build progress. Switching tabs switches
+// read models; neither tab's data is fetched while the other is shown.
 
 const STATUS_BADGE = {
   complete: "sc-badge-ok",
@@ -36,88 +52,6 @@ function StatusBadge({ status, label }) {
   if (!status) return null;
   return (
     <span className={`sc-badge ${STATUS_BADGE[status] ?? ""}`}>{label || status}</span>
-  );
-}
-
-/** Mermaid, rendered client-side, with the source itself as the fallback.
- *
- * If Mermaid cannot lay the diagram out — an older browser, a parse error, a
- * chunk that failed to load — the error is stated and the generated source is
- * shown as text rather than leaving an empty box that looks like "no roadmap".
- * The source stays reachable either way, because it is the thing that is
- * actually derived from authority. */
-function MermaidDiagram({ source }) {
-  const [svg, setSvg] = useState("");
-  const [error, setError] = useState("");
-  const [showSource, setShowSource] = useState(false);
-  // Each render needs a DOM id unique to this mount; Mermaid uses it for the
-  // temporary element it measures in.
-  const idRef = useRef(`bp-mermaid-${Math.random().toString(36).slice(2)}`);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!source) {
-      setSvg("");
-      setError("");
-      return undefined;
-    }
-    (async () => {
-      try {
-        // Imported here, not at module scope: Mermaid and its parser are by
-        // far the largest thing in this bundle, and the conversation screen —
-        // which every user loads — has no use for them. This keeps the cost
-        // on the one screen that draws a diagram. A failed chunk load lands
-        // in the same catch as a parse failure, and shows the source instead.
-        const { default: mermaid } = await import("mermaid");
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "dark",
-          // Labels come from this project's own spine, but the strict setting
-          // is kept anyway: it is the right default for anything injected as
-          // markup, and nothing here needs the relaxed one.
-          securityLevel: "strict",
-          flowchart: { useMaxWidth: true, htmlLabels: true },
-        });
-        const result = await mermaid.render(idRef.current, source);
-        if (!cancelled) {
-          setSvg(result.svg);
-          setError("");
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setSvg("");
-          setError(e?.message || String(e));
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [source]);
-
-  if (!source) {
-    return <div className="muted">The read model carried no diagram source.</div>;
-  }
-
-  return (
-    <>
-      {error && (
-        <div className="inline-error">
-          Could not draw the diagram: {error} — the generated source is shown below instead.
-        </div>
-      )}
-      {svg && (
-        /* Mermaid's own SVG output, from source this app generated server-side. */
-        <div className="bp-diagram" data-testid="bp-diagram"
-             dangerouslySetInnerHTML={{ __html: svg }} />
-      )}
-      {(error || showSource) && (
-        <pre className="bp-mermaid-source" data-testid="bp-mermaid-source">{source}</pre>
-      )}
-      {!error && (
-        <button className="link-btn" onClick={() => setShowSource((s) => !s)}>
-          {showSource ? "Hide" : "Show"} Mermaid source
-        </button>
-      )}
-    </>
   );
 }
 
@@ -483,6 +417,9 @@ export default function BuildPath({ onBack }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [lastLoadedAt, setLastLoadedAt] = useState(null);
+  // "current" is the default on purpose: the question this screen was built to
+  // answer first is still "where is the build right now".
+  const [tab, setTab] = useState("current");
 
   async function load() {
     setLoading(true);
@@ -504,6 +441,7 @@ export default function BuildPath({ onBack }) {
   }, []);
 
   const stale = Boolean(error && model);
+  const onCurrent = tab === "current";
 
   return (
     <div className="workbench">
@@ -511,15 +449,45 @@ export default function BuildPath({ onBack }) {
         <button className="link-btn" onClick={onBack}>← Back to conversation</button>
         <span className="stage-label">Build Path</span>
         <span className="stage-detail">
-          Read-only view of the P0–P6 contained-pipeline sequence, derived from the
-          spine. Nothing on this screen can change roadmap, queue or phase state.
+          {onCurrent
+            ? "Read-only view of the P0–P6 contained-pipeline sequence, derived from the "
+              + "spine. Nothing on this screen can change roadmap, queue or phase state."
+            : "Read-only view of the destination architecture CIS is being built to "
+              + "support. Not a build sequence, and not activated work."}
         </span>
-        <button className="link-btn" onClick={load} disabled={loading}
-                style={{ marginLeft: "auto" }}>
-          {loading ? "Loading…" : "Refresh"}
-        </button>
+        {/* Refresh belongs to the tab it refreshes. The destination tab carries
+            its own, because it reads a different model from a different route. */}
+        {onCurrent && (
+          <button className="link-btn" onClick={load} disabled={loading}
+                  style={{ marginLeft: "auto" }}>
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+        )}
       </header>
 
+      {/* Two tabs, two read models, two different questions — see the note at the
+          top of this file. The tabs switch which question is on screen; they never
+          merge the two graphs. */}
+      <div className="bp-tabs" role="tablist" aria-label="Build Path views">
+        <button role="tab" aria-selected={onCurrent}
+                className={`bp-tab${onCurrent ? " active" : ""}`}
+                onClick={() => setTab("current")}>
+          Current Build
+        </button>
+        <button role="tab" aria-selected={!onCurrent}
+                className={`bp-tab${!onCurrent ? " active" : ""}`}
+                onClick={() => setTab("destination")}>
+          Destination Architecture
+        </button>
+      </div>
+
+      {!onCurrent && (
+        <div className="sc-body bp-body">
+          <DestinationArchitecture />
+        </div>
+      )}
+
+      {onCurrent && (
       <div className="sc-body bp-body">
         {error && (
           <div className="banner-error">
@@ -585,6 +553,7 @@ export default function BuildPath({ onBack }) {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
