@@ -14,6 +14,7 @@ import { getRequestId, clearRequestId } from "./requestId";
 import ProposalPanel from "./ProposalPanel";
 import CardFactory from "./CardFactory";
 import SystemContext from "./SystemContext";
+import BuildPath from "./BuildPath";
 import SignIn from "./SignIn";
 
 const LAST_PROJECT_KEY = "cis-workbench-last-project";
@@ -555,6 +556,13 @@ export default function App() {
     return <SystemContext onBack={() => setView("conversation")} />;
   }
 
+  // Not capability-gated, for the same reason System Context is not: both are
+  // read-only routes this server always registers, and neither offers an
+  // action that a later stage has to unlock.
+  if (view === "buildpath") {
+    return <BuildPath onBack={() => setView("conversation")} />;
+  }
+
   return (
     <div className="workbench">
       <header className="stage-banner">
@@ -568,7 +576,10 @@ export default function App() {
                the UI is broken rather than early. */
             : "Braingate can clarify and discuss here. Proposing actions, generating cards and running them are later stages and are not available yet."}
         </span>
-        <button className="link-btn" onClick={() => setView("recovery")} style={{ marginLeft: "auto" }}>
+        <button className="link-btn" onClick={() => setView("buildpath")} style={{ marginLeft: "auto" }}>
+          Build Path →
+        </button>
+        <button className="link-btn" onClick={() => setView("recovery")}>
           System Context / Recovery →
         </button>
         <SignedInAs identity={auth.identity} />

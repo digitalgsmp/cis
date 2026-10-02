@@ -34,6 +34,17 @@ app.register_blueprint(relay_bp)
 from api.system_context import system_context_bp
 app.register_blueprint(system_context_bp)
 
+# ── Workbench Build Path visualization (read-only) ─────────────────────────────
+# Read-only wrapper over tools/state/build_path.py: one GET route,
+# /api/workbench/build-path, returning the normalized P0..P6 build-path read
+# model (phase sequence parsed from project_state.pipeline_roadmap, blockers
+# from the discovery ledger, generated Mermaid source). Registering it grants
+# a view and nothing else — it adds no mutating route, and the read model
+# opens the spine read-only. Self-contained for the same reason
+# api/system_context.py is.
+from api.build_path import build_path_bp
+app.register_blueprint(build_path_bp)
+
 # ── WB.1 Slice 1 — Braingate conversation stage, ACTIVATED ────────────────────
 # Activated by the WB.1 Braingate live-activation card. Exactly two blueprints
 # register here, and together they are the whole P0 surface:

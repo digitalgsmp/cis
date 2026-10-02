@@ -272,3 +272,13 @@ export function getRecoveryPacket(issue) {
   const qs = issue ? `?issue=${encodeURIComponent(issue)}` : "";
   return workbenchRequest(`/system-context/recovery-packet${qs}`);
 }
+
+// ── Build Path visualization ────────────────────────────────────────────
+// Thin GET wrapper over runtime/api/build_path.py, itself a thin wrapper
+// over tools/state/build_path.py. Read-only and parameterless: the server
+// takes no roadmap input from the browser, so nothing the UI sends can
+// change what the build path says.
+
+export function getBuildPath() {
+  return workbenchRequest("/build-path");
+}

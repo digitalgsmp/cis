@@ -944,3 +944,113 @@ button, input, textarea {
   text-overflow: ellipsis;
   max-width: 22ch;
 }
+
+/* ── Build Path (read-only roadmap visualization) ──────────────────────── */
+/* Deliberately built out of the existing .sc-* section/badge/list vocabulary
+   above — these rules only add what a roadmap view needs that a status list
+   does not: a diagram frame, a phase grid, and a per-status left edge. */
+
+.bp-body {
+  max-width: 1040px;
+}
+
+.bp-headline .bp-current-line {
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.bp-fineprint {
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.bp-longtext {
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.bp-next-action {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.bp-diagram {
+  overflow-x: auto;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.bp-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.bp-mermaid-source {
+  overflow-x: auto;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  margin: 8px 0;
+}
+
+.bp-phase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.bp-phase {
+  margin-bottom: 0;
+  border-left: 3px solid var(--border);
+}
+
+.bp-phase-active { border-left-color: var(--accent); }
+.bp-phase-blocked { border-left-color: var(--danger); }
+.bp-phase-next { border-left-color: var(--warn); }
+.bp-phase-complete { border-left-color: var(--accent); }
+.bp-phase-pending { border-left-color: var(--border); }
+
+.bp-phase-desc {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.bp-here {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.bp-blockers {
+  border-left: 3px solid var(--danger);
+}
+
+.bp-discovery-summary {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 2px 0 4px;
+}
+
+.bp-checkpoint .sc-table th {
+  width: 14rem;
+  white-space: nowrap;
+}
+
+.bp-checkpoint code {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
