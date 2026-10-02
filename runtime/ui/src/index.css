@@ -1175,6 +1175,27 @@ button, input, textarea {
 
 .da-provenance { opacity: 0.8; }
 
+/* Simple mode's plain-language outline of the recorded hierarchy. Indentation
+   comes from each node's depth, which the read model computes. */
+.da-outline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.da-outline-node {
+  border-left: 2px solid var(--border);
+  padding: 6px 0 6px 10px;
+  margin-top: 6px;
+}
+
+.da-outline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .da-decision + .da-decision {
   margin-top: 14px;
   padding-top: 14px;
@@ -1246,7 +1267,38 @@ button, input, textarea {
 }
 
 /* Mode switch — Simple / More Detail / Technical */
+.pm-modes-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  /* On a phone the banner wraps and the group becomes the full row; the note
+     then reads left-to-right under the buttons instead of hugging the edge. */
+  min-width: 0;
+}
+
 .pm-modes { display: flex; gap: 2px; }
+
+/* The acknowledgement that a tap did something. PM-D3: the content a mode
+   reveals can be a long scroll below the control on a narrow viewport, so the
+   selected level has to say what it means right where it was chosen. */
+.pm-mode-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: right;
+  max-width: 44ch;
+}
+
+.pm-mode-note strong { color: var(--accent); }
+
+@media (max-width: 720px) {
+  .pm-modes-group {
+    align-items: flex-start;
+    width: 100%;
+    margin-left: 0 !important;
+  }
+  .pm-mode-note { text-align: left; max-width: none; }
+}
 
 .pm-mode {
   background: transparent;

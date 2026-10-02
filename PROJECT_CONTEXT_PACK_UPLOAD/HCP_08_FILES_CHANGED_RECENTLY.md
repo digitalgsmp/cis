@@ -1,7 +1,63 @@
 # Files Changed Recently
-Generated: 2026-10-02 12:01 UTC | Run: run-e85cf84d75fa
+Generated: 2026-10-02 23:47 UTC | Run: run-306d570078b3
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 48f7388 workbench: add the Project Map as a read-only explanation layer
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/api/project_intelligence.py 
+
+## runtime/container_app.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/tests/test_project_intelligence_api.py 
+
+## runtime/ui/src/App.jsx 
+
+## runtime/ui/src/BuildPath.jsx 
+
+## runtime/ui/src/ProjectMap.jsx 
+
+## runtime/ui/src/ProjectMap.test.jsx 
+
+## runtime/ui/src/api.js 
+
+## runtime/ui/src/index.css 
+
+## tools/state/project_intelligence.py 
+
+## tools/state/project_intelligence_vocabulary.json 
 
 ## 1718e3b workbench: scope the no-WIASW-in-build-state check past the push checkpoint
 
@@ -532,51 +588,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/workbench_session.py 
 
 ## tools/development/oidc_preview.py 
-
-## bb0ea02 recovery: publish Card 03 System Context review packet
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/CARD_03_verification_PASS.json 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/INTEGRATION_REVIEW_REQUIRED.md 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/README.md 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/SOURCE_EVIDENCE_MAP.md 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/changed_sha256.txt 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/completion.json 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/route_inventory.txt 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/secret_scan.txt 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/test_output.txt 
-
-## docs/review_packets/WB-RECOVERY-03-SYSTEM-CONTEXT/test_summary.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 

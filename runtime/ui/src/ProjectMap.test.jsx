@@ -631,10 +631,13 @@ describe("ProjectMap — Current Build area reuses the Build Path view", () => {
     // Panels that live in BuildPath.jsx, rendered here by CurrentBuildPanel.
     expect(screen.getByText("Where the build is")).toBeInTheDocument();
     expect(screen.getByText("P0 → P6 sequence")).toBeInTheDocument();
-    expect(screen.getByText("Checkpoint and authority")).toBeInTheDocument();
     expect(screen.getByText("you are here")).toBeInTheDocument();
     // Twice on purpose: the headline and the phase card, both from BuildPath.jsx.
     expect(screen.getAllByText("active / blocked").length).toBe(2);
+    // Technical is the level at which the embedded panel shows what the
+    // standalone screen shows, which is where the LAST of its panels appears.
+    await setMode("Technical");
+    expect(screen.getByText("Checkpoint and authority")).toBeInTheDocument();
     // The reuse claim, asserted: the build-path route is never called.
     expect(state.buildPathCalls).toBe(0);
   });
@@ -924,6 +927,233 @@ describe("ProjectMap — progressive disclosure", () => {
     for (const label of ["Simple", "More Detail", "Technical"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
+  });
+});
+
+// PM-D3. The mode selector is one GLOBAL control, and before this it reached
+// only the four areas this component draws itself: the Current Build area
+// handed <CurrentBuildPanel> no mode and the Destination area handed
+// <DestinationArchitecture/> none, so the two largest areas did not respond to
+// it at all. Every assertion below is about WHAT IS DISCLOSED, never about how
+// much text a mode produces — a character-count contract would pass on a screen
+// that deferred the wrong things.
+describe("ProjectMap — PM-D3: the mode reaches the two reused views", () => {
+  it("drives the reused Current Build view: where we are, then the evidence, then the ids",
+     async () => {
+    await renderMap();
+    await goTo("Current Build");
+
+    // Simple — where we are, whether blocked, what is next, the roadmap, and
+    // the phase in plain language. No row ids, no migration mechanics, no
+    // provenance, no checkpoint block.
+    expect(screen.getAllByText("active / blocked").length).toBe(2);
+    expect(screen.getByText(/stage 1 of 2/)).toBeInTheDocument();
+    expect(screen.getByText("Next stage")).toBeInTheDocument();
+    expect(screen.getByText("Finish P0 closeout.")).toBeInTheDocument();
+    expect(screen.getByText("activate the first slice")).toBeInTheDocument();
+    expect(screen.queryByText("Checkpoint and authority")).toBeNull();
+    expect(screen.queryByText(/project_state.next_action/)).toBeNull();
+    expect(screen.queryByText("Triage subject")).toBeNull();
+    expect(screen.queryByText(/current task: WB\.1/)).toBeNull();
+
+    // More Detail — the blockers' context, the queue hooks and the triage
+    // subject, the checkpoint state. Still no identifiers.
+    await setMode("More Detail");
+    expect(screen.getByText("Triage subject")).toBeInTheDocument();
+    expect(screen.getByText(/56 unclassified of 132 queue_items/)).toBeInTheDocument();
+    expect(screen.getByText("Checkpoint and authority")).toBeInTheDocument();
+    expect(screen.getByText(/current task: WB\.1/)).toBeInTheDocument();
+    expect(screen.queryByText(/abc123/)).toBeNull();
+    expect(screen.queryByText(/row 9/)).toBeNull();
+
+    // Technical — the exact identifiers and the evidence behind them, including
+    // the way into the quoted roadmap row and the decisions it rests on.
+    await setMode("Technical");
+    expect(screen.getByText("abc123")).toBeInTheDocument();
+    expect(screen.getByText(/project_state.next_action/)).toBeInTheDocument();
+    // Twice: the build model's own revision line, and the map's footer.
+    expect(screen.getAllByText(/state revision/).length).toBe(2);
+    await userEvent.click(screen.getByRole("button", { name: /Show the roadmap row/ }));
+    expect(screen.getByText(/P0 \(activate the first slice\) -> TRIAGE/)).toBeInTheDocument();
+    expect(screen.getByText(/ADR-PIPE-001/)).toBeInTheDocument();
+  });
+
+  it("drives the reused Destination view: the hierarchy, then the meanings, then the ADRs",
+     async () => {
+    await renderMap();
+    await goTo("Destination");
+    await waitFor(() => expect(state.destinationCalls).toBe(1));
+
+    // Simple — the plain-language hierarchy and the relationships that are not
+    // just nesting, named by LABEL. No ids, no kinds, no decision clauses.
+    expect(screen.getByTestId("da-outline")).toBeInTheDocument();
+    expect(screen.getByText("WIASW — Word · Image · Action · Sound + Web"))
+      .toBeInTheDocument();
+    expect(screen.getByText("CIS — deterministic AI / control substrate"))
+      .toBeInTheDocument();
+    expect(screen.getByText("the substrate beneath WIASW")).toBeInTheDocument();
+    // "WIASW uses CIS", written with the target's label rather than its id.
+    expect(screen.getByText(/→ CIS — deterministic AI \/ control substrate/))
+      .toBeInTheDocument();
+    expect(screen.getAllByText("not activated").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Every recorded element")).toBeNull();
+    expect(screen.queryByText("Authority")).toBeNull();
+    expect(screen.queryByText(/declared by ADR-WIASW-001/)).toBeNull();
+    expect(screen.queryByText("2 nodes")).toBeNull();
+
+    // More Detail — what the relationships and the activation states MEAN, and
+    // every node as a card. The decision ids stay deferred.
+    await setMode("More Detail");
+    expect(screen.getByText("Every recorded element")).toBeInTheDocument();
+    expect(screen.getByText("What the relationships mean")).toBeInTheDocument();
+    expect(screen.getByText(/built on top of/)).toBeInTheDocument();
+    expect(screen.getByText(/activation is not build progress/)).toBeInTheDocument();
+    expect(screen.getByText("2 nodes")).toBeInTheDocument();
+    expect(screen.queryByText(/declared by ADR-WIASW-001/)).toBeNull();
+    expect(screen.queryByText("Authority")).toBeNull();
+
+    // Technical — the node ids, kinds, depths, the declaring ADR and clause.
+    await setMode("Technical");
+    expect(screen.getByText("Authority")).toBeInTheDocument();
+    expect(screen.getByText(/declared by ADR-WIASW-001 \(DESTINATION GRAPH NODES\)/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/root · depth 0/)).toBeInTheDocument();
+    expect(screen.getByText("WIASW")).toBeInTheDocument();
+    expect(screen.getByText(/→ CIS$/)).toBeInTheDocument();
+  });
+
+  it("does not duplicate either view to do it", async () => {
+    // The reuse the fix had to preserve: Current Build still renders from the
+    // EMBEDDED build payload (no second fetch), and Destination still fetches
+    // its own authority exactly once, through the component that owns it.
+    await renderMap();
+    await goTo("Current Build");
+    await setMode("Technical");
+    expect(state.buildPathCalls).toBe(0);
+    await goTo("Destination");
+    await waitFor(() => expect(state.destinationCalls).toBe(1));
+    await setMode("Simple");
+    await setMode("Technical");
+    // Changing the level of detail is presentation only: it re-reads nothing.
+    expect(state.destinationCalls).toBe(1);
+    expect(state.buildPathCalls).toBe(0);
+  });
+});
+
+describe("ProjectMap — PM-D3: the control acknowledges the tap", () => {
+  it("says what the selected level means, in the read model's own words", async () => {
+    await renderMap();
+    const note = screen.getByTestId("pm-mode-note");
+    // Eric found PM-D3 on a phone, where what a mode reveals can be a long
+    // scroll below the buttons. The acknowledgement sits with the control.
+    expect(note.textContent).toBe("Simple — Plain language only.");
+    await setMode("More Detail");
+    expect(screen.getByTestId("pm-mode-note").textContent)
+      .toBe("More Detail — Adds capability and build position.");
+    await setMode("Technical");
+    expect(screen.getByTestId("pm-mode-note").textContent)
+      .toBe("Technical — Adds exact identifiers.");
+  });
+
+  it("announces the change rather than only colouring it", async () => {
+    await renderMap();
+    const note = screen.getByTestId("pm-mode-note");
+    expect(note).toHaveAttribute("role", "status");
+    expect(note).toHaveAttribute("aria-live", "polite");
+    // The pressed state is on the buttons themselves, and exactly one of them.
+    const pressed = () => ["Simple", "More Detail", "Technical"]
+      .filter((l) => screen.getByRole("button", { name: l })
+        .getAttribute("aria-pressed") === "true");
+    expect(pressed()).toEqual(["Simple"]);
+    await setMode("Technical");
+    expect(pressed()).toEqual(["Technical"]);
+  });
+
+  it("is reachable and operable from the keyboard", async () => {
+    await renderMap();
+    const technical = screen.getByRole("button", { name: "Technical" });
+    technical.focus();
+    expect(technical).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(technical).toHaveAttribute("aria-pressed", "true");
+    const simple = screen.getByRole("button", { name: "Simple" });
+    simple.focus();
+    await userEvent.keyboard(" ");
+    expect(simple).toHaveAttribute("aria-pressed", "true");
+    expect(technical).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("keeps the screen-reader separators between adjacent list spans", async () => {
+    // The accessibility correction made alongside the Project Map itself: three
+    // pm-list-item call sites rendered adjacent spans with no separator, so a
+    // screen reader announced "BraingateactiveTalking to the system…".
+    await renderMap();
+    await goTo("System Anatomy");
+    const item = screen.getByRole("button", { name: /^Braingate active/ });
+    expect(item.textContent).toBe(
+      "Braingate active Talking to the system about a project.");
+  });
+});
+
+// §8 of the card: these two areas measured as under-differentiated. The
+// additions below are DERIVED from rows the response already carries — no
+// content is manufactured to make a level look different, and where a level has
+// nothing valid to add, the subsection is left alone.
+describe("ProjectMap — PM-D3: Queue / Problems and System Anatomy differentiation", () => {
+  it("defines the two lists at More Detail and names their authority at Technical",
+     async () => {
+    await renderMap();
+    await goTo("Queue / Problems");
+    expect(screen.queryByText(/^Findings:/)).toBeNull();
+    expect(screen.queryByText(/Awaiting triage means/)).toBeNull();
+    expect(screen.queryByText(/ADR-PIPE-006/)).toBeNull();
+
+    await setMode("More Detail");
+    expect(screen.getByText(/findings recorded during the work/)).toBeInTheDocument();
+    expect(screen.getByText(/neither scope nor need_status/)).toBeInTheDocument();
+    expect(screen.getByText(/CONSTRAINTS: triage after P0/)).toBeInTheDocument();
+    expect(screen.queryByText(/ADR-PIPE-006/)).toBeNull();
+
+    await setMode("Technical");
+    expect(screen.getByText("ADR-PIPE-006")).toBeInTheDocument();
+    expect(screen.getByText(/queue_items \+ queue_edges are the work-item authority/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/records 45 relationships between items/)).toBeInTheDocument();
+  });
+
+  it("relates an anatomy area to its capabilities and findings at More Detail", async () => {
+    await renderMap();
+    await goTo("System Anatomy");
+    // Simple: what it is, what it does, why, whether it is on.
+    expect(screen.getByText("Is it on?")).toBeInTheDocument();
+    expect(screen.queryByText("How much of this area is switched on")).toBeNull();
+    expect(screen.queryByText("Problems recorded against this area")).toBeNull();
+
+    await setMode("More Detail");
+    expect(screen.getByText("How much of this area is switched on")).toBeInTheDocument();
+    expect(screen.getByText(/1 of 1 capability is plugged into the live application/))
+      .toBeInTheDocument();
+    expect(screen.getByText("Problems recorded against this area")).toBeInTheDocument();
+    expect(screen.getByText("WB1-D15")).toBeInTheDocument();
+    // Still no paths or derivations — those are Technical.
+    expect(screen.queryByText("Files that implement it")).toBeNull();
+
+    await setMode("Technical");
+    expect(screen.getByText("Files that implement it")).toBeInTheDocument();
+    expect(screen.getByText(/rolled up from the observed status/)).toBeInTheDocument();
+  });
+
+  it("reports a dormant area's capabilities as switched off, from their own status",
+     async () => {
+    await renderMap();
+    await goTo("System Anatomy");
+    await setMode("More Detail");
+    await userEvent.click(screen.getByRole("button", { name: /^Dormant Execution Features/ }));
+    expect(screen.getByText(/0 of 1 capability is plugged into the live application/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Still off: Card Factory/)).toBeInTheDocument();
+    expect(screen.getByText(/No recorded finding names a capability in this area/))
+      .toBeInTheDocument();
   });
 });
 

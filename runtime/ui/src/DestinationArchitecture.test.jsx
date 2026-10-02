@@ -377,3 +377,159 @@ describe("DestinationArchitecture (read-only destination view)", () => {
     expect(screen.getByRole("heading", { name: /^Word\b/ })).toBeInTheDocument();
   });
 });
+
+// PM-D3. This component is the ONE destination-architecture renderer, reused by
+// the Project Map, and it now takes that screen's presentation mode. The
+// standalone tab passes none and therefore gets full disclosure; the Project
+// Map passes Simple / More Detail / Technical. Same response, same authority,
+// different disclosure — assert what each level SHOWS, not how long it is.
+describe("DestinationArchitecture — presentation mode (PM-D3)", () => {
+  async function show(mode) {
+    const utils = mode === undefined
+      ? render(<DestinationArchitecture />)
+      : render(<DestinationArchitecture mode={mode} />);
+    await waitFor(() => expect(screen.getByTestId("da-scope-banner")).toBeInTheDocument());
+    await waitFor(() => expect(state.handler).toHaveBeenCalled());
+    // Mermaid is loaded by dynamic import, so the diagram lands a tick after
+    // the model does. Settle it here or a rendering comparison races it.
+    await waitFor(() => expect(screen.getByTestId("da-diagram")).toBeInTheDocument());
+    return utils;
+  }
+
+  it("discloses everything when handed no mode, exactly as mode=technical does", async () => {
+    const bare = await show(undefined);
+    expect(screen.getByText("Every recorded element")).toBeInTheDocument();
+    expect(screen.getByText("Authority")).toBeInTheDocument();
+    const html = bare.container.innerHTML;
+    bare.unmount();
+    const technical = await show("technical");
+    expect(technical.container.innerHTML).toBe(html);
+  });
+
+  it("Simple shows the plain-language hierarchy and defers the provenance", async () => {
+    await show("simple");
+    // The scope warning is never deferred — it is the first thing a reader of
+    // this screen has to know, at every level.
+    expect(screen.getByTestId("da-scope-banner").textContent)
+      .toMatch(/NOT CURRENTLY ACTIVATED IMPLEMENTATION WORK/);
+
+    // WIASW, its five media domains, CIS and the execution layer, nested the
+    // way the authority records them.
+    const outline = screen.getByTestId("da-outline");
+    expect(outline).toBeInTheDocument();
+    for (const label of ["WIASW — Word · Image · Action · Sound + Web", "Media domains",
+                         "Word", "Image", "Action", "Sound", "Web",
+                         "Horizontal applications",
+                         "CIS — deterministic AI / control substrate",
+                         "Execution / tool backends"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // Deeper nodes are indented by the depth the read model computed.
+    const row = (label) => screen.getByText(label).closest(".da-outline-node");
+    expect(row("WIASW — Word · Image · Action · Sound + Web").style.marginInlineStart)
+      .toBe("0rem");
+    expect(row("Media domains").style.marginInlineStart).toBe("1.1rem");
+    expect(row("Word").style.marginInlineStart).toBe("2.2rem");
+
+    // WIASW uses CIS, and CIS controls / orchestrates / executes through the
+    // backends — named by LABEL, with the nesting not repeated as text.
+    const text = outline.textContent;
+    expect(text).toMatch(/uses → CIS — deterministic AI \/ control substrate/);
+    expect(text).toMatch(/controls → Execution \/ tool backends/);
+    expect(text).toMatch(/orchestrates → Creative applications/);
+    expect(text).toMatch(/executes-through → Creative applications/);
+    expect(text).toMatch(/supports → Media domains/);
+    expect(text).not.toMatch(/contains →/);
+
+    // Nothing is activated, and that is said on every node.
+    expect(screen.getAllByText("not activated").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("tracked elsewhere").length).toBeGreaterThan(0);
+
+    // Deferred: the ids, the kinds, the depths, the ADRs, the counts, the
+    // relationship vocabulary and the authority panel.
+    expect(screen.queryByText(/declared by ADR-WIASW-001/)).toBeNull();
+    expect(screen.queryByText(/root · depth 0/)).toBeNull();
+    expect(screen.queryByText("Every recorded element")).toBeNull();
+    expect(screen.queryByText("What the relationships mean")).toBeNull();
+    expect(screen.queryByText("Authority")).toBeNull();
+    expect(screen.queryByText(/12 nodes/)).toBeNull();
+    expect(screen.queryByText(/project_decisions rows with id LIKE/)).toBeNull();
+    expect(screen.queryByText(/state revision/)).toBeNull();
+  });
+
+  it("More Detail adds the domains, the relationship meanings and activation meaning",
+     async () => {
+    await show("detail");
+    // The outline's job is done by the full node cards at this level.
+    expect(screen.queryByTestId("da-outline")).toBeNull();
+    expect(screen.getByText("Every recorded element")).toBeInTheDocument();
+    expect(screen.getByText("Horizontal applications")).toBeInTheDocument();
+    expect(screen.getByText("Creative applications")).toBeInTheDocument();
+    expect(screen.getByText("Blender, Houdini, ComfyUI, Unreal Engine, DAWs"))
+      .toBeInTheDocument();
+
+    // What the relationships and the activation states MEAN.
+    expect(screen.getByText("What the relationships mean")).toBeInTheDocument();
+    expect(screen.getByText(/the source is built on top of the target/)).toBeInTheDocument();
+    expect(screen.getByText(/the source coordinates multiple independent targets/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/recorded destination architecture carrying no activated/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/activation_state is NOT a build status/)).toBeInTheDocument();
+    expect(screen.getByText("12 nodes")).toBeInTheDocument();
+
+    // Edges still read by label, not by id, and the provenance is still deferred.
+    // The relationship is its own <span>, so the matcher sees the li's own text.
+    expect(screen.getAllByText(/→ CIS — deterministic AI/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/declared by ADR-WIASW-001/)).toBeNull();
+    expect(screen.queryByText(/root · depth 0/)).toBeNull();
+    expect(screen.queryByText("Authority")).toBeNull();
+    expect(screen.queryByText(/project_decisions rows with id LIKE/)).toBeNull();
+  });
+
+  it("Technical adds the node ids, kinds, the declaring ADR and the quoted declarations",
+     async () => {
+    await show("technical");
+    expect(screen.getByText(/root · depth 0/)).toBeInTheDocument();
+    expect(screen.getByText("WIASW")).toBeInTheDocument();
+    expect(screen.getAllByText(/declared by ADR-WIASW-001 \(DESTINATION GRAPH NODES\)/).length)
+      .toBe(12);
+    // Edges now name the declared id rather than the label.
+    expect(screen.getByText(/→ CIS$/)).toBeInTheDocument();
+    expect(screen.queryByText(/→ CIS — deterministic AI/)).toBeNull();
+    // The authority panel, its ADR rows and the quoted decisions.
+    expect(screen.getByText("Authority")).toBeInTheDocument();
+    expect(screen.getByText(/project_decisions rows with id LIKE 'ADR-WIASW-%'/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/parsed from those decision rows at read time/))
+      .toBeInTheDocument();
+    expect(screen.getAllByText(/from ADR-WIASW-001/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/state revision/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Show the decisions/ }));
+    expect(screen.getByText(/WIASW = Word · Image · Action · Sound \+ Web/))
+      .toBeInTheDocument();
+  });
+
+  it("changing the level of detail re-reads nothing", async () => {
+    // The mode is presentation. It never refetches, and it never reaches the
+    // build path's model — which is not even in this mock.
+    const { unmount } = await show("simple");
+    expect(state.handler).toHaveBeenCalledTimes(1);
+    unmount();
+    await show("technical");
+    expect(state.handler).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the recorded problems honest, and says so from More Detail up", async () => {
+    state.handler = vi.fn(async () => ok(fullModel({
+      problems: [{ kind: "undefined_relationship", detail: "an edge uses 'feeds', undefined" }],
+    })));
+    const { unmount } = await show("simple");
+    // Simple is the plain hierarchy; a parser complaint is not part of it.
+    expect(screen.queryByTestId("da-problems")).toBeNull();
+    unmount();
+    await show("detail");
+    expect(screen.getByTestId("da-problems").textContent)
+      .toMatch(/an edge uses 'feeds', undefined/);
+  });
+});

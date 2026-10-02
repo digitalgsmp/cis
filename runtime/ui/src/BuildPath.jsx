@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getBuildPath } from "./api";
 import MermaidDiagram from "./MermaidDiagram";
 import DestinationArchitecture from "./DestinationArchitecture";
+import { atLeast, FULL_DISCLOSURE } from "./presentationMode";
 
 // Read-only screen over GET /api/workbench/build-path (runtime/api/build_path.py
 // -> tools/state/build_path.py). Every value shown here is rendered straight
@@ -55,7 +56,10 @@ function StatusBadge({ status, label }) {
   );
 }
 
-function MigrationLine({ migration }) {
+/** The migration number is the identifier; the rule is the meaning. More
+ *  Detail says a database update gates this phase and whether it has happened;
+ *  Technical names which migration and how its state was detected. */
+function MigrationLine({ migration, mode }) {
   const applied = migration.applied;
   const [label, cls] =
     applied === true ? ["applied", "sc-badge-ok"]
@@ -64,20 +68,26 @@ function MigrationLine({ migration }) {
           : ["applied state unknown", "sc-badge-warn"];
   return (
     <li>
-      <strong>migration {migration.migration}</strong> — {migration.rule}{" "}
+      {atLeast(mode, "technical")
+        ? <strong>migration {migration.migration}</strong>
+        : <strong>a database update</strong>}{" "}
+      — {migration.rule}{" "}
       <span className={`sc-badge ${cls}`}>{label}</span>
-      {migration.detected_by && (
+      {atLeast(mode, "technical") && migration.detected_by && (
         <div className="muted bp-fineprint">{migration.detected_by}</div>
       )}
     </li>
   );
 }
 
-function QueueHookLine({ hook }) {
+function QueueHookLine({ hook, mode }) {
+  const technical = atLeast(mode, "technical");
   if (!hook.found) {
     return (
       <li>
-        <strong>queue {hook.item_num}</strong>{" "}
+        {technical
+          ? <strong>queue {hook.item_num}</strong>
+          : <strong>a work item the roadmap names here</strong>}{" "}
         <span className="sc-badge sc-badge-error">not in queue_items</span>
         {hook.note && <div className="muted bp-fineprint">{hook.note}</div>}
       </li>
@@ -85,24 +95,35 @@ function QueueHookLine({ hook }) {
   }
   return (
     <li>
-      <strong>queue {hook.item_num}</strong> — {hook.title}{" "}
+      {technical && <><strong>queue {hook.item_num}</strong> — </>}
+      {hook.title}{" "}
       <span className="sc-badge sc-badge-warn">{hook.need_status || "unclassified"}</span>
     </li>
   );
 }
 
-function DiscoveryLine({ record }) {
+/** What was found, then how it is dispositioned, then which record it is.
+ *  Simple keeps the sentence and the status; the record id and revision are
+ *  the identifiers, so they wait for Technical. */
+function DiscoveryLine({ record, mode }) {
   return (
     <li>
-      <strong>{record.id || `revision ${record.revision}`}</strong>{" "}
+      {atLeast(mode, "technical") && (
+        <><strong>{record.id || `revision ${record.revision}`}</strong>{" "}</>
+      )}
       <StatusBadge status={record.status} />{" "}
-      <span className="muted">({record.disposition}, rev {record.revision})</span>
+      {atLeast(mode, "detail") && (
+        <span className="muted">
+          ({record.disposition}
+          {atLeast(mode, "technical") && <>, rev {record.revision}</>})
+        </span>
+      )}
       <div className="bp-discovery-summary">{record.summary}</div>
     </li>
   );
 }
 
-function PhaseCard({ phase }) {
+function PhaseCard({ phase, mode }) {
   const cls = phase.blocked ? "blocked" : phase.status;
   return (
     <section className={`sc-section bp-phase bp-phase-${cls}`}>
@@ -112,27 +133,32 @@ function PhaseCard({ phase }) {
       </h3>
       <div className="bp-phase-desc">{phase.description}</div>
 
-      {phase.migrations?.length > 0 && (
+      {/* Simple answers "where are we, is it blocked, what is next, what is
+          the roadmap" and stops there. Everything below is the mechanics of
+          WHY a phase is gated, which is what More Detail is for. */}
+      {atLeast(mode, "detail") && phase.migrations?.length > 0 && (
         <>
           <h4>Migration unlock points</h4>
           <ul className="sc-list">
             {phase.migrations.map((m) => (
-              <MigrationLine key={m.migration} migration={m} />
+              <MigrationLine key={m.migration} migration={m} mode={mode} />
             ))}
           </ul>
         </>
       )}
 
-      {phase.queue_hooks?.length > 0 && (
+      {atLeast(mode, "detail") && phase.queue_hooks?.length > 0 && (
         <>
           <h4>Queue hooks (work-item authority)</h4>
           <ul className="sc-list">
-            {phase.queue_hooks.map((h) => <QueueHookLine key={h.item_num} hook={h} />)}
+            {phase.queue_hooks.map((h) => (
+              <QueueHookLine key={h.item_num} hook={h} mode={mode} />
+            ))}
           </ul>
         </>
       )}
 
-      {phase.queue_classification && (
+      {atLeast(mode, "detail") && phase.queue_classification && (
         <>
           <h4>Triage subject</h4>
           <div className="sc-counts">
@@ -147,23 +173,28 @@ function PhaseCard({ phase }) {
         </>
       )}
 
-      {phase.constraints?.length > 0 && (
+      {atLeast(mode, "detail") && phase.constraints?.length > 0 && (
         <>
           <h4>Stated constraints</h4>
           <ul className="sc-list">
             {phase.constraints.map((c) => (
               <li key={c.constraint}>
                 <strong>{c.constraint}</strong>
-                <div className="muted bp-fineprint">“{c.quote}” — {c.source}</div>
+                <div className="muted bp-fineprint">
+                  “{c.quote}”{atLeast(mode, "technical") && <> — {c.source}</>}
+                </div>
               </li>
             ))}
           </ul>
         </>
       )}
 
-      {phase.discoveries && (
+      {atLeast(mode, "detail") && phase.discoveries && (
         <>
-          <h4>Discoveries on this phase ({phase.task || "unknown task"})</h4>
+          <h4>
+            Discoveries on this phase
+            {atLeast(mode, "technical") && <> ({phase.task || "unknown task"})</>}
+          </h4>
           <div className="sc-counts">
             {Object.entries(phase.discoveries.counts).map(([status, n]) => (
               <span key={status} className="sc-count-pill">{status}: {n}</span>
@@ -178,7 +209,7 @@ function PhaseCard({ phase }) {
   );
 }
 
-function CurrentAndNext({ model }) {
+function CurrentAndNext({ model, mode }) {
   const current = model.current;
   const next = model.next;
   const progress = model.progress || {};
@@ -202,10 +233,10 @@ function CurrentAndNext({ model }) {
               </span>
             )}
           </div>
-          {current.task && (
+          {atLeast(mode, "detail") && current.task && (
             <div className="muted">current task: {current.task}</div>
           )}
-          {current.evidence?.recorded_at && (
+          {atLeast(mode, "technical") && current.evidence?.recorded_at && (
             <div className="muted bp-fineprint">
               from project_state.{current.evidence.state_key} (row{" "}
               {current.evidence.row_id}), recorded {fmtTime(current.evidence.recorded_at)}
@@ -230,16 +261,21 @@ function CurrentAndNext({ model }) {
       ) : (
         <div className="bp-next-action">
           <div className="bp-longtext">{model.next_action.text}</div>
-          <div className="muted bp-fineprint">
-            project_state.next_action, recorded {fmtTime(model.next_action.recorded_at)}
-          </div>
+          {atLeast(mode, "technical") && (
+            <div className="muted bp-fineprint">
+              project_state.next_action, recorded {fmtTime(model.next_action.recorded_at)}
+            </div>
+          )}
         </div>
       )}
     </section>
   );
 }
 
-function Blockers({ model }) {
+/** Whether the build is blocked, and by what, is a Simple question — so the
+ *  blocking list itself is never deferred. The three other dispositions are
+ *  the full discovery record, which is More Detail. */
+function Blockers({ model, mode }) {
   const blockers = model.blockers || [];
   const groups = model.discoveries || {};
   return (
@@ -248,7 +284,7 @@ function Blockers({ model }) {
         Blocking items{" "}
         <span className="sc-badge sc-badge-error">{blockers.length}</span>
       </h3>
-      {model.discoveries_note && (
+      {atLeast(mode, "detail") && model.discoveries_note && (
         <div className="muted bp-fineprint">{model.discoveries_note}</div>
       )}
       {blockers.length === 0 ? (
@@ -257,38 +293,40 @@ function Blockers({ model }) {
         </div>
       ) : (
         <ul className="sc-list">
-          {blockers.map((b) => <DiscoveryLine key={`${b.task}-${b.revision}`} record={b} />)}
+          {blockers.map((b) => (
+            <DiscoveryLine key={`${b.task}-${b.revision}`} record={b} mode={mode} />
+          ))}
         </ul>
       )}
 
-      {groups.resolved?.length > 0 && (
+      {atLeast(mode, "detail") && groups.resolved?.length > 0 && (
         <>
           <h4>Resolved</h4>
           <ul className="sc-list">
             {groups.resolved.map((d) => (
-              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} />
+              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} mode={mode} />
             ))}
           </ul>
         </>
       )}
 
-      {groups.deferred?.length > 0 && (
+      {atLeast(mode, "detail") && groups.deferred?.length > 0 && (
         <>
           <h4>Explicitly deferred</h4>
           <ul className="sc-list">
             {groups.deferred.map((d) => (
-              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} />
+              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} mode={mode} />
             ))}
           </ul>
         </>
       )}
 
-      {groups.open?.length > 0 && (
+      {atLeast(mode, "detail") && groups.open?.length > 0 && (
         <>
           <h4>Open, not classified as blocking</h4>
           <ul className="sc-list">
             {groups.open.map((d) => (
-              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} />
+              <DiscoveryLine key={`${d.task}-${d.revision}`} record={d} mode={mode} />
             ))}
           </ul>
         </>
@@ -297,7 +335,7 @@ function Blockers({ model }) {
   );
 }
 
-function Checkpoint({ checkpoint }) {
+function Checkpoint({ checkpoint, mode }) {
   if (!checkpoint || checkpoint.present === false) {
     return (
       <section className="sc-section">
@@ -337,16 +375,18 @@ function Checkpoint({ checkpoint }) {
           </span>
         )}
       </div>
-      <table className="sc-table">
-        <tbody>
-          <tr><th>latest pushed</th><td><code>{checkpoint.latest_pushed_sha || "—"}</code></td></tr>
-          <tr>
-            <th>last independently verified</th>
-            <td><code>{checkpoint.latest_remote_verified_sha || "—"}</code></td>
-          </tr>
-          <tr><th>remote ref</th><td>{checkpoint.remote_ref || "—"}</td></tr>
-        </tbody>
-      </table>
+      {atLeast(mode, "technical") && (
+        <table className="sc-table">
+          <tbody>
+            <tr><th>latest pushed</th><td><code>{checkpoint.latest_pushed_sha || "—"}</code></td></tr>
+            <tr>
+              <th>last independently verified</th>
+              <td><code>{checkpoint.latest_remote_verified_sha || "—"}</code></td>
+            </tr>
+            <tr><th>remote ref</th><td>{checkpoint.remote_ref || "—"}</td></tr>
+          </tbody>
+        </table>
+      )}
       {checkpoint.next_transition && (
         <div className="muted bp-fineprint">
           next: {checkpoint.next_transition.to} — requires{" "}
@@ -360,7 +400,7 @@ function Checkpoint({ checkpoint }) {
   );
 }
 
-function AuthorityNote({ model }) {
+function AuthorityNote({ model, mode }) {
   const authority = model.authority || {};
   const [open, setOpen] = useState(false);
   const decisions = model.decisions || [];
@@ -377,10 +417,14 @@ function AuthorityNote({ model }) {
           <li className="muted">{authority.separation_note}</li>
         )}
       </ul>
-      <button className="context-toggle" onClick={() => setOpen((o) => !o)}>
-        {open ? "Hide" : "Show"} the roadmap row and the decisions behind it
-      </button>
-      {open && (
+      {/* The quoted roadmap row and the decision ids behind it are the
+          provenance itself, so the way into them waits for Technical. */}
+      {atLeast(mode, "technical") && (
+        <button className="context-toggle" onClick={() => setOpen((o) => !o)}>
+          {open ? "Hide" : "Show"} the roadmap row and the decisions behind it
+        </button>
+      )}
+      {atLeast(mode, "technical") && open && (
         <div className="context-body">
           {roadmap.raw ? (
             <>
@@ -424,13 +468,20 @@ function AuthorityNote({ model }) {
  * passes the same payload as the project-intelligence response embedded it.
  * Both are the output of tools/state/build_path.py, so the two screens cannot
  * disagree about where the build is.
+ *
+ * `mode` is the Project Map's presentation mode (see presentationMode.js). It
+ * selects how much of the SAME model is disclosed and nothing else: no branch
+ * below reads a different field, recomputes a status or drops anything the
+ * read model sent. The default is full disclosure, so the standalone Build
+ * Path screen — which passes no mode — renders exactly what it rendered
+ * before the mode existed.
  */
-export function CurrentBuildPanel({ model }) {
+export function CurrentBuildPanel({ model, mode = FULL_DISCLOSURE }) {
   return (
     <>
       <div className="sc-section-group">
         <h2>Where the build is</h2>
-        <CurrentAndNext model={model} />
+        <CurrentAndNext model={model} mode={mode} />
       </div>
 
       <div className="sc-section-group">
@@ -441,7 +492,7 @@ export function CurrentBuildPanel({ model }) {
         </section>
         <div className="bp-phase-grid">
           {model.phases?.length > 0 ? (
-            model.phases.map((p) => <PhaseCard key={p.id} phase={p} />)
+            model.phases.map((p) => <PhaseCard key={p.id} phase={p} mode={mode} />)
           ) : (
             <div className="muted">
               No phases were parsed from the roadmap row, so none are shown.
@@ -452,18 +503,25 @@ export function CurrentBuildPanel({ model }) {
 
       <div className="sc-section-group">
         <h2>Blockers</h2>
-        <Blockers model={model} />
+        <Blockers model={model} mode={mode} />
       </div>
 
-      <div className="sc-section-group">
-        <h2>Checkpoint and authority</h2>
-        <Checkpoint checkpoint={model.checkpoint} />
-        <AuthorityNote model={model} />
-        <div className="muted bp-fineprint">
-          state revision <code>{model.state_revision}</code>, generated{" "}
-          {fmtTime(model.generated_at)}
+      {/* The push checkpoint and the quoted authority are evidence about the
+          build, not the build. Simple says where the build is and what is in
+          the way; this group is what More Detail and Technical are for. */}
+      {atLeast(mode, "detail") && (
+        <div className="sc-section-group">
+          <h2>Checkpoint and authority</h2>
+          <Checkpoint checkpoint={model.checkpoint} mode={mode} />
+          <AuthorityNote model={model} mode={mode} />
+          {atLeast(mode, "technical") && (
+            <div className="muted bp-fineprint">
+              state revision <code>{model.state_revision}</code>, generated{" "}
+              {fmtTime(model.generated_at)}
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </>
   );
 }

@@ -3,6 +3,7 @@ import { getProjectIntelligence } from "./api";
 import MermaidDiagram from "./MermaidDiagram";
 import DestinationArchitecture from "./DestinationArchitecture";
 import { CurrentBuildPanel } from "./BuildPath";
+import { atLeast } from "./presentationMode";
 
 // The Workbench "Project Map", over GET /api/workbench/project-intelligence
 // (runtime/api/project_intelligence.py -> tools/state/project_intelligence.py).
@@ -26,13 +27,18 @@ import { CurrentBuildPanel } from "./BuildPath";
 // own route. Neither view is reimplemented here, so this screen cannot drift
 // from the two screens that own those questions.
 //
+// ONE MODE, ALL SIX AREAS (PM-D3). Simple / More Detail / Technical is a single
+// global control, so it has to reach the two reused components as well as the
+// four areas this file draws. It does that by PASSING THE MODE as a prop —
+// `mode` on CurrentBuildPanel and DestinationArchitecture — never by keeping a
+// Project-Map-only copy of either view. The predicate itself lives in
+// presentationMode.js precisely so all three files share one vocabulary.
+//
 // READ-ONLY. The one api.js function imported is a parameterless GET. There is
 // no mutation call in this file, and nothing here classifies a queue item.
 
 const AREA_ORDER = ["overview", "current_build", "queue_problems", "system_anatomy",
                     "destination", "trajectory"];
-
-const MODE_RANK = { simple: 0, detail: 1, technical: 2 };
 
 function fmtTime(iso) {
   if (!iso) return "unknown";
@@ -41,13 +47,6 @@ function fmtTime(iso) {
   } catch {
     return iso;
   }
-}
-
-/** Progressive disclosure, as one predicate. Technical detail is never
- *  removed from the app — it sits one mode away, which is what the card means
- *  by "do not hide technical truth; progressively disclose it". */
-function atLeast(mode, needed) {
-  return (MODE_RANK[mode] ?? 0) >= (MODE_RANK[needed] ?? 0);
 }
 
 /** How a statement is known. Rendered from the response's own
@@ -525,6 +524,19 @@ function QueueProblems({ model, mode }) {
             cannot be quietly forgotten. <strong>Queue items</strong> are recorded pieces of
             work. They are not the same list, and a problem is not automatically a queue item.
           </div>
+          {/* More Detail is where the two lists stop being two names and become
+              two definitions: what a finding IS, and the exact rule by which a
+              row counts as untriaged. Both sentences are the read model's. */}
+          {atLeast(mode, "detail") && model.problems?.statement && (
+            <div className="muted bp-fineprint">
+              Findings: {model.problems.statement}
+            </div>
+          )}
+          {atLeast(mode, "detail") && queue.counts?.unclassified_definition && (
+            <div className="muted bp-fineprint">
+              Awaiting triage means: {queue.counts.unclassified_definition}
+            </div>
+          )}
           <div className="sc-counts">
             <span className="sc-count-pill">{problems.length} findings recorded</span>
             <span className="sc-count-pill sc-pill-warn">
@@ -548,8 +560,10 @@ function QueueProblems({ model, mode }) {
                 The recorded roadmap places it at{" "}
                 <strong>{queue.triage_state.sequencing.stage_label}</strong>, currently{" "}
                 {queue.triage_state.sequencing.stage_status} (
-                {queue.triage_state.sequencing.stage_description}). Authority:{" "}
-                <code>{queue.triage_state.sequencing.authority}</code>.
+                {queue.triage_state.sequencing.stage_description}).
+                {atLeast(mode, "technical") && (
+                  <> Authority: <code>{queue.triage_state.sequencing.authority}</code>.</>
+                )}
               </div>
             ) : (
               <MissingLink explanation={queue.triage_state?.sequencing?.note} />
@@ -560,6 +574,21 @@ function QueueProblems({ model, mode }) {
               </div>
             )}
           </div>
+          {/* Which tables answer the work-item question, and how much of the
+              relationship graph between items actually exists. */}
+          {atLeast(mode, "technical") && (
+            <div className="muted bp-fineprint">
+              {queue.authority}
+              {queue.edge_count !== undefined && (
+                <> <code>queue_edges</code> records {queue.edge_count} relationships
+                  between items.</>
+              )}
+              {(queue.stale_vocabulary_item_nums || []).length > 0 && (
+                <> Items carrying a status outside the recorded vocabulary:{" "}
+                  {queue.stale_vocabulary_item_nums.join(", ")}.</>
+              )}
+            </div>
+          )}
         </section>
       </div>
 
@@ -889,6 +918,66 @@ const AREA_BADGE = {
   INFORMATIONAL: "",
 };
 
+/** What is recorded about an area BEYOND its own description: how much of it is
+ *  switched on, which findings name something inside it, and whether it claims
+ *  a capability that does not resolve. Every line is derived from rows the
+ *  response already carries — the same derivation CapabilityDetail uses one
+ *  level down — so nothing here is invented to make More Detail look different.
+ */
+function AreaRelationships({ area, model }) {
+  const caps = area.capabilities || [];
+  const on = caps.filter((c) => c.status === "REGISTERED");
+  const problems = (model.problems?.items || []).filter(
+    (p) => (p.capability_ids || []).some((id) => (area.capability_ids || []).includes(id)));
+  const unresolved = area.unresolved_capability_ids || [];
+  return (
+    <>
+      <h4>How much of this area is switched on</h4>
+      {caps.length === 0 ? (
+        <div className="muted">
+          Nothing is attached to this area, so there is nothing to be on or off.
+        </div>
+      ) : (
+        <div className="pm-plain">
+          {on.length} of {caps.length}{" "}
+          {caps.length === 1 ? "capability is" : "capabilities are"} plugged into the live
+          application.
+          {on.length < caps.length && (
+            <> Still off: {caps.filter((c) => c.status !== "REGISTERED")
+              .map((c) => c.label).join(", ")}.</>
+          )}
+        </div>
+      )}
+
+      <h4>Problems recorded against this area</h4>
+      {problems.length === 0 ? (
+        <div className="muted">No recorded finding names a capability in this area.</div>
+      ) : (
+        <ul className="sc-list">
+          {problems.map((p) => (
+            <li key={p.id || `${p.task}#${p.revision}`}>
+              <strong>{p.id || `#${p.revision}`}</strong>{" "}
+              <span className={`sc-badge ${PROBLEM_BADGE[p.display_status] || ""}`}>
+                {p.display_status}
+              </span>
+              <PlainLine text={p.plain_english} recorded={p.plain_language_recorded} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {unresolved.length > 0 && (
+        <>
+          <h4>Named here but not resolved</h4>
+          <MissingLink explanation={
+            `This area claims ${unresolved.join(", ")}, which the capability view does `
+            + "not resolve to anything."} />
+        </>
+      )}
+    </>
+  );
+}
+
 function SystemAnatomy({ model, mode }) {
   const anatomy = model.anatomy || {};
   const areas = anatomy.areas || [];
@@ -1011,6 +1100,10 @@ function SystemAnatomy({ model, mode }) {
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {atLeast(mode, "detail") && (
+                <AreaRelationships area={area} model={model} />
               )}
 
               {atLeast(mode, "technical") && area.files.length > 0 && (
@@ -1148,7 +1241,7 @@ function Trajectory({ model, mode }) {
 
 // ── Current Build and Destination areas (reused views) ──────────────────
 
-function CurrentBuildArea({ model, onOpenBuildPath }) {
+function CurrentBuildArea({ model, mode, onOpenBuildPath }) {
   const area = model.current_build || {};
   if (!area.available) {
     return (
@@ -1173,9 +1266,17 @@ function CurrentBuildArea({ model, onOpenBuildPath }) {
           <button className="link-btn" onClick={onOpenBuildPath}>
             Open the full Build Path screen →
           </button>
+          {!atLeast(mode, "technical") && (
+            <div className="muted bp-fineprint">
+              The full Build Path screen always shows every panel. Here the level of detail
+              above decides how much of the same data is shown.
+            </div>
+          )}
         </section>
       </div>
-      <CurrentBuildPanel model={area.build_path} />
+      {/* Same component, same payload — the mode only selects how much of it
+          is disclosed. See CurrentBuildPanel in BuildPath.jsx. */}
+      <CurrentBuildPanel model={area.build_path} mode={mode} />
     </>
   );
 }
@@ -1201,7 +1302,9 @@ function DestinationArea({ model, mode }) {
           )}
         </section>
       </div>
-      <DestinationArchitecture />
+      {/* The destination view fetches and owns its own authority; the mode only
+          selects how much of that one response it discloses. */}
+      <DestinationArchitecture mode={mode} />
     </>
   );
 }
@@ -1242,6 +1345,7 @@ export default function ProjectMap({ onBack, onOpenBuildPath }) {
     return AREA_ORDER.filter((id) => byId[id]).map((id) => byId[id]);
   }, [model]);
   const modes = model?.modes || [];
+  const selectedMode = modes.find((m) => m.id === mode) || null;
 
   return (
     <div className="workbench">
@@ -1252,16 +1356,33 @@ export default function ProjectMap({ onBack, onOpenBuildPath }) {
           Read-only. It explains how problems, work, capabilities, code, the build order and the
           destination relate — and says plainly where nothing has been recorded.
         </span>
-        <div className="pm-modes" role="group" aria-label="Level of detail"
-             style={{ marginLeft: "auto" }}>
-          {modes.map((m) => (
-            <button key={m.id} className={`pm-mode${mode === m.id ? " active" : ""}`}
-                    aria-pressed={mode === m.id}
-                    title={m.plain_english}
-                    onClick={() => setMode(m.id)}>
-              {m.label}
-            </button>
-          ))}
+        {/* The control, and immediately under it a sentence saying what the
+            chosen level means. Eric found PM-D3 on a phone, where the content a
+            mode reveals can be a long scroll away: without this line, tapping a
+            button looked like it had done nothing. The wording is the read
+            model's own modes[].plain_english, not this component's, so the
+            explanation cannot drift from what the mode actually shows — and
+            because it is a live region the change is ANNOUNCED, not only
+            coloured, which is the same reason aria-pressed is on each button. */}
+        <div className="pm-modes-group" style={{ marginLeft: "auto" }}>
+          <div className="pm-modes" role="group" aria-label="Level of detail">
+            {modes.map((m) => (
+              <button key={m.id} className={`pm-mode${mode === m.id ? " active" : ""}`}
+                      aria-pressed={mode === m.id}
+                      title={m.plain_english}
+                      onClick={() => setMode(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {selectedMode && (
+            <div className="pm-mode-note" role="status" aria-live="polite"
+                 data-testid="pm-mode-note">
+              <strong>{selectedMode.label}</strong>
+              {" — "}
+              {selectedMode.plain_english}
+            </div>
+          )}
         </div>
         <button className="link-btn" onClick={load} disabled={loading}>
           {loading ? "Loading…" : "Refresh"}
@@ -1315,7 +1436,8 @@ export default function ProjectMap({ onBack, onOpenBuildPath }) {
 
             {area === "overview" && <Overview model={model} mode={mode} onGo={setArea} />}
             {area === "current_build" && (
-              <CurrentBuildArea model={model} onOpenBuildPath={onOpenBuildPath} />
+              <CurrentBuildArea model={model} mode={mode}
+                                onOpenBuildPath={onOpenBuildPath} />
             )}
             {area === "queue_problems" && <QueueProblems model={model} mode={mode} />}
             {area === "system_anatomy" && <SystemAnatomy model={model} mode={mode} />}

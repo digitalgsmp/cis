@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import BuildPath from "./BuildPath";
+import BuildPath, { CurrentBuildPanel } from "./BuildPath";
 
 // In-memory fake of runtime/api/build_path.py's single GET route — no real
 // fetch, no network, no model call. The mock deliberately exposes ONLY the two
@@ -497,5 +497,128 @@ describe("BuildPath (read-only build path visualization)", () => {
     await user.click(screen.getByRole("tab", { name: /Current Build/ }));
     await waitFor(() => expect(screen.getByText("Current phase")).toBeInTheDocument());
     expect(screen.queryByTestId("da-scope-banner")).not.toBeInTheDocument();
+  });
+});
+
+// PM-D3. CurrentBuildPanel is the ONE Build Path renderer, reused by the
+// Project Map, and it now takes that screen's presentation mode. These tests
+// assert two things: that the standalone screen is unchanged (it passes no
+// mode, so it gets full disclosure), and that each level DISCLOSES a
+// different, meaningful subset of the SAME model — never a different model,
+// and never merely a different amount of text.
+describe("CurrentBuildPanel — presentation mode (PM-D3)", () => {
+  it("discloses everything when handed no mode, which is the standalone screen", () => {
+    render(<CurrentBuildPanel model={fullModel()} />);
+    expect(screen.getByText("Where the build is")).toBeInTheDocument();
+    expect(screen.getByText("Checkpoint and authority")).toBeInTheDocument();
+    expect(screen.getByText("migration 0035")).toBeInTheDocument();
+    expect(screen.getByText("queue 0.4")).toBeInTheDocument();
+    expect(screen.getByText(/current task: WB\.1/)).toBeInTheDocument();
+    expect(screen.getByText(/row 141/)).toBeInTheDocument();
+    expect(screen.getByText("WB1-D15")).toBeInTheDocument();
+  });
+
+  it("renders the same panels on the standalone screen as with mode=technical",
+     async () => {
+    // The default is not merely "a lot" — it is exactly Technical, so nothing
+    // on the Build Path screen changed when the mode was introduced.
+    const bare = render(<CurrentBuildPanel model={fullModel()} />);
+    const html = bare.container.innerHTML;
+    bare.unmount();
+    const technical = render(<CurrentBuildPanel model={fullModel()} mode="technical" />);
+    expect(technical.container.innerHTML).toBe(html);
+  });
+
+  it("Simple answers where the build is, whether it is blocked and what is next", () => {
+    render(<CurrentBuildPanel model={fullModel()} mode="simple" />);
+    // Present: position, blocked state, next stage, next action, the roadmap
+    // diagram, every phase in plain language, and what is in the way.
+    expect(screen.getAllByText("active / blocked").length).toBeGreaterThan(0);
+    expect(screen.getByText(/stage 1 of 9/)).toBeInTheDocument();
+    expect(screen.getByText("Next stage")).toBeInTheDocument();
+    expect(screen.getByText(/Finish WB\.1 P0 closeout/)).toBeInTheDocument();
+    expect(screen.getByText("activate WB.1 Slice 1")).toBeInTheDocument();
+    expect(screen.getByText("Blocking items")).toBeInTheDocument();
+    expect(screen.getByText(/the Brain gateway's upstream credential is rejected/))
+      .toBeInTheDocument();
+
+    // Absent — technical evidence, in every form the card names.
+    expect(screen.queryByText("migration 0035")).toBeNull();
+    expect(screen.queryByText(/presence of the tables/)).toBeNull();
+    expect(screen.queryByText("queue 0.4")).toBeNull();
+    expect(screen.queryByText("WB1-D15")).toBeNull();
+    expect(screen.queryByText(/rev 65/)).toBeNull();
+    expect(screen.queryByText(/row 141/)).toBeNull();
+    expect(screen.queryByText(/project_state\.next_action/)).toBeNull();
+    expect(screen.queryByText("Checkpoint and authority")).toBeNull();
+    expect(screen.queryByText(/383b404dc2847aaa/)).toBeNull();
+    expect(screen.queryByText("Triage subject")).toBeNull();
+    expect(screen.queryByText("Resolved")).toBeNull();
+    expect(screen.queryByText(/current task: WB\.1/)).toBeNull();
+  });
+
+  it("More Detail adds what gates a phase and what is deferred, without the ids", () => {
+    render(<CurrentBuildPanel model={fullModel()} mode="detail" />);
+    // A database update gates the phase, and whether it has happened — the
+    // unlock MEANING, which is what More Detail is for.
+    expect(screen.getAllByText("a database update").length).toBe(4);
+    expect(screen.getAllByText(/required at this phase/).length).toBe(2);
+    expect(screen.getAllByText("applied").length).toBe(2);
+    // The work items the roadmap names here, by title.
+    expect(screen.getAllByText("Queue hooks (work-item authority)").length).toBe(2);
+    expect(screen.getByText(/Override plane and fail-mode policy/)).toBeInTheDocument();
+    // The triage subject, the stated constraints and the full discovery record.
+    expect(screen.getByText("Triage subject")).toBeInTheDocument();
+    expect(screen.getByText(/NO item redesign during triage/)).toBeInTheDocument();
+    expect(screen.getByText("Resolved")).toBeInTheDocument();
+    expect(screen.getByText("Explicitly deferred")).toBeInTheDocument();
+    expect(screen.getAllByText(/EXPLICITLY_DEFERRED/).length).toBeGreaterThan(0);
+    // The checkpoint's state and what it is waiting for.
+    expect(screen.getByText("REMOTE_REVIEW_REQUIRED")).toBeInTheDocument();
+    expect(screen.getByText(/requires independent readback/)).toBeInTheDocument();
+    expect(screen.getByText(/current task: WB\.1/)).toBeInTheDocument();
+
+    // Absent — every exact identifier.
+    expect(screen.queryByText("migration 0035")).toBeNull();
+    expect(screen.queryByText(/presence of the tables/)).toBeNull();
+    expect(screen.queryByText("queue 0.4")).toBeNull();
+    expect(screen.queryByText("WB1-D15")).toBeNull();
+    expect(screen.queryByText(/rev 65/)).toBeNull();
+    expect(screen.queryByText(/383b404dc2847aaa/)).toBeNull();
+    expect(screen.queryByText(/row 141/)).toBeNull();
+    expect(screen.queryByText(/— ADR-PIPE-006$/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Show the roadmap row/ })).toBeNull();
+  });
+
+  it("Technical names the migrations, the queue ids, the revisions and the pushed SHA",
+     async () => {
+    render(<CurrentBuildPanel model={fullModel()} mode="technical" />);
+    expect(screen.getByText("migration 0035")).toBeInTheDocument();
+    expect(screen.getByText("migration 0037")).toBeInTheDocument();
+    expect(screen.getByText(/presence of the tables 0035 creates/)).toBeInTheDocument();
+    expect(screen.getByText("queue 0.4")).toBeInTheDocument();
+    expect(screen.getByText("queue 1.23")).toBeInTheDocument();
+    expect(screen.getByText("WB1-D15")).toBeInTheDocument();
+    expect(screen.getByText(/rev 65/)).toBeInTheDocument();
+    expect(screen.getByText("383b404dc2847aaa9a1260d5de5483535b774892")).toBeInTheDocument();
+    expect(screen.getByText(/from project_state.build_phase \(row 141\)/)).toBeInTheDocument();
+    expect(screen.getByText(/project_state\.next_action, recorded/)).toBeInTheDocument();
+    expect(screen.getByText(/Discoveries on this phase \(WB\.1\)/)).toBeInTheDocument();
+
+    // And the quoted roadmap row with the decisions behind it, one click away.
+    await userEvent.click(screen.getByRole("button", { name: /Show the roadmap row/ }));
+    expect(screen.getByText(/P0 \(activate WB\.1 Slice 1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/ADR-PIPE-001/)).toBeInTheDocument();
+  });
+
+  it("takes nothing out of the model at any level — only out of the rendering", () => {
+    // Disclosure, not removal: the payload handed to Simple is the same object,
+    // field for field, as the one handed to Technical.
+    const model = fullModel();
+    const snapshot = JSON.stringify(model);
+    const { unmount } = render(<CurrentBuildPanel model={model} mode="simple" />);
+    unmount();
+    render(<CurrentBuildPanel model={model} mode="technical" />);
+    expect(JSON.stringify(model)).toBe(snapshot);
   });
 });

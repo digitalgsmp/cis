@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDestinationArchitecture } from "./api";
 import MermaidDiagram from "./MermaidDiagram";
+import { atLeast, FULL_DISCLOSURE } from "./presentationMode";
 
 // The "Destination Architecture" tab of the Build Path screen, over GET
 // /api/workbench/destination-architecture (runtime/api/destination_architecture.py
@@ -16,6 +17,13 @@ import MermaidDiagram from "./MermaidDiagram";
 // them, and if they are absent it says so instead of drawing something.
 //
 // Read-only: the one api.js function imported is a parameterless GET.
+//
+// PRESENTATION MODE. The Project Map embeds this component and passes its
+// Simple / More Detail / Technical mode in (see presentationMode.js). The mode
+// changes how much of the SAME response is disclosed and nothing else — no
+// branch here reads a different field or recomputes anything — and it defaults
+// to full disclosure, so the standalone Destination Architecture tab of the
+// Build Path screen renders exactly what it rendered before the mode existed.
 
 function fmtTime(iso) {
   if (!iso) return "unknown";
@@ -37,32 +45,39 @@ function ActivationBadge({ state }) {
   return <span className={`sc-badge ${cls}`}>{state.replace(/_/g, " ").toLowerCase()}</span>;
 }
 
-function NodeCard({ node, edgesFrom, edgesTo }) {
+function NodeCard({ node, edgesFrom, edgesTo, labelOf, mode }) {
+  // At Technical an edge names the node's declared id, which is what a reader
+  // in that mode came for. Below Technical it names the node's label, because
+  // "uses → CIS" is an identifier and "uses → CIS — the control substrate" is
+  // the sentence. Same edge, same authority, different disclosure.
+  const name = (id) => (atLeast(mode, "technical") ? id : (labelOf[id] || id));
   return (
     <section className={`sc-section da-node da-node-${node.activation_state || "unknown"}`}>
       <h4>
         {node.label} <ActivationBadge state={node.activation_state} />
       </h4>
-      <div className="muted bp-fineprint">
-        {node.kind.replace(/_/g, " ")} · depth {node.depth} · <code>{node.id}</code>
-      </div>
+      {atLeast(mode, "technical") && (
+        <div className="muted bp-fineprint">
+          {node.kind.replace(/_/g, " ")} · depth {node.depth} · <code>{node.id}</code>
+        </div>
+      )}
       <div className="bp-phase-desc">{node.description}</div>
 
       {(edgesFrom.length > 0 || edgesTo.length > 0) && (
         <ul className="sc-list da-edge-list">
           {edgesFrom.map((e) => (
             <li key={`out-${e.relationship}-${e.target}`}>
-              <span className="da-rel">{e.relationship}</span> → {e.target}
+              <span className="da-rel">{e.relationship}</span> → {name(e.target)}
             </li>
           ))}
           {edgesTo.map((e) => (
             <li key={`in-${e.relationship}-${e.source}`}>
-              {e.source} <span className="da-rel">{e.relationship}</span> → this
+              {name(e.source)} <span className="da-rel">{e.relationship}</span> → this
             </li>
           ))}
         </ul>
       )}
-      {node.authority_ref && (
+      {atLeast(mode, "technical") && node.authority_ref && (
         <div className="muted bp-fineprint da-provenance">
           declared by {node.authority_ref.decision_id} ({node.authority_ref.clause})
         </div>
@@ -71,13 +86,13 @@ function NodeCard({ node, edgesFrom, edgesTo }) {
   );
 }
 
-function KindGroup({ kind, nodes, edges }) {
+function KindGroup({ kind, nodes, edges, labelOf, mode }) {
   return (
     <div className="sc-section-group">
       <h3 className="da-kind-heading">{kind.replace(/_/g, " ")}</h3>
       <div className="bp-phase-grid">
         {nodes.map((n) => (
-          <NodeCard key={n.id} node={n}
+          <NodeCard key={n.id} node={n} labelOf={labelOf} mode={mode}
                     edgesFrom={edges.filter((e) => e.source === n.id)}
                     edgesTo={edges.filter((e) => e.target === n.id)} />
         ))}
@@ -86,7 +101,69 @@ function KindGroup({ kind, nodes, edges }) {
   );
 }
 
-function Relationships({ model }) {
+/**
+ * The architecture as an indented plain-language outline. Simple mode only.
+ *
+ * Simple's job is the SHAPE of the destination: what WIASW is, that it uses
+ * CIS, that CIS controls and orchestrates the execution backends, and that none
+ * of it is activated. No hierarchy is known to this file: `depth` arrives in the
+ * response — the read model computes it from the authority's own containment
+ * relationship per request — so the nesting below is the authority's.
+ *
+ * Edges that only restate that nesting are not repeated as text, because the
+ * indentation already says them. Every OTHER declared relationship is shown,
+ * with the other node's label rather than its id. Nothing is dropped from the
+ * model: at More Detail the same nodes reappear as full cards grouped by the
+ * kinds the authority used, and at Technical with their ids, kinds and the
+ * decision clause that declared each one.
+ */
+function HierarchyOutline({ nodes, edges }) {
+  const depthOf = (n) => n.depth ?? 0;
+  const labelOf = Object.fromEntries(nodes.map((n) => [n.id, n.label]));
+
+  // A node's outline parent is the nearest preceding node one level shallower,
+  // which is exactly what the indentation shows a reader.
+  const lastAtDepth = [];
+  const parentOf = new Map();
+  for (const node of nodes) {
+    const depth = depthOf(node);
+    if (depth > 0 && lastAtDepth[depth - 1]) {
+      parentOf.set(node.id, lastAtDepth[depth - 1]);
+    }
+    lastAtDepth[depth] = node.id;
+  }
+  const beyondNesting = (id) =>
+    edges.filter((e) => e.source === id && parentOf.get(e.target) !== e.source);
+
+  return (
+    <ul className="da-outline" data-testid="da-outline">
+      {nodes.map((node) => {
+        const related = beyondNesting(node.id);
+        return (
+          <li key={node.id} className="da-outline-node"
+              style={{ marginInlineStart: `${depthOf(node) * 1.1}rem` }}>
+            <div className="da-outline-head">
+              <strong>{node.label}</strong> <ActivationBadge state={node.activation_state} />
+            </div>
+            {node.description && <div className="pm-plain">{node.description}</div>}
+            {related.length > 0 && (
+              <ul className="sc-list da-edge-list">
+                {related.map((e) => (
+                  <li key={`${e.relationship}-${e.target}`}>
+                    <span className="da-rel">{e.relationship}</span> →{" "}
+                    {labelOf[e.target] || e.target}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Relationships({ model, mode }) {
   const relationships = model.relationships || [];
   const used = model.relationship_types_used || [];
   return (
@@ -104,9 +181,11 @@ function Relationships({ model }) {
               {!used.includes(r.name) && (
                 <span className="muted"> (defined, not used by any edge)</span>
               )}
-              <div className="muted bp-fineprint da-provenance">
-                from {r.authority_ref?.decision_id}
-              </div>
+              {atLeast(mode, "technical") && (
+                <div className="muted bp-fineprint da-provenance">
+                  from {r.authority_ref?.decision_id}
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -118,7 +197,7 @@ function Relationships({ model }) {
   );
 }
 
-function ActivationPanel({ model }) {
+function ActivationPanel({ model, mode }) {
   const activation = model.activation || {};
   return (
     <section className="sc-section da-activation">
@@ -135,9 +214,11 @@ function ActivationPanel({ model }) {
         {(activation.vocabulary || []).map((v) => (
           <li key={v.state}>
             <strong>{v.state}</strong> — {v.definition}
-            <div className="muted bp-fineprint da-provenance">
-              from {v.authority_ref?.decision_id}
-            </div>
+            {atLeast(mode, "technical") && (
+              <div className="muted bp-fineprint da-provenance">
+                from {v.authority_ref?.decision_id}
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -197,7 +278,7 @@ function AuthorityPanel({ model }) {
   );
 }
 
-export default function DestinationArchitecture() {
+export default function DestinationArchitecture({ mode = FULL_DISCLOSURE }) {
   const [model, setModel] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -234,6 +315,7 @@ export default function DestinationArchitecture() {
     kind,
     nodes: (model?.nodes || []).filter((n) => n.kind === kind),
   })).filter((g) => g.nodes.length > 0);
+  const labelOf = Object.fromEntries((model?.nodes || []).map((n) => [n.id, n.label]));
 
   return (
     <div className="da-body">
@@ -300,22 +382,37 @@ export default function DestinationArchitecture() {
                                   emptyNote="The read model carried no diagram source for this level." />
                 </>
               )}
-              <div className="sc-counts">
-                <span className="sc-count-pill">{model.counts?.nodes} nodes</span>
-                <span className="sc-count-pill">{model.counts?.edges} edges</span>
-                <span className="sc-count-pill">
-                  {model.counts?.relationship_types} relationship types
-                </span>
-                {level && (
+              {atLeast(mode, "detail") && (
+                <div className="sc-counts">
+                  <span className="sc-count-pill">{model.counts?.nodes} nodes</span>
+                  <span className="sc-count-pill">{model.counts?.edges} edges</span>
                   <span className="sc-count-pill">
-                    {level.node_count} shown at this level
+                    {model.counts?.relationship_types} relationship types
                   </span>
-                )}
-              </div>
+                  {level && (
+                    <span className="sc-count-pill">
+                      {level.node_count} shown at this level
+                    </span>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
-          {model.problems?.length > 0 && (
+          {/* Simple: the hierarchy in plain words, which is the one thing a
+              reader needs from this screen before anything else. At More Detail
+              and above the same nodes appear as full cards under "Every
+              recorded element", so the outline would only repeat them. */}
+          {!atLeast(mode, "detail") && (
+            <div className="sc-section-group">
+              <h2>What it is made of</h2>
+              <section className="sc-section">
+                <HierarchyOutline nodes={model.nodes || []} edges={model.edges || []} />
+              </section>
+            </div>
+          )}
+
+          {atLeast(mode, "detail") && model.problems?.length > 0 && (
             <div className="sc-section-group">
               <h2>Problems in the recorded architecture</h2>
               <section className="sc-section">
@@ -331,32 +428,45 @@ export default function DestinationArchitecture() {
             </div>
           )}
 
-          <div className="sc-section-group">
-            <h2>Semantics and activation</h2>
-            <ActivationPanel model={model} />
-            <Relationships model={model} />
-          </div>
-
-          <h2>Every recorded element</h2>
-          {shownIds && level?.max_depth !== null && (
-            <div className="muted bp-fineprint">
-              The diagram above shows {level.node_count} of {model.counts?.nodes} nodes at
-              this zoom level. Every node is listed below regardless of level.
+          {/* What the relationships mean and what activation means are the
+              explanations, not the identifiers — More Detail. The decision ids
+              inside them wait for Technical. */}
+          {atLeast(mode, "detail") && (
+            <div className="sc-section-group">
+              <h2>Semantics and activation</h2>
+              <ActivationPanel model={model} mode={mode} />
+              <Relationships model={model} mode={mode} />
             </div>
           )}
-          {groups.map((g) => (
-            <KindGroup key={g.kind} kind={g.kind} nodes={g.nodes}
-                       edges={model.edges || []} />
-          ))}
 
-          <div className="sc-section-group">
-            <h2>Authority</h2>
-            <AuthorityPanel model={model} />
-            <div className="muted bp-fineprint">
-              state revision <code>{model.state_revision}</code>, generated{" "}
-              {fmtTime(model.generated_at)}
+          {atLeast(mode, "detail") && (
+            <>
+              <h2>Every recorded element</h2>
+              {shownIds && level?.max_depth !== null && (
+                <div className="muted bp-fineprint">
+                  The diagram above shows {level.node_count} of {model.counts?.nodes} nodes at
+                  this zoom level. Every node is listed below regardless of level.
+                </div>
+              )}
+              {groups.map((g) => (
+                <KindGroup key={g.kind} kind={g.kind} nodes={g.nodes} labelOf={labelOf}
+                           mode={mode} edges={model.edges || []} />
+              ))}
+            </>
+          )}
+
+          {/* The ADR ids, the quoted declarations and the parser/projection
+              notes ARE the technical provenance this screen is built on. */}
+          {atLeast(mode, "technical") && (
+            <div className="sc-section-group">
+              <h2>Authority</h2>
+              <AuthorityPanel model={model} />
+              <div className="muted bp-fineprint">
+                state revision <code>{model.state_revision}</code>, generated{" "}
+                {fmtTime(model.generated_at)}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
