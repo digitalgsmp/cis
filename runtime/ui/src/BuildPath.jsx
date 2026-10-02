@@ -412,6 +412,62 @@ function AuthorityNote({ model }) {
   );
 }
 
+/**
+ * The Current Build body, as a component, so the Project Map can render the
+ * SAME panels from the SAME read model instead of carrying a second copy of
+ * them.
+ *
+ * Exported for exactly one reason: ProjectMap.jsx's "Current Build" area is
+ * required to reuse this view rather than reimplement it. It takes the
+ * build-path model as a prop and fetches nothing — the Build Path screen below
+ * passes what it loaded from /api/workbench/build-path, and the Project Map
+ * passes the same payload as the project-intelligence response embedded it.
+ * Both are the output of tools/state/build_path.py, so the two screens cannot
+ * disagree about where the build is.
+ */
+export function CurrentBuildPanel({ model }) {
+  return (
+    <>
+      <div className="sc-section-group">
+        <h2>Where the build is</h2>
+        <CurrentAndNext model={model} />
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Roadmap</h2>
+        <section className="sc-section">
+          <h3>P0 → P6 sequence</h3>
+          <MermaidDiagram source={model.mermaid} />
+        </section>
+        <div className="bp-phase-grid">
+          {model.phases?.length > 0 ? (
+            model.phases.map((p) => <PhaseCard key={p.id} phase={p} />)
+          ) : (
+            <div className="muted">
+              No phases were parsed from the roadmap row, so none are shown.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Blockers</h2>
+        <Blockers model={model} />
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Checkpoint and authority</h2>
+        <Checkpoint checkpoint={model.checkpoint} />
+        <AuthorityNote model={model} />
+        <div className="muted bp-fineprint">
+          state revision <code>{model.state_revision}</code>, generated{" "}
+          {fmtTime(model.generated_at)}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function BuildPath({ onBack }) {
   const [model, setModel] = useState(null);
   const [error, setError] = useState("");
@@ -512,46 +568,7 @@ export default function BuildPath({ onBack }) {
           </div>
         )}
 
-        {model && (
-          <>
-            <div className="sc-section-group">
-              <h2>Where the build is</h2>
-              <CurrentAndNext model={model} />
-            </div>
-
-            <div className="sc-section-group">
-              <h2>Roadmap</h2>
-              <section className="sc-section">
-                <h3>P0 → P6 sequence</h3>
-                <MermaidDiagram source={model.mermaid} />
-              </section>
-              <div className="bp-phase-grid">
-                {model.phases?.length > 0 ? (
-                  model.phases.map((p) => <PhaseCard key={p.id} phase={p} />)
-                ) : (
-                  <div className="muted">
-                    No phases were parsed from the roadmap row, so none are shown.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="sc-section-group">
-              <h2>Blockers</h2>
-              <Blockers model={model} />
-            </div>
-
-            <div className="sc-section-group">
-              <h2>Checkpoint and authority</h2>
-              <Checkpoint checkpoint={model.checkpoint} />
-              <AuthorityNote model={model} />
-              <div className="muted bp-fineprint">
-                state revision <code>{model.state_revision}</code>, generated{" "}
-                {fmtTime(model.generated_at)}
-              </div>
-            </div>
-          </>
-        )}
+        {model && <CurrentBuildPanel model={model} />}
       </div>
       )}
     </div>

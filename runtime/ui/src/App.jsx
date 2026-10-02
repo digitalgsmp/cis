@@ -15,6 +15,7 @@ import ProposalPanel from "./ProposalPanel";
 import CardFactory from "./CardFactory";
 import SystemContext from "./SystemContext";
 import BuildPath from "./BuildPath";
+import ProjectMap from "./ProjectMap";
 import SignIn from "./SignIn";
 
 const LAST_PROJECT_KEY = "cis-workbench-last-project";
@@ -563,6 +564,19 @@ export default function App() {
     return <BuildPath onBack={() => setView("conversation")} />;
   }
 
+  // Also not capability-gated, for the same reason: one read-only route this
+  // server always registers, offering no action a later stage has to unlock.
+  // It hands the Build Path screen the navigation rather than embedding a
+  // second copy of that screen's header.
+  if (view === "projectmap") {
+    return (
+      <ProjectMap
+        onBack={() => setView("conversation")}
+        onOpenBuildPath={() => setView("buildpath")}
+      />
+    );
+  }
+
   return (
     <div className="workbench">
       <header className="stage-banner">
@@ -576,7 +590,10 @@ export default function App() {
                the UI is broken rather than early. */
             : "Braingate can clarify and discuss here. Proposing actions, generating cards and running them are later stages and are not available yet."}
         </span>
-        <button className="link-btn" onClick={() => setView("buildpath")} style={{ marginLeft: "auto" }}>
+        <button className="link-btn" onClick={() => setView("projectmap")} style={{ marginLeft: "auto" }}>
+          Project Map →
+        </button>
+        <button className="link-btn" onClick={() => setView("buildpath")}>
           Build Path →
         </button>
         <button className="link-btn" onClick={() => setView("recovery")}>

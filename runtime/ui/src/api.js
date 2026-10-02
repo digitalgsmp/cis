@@ -295,3 +295,15 @@ export function getBuildPath() {
 export function getDestinationArchitecture() {
   return workbenchRequest("/destination-architecture");
 }
+
+// ── Project Map ─────────────────────────────────────────────────────────
+// Thin GET wrapper over runtime/api/project_intelligence.py, itself a thin
+// wrapper over tools/state/project_intelligence.py. Read-only and
+// parameterless like the two above it. One request returns the whole composed
+// map — including the Build Path payload the Project Map's Current Build area
+// re-renders with the same component the Build Path screen uses — so the two
+// screens cannot show different build state.
+
+export function getProjectIntelligence() {
+  return workbenchRequest("/project-intelligence");
+}

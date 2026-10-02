@@ -59,6 +59,25 @@ app.register_blueprint(build_path_bp)
 from api.destination_architecture import destination_architecture_bp
 app.register_blueprint(destination_architecture_bp)
 
+# ── Workbench Project Map (read-only composition layer) ───────────────────────
+# Read-only wrapper over tools/state/project_intelligence.py: one GET route,
+# /api/workbench/project-intelligence. A THIRD question, above and across the
+# two above it: not "what are we building now" and not "what is CIS ultimately
+# being built to support", but "how do the problems, the work, the capabilities,
+# the code, the build order and the destination relate to each other" — in plain
+# language, for a reader who is not a programmer.
+#
+# It COMPOSES the two read models above rather than restating them: it calls
+# build_path.get_build_path() and
+# destination_architecture.get_destination_architecture(), and holds no phase
+# sequence and no destination graph of its own. Registering it grants a view and
+# nothing else — no mutating route, and the read model opens the spine
+# read-only. It performs NO queue triage: every queue row with neither scope nor
+# need_status is reported AWAITING TRIAGE exactly as stored.
+from api.project_intelligence import project_intelligence_bp
+app.register_blueprint(project_intelligence_bp)
+
+
 # ── WB.1 Slice 1 — Braingate conversation stage, ACTIVATED ────────────────────
 # Activated by the WB.1 Braingate live-activation card. Exactly two blueprints
 # register here, and together they are the whole P0 surface:
