@@ -917,6 +917,16 @@ def build_queue(conn, vocabulary, build):
         body, truncated = _truncate(item.pop("body_md", ""), _QUEUE_BODY_LIMIT)
         awaiting = item.get("need_status") is None and (
             item.get("scope") is None if has_scope else True)
+        # ADR-PIPE-001 defines the triage write as BOTH fields, so presence of
+        # one is not a triaged row. `awaiting_triage` is left exactly as
+        # ADR-PIPE-006 defines it (neither field) and is NOT widened here;
+        # `triage_complete` carries the two-field question on its own, so a
+        # half-written row cannot read as finished triage from either angle.
+        missing = []
+        if item.get("need_status") is None:
+            missing.append("need_status")
+        if has_scope and not (item.get("scope") or "").strip():
+            missing.append("scope")
         explanation = explanations.get(item["item_num"])
         if explanation:
             used.add(item["item_num"])
@@ -926,6 +936,11 @@ def build_queue(conn, vocabulary, build):
             "body_truncated": truncated,
             "awaiting_triage": awaiting,
             "classification_status": "AWAITING TRIAGE" if awaiting else "CLASSIFIED",
+            "triage_complete": not missing,
+            "triage_missing_fields": missing,
+            "triage_status": ("AWAITING TRIAGE" if awaiting
+                              else "CLASSIFIED" if not missing
+                              else "PARTIALLY CLASSIFIED"),
             "plain_english": (explanation or {}).get("plain_english")
                              or MISSING_PLAIN_LANGUAGE_TEXT,
             "why_it_matters": (explanation or {}).get("why_it_matters"),
@@ -963,6 +978,13 @@ def build_queue(conn, vocabulary, build):
         "total_items": counts["total_items"],
         "awaiting_triage": sum(1 for i in items if i["awaiting_triage"]),
         "classified": sum(1 for i in items if not i["awaiting_triage"]),
+        # The two-field reading, reported alongside rather than folded into the
+        # ADR-PIPE-006 count above. 'classified' answers "not the triage
+        # subject"; 'fully_classified' answers "carries both fields ADR-PIPE-001
+        # requires". They differ by exactly the partially_classified rows.
+        "fully_classified": sum(1 for i in items if i["triage_complete"]),
+        "partially_classified": sum(
+            1 for i in items if not i["awaiting_triage"] and not i["triage_complete"]),
         "distributions": {
             "need_status": _distribution(conn, "need_status"),
             "scope": _distribution(conn, "scope"),

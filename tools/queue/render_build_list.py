@@ -58,11 +58,53 @@ def banner(conn):
     return BANNER_STATIC + f"\n<!-- state_revision: {rev} -->"
 
 
-def rewrite_status(body_md, need_status):
-    """Replace the whole status marker in body_md with a canonical
-    '**Need: <STATUS>.**' reflecting need_status.
+# A '---' rule is how this file separates items; markers belong with the item's
+# prose, above it, not orphaned underneath.
+_RULE_RE = re.compile(r"^-{3,}\s*$")
 
-    Only called for items whose status was EXPLICITLY changed via queue_set.py
+# The marker count classify_status() in extract_queue_items.py uses to decide
+# the status is AMBIGUOUS. It is anchored, and it is the exact expression a
+# marker insertion must not push from 1 to 2 -- two markers fail the recovery
+# run outright.
+_NEED_MARKER_COUNT_RE = re.compile(r"^\*\*Need:", re.M)
+
+# Shape 1 of extract_scope(): the canonical single-line form this module writes
+# and the one extract_scope() tries FIRST, so a line in this shape wins the
+# round trip wherever it sits in the body.
+_SCOPE_LINE_RE = re.compile(r"^\*\*Scope:?\*\*.*$", re.M)
+
+
+def _split_trailer(lines):
+    """Split body lines into (content, trailer).
+
+    trailer is the trailing blank lines plus an optional trailing '---' rule and
+    the blanks above it. Inserting a marker between the two keeps it attached to
+    the item it describes and leaves the item separator where it was, so the
+    rendered file still reads as the same document.
+    """
+    end = len(lines)
+    while end > 0 and not lines[end - 1].strip():
+        end -= 1
+    if end > 0 and _RULE_RE.match(lines[end - 1]):
+        end -= 1
+        while end > 0 and not lines[end - 1].strip():
+            end -= 1
+    return lines[:end], lines[end:]
+
+
+def _insert_marker(body_md, marker_line):
+    """Append marker_line as its own paragraph, above any trailing rule."""
+    content, trailer = _split_trailer(body_md.split("\n"))
+    if content:
+        content.append("")
+    content.append(marker_line)
+    return "\n".join(content + trailer)
+
+
+def rewrite_status(body_md, need_status):
+    """Put a canonical '**Need: <STATUS>.**' marker into body_md.
+
+    Called for items whose status was EXPLICITLY changed via queue_set.py
     (status_changed_at not null). The three marker shapes mirror
     classify_status() in extract_queue_items.py; each is replaced wholesale —
     token, stale date, and trailing prose — because the date belongs to the OLD
@@ -71,21 +113,73 @@ def rewrite_status(body_md, need_status):
 
     Canonical form chosen over minimal-token-replacement because a half-edit
     leaves artefacts like 'DONE-09-04.' (stale date glued to the new status).
+
+    WHEN NO MARKER EXISTS THE MARKER IS INSERTED (OQ-TRIAGE-001 option 1).
+    This function used to return body_md unchanged in that case, which meant a
+    status written through queue_set.py was invisible in the projection and was
+    reset to NULL by the documented recovery path. Measured 2026-10-03: 0 of the
+    56 unclassified items carry a marker of any shape, so for triage the
+    insertion branch is the ONLY branch that ever runs.
     """
     display = need_status.replace("_", " ")
+    marker = "**Need: " + display + ".**"
     # Shape 1 -- '**Need:** VALUE' (value bare, outside the bold)
     m = re.search(r"\*\*Need:\*\*\s*[A-Za-z_ ]+", body_md)
     if m:
-        return body_md[:m.start()] + "**Need: " + display + ".**" + body_md[m.end():]
+        return body_md[:m.start()] + marker + body_md[m.end():]
     # Shape 2 -- '**Need: VALUE ...**' (key inside the bold span)
     m = re.search(r"\*\*Need:\s*[A-Za-z][A-Za-z_ ]{0,30}[^*]*\*\*", body_md)
     if m:
-        return body_md[:m.start()] + "**Need: " + display + ".**" + body_md[m.end():]
+        return body_md[:m.start()] + marker + body_md[m.end():]
     # Shape 3 -- bare '**DONE ...**' marker with no Need key
     m = re.search(r"\*\*(?:DONE|HALF DONE|RESOLVED)\b[^*]*\*\*", body_md)
     if m:
-        return body_md[:m.start()] + "**Need: " + display + ".**" + body_md[m.end():]
-    return body_md
+        return body_md[:m.start()] + marker + body_md[m.end():]
+    # No marker of any recognised shape. Guard on the SAME anchored count the
+    # extractor uses before inserting: a malformed '**Need: x' with no closing
+    # bold matches none of the shapes above but still counts as a marker there,
+    # and inserting beside it would take the count to 2 and fail recovery.
+    if _NEED_MARKER_COUNT_RE.search(body_md):
+        return body_md
+    return _insert_marker(body_md, marker)
+
+
+def rewrite_scope(body_md, scope):
+    """Put a canonical '**Scope:** <scope>' line into body_md.
+
+    Mirrors rewrite_status for the other triage field. extract_scope() in
+    extract_queue_items.py reads shape 1 first —
+    `\\*\\*Scope:?\\*\\*[:\\s]*([^\\n]+)` truncated to 300 — so one single-line
+    marker in this shape round-trips exactly, wherever in the body it sits.
+    That is why an existing prose scope ('**Scope — REPOINTED ...**', item 1.20)
+    is left alone rather than rewritten: the canonical line still wins the
+    extractor's first regex, and rewriting someone's recorded prose is not this
+    function's business.
+
+    queue_set.py refuses a scope containing a newline or over 300 characters,
+    which is what makes the single-line form lossless here.
+    """
+    marker = "**Scope:** " + scope
+    m = _SCOPE_LINE_RE.search(body_md)
+    if m:
+        return body_md[:m.start()] + marker + body_md[m.end():]
+    return _insert_marker(body_md, marker)
+
+
+def explicitly_scoped(conn):
+    """Item numbers whose scope was set through queue_set.py.
+
+    queue_items has a status_changed_at column but no scope_changed_at, and
+    adding one would be a migration this card does not need: queue_item_events
+    is already the append-only authority on what was explicitly changed, and a
+    `field='scope'` row there says exactly that. Items with no scope event are
+    left byte-untouched, which is what keeps --verify meaningful at baseline.
+    """
+    try:
+        return {r[0] for r in conn.execute(
+            "SELECT DISTINCT item_num FROM queue_item_events WHERE field='scope'")}
+    except sqlite3.Error:
+        return set()
 
 
 def render(conn):
@@ -94,15 +188,18 @@ def render(conn):
     sits under '# TIER 3' in the file; sorting by tier would move it.
 
     Items whose status was changed through queue_set.py (status_changed_at set)
-    get their marker rewritten to the new status, so the rendered markdown never
-    lags behind the database."""
+    get their marker rewritten to the new status, and items whose scope was set
+    through it (a queue_item_events row with field='scope') get a '**Scope:**'
+    line, so the rendered markdown never lags behind the database on either
+    triage field. An item changed in neither way is emitted byte-for-byte."""
     sections = conn.execute(
         "SELECT kind, content, tier, source_line FROM queue_sections ORDER BY seq"
     ).fetchall()
     items = conn.execute(
-        "SELECT body_md, source_line, need_status, status_changed_at "
+        "SELECT item_num, body_md, source_line, need_status, scope, status_changed_at "
         "FROM queue_items ORDER BY source_line"
     ).fetchall()
+    scoped = explicitly_scoped(conn)
 
     blocks = [banner(conn)]
     # preamble comes first, before the first tier header
@@ -114,9 +211,11 @@ def render(conn):
     for k, c, t, sl in sections:
         if k == "tier_header":
             segments.append((sl, c))
-    for body_md, sl, need_status, changed_at in items:
+    for item_num, body_md, sl, need_status, scope, changed_at in items:
         if changed_at is not None and need_status is not None:
             body_md = rewrite_status(body_md, need_status)
+        if item_num in scoped and scope:
+            body_md = rewrite_scope(body_md, scope)
         segments.append((sl, body_md))
     segments.sort(key=lambda x: x[0])
     blocks.extend(c for sl, c in segments)

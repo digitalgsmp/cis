@@ -324,7 +324,23 @@ def _queue_item(conn, item_num):
 def queue_classification(conn):
     """Triage's own subject matter, counted live. 'Unclassified' is
     ADR-PIPE-006's definition verbatim — rows carrying neither scope nor
-    need_status — not a looser reading of it."""
+    need_status — not a looser reading of it.
+
+    TWO COUNTS, DELIBERATELY NOT ONE (OQ-TRIAGE-001 option 1, 2026-10-03).
+    `unclassified` answers "how many rows is triage's subject", and ADR-PIPE-006
+    fixes that as rows carrying NEITHER field: "a bounded mechanical
+    classification pass over the currently unclassified queue_items (56 of 132
+    rows carry neither scope nor need_status as of 2026-10-01)". It is not this
+    module's business to redefine it.
+
+    But ADR-PIPE-001 defines the triage WRITE as both fields, so a row holding
+    one of the two is not triaged either — and counting it under `unclassified`
+    would contradict ADR-PIPE-006 while counting it as done would overstate the
+    work. `fully_classified` / `partially_classified` carry that distinction
+    explicitly instead, so neither number has to lie. On the production table
+    today: 56 neither, 13 need_status-only (mostly DONE rows predating the scope
+    column), 0 scope-only, 63 both.
+    """
     total = conn.execute("SELECT COUNT(*) FROM queue_items").fetchone()[0]
     no_need = conn.execute(
         "SELECT COUNT(*) FROM queue_items WHERE need_status IS NULL").fetchone()[0]
@@ -335,9 +351,14 @@ def queue_classification(conn):
         unclassified = conn.execute(
             "SELECT COUNT(*) FROM queue_items "
             "WHERE need_status IS NULL AND scope IS NULL").fetchone()[0]
+        full = conn.execute(
+            "SELECT COUNT(*) FROM queue_items "
+            "WHERE need_status IS NOT NULL AND scope IS NOT NULL "
+            "AND TRIM(scope) <> ''").fetchone()[0]
     else:
         no_scope = None
         unclassified = no_need
+        full = total - no_need
     counts = {r[0] or "(unset)": r[1] for r in conn.execute(
         "SELECT need_status, COUNT(*) FROM queue_items GROUP BY need_status")}
     return {
@@ -345,10 +366,19 @@ def queue_classification(conn):
         "unclassified": unclassified,
         "missing_need_status": no_need,
         "missing_scope": no_scope,
+        "fully_classified": full,
+        "partially_classified": total - unclassified - full,
         "counts_by_need_status": counts,
         "unclassified_definition": (
             "queue_items rows carrying neither scope nor need_status "
             "(ADR-PIPE-006's own definition of the triage subject)"
+        ),
+        "fully_classified_definition": (
+            "queue_items rows carrying BOTH scope and need_status — the triage "
+            "write ADR-PIPE-001 defines. A row with one of the two is counted "
+            "under partially_classified and is NOT triaged; it is kept separate "
+            "from unclassified so ADR-PIPE-006's definition of the triage "
+            "subject is not quietly widened."
         ),
     }
 
