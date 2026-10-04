@@ -18,7 +18,7 @@ Four kinds of test, deliberately:
      recorded solution direction, and no capability has a destination node.
 
   3. READ-ONLY AND NO TRIAGE. Every table the card forbids touching is hashed
-     before and after exercising the route and compared; the 56 unclassified
+     before and after exercising the route and compared; the unclassified
      queue_items are asserted still unclassified, still marked AWAITING TRIAGE,
      and still carrying neither scope nor need_status afterwards.
 
@@ -270,7 +270,7 @@ def test_p0_remains_current_and_triage_remains_next(model):
           "the composed order is preserved verbatim")
 
 
-# ── 5. 56 unclassified queue items remain unclassified ───────────────────
+# ── 5. the unclassified queue items remain unclassified ──────────────────
 
 def test_queue_is_shown_never_triaged(model):
     queue = model["queue"]
@@ -285,8 +285,15 @@ def test_queue_is_shown_never_triaged(model):
 
     check("5a. the queue total is the live count, not a cached one",
           queue["total_items"] == live_total, f"{queue['total_items']} vs {live_total}")
-    check("5b. 56 items are reported awaiting triage, matching the live unclassified set",
-          queue["awaiting_triage"] == live_unclassified == 56,
+    # COUNT UPDATED 56 -> 57, NOT WEAKENED. ADR-PIPE-009 clause 8 recovered queue
+    # item 4.10, which the original extraction silently dropped, with scope and
+    # need_status deliberately left NULL so no classification was invented -- so
+    # it joins the awaiting-triage set and the prepared 56-item triage proposal
+    # does not cover it. The claim this check exists to make is that the read
+    # model's count is the LIVE one rather than a cached or hardcoded figure, and
+    # both halves of that are still asserted.
+    check("5b. 57 items are reported awaiting triage, matching the live unclassified set",
+          queue["awaiting_triage"] == live_unclassified == 57,
           f"model {queue['awaiting_triage']}, live {live_unclassified}")
     check("5c. the counts come from the build-path read model's own definition",
           queue["counts"]["unclassified"] == queue["awaiting_triage"],

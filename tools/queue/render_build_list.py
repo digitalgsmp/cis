@@ -14,6 +14,7 @@ Usage:
     python3 tools/queue/render_build_list.py --stdout   # print to stdout instead
     python3 tools/queue/render_build_list.py --verify   # exit 1 if stale
 """
+import json
 import os
 import re
 import sqlite3
@@ -68,9 +69,10 @@ _RULE_RE = re.compile(r"^-{3,}\s*$")
 # run outright.
 _NEED_MARKER_COUNT_RE = re.compile(r"^\*\*Need:", re.M)
 
-# Shape 1 of extract_scope(): the canonical single-line form this module writes
-# and the one extract_scope() tries FIRST, so a line in this shape wins the
-# round trip wherever it sits in the body.
+# The visible '**Scope:**' line. SINCE ADR-PIPE-009 THIS IS PROSE, NOT A
+# RECOVERY CARRIER: the extractor no longer reads scope from it at all, so a
+# line in this shape is for a human reading the document and the cis:scope
+# marker is what survives a recovery cycle.
 _SCOPE_LINE_RE = re.compile(r"^\*\*Scope:?\*\*.*$", re.M)
 
 
@@ -147,23 +149,77 @@ def rewrite_status(body_md, need_status):
 def rewrite_scope(body_md, scope):
     """Put a canonical '**Scope:** <scope>' line into body_md.
 
-    Mirrors rewrite_status for the other triage field. extract_scope() in
-    extract_queue_items.py reads shape 1 first —
-    `\\*\\*Scope:?\\*\\*[:\\s]*([^\\n]+)` truncated to 300 — so one single-line
-    marker in this shape round-trips exactly, wherever in the body it sits.
-    That is why an existing prose scope ('**Scope — REPOINTED ...**', item 1.20)
-    is left alone rather than rewritten: the canonical line still wins the
-    extractor's first regex, and rewriting someone's recorded prose is not this
-    function's business.
+    HUMAN VISIBILITY ONLY SINCE ADR-PIPE-009. This used to be how scope reached
+    the recovery path; it no longer is, because '**Scope:**' is overloaded in
+    this document and prose may not carry a classification (clause 3). Recovery
+    now reads the cis:scope marker, which apply_scope_marker() writes for EVERY
+    non-NULL scope rather than only for the event-gated rows this function sees.
+    What is left here is the courtesy of showing an audited scope write to a
+    person reading the markdown.
 
-    queue_set.py refuses a scope containing a newline or over 300 characters,
-    which is what makes the single-line form lossless here.
+    An existing prose scope ('**Scope — REPOINTED ...**', item 1.20) is still
+    left alone rather than rewritten: rewriting someone's recorded prose is not
+    this function's business, and nothing depends on it any more.
     """
     marker = "**Scope:** " + scope
     m = _SCOPE_LINE_RE.search(body_md)
     if m:
         return body_md[:m.start()] + marker + body_md[m.end():]
     return _insert_marker(body_md, marker)
+
+
+# ── the machine-owned scope marker (ADR-PIPE-009 clauses 2-4) ───────────────
+# THIS, not '**Scope:**', is what carries scope through a recovery cycle. The
+# prose form stayed overloaded in this document -- both a classification marker
+# and an ordinary paragraph label, with 12 legitimate scopes and 6 authoritative
+# NULLs wearing structurally identical wrapped paragraphs -- so the
+# classification moved to a marker this module owns and the extractor reads
+# exactly, and historical prose is now preserved rather than interpreted.
+#
+# EMITTED FOR EVERY NON-NULL SCOPE, NOT ONLY AUDITED ONES (clause 4). The
+# event-gated '**Scope:**' insertion below cannot bootstrap recovery identity:
+# there are ZERO queue_item_events rows with field='scope' in production, so
+# gating on them would have left all 63 stored scopes unrecoverable.
+_SCOPE_MARKER_PROBE = re.compile(r"^<!--\s*cis:scope=")
+
+
+def scope_marker(scope):
+    """'<!-- cis:scope="VALUE" -->' with VALUE JSON-encoded.
+
+    JSON because the marker must carry what the column already holds: item
+    1.20's legacy value contains an embedded newline and another contains a
+    double quote. '>' is escaped so no value can close the comment early with
+    '-->'. Nothing is normalised -- clause 9 forbids cleaning a legacy value to
+    make a proof pass.
+    """
+    return "<!-- cis:scope=" + json.dumps(scope, ensure_ascii=False).replace(
+        ">", "\\u003e") + " -->"
+
+
+def _strip_scope_markers(lines):
+    """Drop any existing marker line AND the blank line _insert_marker put above
+    it, so remove-then-insert is exactly inverse.
+
+    Needed for idempotence across a recovery cycle: after a --force recovery the
+    stored body_md CONTAINS the marker, and re-rendering must reproduce the same
+    bytes rather than accumulate a blank line per render.
+    """
+    out = []
+    for line in lines:
+        if _SCOPE_MARKER_PROBE.match(line):
+            if out and not out[-1].strip():
+                out.pop()
+            continue
+        out.append(line)
+    return out
+
+
+def apply_scope_marker(body_md, scope):
+    """Ensure body_md carries exactly one canonical marker, or none for NULL."""
+    body = "\n".join(_strip_scope_markers(body_md.split("\n")))
+    if scope is None:
+        return body
+    return _insert_marker(body, scope_marker(scope))
 
 
 def explicitly_scoped(conn):
@@ -216,6 +272,11 @@ def render(conn):
             body_md = rewrite_status(body_md, need_status)
         if item_num in scoped and scope:
             body_md = rewrite_scope(body_md, scope)
+        # LAST, and for EVERY row rather than only audited ones: this is the
+        # marker the recovery path actually reads (ADR-PIPE-009 clause 4). The
+        # visible '**Scope:**' line above remains a human-readable courtesy for
+        # an audited write; it is no longer the recovery mechanism.
+        body_md = apply_scope_marker(body_md, scope)
         segments.append((sl, body_md))
     segments.sort(key=lambda x: x[0])
     blocks.extend(c for sl, c in segments)

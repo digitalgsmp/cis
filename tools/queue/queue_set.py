@@ -138,13 +138,17 @@ SCOPE_CONVENTION = (
     "NOT_IN_CONTAINER_PATH", "UNDETERMINED",
 )
 
-# The three hard limits are ROUND-TRIP limits, not taste. docs/UNIFIED_BUILD_LIST.md
-# is a generated projection that the documented recovery path
-# (extract_queue_items.py --force) reads back, and extract_scope() there is
-# `\*\*Scope:?\*\*[:\s]*([^\n]+)` truncated to [:300]. A value with a newline or
-# over 300 characters would therefore come back DIFFERENT from what was written
-# -- silent classification loss on recovery. Rejecting at the write path is the
-# only place that cannot be bypassed.
+# The three hard limits are the CANONICAL SINGLE-LINE WRITE CONTRACT, not taste.
+# They began as round-trip limits: the old recovery reader was
+# `\*\*Scope:?\*\*[:\s]*([^\n]+)` truncated to [:300], so a newline or a longer
+# value came back DIFFERENT from what was written. ADR-PIPE-009 removed that
+# particular failure -- the cis:scope marker JSON-encodes the value, so a newline
+# would now survive -- and the limits are KEPT anyway, deliberately: a scope is a
+# short statement of where work lives, the one legacy value that broke this
+# contract (item 1.20, an embedded newline inside a 300-character truncation
+# artefact of the old parser) is recorded as integrity debt rather than a
+# precedent, and clause 9 forbids cleaning it. Rejecting at the write path is
+# still the only place that cannot be bypassed.
 SCOPE_MAX_LEN = 300
 _SCOPE_LEADING_TOKEN = re.compile(r"\s*([A-Z][A-Z_/]*)")
 
@@ -163,15 +167,16 @@ def validate_scope(raw):
         return None, ("--scope is empty or whitespace-only. A scope states WHERE the "
                       "work lives; there is no blank answer to that."), notes
     if "\n" in value or "\r" in value:
-        return None, ("--scope contains a newline. The build-list projection renders "
-                      "scope as a single '**Scope:** ...' line and the recovery "
-                      "extractor reads to end-of-line, so a multi-line value would not "
-                      "survive a round trip. Put the detail in --note."), notes
+        return None, ("--scope contains a newline. A scope is a single-line "
+                      "statement of where the work lives; the one stored value that "
+                      "breaks that (item 1.20) is recorded as legacy integrity debt "
+                      "under ADR-PIPE-009 clause 9, not a precedent. Put the detail "
+                      "in --note."), notes
     if len(value) > SCOPE_MAX_LEN:
-        return None, ("--scope is %d characters; the limit is %d. extract_scope() in "
-                      "the recovery path truncates at %d, so a longer value would come "
-                      "back truncated and the classification would silently change."
-                      % (len(value), SCOPE_MAX_LEN, SCOPE_MAX_LEN)), notes
+        return None, ("--scope is %d characters; the limit is %d. A scope states "
+                      "WHERE the work lives and stays short enough to read in the "
+                      "projection; the detail belongs in --note or the item body."
+                      % (len(value), SCOPE_MAX_LEN)), notes
     m = _SCOPE_LEADING_TOKEN.match(value)
     token = m.group(1) if m else None
     if token not in SCOPE_CONVENTION:

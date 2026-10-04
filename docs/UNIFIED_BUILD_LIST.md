@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: 887988d455a9de2b -->
+<!-- state_revision: 0959ccd555ea3944 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -151,6 +151,8 @@ Preserve unrelated dirty files. Pending unaccepted health changes already exist 
 Shared directory: /mnt/projects/cis/data/agent_handoffs/WB-1A-workbench (container /workspace/cis/data/agent_handoffs/WB-1A-workbench).
 Save source preimages under backups/. Write evidence.md with implementation claims, commands/results and limitations. Write completion.json LAST: card_id='WB.1A', status='READY_FOR_VERIFICATION' or 'BLOCKED', changed_files, tests, evidence_path, remaining_limitations, activation_steps. Never label your own work VERIFIED. If blocked, preserve progress and report the exact blocker; do not expand scope.
 Your final response is automatically captured here. Codex reads this location directly.
+
+<!-- cis:scope="CONTAINER" -->
 
 # TIER 0 — trust preconditions
 
@@ -333,6 +335,8 @@ The v2.0 deadlock came from a clearance token the gate itself could prevent you 
 
 **Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 1462,508; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="CONTAINER — the .GATE_DISABLED override plane is repo-level and applies to both pipelines" -->
+
 ### 0.5 Secure the operator surfaces before any field exposure
 
 Flask has no app-level login and Phase 0 (backup safety net) is deferred with backup integrity unverified; /ui/schedule was blocked on an authentication review that never happened, and the page carries client, work and personal obligations.
@@ -342,6 +346,8 @@ Flask has no app-level login and Phase 0 (backup safety net) is deferred with ba
 **Need:** OPEN — Flask has no app-level login and the field-access security review was never done. Neither pipeline supplies authentication for the operator surface, so the need stands.
 
 **Evidence:** raised 2 times, 2026-06-01 to 2026-08-29; mining_candidates 15004,3620; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — the Flask dashboard and its login surface run on the VM" -->
 
 
 ### 0.6 ARMING A GUARDRAIL NEEDS AN OVERRIDE POLICY THAT DOES NOT EXIST
@@ -372,6 +378,8 @@ that outcome only because it fails open.
 
 **Related:** 0.4 (the override plane is built and proven; the fail-mode half is
 where this policy lands), 2.1 (the item this gates).
+
+<!-- cis:scope="CONTAINER — the guardrail modes and the override plane are both" -->
 
 
 # TIER 1 — blocks a run completing end to end
@@ -914,6 +922,8 @@ The relay blueprint exposes eight routes and none cancels a run; grep for 'cance
 
 **Evidence:** raised 2 times, 2026-07-08 to 2026-07-08; mining_candidates 15439,15418; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="CONTAINER — runtime/api/relay.py is the blueprint container_app.py registers at line 27; no _validate_intent in runtime/abstraction/pipeline_relay.py" -->
+
 ### 1.15 Remove Eric from the relay roles he still fills by hand
 
 Human router, human triage clerk, human reviewer selector and human schema reconciler. The reviewer-implementer challenge loop halts on him; the Implementer-to-Verifier loop has no owner; the manual instruction template has no automation; escalation needs a snapshot-and-switch with an acknowledgement signal rather than a prompt-optimisation step.
@@ -923,6 +933,8 @@ Human router, human triage clerk, human reviewer selector and human schema recon
 **Need:** OPEN — he is still the relay — this very session ran as him passing directives between steps. The container has not removed the four roles; it changed where the work executes, not who routes it.
 
 **Evidence:** raised 5 times, 2026-06-27 to 2026-08-29; mining_candidates 14561,541,1169,127,3552; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — the four relay roles and the escalation path are the VM-era manual workflow" -->
 
 ### 1.16 Close the gate bypass and generalise enforcement
 
@@ -935,6 +947,8 @@ The write-block was proven on one file and never generalised to the 16 failure m
 **The one check that settles it:** test whether the mwl-proof pre_tool_call hook blocks a write outside /workspace/cis
 
 **Evidence:** raised 2 times, 2026-06-27 to 2026-08-29; mining_candidates 13418,14719; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — no pre_tool_call configured in any /home/worker/.hermes-*/config.yaml; the container constrains agents by image and mount" -->
 
 ### 1.17 Restore the dev-mode agent configs before any pipeline run
 
@@ -986,6 +1000,8 @@ The standing constraint that follows: Eric does not fall back into transport
 mode. A design that requires him to carry text between models is a regression
 regardless of what it buys.
 
+<!-- cis:scope="CONTAINER — /home/worker/.hermes-review2/config.yaml, two appended blocks both marked `# DEV MODE 2026-09-02`. Backups `config.yaml.bak.20260902-devmode` (pre-skills) and `config.yaml.bak.20260902-devmode-2` (pre-toolsets), both md5-verified and separately reversible. The other five agent configs we" -->
+
 ### 1.18 Cards are written and executed by the same party
 
 A wrong card produces a result that satisfies a wrong EXPECT, and a review that checks the result against that EXPECT passes it. The whole check rests on the card, and nothing checks the card. This is evaluator-must-not-be-the-builder one level above where 4.10 guards it: 4.10 separates the agent that judges the work from the agent that did it, and leaves whoever wrote the instruction unexamined.
@@ -1007,6 +1023,8 @@ Fix: the packet goes to the advisor twice. Once with the card before it runs —
 **For this item:** *"drafter has to stop for clarity and understanding check"* — before it writes anything. This item was framed as reviewing the CARD before it runs; the record asks for the same thing one step earlier and inside the pipeline, an understanding check the drafter itself must pass before drafting. The card-review design is the right shape; it was arrived at independently, and the record specifies where it belongs.
 
 **Read the whole excerpt against what runs.** It names four stops. The pipeline implements one — the Eric Gate — and the single step Eric said should proceed *without* waiting ("the pass is the only thing done with out waiting") is the only one built. That inversion is the finding, and it is the shared root of 1.18, 1.19, 1.21 and 2.3.
+
+<!-- cis:scope="CONTAINER — `tools/advisor_review.sh` sends one packet after the fact. A pre-flight mode is a second packet shape, not a second script." -->
 
 ### 1.19 One-shot critique loses what multi-round exchange catches
 
@@ -1031,6 +1049,8 @@ Fix: Claude Code may answer an objection with evidence; the reviewer withdraws i
 **For this item:** *"the rreviewers have to stop to deliberate and reconcile any differences"* — this is the exchange, specified. Not a second opinion collected in parallel, but two reviewers stopping, deliberating, and **reconciling**, with the reconciled result presented to Eric. This item argues one-shot critique loses what exchange catches; the record already required exchange, and required it between the reviewers rather than between an advisor and a packet.
 
 **One consequence worth carrying:** the record says the reconciliation output goes to the user "for clarity, understanding and alignment check". So the exchange this item builds is not finished when the two agree — agreement is the input to a human check, not a substitute for one.
+
+<!-- cis:scope="CONTAINER — `tools/advisor_review.sh` writes one response file per packet and exits. A thread needs the packet, the objection, the answer and the withdrawal in one artifact." -->
 
 ### 1.20 Add Qwen (8643) as technical evaluator
 
@@ -1158,6 +1178,8 @@ not in place of them.** The third packet this item asks for will be the first
 taken under the corrected label, which makes it worth more than a tiebreaker.
 
 **Related:** 3.22 is the measurement this depends on. 2.23 is why the MCP server must be disabled rather than merely untooled. 2.41 (the reviews of anything built on a changed assumption are void, which is how the mislabel survived three packets).
+
+<!-- cis:scope="**Scope — REPOINTED 2026-09-07. It is `evaluator` on 8650, not review1 on 8643.**\nThis item was written 2026-09-02, when review1 was the only Qwen in the system and" -->
 ### 1.21 The loop must stop and wait, not run past Eric
 
 Eric, 2026-09-02: "having the loop waiting on my approval is a lot better for me than physically being locked to a screen watching, reading, understanding and copy pasting every exchange."
@@ -1190,6 +1212,8 @@ And it names the one place that must NOT wait: *"the pass is the only thing done
 **This item's PAUSE POINTS were drawn as "between queue items, and before any card that writes."** That is a read/write consequence split, invented here. The record's split is different and better founded: pauses fall wherever **understanding could have diverged**, not wherever a write could occur. A read-only card that misunderstands the intent is exactly as expensive as a write, and it is what four attempts at the ask_history intent produced.
 
 **Today the pipeline implements one of the four**, the Eric Gate, and implements the one step Eric said should not wait as its only synchronous behaviour.
+
+<!-- cis:scope="UNDETERMINED — no loop runner exists yet. Whether the waiting state lives in a script, in the spine, or in the relay is not settled, and choosing wrong here is expensive." -->
 
 ### 1.22 Nothing the loop produces reaches the KB — BLOCKS 1.18 through 1.21 and 2.25
 
@@ -1254,6 +1278,8 @@ This is also what makes the external perspective cumulative. Without it every ad
 
 **Related:** 4.1 is the same gap without the dependency. Blocks 1.18, 1.19, 1.20, 1.21 and 2.25 — the loop does not ship without this.
 
+<!-- cis:scope="REPO — this is 4.1 restated with a deadline attached. Both ingest tools exist and work; neither fires. The closeout hook is where they would fire, and it is four lines in `tools/closeout.sh`." -->
+
 ### 1.23 A code run has never completed end to end
 
 1.1 proved the path is walkable on a documentation task — one file, no code written. On that run the three BLOCK-mode verification guardrails all SKIPPED: `claim_action_verifier` ("no file or function claims detected"), `intent_compliance` ("no Python code blocks to test"), `capability_claim_verifier` ("no capability claims detected"). Legitimate for that task, and the point stands — the three strongest checks are shaped for code and have never fired.
@@ -1269,6 +1295,8 @@ Two code-run attempts failed for unrelated reasons. `run-4bbeea78056e2607-178812
 **The one check that settles it:** a completed run whose guardrail summary shows the three named checks reporting PASS or FAIL rather than SKIP.
 
 **Related:** 1.1 (the documentation run that established the path is walkable), 1.11 and 1.13 (the two failures that stopped the earlier attempts, both fixed or open on their own items), 2.1 (the guardrail audit this would give real code-path data to).
+
+<!-- cis:scope="CONTAINER — the pipeline path is the same one 1.1 walked. What is untested is every check that only engages when there is code to check." -->
 
 ### 1.25 MENTER DOES THE WRITES; REVIEWERS REVIEW
 
@@ -1298,6 +1326,8 @@ inheriting it from the last one.
 
 **Related:** 2.23 (capability by inheritance rather than decision), 4.10, 4.19,
 3.22 (the trim that assigned the current loadouts, by usage not by role).
+
+<!-- cis:scope="CONTAINER — the per-role `platform_toolsets` in" -->
 
 ### 1.26 KB WRITES HALT CARD WORK — 0.3's ARBITRATION HAS NO PRIORITY MODEL
 
@@ -1371,6 +1401,8 @@ then 1.26.**
 recorded as not-yet-symptomatic), 2.30 (which needs the status half to be
 readable in time to be useful), 3.21 and 2.13 (the table the status write needs).
 
+<!-- cis:scope="the lock is `runtime/mcp_bridge/chroma_lock.py`; the readers are" -->
+
 ### 1.24 Brain is fed its own prior attempts, labelled successful, from runs that failed
 
 Found 2026-09-04 by dumping the six payloads of `run-4bbeea78056e2607-1788140226`. The `## Prior Agent Trajectories` block inside `[PRE-DISCOVERY RESULTS]` hands brain three earlier trajectories — all of them `brain/brain` rows, all on the **same intent**, each tagged `success`:
@@ -1394,6 +1426,8 @@ Brain therefore opens its turn reading three near-identical restatements of its 
 **The one check that settles it:** for any run cited in a `Prior Agent Trajectories` block, confirm the run reached a terminal success state, not merely that the quoted phase row says `success`. A trajectory from a run that escalated or timed out should either be excluded or carry what became of it.
 
 **Related:** 1.23 (the code run that has never completed — two of the three runs cited here are its failed attempts), 1.11 and 1.13 (why those two died: an API 402 reported as ambiguous output, and a draft timeout with no cause), 2.13 (runs are not linked to what they advance), and 2.3 / 3.23 for the rest of the payload composition.
+
+<!-- cis:scope="CONTAINER — the trajectory selection in the pre-discovery builder in `runtime/abstraction/pipeline_relay.py`." -->
 
 
 ### 1.27 SIX ITEMS ARE ONE DESIGN: THE SYSTEM CANNOT CLASSIFY A FAILURE
@@ -1427,6 +1461,8 @@ review loop is.
 
 **Related:** 0.4 (the five fail-open paths), 1.3, 1.4, 1.11, 1.13, 2.10.
 
+<!-- cis:scope="CONTAINER — the gateway response handling, the relay's exception" -->
+
 ### 1.28 1.23 IS GATED ON THE BRIEFING, NOT ONLY ON THE RUN
 
 1.23 (a code run has never completed end to end) is treated as the next
@@ -1453,6 +1489,8 @@ plumbing and nothing about the judgement.
 **Related:** 1.12 (the empty briefing), 1.23 (the milestone this gates), 1.18
 through 1.22 (the review loop, which exists to supply the same missing
 perspective on the other plane).
+
+<!-- cis:scope="CONTAINER — the briefing renderer and the tables it reads." -->
 
 
 # TIER 2 — blocks trusting what a run produces
@@ -1894,6 +1932,8 @@ Execution snapshot and git snapshot isolation are both recorded as verified gaps
 
 **Evidence:** raised 5 times, 2026-07-13 to 2026-08-24; mining_candidates 15782,15784,15723,15720,15815; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="CONTAINER — all four documents are the container's own skill library describing its verification phase; 15815 still needs verify-snapshot-gap.md read in full" -->
+
 ### 2.20 Make review independence verifiable, not assumed
 
 Nothing checks that a reviewer searched before delivering a verdict; a revision carries no objection-to-resolution mapping; an empty or ambiguous reviewer response is consumed as a review; and Eric has no guaranteed second opinion. NOTE: the model-sharing half of this is FALSE in the container.
@@ -1904,6 +1944,8 @@ Nothing checks that a reviewer searched before delivering a verdict; a revision 
 
 
 **Evidence:** raised 5 times, 2026-06-27 to 2026-08-29; mining_candidates 166,976,13826,14972,3563; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="CONTAINER — container review1 is qwen/qwen3.7-max and review2 is z-ai/glm-5.2 against draft deepseek-v4-pro — three lineages, so model-sharing does not apply; the independence CHECKS are still absent" -->
 
 ### 2.21 The reviewed diff must contain the deliverable
 
@@ -1916,6 +1958,8 @@ A code review ran against a diff that omitted the new file entirely while L1 con
 
 **Evidence:** raised 2 times, 2026-08-29 to 2026-08-29; mining_candidates 783,786; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="CONTAINER — the source rows are pipeline_code_review, i.e. container runs" -->
+
 ### 2.22 Fix the construction-view data contract and its missing handlers
 
 F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes the view non-functional, and the UI gate action handlers the directive assumes exist were never confirmed.
@@ -1927,6 +1971,8 @@ F3 mismatch — topic vs intent, rounds vs phases, no latest_output — makes th
 **The one check that settles it:** confirm whether the VM dashboard construction view is still in use
 
 **Evidence:** raised 2 times, 2026-08-29 to 2026-08-29; mining_candidates 724,838; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — VM dashboard; container_app.py serves only static /ui/" -->
 
 ### 2.23 The cis-knowledge toolset grants pipeline dispatch to anything that uses it
 
@@ -1952,6 +1998,8 @@ take or leave the whole set, which is why the 2026-09-04 trim had to disable
 `cis-knowledge` entirely on all six profiles and thereby removed retrieval it
 would rather have kept.
 
+<!-- cis:scope="CONTAINER — runtime/mcp_bridge/tools.py defines all 18 and the server registers them as one set (agent.log, 2026-08-29: \"registered 18 tool(s)\"). The fix is in the MCP server, not config: config can only take or leave the whole toolset." -->
+
 ### 2.24 The gateway caches OpenRouter replies on prompt identity
 
 Verified 2026-09-02 while building the advisor protocol: five `OpenRouter response cache HIT` entries in the review2 agent log. A re-review returned in 0.4s with an identical body and `usage` reporting `prompt_tokens 0, completion_tokens 0, total_tokens 0`; the gateway log recorded the same call as `in=0 out=0 total=0`. The reply looks fresh and costs nothing to record.
@@ -1965,6 +2013,8 @@ The consequence is not the wasted call, it is the stale one. A packet that has b
 **The one check that settles it:** determine whether pipeline_relay's calls are cache-eligible and what identity the cache keys on — full prompt, message list, or something narrower. If the key is the prompt, a revised proposal changes it and the risk is bounded; if it is narrower, it is not.
 
 **Related:** 3.22 — a cached reply also reports zero tokens, so any per-agent cost measurement that lands on a cache hit will understate the true cost.
+
+<!-- cis:scope="CONTAINER — the gateway's OpenRouter response cache, hit on the api_server path. `tools/advisor_review.sh` works around it with a per-call nonce (`RUN_TAG`), which is a workaround in one script, not a fix. The pipeline's own agent calls in runtime/abstraction/pipeline_relay.py carry no such guard." -->
 
 ### 2.25 The feed is a direct API call, not an agent
 
@@ -2079,6 +2129,8 @@ it rather than has to reconstruct it — a view over `deliberation_rounds`, or t
 separate table this deliberately avoided needing. Recorded now because the cost
 lands on whoever reads pauses next, not on the script that writes them.
 
+<!-- cis:scope="HOST — settled 2026-09-02. The Telegram credentials live in the host Hermes profiles' `.env` files, seven bot tokens across `/home/eric/.hermes` and `/home/eric/.hermes-*`. They are readable by whoever runs Claude Code. The container has NONE: all six container profiles' `.env` files carry zero Tele" -->
+
 ### 2.26 Six buried plugin copies wait inside the profile volumes
 
 Each of the six profile volumes still holds the `mwl-proof` copy seeded into it on 2026-08-29. Since 2026-09-03 those paths carry a read-only bind mount of `enforcement/mwl-proof-v2/plugin` from the repo, so the buried copies are masked and unreachable. Harmless while the mounts are there.
@@ -2096,6 +2148,8 @@ Each of the six profile volumes still holds the `mwl-proof` copy seeded into it 
 **The one check that settles it:** at startup, md5 each mounted `plugins/mwl-proof` against `enforcement/mwl-proof-v2/plugin` and confirm the bind mount is actually present — not that the permission bits look right. A match plus a present mount is the pass; equal bits with no mount is the silent-failure case the check exists to catch.
 
 **Related:** 2.15 (gate scripts that have never fired — the same absence-read-as-health pattern), 1.17 (a comment is not a check), 0.4 (the override plane, which is the other thing that must be verified rather than assumed before enforcement is trusted).
+
+<!-- cis:scope="REPO — `enforcement/mwl-proof-v2/run_container.sh` lines 123-128, and the six `cis-agent-*` Docker volumes." -->
 
 ### 2.27 The web-research block returns marketing copy, with raw HTML, into every call
 
@@ -2126,6 +2180,8 @@ The task was merging FTS5 keyword results into `tools/ask_history.py`. The query
 
 **Related:** failure mode 4 (this gate's purpose), 2.18 (placeholders not marked as placeholders — the same problem of unusable content presented as usable), 3.23 (the rest of the payload audit).
 
+<!-- cis:scope="CONTAINER — the web-research step of the pre-discovery builder in `runtime/abstraction/pipeline_relay.py`." -->
+
 ### 2.28 KB_CONTEXT is duplicated inside PRE-DISCOVERY in the same prompt
 
 Both `[KB_CONTEXT]` and the `## Knowledge Base` section of `[PRE-DISCOVERY RESULTS]` are built in the same call and land in the same payload, carrying the same rows under two headings. On `run-4bbeea78056e2607-1788140226`, three of the four signals are identical:
@@ -2146,6 +2202,8 @@ Present in all six calls: 7,824 characters of `KB_CONTEXT` across the run, most 
 **The one check that settles it:** extract the row identifiers from both blocks of one payload and intersect them. A non-empty intersection is the defect; the fix is one block or a documented reason for two.
 
 **Related:** 0.2 (both blocks are redaction choke points, so both were already known to exist — the duplication was not), 3.23, 2.3.
+
+<!-- cis:scope="CONTAINER — `_add_hit` and `_pre_discovery` in `runtime/abstraction/pipeline_relay.py` both query and both render; neither knows about the other." -->
 
 ### 2.30 The spine is the stateless agents' source of truth
 
@@ -2169,6 +2227,8 @@ roadmap is a consequence, not the purpose.
 **Related:** 2.12 — divergence is what happens when each reader parses prose
 differently. 3.21 is the implementation. 1.26 supplies the "did it succeed" half
 in time to be useful.
+
+<!-- cis:scope="CONTAINER — the agents that need it run there." -->
 
 ### 2.32 SUPERSESSION HAS NO SCHEMA REPRESENTATION
 
@@ -2194,6 +2254,8 @@ whether a query can distinguish them from open items. Today it cannot.
 
 **Related:** 2.12 (a superseded thing that still reads as current is the same
 failure), C/3.25 below (the other edge kind the same read found missing).
+
+<!-- cis:scope="REPO/CONTAINER — the queue schema 3.21 creates." -->
 
 ### 2.33 DESCRIPTION INDEX OVER THE IDENTIFIED SPECS
 
@@ -2229,6 +2291,8 @@ search.
 
 **Cost is the reading, not the writing.** Generating 210 lines mechanically is
 easy and produces 210 plausible wrong lines. Each has to be read.
+
+<!-- cis:scope="REPO — the index is generated from the documents; the loading is a" -->
 
 ### 2.35 THE EXPORT GATE IS SELF-CERTIFYING
 **Found 2026-09-07, from a live failure.** Migration 0030 lowercased
@@ -2396,6 +2460,8 @@ recurs.
 **Collapses most of 3.23's fixed-context cost** as a side effect, but the reason
 to build it is alignment, not tokens.
 
+<!-- cis:scope="CONTAINER — prompt assembly in `runtime/abstraction/pipeline_relay.py`." -->
+
 ### 2.31 Constrain queue writes before any agent gets them
 
 **An agent that can write the queue can mark its own work done.** That is
@@ -2420,6 +2486,8 @@ item exists to be answered before that changes.
 **Related:** 4.10 (the harness must not edit its own scorer), 4.19 (the pipeline
 must not select its own work), 2.17 (what a silently-wrong write to an audit
 table costs).
+
+<!-- cis:scope="CONTAINER." -->
 
 
 ### 2.39 THE CONFIRM-BEFORE-WORKING STEP IS A HUMAN REMEMBERING
@@ -2448,6 +2516,8 @@ sweep of every item; the cost belongs at the moment one is picked up.
 **Related:** 2.12 (primer/runtime divergence — this is the same defect pointed
 at the queue instead of at the primer), 2.38 (a check derived from the change
 cannot see what the change breaks).
+
+<!-- cis:scope="REPO — this list and whatever comes to check it." -->
 
 
 ### 2.40 THE ADVISOR LOOP RECORDS WHAT WAS SAID, NOT WHETHER IT WAS RIGHT
@@ -2500,6 +2570,8 @@ time, and it is cheaper to add the field now than to mine it back later. Also
 1.20 (the measure this makes countable), 1.18 and 1.19 (the rounds that produce
 the thread), 1.22 (whether any of it reaches the KB at all).
 
+<!-- cis:scope="REPO — `tools/advisor_review.sh` and the `objections_json` thread it" -->
+
 
 ### 2.41 A CHANGE THAT ALTERS AN ASSUMPTION INVALIDATES THE REVIEWS OF EVERYTHING BUILT ON IT
 
@@ -2550,6 +2622,8 @@ the verification. **1.20**, whose three divergence counts were all taken under a
 prompt label that changed underneath them. **2.39** (staleness in the queue) and
 **2.12** (divergence between two copies) are the same defect aimed at documents
 rather than at reviews.
+
+<!-- cis:scope="REPO — the review record in `deliberation_rounds`, and whatever comes" -->
 
 
 # TIER 3 — independent defects, no dependants
@@ -2746,6 +2820,8 @@ seed_memory.py failed with 'database or disk is full' across roughly a thousand 
 
 **Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 3513; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="UNDETERMINED — the seed target and its current completeness were never established" -->
+
 ### 3.14 Finish or retire the VM operator surfaces
 
 Pipeline source list and pagination, intake auto-refresh, the Review page, the DAM nav surface and the LXC public endpoint are specified and unbuilt; the Intel sidebar tabs are decorative placeholders; the dashboard cannot track long-running subprocess work; creating a CIS Live session does not auto-populate the sidebar so rounds can be logged against the wrong session; cis_review.py was built with no contract.
@@ -2755,6 +2831,8 @@ Pipeline source list and pagination, intake auto-refresh, the Review page, the D
 **Need:** OPEN — these are Eric's operator surfaces and he still works through them. The container serves only static /ui/, so nothing has replaced them — the need stands either as build or as an explicit retirement.
 
 **Evidence:** raised 5 times, 2026-04-24 to 2026-06-27; mining_candidates 5138,15527,15230,5153,15551; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — all are VM dashboard surfaces; container_app.py registers only relay_bp plus health/UI" -->
 
 ### 3.15 Record the decision rationale that was never written down
 
@@ -2766,6 +2844,8 @@ The file-size limit has no explanatory note; the build plan still depends on a s
 
 **Evidence:** raised 3 times, 2026-06-27 to 2026-08-29; mining_candidates 161,147,152; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — project_decisions is not read or written in the container path" -->
+
 ### 3.16 Retire the legacy inline relay in app.py
 
 PIPELINE_RUNS, portal_pipeline_start and portal_pipeline_status are still at app.py:824-917, duplicating api/relay.py, with only a TODO at line 22. app.py now declares itself reference-only, so the question is whether the file retires wholesale.
@@ -2775,6 +2855,8 @@ PIPELINE_RUNS, portal_pipeline_start and portal_pipeline_status are still at app
 **Need:** OPEN — the duplicate code is present at app.py:824-917 and the file's own header declares it reference-only. The cleanup stands regardless of which pipeline runs.
 
 **Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 3337; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — app.py is not the container entry point; container_app.py is" -->
 
 ### 3.17 Build the ADR-045 execution queue and run logging
 
@@ -2788,6 +2870,8 @@ execution_jobs schema, queue worker and operator queue routing are all recorded 
 
 **Evidence:** raised 2 times, 2026-04-26 to 2026-04-29; mining_candidates 15570,15625; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — no execution_jobs or runs table in the spine; the queue is VM-era design" -->
+
 ### 3.18 Add pagination to the capped list endpoints
 
 runtime/api/extraction_runs.py:27,32 and captures.py:23,28 hardcode LIMIT 50 with no paging.
@@ -2799,6 +2883,8 @@ runtime/api/extraction_runs.py:27,32 and captures.py:23,28 hardcode LIMIT 50 wit
 **The one check that settles it:** confirm whether the VM app serving extraction_runs and captures is still running
 
 **Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 809; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — neither blueprint is registered in container_app.py" -->
 
 ### 3.19 Group parallel advisor rounds reliably
 
@@ -2812,6 +2898,8 @@ advisor_messages needs a nullable batch_id; thread_id plus timestamp proximity c
 
 **Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 1402; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — advisor_messages is referenced nowhere in the container path" -->
+
 ### 3.20 Implement knowledge-record backlinks
 
 The designed backlink syntax for knowledge-record markdown was never implemented in cis_normalize.py.
@@ -2823,6 +2911,8 @@ The designed backlink syntax for knowledge-record markdown was never implemented
 **The one check that settles it:** confirm whether backlinks are still wanted in the current knowledge model
 
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5158; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — cis_normalize.py is VM ingestion tooling, not in the container path" -->
 
 
 
@@ -3046,6 +3136,8 @@ slash**. `cis_dashboard.html:1672` reads `r.found`, which only the manifest rout
 returns — so the dashboard is consistent today, and would silently render
 nothing if the collision were ever resolved the other way. Recorded, not fixed.
 
+<!-- cis:scope="UNDETERMINED — the spine is shared by both pipelines, but which surface renders the" -->
+
 ### 3.22 Audit token cost per agent against what the role actually needs
 
 Measured on review2, 2026-09-02: the 79 skills cost 2,193 tokens, 14% of the prompt. Tool schemas cost the rest. `platform_toolsets.api_server` was unset, so all 14 toolsets loaded — including browser, image_gen, vision, cronjob and code_execution, none of which a reviewer uses. The five largest tool schemas were 24KB alone: session_search 5,919 bytes, terminal 5,675, delegate_task 5,573, skill_manage 4,138, memory 2,836.
@@ -3091,6 +3183,8 @@ context. The per-turn floor is not the cost of a review — turn count is. Cutti
 skills and toolsets lowers the floor and does not touch this. Any advisor
 protocol should hand the agent its evidence rather than making it search for it.
 
+<!-- cis:scope="CONTAINER — the six /home/worker/.hermes-*/config.yaml files. `platform_toolsets` is unset in all six; no agent's loadout has ever been matched to its role." -->
+
 ### 3.23 Two thirds of every relay payload is context repeated call to call
 
 The full composition of `run-4bbeea78056e2607-1788140226`, six calls, 131,197 characters — the relay-side prompt, separate from the per-agent system prompt that 3.22 trimmed:
@@ -3131,6 +3225,8 @@ Only the 35% labelled *constraints + prior phase output* differs by phase and ca
 
 **Related:** **2.3** — the same root. Independent POSTs force both the re-sent context and the reviewers' blindness to each other; one change fixes both. 3.22 (the system-prompt side of the same bill, done), 1.6 (prompt size is never measured), 2.28 and 2.27 (specific defects inside these blocks), 1.24 (what the trajectory block feeds brain).
 
+<!-- cis:scope="CONTAINER — prompt assembly in `runtime/abstraction/pipeline_relay.py`." -->
+
 ### 3.25 THE REFERENCE-DOCUMENTS TABLE IS A DEPENDENCY MAP WITH NO EDGE KIND
 
 The `REFERENCE DOCUMENTS` table near the end of this file maps **ten documents to
@@ -3154,6 +3250,8 @@ discarded again by whoever writes the next extractor.
 is in the file and no query can reach it.
 
 **Related:** 2.32 (the other missing edge kind, same read), 3.21.
+
+<!-- cis:scope="REPO — the queue schema 3.21 creates." -->
 
 ### 3.26 DEAD TELEGRAM NOTIFICATION CODE IN THE RELAY
 
@@ -3188,6 +3286,8 @@ second way as well.
 
 **Related:** 2.18 (placeholders not marked as placeholders), 2.25 (the feed —
 separate, settled, host scope).
+
+<!-- cis:scope="CONTAINER — `runtime/abstraction/pipeline_relay.py`, on the" -->
 
 ### 2.38 A SCHEMA CHANGE'S BLAST RADIUS MUST BE ENUMERATED BY OBJECT, NOT BY STATEMENT SYNTAX
 **Two misses in one session, 2026-09-07, from the same cause.**
@@ -3360,6 +3460,8 @@ container", that is the answer and it should be written down.
 artifact), 2.37 (nothing tests the artifacts for whether anything exercises
 them), 3.21 (the build that surfaced it).
 
+<!-- cis:scope="REPO — the host's interpreters, not the container's. Whether the" -->
+
 
 ### 3.29 Cap MCP tool result sizes and match each profile's tool surface to its role
 
@@ -3369,6 +3471,8 @@ After reviewers were given read-only MCP instruments, one advisor review balloon
 
 **Need: HALF DONE.** Reviewer read-only surface already cut: cis_search_semantic / cis_get_similar / cis_search_knowledge removed from READONLY_TOOL_NAMES (20 to 17 tools). Remaining: add hard result-size caps (row limits + char truncation) to the spine-query handlers, then extend 3.22's per-role audit to the MCP surface and the advisor/evaluator profiles.
 
+<!-- cis:scope="CONTAINER — runtime/mcp_bridge/tools.py + spine.py handlers; per-profile MCP and native tool surfaces in enforcement/mwl-proof-v2/profiles/*.yaml" -->
+
 ### 3.30 Persist review output + token counts to the spine (append-only); fix overwrite bugs
 
 Round-1 review of spine-baseline-discipline confirmed the gap: a before/after claim (e.g. "prompt_tokens 5,118 → 303,099") is unverifiable because the BEFORE lives only in an ephemeral gateway log and the rerun overwrites the response file. deliberation_rounds already has reviewer1_output/reviewer2_output (migrations 0015/0016) but advisor_review.sh never populates them — it writes only reviewer_signal. Token columns do not exist on deliberation_rounds.
@@ -3377,6 +3481,8 @@ Round-1 review of spine-baseline-discipline confirmed the gap: a before/after cl
 
 **Need: OPEN.** Card reviews/pending/spine-baseline-discipline.md is V2 (RIGHT_WORK, objections addressed). Not yet implemented.
 
+<!-- cis:scope="runtime/schema/migrations; tools/advisor_review.sh; runtime/orchestrator.py; runtime/mcp_bridge/spine.py" -->
+
 ### 3.31 Two-way report: verdict to Eric's phone, reply releases the stop
 
 pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates poller is a terminal-tied process the row-based pause 1.21 avoids). Advisor/evaluator bots are now wired (TG1). TG2 makes the report two-way from inside the container: a stop is pushed to Eric's phone, and his "go" reply releases it via the existing --continue path.
@@ -3384,6 +3490,8 @@ pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates po
 **Scope:** tools/pause_notify.py (container-scoped mirror); a reply-consumer process started in enforcement/mwl-proof-v2/entrypoint.sh; advisor_review.sh pause path.
 
 **Need: OPEN.** Card reviews/pending/tg2-two-way-report.md is V2 (spec in review). Not yet implemented.
+
+<!-- cis:scope="tools/pause_notify.py; enforcement/mwl-proof-v2/entrypoint.sh; tools/advisor_review.sh" -->
 
 # TIER 4 — after the infrastructure works
 
@@ -3502,6 +3610,8 @@ The record calls the manual transfer of structured content the largest remaining
 
 **Evidence:** raised 4 times, 2026-05-13 to 2026-08-02; mining_candidates 15019,15020,15017,14994; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="UNDETERMINED — the ADR-048 staging path is VM-side, but whether the container pipeline's own intake replaces the need is not established" -->
+
 ### 4.12 Settle the glossary-collision and inheritance-index schemas
 
 Unresolved glossary term collisions block cross-layer operations with no collision-to-runtime bridge; the inheritance index has no machine-readable schema and neither session-initialization nor query-routing consumes it.
@@ -3514,6 +3624,8 @@ Unresolved glossary term collisions block cross-layer operations with no collisi
 
 **Evidence:** raised 2 times, 2026-05-13 to 2026-05-13; mining_candidates 15023,15024; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="UNDETERMINED — would be settled by checking whether any container phase reads the glossary or the index" -->
+
 ### 4.13 Close the system-learning loop
 
 Corrections are logged but never fed back into the extraction model, so the review work produces no improvement.
@@ -3524,6 +3636,8 @@ Corrections are logged but never fed back into the extraction model, so the revi
 
 
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5162; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="UNDETERMINED — would be settled by establishing whether the container's pattern catalog consumes correction history" -->
 
 ### 4.14 Define the capability taxonomy and criticality criteria
 
@@ -3537,6 +3651,8 @@ Without one, the primary-plus-fallback requirement cannot be enforced.
 
 **Evidence:** raised 1 times, 2026-08-29 to 2026-08-29; mining_candidates 79; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="UNDETERMINED — no capability_taxonomy, CapabilityClaim or capability_registry anywhere under runtime/ — absent from both pipelines" -->
+
 ### 4.15 Lock the video preprocessing decisions
 
 Whisper model size and the segment-level video source_unit schema must be decided before video preprocessing is built.
@@ -3549,6 +3665,8 @@ Whisper model size and the segment-level video source_unit schema must be decide
 
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5149; full record in `data/mining_archive/MINED_TASKS.md`.
 
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — video preprocessing is the VM creative-ingestion path" -->
+
 ### 4.16 Settle model routing and the benchmark protocol
 
 Intelligent routing between local and frontier models is unimplemented, the benchmark protocol is not operationalised, and the Qwen3-VL-32B FP8 test path is unsettled.
@@ -3560,6 +3678,8 @@ Intelligent routing between local and frontier models is unimplemented, the benc
 **The one check that settles it:** decide whether fixed per-role model config answers the routing need
 
 **Evidence:** raised 1 times, 2026-06-27 to 2026-06-27; mining_candidates 5141; full record in `data/mining_archive/MINED_TASKS.md`.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — routing between local and frontier models is the VM ingestion concern; the container uses fixed per-role model config" -->
 
 
 
@@ -3585,6 +3705,8 @@ list fills with noise.
 
 **Related:** the end-of-day evaluation item — both are about the system noticing its own state
 without Eric reading logs.
+
+<!-- cis:scope="CONTAINER — the plugin that writes the payload log runs in the container on every tool" -->
 
 ### 4.18 Wire the card factory to the queue
 
@@ -3625,6 +3747,8 @@ and its destroy-and-rebuild behaviour — at which point nothing of it survives 
 the name.
 
 **Depends on:** 3.21 — the factory needs a table, not a markdown document, to read.
+
+<!-- cis:scope="NOT_IN_CONTAINER_PATH — the generators and `cards/pipeline_cards.db` are VM tooling; none" -->
 
 ### 4.19 A button that sends an issue card into the pipeline
 
@@ -3727,6 +3851,8 @@ them (63%) invisible to any filename search.** Tool:
 
 The gate scripts and `guardrails.py` are the parts I would defend. The document
 corpus is sampled, not exhausted.
+
+<!-- cis:scope="CONTAINER — the pipeline the button would feed is the container pipeline." -->
 
 ### 4.20 Contained-pipeline deterministic-enforcement capability set
 
