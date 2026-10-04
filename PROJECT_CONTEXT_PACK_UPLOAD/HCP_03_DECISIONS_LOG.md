@@ -1,10 +1,11 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-04 05:20 UTC | Run: run-e14102f58c84
+Generated: 2026-10-04 16:02 UTC | Run: run-a1802ae3cb2d
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-04 | [ADR-WIASW-004] Continuous development intake and build-order integration is a destination requirement: Records the CONT | Development-relevant input arrives continuously and incidentally -- a feature th | DECIDED | spine record |
 | 2026-10-04 | [ADR-PIPE-008] Queue recovery must read every status the queue can store; unknown tokens still fail: The recovery read v | Found 2026-10-03 by OQ-TRIAGE-001's own guard, and it blocked triage: 11 of the  | DECIDED | spine record |
 | 2026-10-03 | [ADR-PIPE-007] Parallel Queue Triage authorized while P0 closeout is externally blocked: TEMPORARY SEQUENCING EXCEPTION, | Recorded so the audit trail shows WHY triage was attempted ahead of P0 closeout, | DECIDED | spine record |
 | 2026-10-02 | [ADR-WIASW-001] WIASW destination architecture — Word, Image, Action, Sound, Web: Records the long-range destination/pro | The long-range product architecture was clarified in conversation and existed no | DECIDED | spine record |

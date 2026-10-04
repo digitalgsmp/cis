@@ -93,7 +93,10 @@ import canonical_state as cs  # noqa: E402  (shared DB default + state revision)
 READ_MODEL_KIND = "cis_destination_architecture"
 
 # The decision family that carries the architecture. A PATTERN, not a list of
-# ids: ADR-WIASW-004 would be picked up with no change here.
+# ids. ADR-WIASW-004 (continuous development intake and build-order
+# integration) joined the family on 2026-10-04 and required no change here,
+# not even to the clause grammar — which is the property this pattern exists
+# to have.
 DECISION_ID_PATTERN = "ADR-WIASW-%"
 DECISION_ID_DESCRIPTION = (
     "project_decisions rows with id LIKE 'ADR-WIASW-%' and status != 'SUPERSEDED', "
@@ -138,9 +141,15 @@ _VOCABULARY_RE = re.compile(r"([A-Z][A-Z0-9_]*)\s*=\s*([^;]*)")
 CONTAINS = "contains"
 
 # Zoom levels, as the card's own framing: level 1 answers "why", level 2
-# answers "what WIASW is". Levels 3 and 4 — the P0–P6 sequence and the queue
-# items under it — are a different authority and a different screen; see
-# authority.current_build_view.
+# answers what the destination actually holds. Levels 3 and 4 — the P0–P6
+# sequence and the queue items under it — are a different authority and a
+# different screen; see authority.current_build_view.
+#
+# Level 2's wording said "what WIASW is" while the family carried only WIASW,
+# CIS and the execution layer. ADR-WIASW-004 added a CIS capability
+# (continuous development intake), so that wording would now describe less than
+# the level shows. The label states the level's SCOPE, never its contents:
+# a later family decision must not require an edit here.
 LEVELS = (
     {
         "id": "overview",
@@ -150,8 +159,9 @@ LEVELS = (
     },
     {
         "id": "full",
-        "label": "Level 2 — what WIASW is",
-        "question": "What are the WIASW domains, applications and backends?",
+        "label": "Level 2 — what the destination holds",
+        "question": ("What are the WIASW domains and applications, the execution "
+                     "backends, and the CIS capabilities the destination requires?"),
         "max_depth": None,
     },
 )

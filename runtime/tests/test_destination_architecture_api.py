@@ -10,8 +10,9 @@ Four kinds of test, deliberately:
      architecture can actually be built from the current authority state and
      that it says what the ADR-WIASW-* decisions say — WIASW on top, the five
      named media domains, the horizontal applications marked as NOT additional
-     domains, CIS as substrate, the execution layer below it, and all six
-     relationship types carrying explicit semantics. A card assertion that
+     domains, CIS as substrate, the execution layer below it, the continuous
+     development intake capability under CIS, and all seven relationship
+     types carrying explicit semantics. A card assertion that
      passed only against a hand-built fixture would prove nothing about the
      architecture the project actually recorded.
 
@@ -139,7 +140,7 @@ def test_read_model_builds_from_live_authority():
           model.get("state_revision"))
     check("1c. the architecture is read from the ADR-WIASW decision family",
           [d["id"] for d in model["decisions"]]
-          == ["ADR-WIASW-001", "ADR-WIASW-002", "ADR-WIASW-003"],
+          == ["ADR-WIASW-001", "ADR-WIASW-002", "ADR-WIASW-003", "ADR-WIASW-004"],
           [d["id"] for d in model["decisions"]])
     check("1d. every decision row is DECIDED and not superseded",
           all(d["status"] == "DECIDED" and not d["superseded_by"]
@@ -243,19 +244,27 @@ def test_cis_is_the_substrate_beneath_wiasw(model):
                            ("Blender", "Houdini", "ComfyUI", "Unreal Engine"))
           and "no adapter authorized" in creative["description"],
           creative and creative["description"][-120:])
+    # Execution infrastructure is REACHED, never owned: CIS drives it through
+    # stable contracts. The guard is scoped to the execution layer rather than
+    # to every CIS edge because ADR-WIASW-004 declares a CIS capability that IS
+    # structurally part of CIS (CIS contains DEVELOPMENT_INTAKE). Owning a
+    # capability and owning a replaceable backend are different claims, and
+    # collapsing them would make the second unmeasurable.
+    execution_ids = {"EXECUTION_LAYER"} | {f["id"] for f in families}
     check("5f. CIS reaches tool backends through orchestration and executes-through, "
           "not by containing them",
           has_edge(model, "CIS", "orchestrates", "MODEL_BACKENDS")
           and has_edge(model, "CIS", "executes-through", "CREATIVE_TOOL_BACKENDS")
           and not any(e["source"] == "CIS" and e["relationship"] == "contains"
-                      for e in model["edges"]),
-          [e["relationship"] for e in model["edges"] if e["source"] == "CIS"])
+                      and e["target"] in execution_ids for e in model["edges"]),
+          [(e["relationship"], e["target"]) for e in model["edges"]
+           if e["source"] == "CIS"])
 
 
 def test_relationship_semantics_are_explicit(model):
     defined = {r["name"]: r for r in model["relationships"]}
-    check("6a. all six relationship classes are defined by the authority",
-          sorted(defined) == ["contains", "controls", "executes-through",
+    check("6a. all seven relationship classes are defined by the authority",
+          sorted(defined) == ["contains", "controls", "executes-through", "feeds",
                              "orchestrates", "supports", "uses"],
           sorted(defined))
     check("6b. every definition is non-empty and carries its own provenance",
@@ -269,13 +278,20 @@ def test_relationship_semantics_are_explicit(model):
           all(e["source_declared"] and e["target_declared"] for e in model["edges"]),
           [e["authority_ref"]["declaration"] for e in model["edges"]
            if not (e["source_declared"] and e["target_declared"])])
-    check("6e. all six are actually used, not merely defined",
+    check("6e. all seven are actually used, not merely defined",
           sorted(model["relationship_types_used"]) == sorted(defined),
           model["relationship_types_used"])
     # The point of the separation: no build-order vocabulary anywhere.
     check("6f. no build-order relationship (builds-before / next / phase-order) exists here",
           not ({"builds-before", "next", "phase-order"} & set(defined)),
           sorted(defined))
+    # `feeds` is the one relationship that LOOKS like sequencing, so the
+    # authority has to disclaim it in its own words rather than relying on this
+    # module's reading of it.
+    check("6g. `feeds` declares itself a stage contract, not a build-order edge",
+          "feeds" in defined
+          and "never a build-order, phase or chronology edge" in defined["feeds"]["definition"],
+          defined.get("feeds", {}).get("definition"))
 
 
 def test_activation_is_not_progress(model):
@@ -293,6 +309,25 @@ def test_activation_is_not_progress(model):
     check("7c. CIS's own status is deferred to its real authority, not restated here",
           node(model, "CIS")["activation_state"] == "TRACKED_ELSEWHERE",
           node(model, "CIS")["activation_state"])
+    # ADR-WIASW-004 needed a third answer: accepted as destination, some
+    # substrate already exists elsewhere, capability itself not built. Saying
+    # NOT_ACTIVATED would have hidden the substrate; saying TRACKED_ELSEWHERE
+    # would have claimed the capability is real today. Both are wrong.
+    partial = {v["state"]: v for v in activation["vocabulary"]}.get("PARTIAL_SUBSTRATE")
+    check("7g. PARTIAL_SUBSTRATE is defined by the authority and denies being built",
+          partial is not None
+          and "not implemented, not activated and not claimed implemented"
+              in partial["definition"]
+          and "not a build status" in partial["definition"],
+          partial and partial["definition"])
+    check("7h. it is used only where the authority assigned it, never by default",
+          activation["default"] == "NOT_ACTIVATED"
+          and {n["id"] for n in model["nodes"]
+               if n["activation_state"] == "PARTIAL_SUBSTRATE"}
+          == {"DEVELOPMENT_INTAKE", "INTAKE_CLASSIFICATION", "INTAKE_DEPENDENCY_ORDER",
+              "INTAKE_VISIBILITY", "INTAKE_DURABILITY"},
+          sorted(n["id"] for n in model["nodes"]
+                 if n["activation_state"] == "PARTIAL_SUBSTRATE"))
     check("7d. every activation state used is defined in the authority's vocabulary",
           all(n["activation_state"] in vocabulary for n in model["nodes"]),
           sorted({n["activation_state"] for n in model["nodes"]} - vocabulary))
@@ -710,7 +745,7 @@ def test_architecture_is_recoverable_through_the_canonical_chain():
     state = cs.get_canonical_state()
     family = [d for d in state["active_decisions"] if d["id"].startswith("ADR-WIASW-")]
     check("25a. the canonical state read model carries the ADR-WIASW decisions",
-          len(family) == 3, [d["id"] for d in family])
+          len(family) == 4, [d["id"] for d in family])
     text = " ".join(d["decision"] for d in family)
     facts = {
         "WIASW is Word, Image, Action, Sound + Web":
@@ -749,6 +784,121 @@ def test_architecture_is_recoverable_through_the_canonical_chain():
           not missing, missing)
     check("25c. recovery does not depend on any markdown document",
           all("ADR-WIASW" in d["id"] for d in family), None)
+
+
+# ── 7. the continuous development intake destination (ADR-WIASW-004) ─────
+#
+# Recorded because a development-relevant observation -- a request, a defect
+# found in passing, a prerequisite discovered mid-implementation -- had no
+# durable path into authoritative state, so its survival depended on a human
+# or a model remembering it. These checks prove the requirement is readable
+# from authority, that it is NOT claimed implemented, and that recording it
+# authorized nothing.
+
+def test_continuous_development_intake_is_recorded(model):
+    intake = node(model, "DEVELOPMENT_INTAKE")
+    check("26a. the intake capability is declared, under CIS, not as a top-level target",
+          intake is not None and intake["kind"] == "destination_capability_group"
+          and has_edge(model, "CIS", "contains", "DEVELOPMENT_INTAKE")
+          and intake["depth"] == 1,
+          intake and (intake["kind"], intake["depth"]))
+    children = [e["target"] for e in model["edges"]
+                if e["source"] == "DEVELOPMENT_INTAKE" and e["relationship"] == "contains"]
+    check("26b. it carries the nine named intake capabilities",
+          sorted(children) == sorted([
+              "INTAKE_CAPTURE", "INTAKE_PROVENANCE", "INTAKE_REVIEW",
+              "INTAKE_CLASSIFICATION", "INTAKE_RECONCILIATION",
+              "INTAKE_DEPENDENCY_ORDER", "INTAKE_TARGET_TRACE",
+              "INTAKE_VISIBILITY", "INTAKE_DURABILITY"]),
+          sorted(children))
+    check("26c. the discovery-to-build-order path is representable as stages, in order",
+          has_edge(model, "INTAKE_CAPTURE", "feeds", "INTAKE_REVIEW")
+          and has_edge(model, "INTAKE_REVIEW", "feeds", "INTAKE_CLASSIFICATION")
+          and has_edge(model, "INTAKE_CLASSIFICATION", "feeds", "INTAKE_DEPENDENCY_ORDER"),
+          [(e["source"], e["target"]) for e in model["edges"]
+           if e["relationship"] == "feeds"])
+    check("26d. it serves the WIASW targets, without becoming one of them",
+          has_edge(model, "DEVELOPMENT_INTAKE", "supports", "WIASW")
+          and has_edge(model, "DEVELOPMENT_INTAKE", "supports", "HORIZONTAL_APPLICATIONS")
+          and not has_edge(model, "WIASW", "contains", "DEVELOPMENT_INTAKE"),
+          [(e["relationship"], e["target"]) for e in model["edges"]
+           if e["source"] == "DEVELOPMENT_INTAKE" and e["relationship"] != "contains"])
+    check("26e. recording it did not change the 'why' level, which answers a different question",
+          sorted(next(lv for lv in model["levels"]
+                      if lv["id"] == "overview")["node_ids"])
+          == ["CIS", "EXECUTION_LAYER", "WIASW"],
+          next(lv for lv in model["levels"] if lv["id"] == "overview")["node_ids"])
+
+    text = next(d["decision"] for d in model["decisions"] if d["id"] == "ADR-WIASW-004")
+    facts = {
+        "capture is not approval, and approval is not execution authorization":
+            "CAPTURE != APPROVAL. APPROVAL != EXECUTION AUTHORIZATION." in text,
+        "capture alone cannot activate a phase or authorize implementation":
+            "activate a phase, create an implementation authorization" in text,
+        "an observation may survive without becoming executable work":
+            "survive even when it does NOT immediately become executable work" in text,
+        "the record names what must not be depended on":
+            "must NOT depend on architect memory, model memory, conversation context" in text,
+        "provenance distinguishes unequal sources":
+            "SOURCES DO NOT CARRY EQUAL AUTHORITY" in text,
+        "intake is not the queue": "INTAKE IS NOT THE QUEUE" in text,
+        "not every thought is forced into queue_items":
+            "NOT EVERY THOUGHT IS FORCED INTO queue_items" in text,
+        "queue triage is not the whole capability":
+            "CURRENT QUEUE TRIAGE IS NOT A COMPLETE CONTINUOUS DEVELOPMENT INTAKE SYSTEM"
+            in text,
+        "queue_edges is current infrastructure, not the finished answer":
+            "NOT assumed to be the complete destination solution" in text,
+        "build-order reasoning is the purpose":
+            "E before D before B before X" in text,
+        "the targets are CIS, WIASW, the productivity applications and future families":
+            "future architect-approved application families" in text,
+        "lightweight capture must not require specifying the idea first":
+            "WITHOUT requiring the architect to stop the current task" in text,
+        "deduplication is required but not built":
+            "SEMANTIC DEDUPLICATION IS NOT IMPLEMENTED BY THIS DECISION" in text,
+        "no competing lifecycle authority is introduced":
+            "NO COMPETING LIFECYCLE AUTHORITY IS INTRODUCED" in text,
+        "no schema change was made or proposed":
+            "NO TABLE, COLUMN, CHECK CONSTRAINT, ENUM OR MIGRATION IS CREATED" in text,
+        "the capability is not claimed implemented":
+            "THE FULL CAPABILITY IS NOT IMPLEMENTED AND IS NOT CLAIMED IMPLEMENTED" in text,
+        "the gap is carried as an open question":
+            "recorded as OQ-INTAKE-001" in text,
+        "the existing queue and phase authorities are left unamended":
+            "ADR-PIPE-008 are unamended" in text,
+    }
+    missing = [name for name, found in facts.items() if not found]
+    check(f"26f. all {len(facts)} intake contract facts are readable from the decision row",
+          not missing, missing)
+
+    conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        gap = conn.execute(
+            "SELECT status, question FROM open_questions WHERE id = 'OQ-INTAKE-001'"
+        ).fetchone()
+        queue_hits = conn.execute(
+            "SELECT COUNT(*) FROM queue_items WHERE title LIKE '%ADR-WIASW%' "
+            "OR COALESCE(body_md, '') LIKE '%ADR-WIASW%' "
+            "OR UPPER(title) LIKE '%CONTINUOUS DEVELOPMENT INTAKE%' "
+            "OR UPPER(COALESCE(body_md, '')) LIKE '%CONTINUOUS DEVELOPMENT INTAKE%'"
+        ).fetchone()[0]
+        state_hits = conn.execute(
+            "SELECT COUNT(*) FROM project_state WHERE value LIKE '%DEVELOPMENT_INTAKE%' "
+            "AND key != 'external_dev_checkpoint'").fetchone()[0]
+    finally:
+        conn.close()
+    check("26g. the implementation gap exists as an OPEN question, not as executable work",
+          gap is not None and gap[0] == "OPEN"
+          and "which does Eric authorize" in gap[1],
+          gap and gap[0])
+    check("26h. the gap question does not reorder accepted work, and says so",
+          gap is not None and "NOTHING IS REORDERED BY THIS QUESTION" in gap[1]
+          and "OQ-TRIAGE-003" in gap[1], None)
+    check("26i. no queue item was created for the intake capability",
+          queue_hits == 0, queue_hits)
+    check("26j. the capability was not written into build state",
+          state_hits == 0, state_hits)
 
 
 def run():
@@ -792,6 +942,7 @@ def run():
     test_read_model_connection_is_read_only()
     test_current_build_state_is_unchanged(before_fingerprint)
     test_architecture_is_recoverable_through_the_canonical_chain()
+    test_continuous_development_intake_is_recorded(model)
 
     for r in results:
         print(r)

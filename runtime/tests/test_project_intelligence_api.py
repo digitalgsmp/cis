@@ -438,9 +438,14 @@ def test_discovery_status_is_distinct_from_build_status(model):
     check("8c. capability activation is its own vocabulary, not a phase status",
           not (cap_statuses & build_statuses) and not (cap_statuses & dispositions),
           cap_statuses)
+    # PARTIAL_SUBSTRATE joined the vocabulary with ADR-WIASW-004: a destination
+    # capability whose substrate partly exists under other authorities while the
+    # capability itself is not built. It is still an ACTIVATION state, not a
+    # capability status — which is what this check is for.
     check("8d. destination activation is its own vocabulary, not a capability status",
           not (dest_states & cap_statuses) and dest_states <= {"NOT_ACTIVATED",
-                                                              "TRACKED_ELSEWHERE"},
+                                                               "TRACKED_ELSEWHERE",
+                                                               "PARTIAL_SUBSTRATE"},
           dest_states)
     check("8e. five status systems coexist without being collapsed into one",
           len({frozenset(build_statuses), frozenset(discovery_statuses),
