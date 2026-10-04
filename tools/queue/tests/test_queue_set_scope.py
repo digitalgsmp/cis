@@ -205,16 +205,29 @@ def test_write_path():
         check("13e. passing neither field is refused",
               p.returncode == 2 and "nothing to write" in p.stdout, p.stdout)
 
-        # The guard that keeps the projection recoverable.
-        p = run_set(db, "3.1", "--status", "NEEDS_ERIC", "--note", "Eric decides")
+        # The guard that keeps the projection recoverable. UPDATED FOR
+        # OQ-TRIAGE-002: this check used to use NEEDS_ERIC, because the recovery
+        # extractor could not read it back. It can now -- all nine stored
+        # statuses round-trip -- so the subject here is UNPARSED, the one CHECK
+        # value the extractor still deliberately refuses to read (it is its own
+        # "marker present but unreadable" sentinel). The guard itself is
+        # unchanged and still derived by import; only its one remaining subject
+        # moved. Round trips for the nine live in
+        # tools/queue/tests/test_recovery_status_vocabulary.py.
+        p = run_set(db, "3.1", "--status", "UNPARSED", "--note", "parse failed")
         check("12a. a status the recovery path cannot read back is refused",
               p.returncode == 2 and "cannot survive the documented recovery path" in p.stdout
               and row(db, "3.1")[0] is None, p.stdout)
 
-        p = run_set(db, "3.1", "--status", "NEEDS_ERIC", "--note", "Eric decides",
+        p = run_set(db, "3.1", "--status", "UNPARSED", "--note", "parse failed",
                     "--allow-unrecoverable-status")
         check("12b. the same status is written when the override is passed explicitly",
-              p.returncode == 0 and row(db, "3.1")[0] == "NEEDS_ERIC", p.stdout)
+              p.returncode == 0 and row(db, "3.1")[0] == "UNPARSED", p.stdout)
+
+        p = run_set(db, "1.4", "--status", "NEEDS_ERIC", "--note", "Eric decides")
+        check("12c. a status the repaired recovery path CAN read needs no override",
+              p.returncode == 0 and row(db, "1.4")[0] == "NEEDS_ERIC"
+              and "allow-unrecoverable" not in p.stdout, p.stdout)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

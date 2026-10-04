@@ -22,6 +22,11 @@ THE CONTRACT, as reviewed across three packets:
    As of 2026-09-09 this fires for EITHER '**Need:' shape, not just one.
 6. The run fails ONLY on UNPARSED > 0, printing the item numbers, because that
    is the one condition where the extractor knows it is losing information.
+7. The known vocabulary COVERS EVERY need_status the column can hold except
+   UNPARSED itself (OQ-TRIAGE-002, 2026-10-03), and the normalisation that
+   reaches it is derived FROM that vocabulary rather than fixed at two words.
+   Before this, five legitimate stored statuses were unreadable here and any one
+   of them in the projection failed the entire recovery run. See KNOWN below.
 
 An earlier version of this contract conflated 4 and 5 — it made "no status"
 unclassifiable, and made any unclassifiable item fail the run. It would have
@@ -52,13 +57,34 @@ TIER_RE = re.compile(r"^# TIER\b")
 # The recognised status vocabulary. A token after '**Need:' that is NOT in here
 # stops the run -- see classify_status.
 #
-# BUILT IS RECOGNISED BUT STORED AS DONE. queue_items.need_status carries a CHECK
-# constraint listing five values, and BUILT is not one of them; storing it
-# literally needs a schema change, which is out of scope for the card that added
-# it. This follows the RESOLVED -> DONE mapping already in shape 3 below: the
-# vocabulary is what the parser can READ, the CHECK is what the column can HOLD,
-# and need_raw preserves the literal prose either way.
-KNOWN = {"OPEN", "UNASSESSED", "DONE", "HALF_DONE", "BUILT"}
+# IT MUST COVER EVERY need_status THE COLUMN CAN HOLD (OQ-TRIAGE-002, resolved
+# 2026-10-03). The earlier comment here recorded the split as deliberate -- "the
+# vocabulary is what the parser can READ, the CHECK is what the column can HOLD"
+# -- and that was true when the CHECK listed five values and the projection never
+# WROTE a status into an item that had no marker, so the other values could not
+# reach the markdown. Both halves of that have changed: the CHECK grew to ten,
+# and marker insertion (OQ-TRIAGE-001 option 1) now puts whatever the table holds
+# into the projection. A stored status the parser cannot read back is therefore no
+# longer a harmless asymmetry -- it is a status that fails the whole recovery run
+# (rule 6) and takes the other 131 items down with it. Nothing detected that
+# drift, which is why queue_set.py now DERIVES its guard from this set by import.
+#
+# BUILT IS RECOGNISED BUT STORED AS DONE. It is not one of the CHECK's values;
+# storing it literally would need a schema change. It stays readable for
+# compatibility with markdown written before the table existed, following the
+# RESOLVED -> DONE mapping already in shape 3 below. need_raw preserves the
+# literal prose either way.
+#
+# UNPARSED IS DELIBERATELY ABSENT, and it is the one CHECK value this set does
+# not cover. UNPARSED is this parser's own sentinel for "a marker was present and
+# unreadable". A rendered '**Need: UNPARSED.**' must keep failing the run rather
+# than round-tripping, because reading a recorded parse FAILURE back as a
+# successful status is how an unknown status would launder itself into the table.
+KNOWN = {
+    "OPEN", "UNASSESSED", "DONE", "HALF_DONE",
+    "PARTLY", "UNCLEAR", "PRESENT_UNPROVEN", "NEEDS_ERIC", "NO_CHECK_WRITTEN",
+    "BUILT",
+}
 STORE_AS = {"BUILT": "DONE", "RESOLVED": "DONE"}
 
 
@@ -129,15 +155,44 @@ def parse_sections(text):
     return preamble, tier_headers
 
 
+# The vocabulary indexed BY ITS RENDERED SPELLING, which is what this parser
+# actually receives. render_build_list.py writes '**Need: <status>.**' with
+# underscores canonicalised to spaces, so NO_CHECK_WRITTEN arrives as three
+# words, PRESENT_UNPROVEN as two, and DONE as one.
+#
+# THIS IS WHY OQ-TRIAGE-002 COULD NOT BE FIXED BY ADDING STRINGS TO `KNOWN`.
+# _normalise() used to join at most the first TWO words, so 'NO CHECK WRITTEN'
+# normalised to 'NO' no matter what `KNOWN` contained -- the three-word status was
+# unreachable by construction. The word count is now derived from the vocabulary
+# instead of hardcoded, so a status of any length survives the round trip and
+# adding one later needs no change here.
+#
+# Keyed on the space form with both spellings folded into it, so a hand-written
+# underscore form ('**Need: NO_CHECK_WRITTEN.**') reads identically to the
+# generated one -- recovery runs against files humans have edited.
+_RENDERED = {tok.replace("_", " "): tok for tok in set(KNOWN) | set(STORE_AS)}
+_MAX_STATUS_WORDS = max(len(k.split()) for k in _RENDERED)
+
+
 def _normalise(raw):
-    """'HALF DONE 2026-09-04.' -> HALF_DONE;  'BUILT 2026-09-09,' -> BUILT."""
+    """'HALF DONE 2026-09-04.' -> HALF_DONE;  'NO CHECK WRITTEN.' ->
+    NO_CHECK_WRITTEN;  'BUILT 2026-09-09,' -> BUILT.
+
+    LONGEST VOCABULARY MATCH FIRST, then fall back to the first word. The
+    fallback is what preserves unknown-token detection: 'TOTALLY UNKNOWN STATUS'
+    matches no entry at any length, so it returns 'TOTALLY', which is not in
+    KNOWN, and classify_status() calls it UNPARSED. Widening the vocabulary
+    cannot widen what this accepts -- only an entry in `KNOWN` can.
+    """
     words = [w.strip(":.,;)—") for w in raw.split() if w.strip(":.,;)—")]
     if not words:
         return None
-    two = "_".join(w.upper() for w in words[:2])
-    if two in KNOWN:
-        return two
-    return words[0].upper()
+    upper = [w.upper() for w in words]
+    for n in range(min(_MAX_STATUS_WORDS, len(upper)), 0, -1):
+        candidate = " ".join(upper[:n]).replace("_", " ")
+        if candidate in _RENDERED:
+            return _RENDERED[candidate]
+    return upper[0]
 
 
 def classify_status(body):

@@ -31,6 +31,15 @@ either the item ends up with both fields or the row is untouched. That matters
 because a row carrying need_status with scope still NULL is the shape that reads
 as triaged without being triaged.
 
+A STATUS WRITE ALSO CHECKS THE RECOVERY CONTRACT, FAIL CLOSED (OQ-TRIAGE-002,
+2026-10-03). The value has to be one the documented recovery path
+(extract_queue_items.py --force) can read back out of the generated build list,
+and that vocabulary is derived by importing the extractor rather than copied here
+-- a copy is what drifted in the first place. If the vocabulary cannot be
+determined at all, the status write is REFUSED; it used to be allowed, which
+disabled the guard in the one case where it mattered. A scope-only write does not
+consult the extractor and is unaffected.
+
 Refuses unknown items and unknown statuses. Evidence (command output) is
 required for statuses that assert a code fact: DONE, OPEN, PARTLY,
 PRESENT_UNPROVEN, UNCLEAR. NEEDS_ERIC and NO_CHECK_WRITTEN carry a note -- a
@@ -57,42 +66,58 @@ EVIDENCE_REQUIRED = {"DONE", "OPEN", "PARTLY", "PRESENT_UNPROVEN", "UNCLEAR"}
 
 def recovery_readable_statuses():
     """The statuses the documented recovery path can read back, taken from the
-    recovery path ITSELF rather than copied.
+    recovery path ITSELF rather than copied. Returns (statuses, error): on any
+    failure `statuses` is None and `error` says why, and the caller REFUSES the
+    status write. See the fail-closed note below.
 
     THE DIVERGENCE THIS EXISTS TO STOP, found 2026-10-03 while adding the scope
     write path. queue_items.need_status's CHECK constraint permits 10 values.
-    extract_queue_items.py -- the `--force` recovery path -- carries its own
+    extract_queue_items.py -- the `--force` recovery path -- carried its own
     KNOWN vocabulary of 5: BUILT, DONE, HALF_DONE, OPEN, UNASSESSED. The other
-    five (PARTLY, UNCLEAR, PRESENT_UNPROVEN, NEEDS_ERIC, NO_CHECK_WRITTEN) parse
+    five (PARTLY, UNCLEAR, PRESENT_UNPROVEN, NEEDS_ERIC, NO_CHECK_WRITTEN) parsed
     to UNPARSED, and the extractor's rule 6 FAILS THE WHOLE RECOVERY RUN on
-    UNPARSED > 0 and imports nothing. The extractor's own comment documents the
+    UNPARSED > 0 and imports nothing. The extractor's own comment documented the
     split as deliberate -- "the vocabulary is what the parser can READ, the
     CHECK is what the column can HOLD" -- but it was written when the CHECK
-    listed five values, and the CHECK has since grown to ten while KNOWN did
+    listed five values, and the CHECK had since grown to ten while KNOWN did
     not. Nothing detected that.
 
     It stayed harmless only because the projection never WROTE a status into an
     item that had no marker, so these values never reached the markdown. Marker
     insertion (OQ-TRIAGE-001 option 1) removes that accident, which is why the
-    guard is needed now.
+    guard was needed.
+
+    OQ-TRIAGE-002 (2026-10-03) then repaired the extractor rather than leaving
+    the guard to refuse legitimate statuses forever: all nine stored statuses now
+    round-trip, and the only CHECK value this returns without is UNPARSED, the
+    extractor's own "marker present but unreadable" sentinel. So in normal
+    operation this guard refuses nothing a triage pass needs.
 
     Derived by import, never duplicated, so the two cannot drift apart again.
-    Returns None if the extractor cannot be read, in which case the caller does
-    not guess -- it declines to enforce rather than enforce a stale copy.
+
+    FAIL CLOSED (OQ-TRIAGE-002 review finding). This used to return None on
+    failure and the caller then DECLINED TO ENFORCE -- so the one condition under
+    which the guard mattered most, an unreadable or broken recovery path, was the
+    condition under which it stopped guarding. An unverifiable recovery contract
+    is not a verified one.
     """
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "extract_queue_items.py")
+    if not os.path.exists(path):
+        return None, "%s does not exist" % path
     try:
         spec = importlib.util.spec_from_file_location("_cis_queue_extractor", path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         known = set(mod.KNOWN)
         store_as = dict(mod.STORE_AS)
-    except Exception:
-        return None
+    except Exception as e:
+        return None, "%s could not be imported: %s: %s" % (path, type(e).__name__, e)
+    if not known:
+        return None, "%s defines an EMPTY KNOWN vocabulary" % path
     # BUILT is readable but stored as DONE, so what the column can hold after a
     # round trip is the stored form.
-    return {store_as.get(k, k) for k in known}
+    return {store_as.get(k, k) for k in known}, None
 
 # `scope` IS FREE TEXT AND STAYS FREE TEXT. No CHECK constraint is added here
 # and none should be: the column holds a scope token followed by its
@@ -168,10 +193,25 @@ def main():
     ap.add_argument("--evidence", default="")
     ap.add_argument("--note", default="")
     ap.add_argument("--by", default="")
+    # KEPT, WITH ONE REMAINING PURPOSE (OQ-TRIAGE-002 requirement 12). After the
+    # vocabulary repair the only CHECK value the recovery path cannot read is
+    # UNPARSED -- the extractor's own sentinel for "a marker was present and
+    # unreadable", deliberately excluded so a recorded parse failure cannot
+    # round-trip back in as a successful status. Writing UNPARSED through this
+    # tool is therefore the one legitimate unrecoverable write: it records that an
+    # item's stated status could not be read, which is a true fact about the item
+    # that the projection then cannot carry back. It is not removed, because the
+    # guard it overrides is derived by import and will refuse any FUTURE drift
+    # between the CHECK and the extractor too -- and when that happens the
+    # architect needs a way to write the already-legitimate value while the
+    # extractor is repaired, which is precisely how this flag was used before.
+    # It does NOT override the fail-closed branch above: see there.
     ap.add_argument(
         "--allow-unrecoverable-status", action="store_true",
-        help="write a status the recovery extractor cannot read back. Requires "
-             "an architect decision on the recovery contract; see OQ-TRIAGE-002.")
+        help="write a status the recovery extractor cannot read back. Since "
+             "OQ-TRIAGE-002 that means UNPARSED and nothing else; any other "
+             "status reaching this flag means the CHECK and the extractor have "
+             "drifted apart again, which is a bug to fix, not to flag past.")
     a = ap.parse_args()
 
     if a.status is None and a.scope is None:
@@ -191,9 +231,33 @@ def main():
             print("--evidence is required for %s." % status)
             print("The rule is: no mark without the command output that justified it.")
             return 2
-        readable = recovery_readable_statuses()
-        if (readable is not None and status not in readable
-                and not a.allow_unrecoverable_status):
+        # FAIL CLOSED. If the recovery-readable vocabulary cannot be determined,
+        # no status is written -- and the override does NOT reach this branch.
+        # --allow-unrecoverable-status is a deliberate decision about ONE status
+        # known to be unreadable; it is not a way past a recovery path that
+        # cannot be inspected at all, because then nobody knows what is being
+        # overridden. The fix is to repair the extractor, not to flag past it.
+        readable, readable_err = recovery_readable_statuses()
+        if readable is None:
+            print("REFUSED — cannot determine what the recovery path can read back.")
+            print("")
+            print("  %s" % readable_err)
+            print("")
+            print("queue_items.need_status is only safe to write if the documented")
+            print("recovery path (extract_queue_items.py --force) can read the value")
+            print("back out of the generated build list. That vocabulary is derived")
+            print("from the extractor by import, and the import did not succeed, so")
+            print("the guarantee cannot be checked.")
+            print("")
+            print("This refuses rather than assuming, because the assumption that")
+            print("used to be made here was the permissive one: an unreadable")
+            print("extractor disabled the guard exactly when it mattered most.")
+            print("")
+            print("Repair tools/queue/extract_queue_items.py and retry. A scope-only")
+            print("write (--scope with no --status) does not consult this and still")
+            print("works.")
+            return 2
+        if status not in readable and not a.allow_unrecoverable_status:
             print("%s cannot survive the documented recovery path." % status)
             print("")
             print("extract_queue_items.py --force reads status back out of the")
@@ -206,9 +270,11 @@ def main():
             print("Refused rather than written, because the damage only shows up at")
             print("recovery time, when the table is already gone.")
             print("")
-            print("This needs an architect decision on the recovery contract, not a")
-            print("flag: see OQ-TRIAGE-002. --allow-unrecoverable-status exists so")
-            print("that decision can be carried out once it is made.")
+            print("OQ-TRIAGE-002 widened the recovery vocabulary to cover every")
+            print("status the column can hold except UNPARSED, so a triage pass no")
+            print("longer meets this refusal. If you are reading it for anything")
+            print("other than UNPARSED, the extractor and the CHECK have drifted")
+            print("again and THAT is the bug — not this guard.")
             return 2
 
     scope = None
