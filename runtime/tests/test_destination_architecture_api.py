@@ -11,8 +11,9 @@ Four kinds of test, deliberately:
      that it says what the ADR-WIASW-* decisions say — WIASW on top, the five
      named media domains, the horizontal applications marked as NOT additional
      domains, CIS as substrate, the execution layer below it, the continuous
-     development intake capability under CIS, and all seven relationship
-     types carrying explicit semantics. A card assertion that
+     development intake capability under CIS, the Creative/Software Control
+     Center and its reference outcomes, and all eight relationship types
+     carrying explicit semantics. A card assertion that
      passed only against a hand-built fixture would prove nothing about the
      architecture the project actually recorded.
 
@@ -140,7 +141,8 @@ def test_read_model_builds_from_live_authority():
           model.get("state_revision"))
     check("1c. the architecture is read from the ADR-WIASW decision family",
           [d["id"] for d in model["decisions"]]
-          == ["ADR-WIASW-001", "ADR-WIASW-002", "ADR-WIASW-003", "ADR-WIASW-004"],
+          == ["ADR-WIASW-001", "ADR-WIASW-002", "ADR-WIASW-003", "ADR-WIASW-004",
+              "ADR-WIASW-005"],
           [d["id"] for d in model["decisions"]])
     check("1d. every decision row is DECIDED and not superseded",
           all(d["status"] == "DECIDED" and not d["superseded_by"]
@@ -263,9 +265,9 @@ def test_cis_is_the_substrate_beneath_wiasw(model):
 
 def test_relationship_semantics_are_explicit(model):
     defined = {r["name"]: r for r in model["relationships"]}
-    check("6a. all seven relationship classes are defined by the authority",
-          sorted(defined) == ["contains", "controls", "executes-through", "feeds",
-                             "orchestrates", "supports", "uses"],
+    check("6a. all eight relationship classes are defined by the authority",
+          sorted(defined) == ["anchors", "contains", "controls", "executes-through",
+                             "feeds", "orchestrates", "supports", "uses"],
           sorted(defined))
     check("6b. every definition is non-empty and carries its own provenance",
           all(r["definition"] and r["authority_ref"]["decision_id"].startswith("ADR-WIASW-")
@@ -278,7 +280,7 @@ def test_relationship_semantics_are_explicit(model):
           all(e["source_declared"] and e["target_declared"] for e in model["edges"]),
           [e["authority_ref"]["declaration"] for e in model["edges"]
            if not (e["source_declared"] and e["target_declared"])])
-    check("6e. all seven are actually used, not merely defined",
+    check("6e. all eight are actually used, not merely defined",
           sorted(model["relationship_types_used"]) == sorted(defined),
           model["relationship_types_used"])
     # The point of the separation: no build-order vocabulary anywhere.
@@ -292,6 +294,15 @@ def test_relationship_semantics_are_explicit(model):
           "feeds" in defined
           and "never a build-order, phase or chronology edge" in defined["feeds"]["definition"],
           defined.get("feeds", {}).get("definition"))
+    # `anchors` is the other relationship that could be mistaken for something
+    # binding. A reference outcome that read as an acceptance test would let a
+    # phase be reported complete against a studio's website.
+    check("6h. `anchors` authorizes no work and is not an acceptance test",
+          "anchors" in defined
+          and all(phrase in defined["anchors"]["definition"] for phrase in
+                  ("authorizes no work", "specifies no design",
+                   "never an acceptance test")),
+          defined.get("anchors", {}).get("definition"))
 
 
 def test_activation_is_not_progress(model):
@@ -745,7 +756,7 @@ def test_architecture_is_recoverable_through_the_canonical_chain():
     state = cs.get_canonical_state()
     family = [d for d in state["active_decisions"] if d["id"].startswith("ADR-WIASW-")]
     check("25a. the canonical state read model carries the ADR-WIASW decisions",
-          len(family) == 4, [d["id"] for d in family])
+          len(family) == 5, [d["id"] for d in family])
     text = " ".join(d["decision"] for d in family)
     facts = {
         "WIASW is Word, Image, Action, Sound + Web":
@@ -901,6 +912,149 @@ def test_continuous_development_intake_is_recorded(model):
           state_hits == 0, state_hits)
 
 
+# ── 8. the reference outcome and Control Center (ADR-WIASW-005) ──────────
+#
+# Recorded because every capability question could otherwise be answered by a
+# single-tool demonstration -- "AI can operate Houdini" is true, verifiable,
+# and proves nothing about whether one discipline's output can become
+# another's controlled input. These checks prove the bar is cross-tool
+# orchestration, that the reference is a capability class and never work to
+# reproduce, and that recording it satisfied no acceptance test.
+
+def test_reference_outcome_is_recorded(model):
+    centre = node(model, "CONTROL_CENTER")
+    check("27a. the Control Center is declared inside WIASW, above CIS, not as a target itself",
+          centre is not None and centre["kind"] == "control_center"
+          and has_edge(model, "WIASW", "contains", "CONTROL_CENTER")
+          and has_edge(model, "CONTROL_CENTER", "uses", "CIS")
+          and centre["depth"] == 1,
+          centre and (centre["kind"], centre["depth"]))
+    check("27b. it reaches professional tools through CIS, never directly",
+          not any(e["source"] == "CONTROL_CENTER"
+                  and e["target"] in ("EXECUTION_LAYER", "MODEL_BACKENDS",
+                                      "DEV_TOOL_BACKENDS", "CREATIVE_TOOL_BACKENDS")
+                  for e in model["edges"]),
+          [(e["relationship"], e["target"]) for e in model["edges"]
+           if e["source"] == "CONTROL_CENTER"])
+    check("27c. it is not a media domain and says so in its own words",
+          centre and "not a media domain" in centre["description"].lower()
+          and not has_edge(model, "DOMAINS", "contains", "CONTROL_CENTER")
+          and centre["kind"] != "domain",
+          centre and centre["description"][:160])
+    orchestration = node(model, "CROSS_DISCIPLINE_ORCHESTRATION")
+    check("27d. cross-discipline orchestration is the recorded capability, "
+          "with the human direction level beside it",
+          orchestration is not None
+          and "controlled inputs" in orchestration["description"]
+          and has_edge(model, "CREATIVE_DIRECTION_SURFACE", "supports",
+                       "CROSS_DISCIPLINE_ORCHESTRATION")
+          and has_edge(model, "PRODUCTION_CHAIN_MODEL", "supports",
+                       "CROSS_DISCIPLINE_ORCHESTRATION"),
+          orchestration and orchestration["description"][:160])
+    lusion = node(model, "LUSION_CLASS")
+    check("27e. the reference is declared as a capability class, not as work to reproduce",
+          lusion is not None and lusion["kind"] == "reference_outcome"
+          and "CAPABILITY CLASS" in lusion["description"]
+          and "does NOT mean copying" in lusion["description"]
+          and "https://lusion.co/" in lusion["description"],
+          lusion and lusion["description"][:200])
+    video = node(model, "PROCESS_REFERENCE_VIDEO")
+    check("27f. the process reference keeps its URL and claims nothing about its contents",
+          video is not None and video["kind"] == "process_reference"
+          and "https://youtu.be/dyEpDobnkmA" in video["description"]
+          and "HAVE NOT BEEN INDEPENDENTLY INSPECTED" in video["description"],
+          video and video["description"][:200])
+    check("27g. the reference anchors the capability rather than being contained by it",
+          has_edge(model, "LUSION_CLASS", "anchors", "CONTROL_CENTER")
+          and has_edge(model, "LUSION_CLASS", "anchors", "CROSS_DISCIPLINE_ORCHESTRATION")
+          and has_edge(model, "REFERENCE_OUTCOMES", "contains", "LUSION_CLASS"),
+          [(e["relationship"], e["target"]) for e in model["edges"]
+           if e["source"] == "LUSION_CLASS"])
+    check("27h. reference outcomes reach the intake path, which is what makes them anchors",
+          has_edge(model, "CAPABILITY_ANCHORING", "supports", "DEVELOPMENT_INTAKE")
+          and has_edge(model, "OUTCOME_TRACEABILITY", "supports", "INTAKE_TARGET_TRACE"),
+          [(e["source"], e["target"]) for e in model["edges"]
+           if e["relationship"] == "anchors" or e["target"].startswith("INTAKE_")])
+    check("27i. nothing in the reference record is activated",
+          all(n["activation_state"] == "NOT_ACTIVATED" for n in model["nodes"]
+              if n["authority_ref"]["decision_id"] == "ADR-WIASW-005"),
+          [(n["id"], n["activation_state"]) for n in model["nodes"]
+           if n["authority_ref"]["decision_id"] == "ADR-WIASW-005"
+           and n["activation_state"] != "NOT_ACTIVATED"])
+
+    text = next(d["decision"] for d in model["decisions"] if d["id"] == "ADR-WIASW-005")
+    facts = {
+        "the reference is a capability class, not an instruction to reproduce":
+            "THIS IS A CAPABILITY-CLASS REFERENCE AND NOT AN INSTRUCTION TO REPRODUCE" in text,
+        "single-tool demonstrations are recorded as insufficient":
+            "It is NOT enough for the destination system to prove that AI can operate Houdini"
+            in text,
+        "accumulated single-tool wins may not be reported as satisfying the bar":
+            "does not satisfy this and must not be reported as satisfying it" in text,
+        "the bar is coordination, with one discipline's output becoming another's input":
+            "CONTROLLED INPUTS" in text,
+        "the significance is cross-tool and cross-discipline":
+            "THE SIGNIFICANCE IS CROSS-TOOL AND CROSS-DISCIPLINE ORCHESTRATION" in text,
+        "the human creative role is not removed":
+            "THIS DOES NOT MEAN REMOVING THE HUMAN CREATIVE ROLE" in text,
+        "the human operates at intent, direction, selection, critique, iteration, approval":
+            "intent, direction, selection, critique, iteration and approval" in text,
+        "the target user has strong judgment and limited specialist proficiency":
+            "limited specialist proficiency across all of the professional tools" in text,
+        "the system should reduce the need to master every discipline first":
+            "PROGRESSIVELY REDUCE" in text,
+        "Lusion-class is defined, and excludes copying the design":
+            "IT MUST NOT MEAN COPYING LUSION'S DESIGN" in text,
+        "many artistic styles must stay supportable":
+            "capable of supporting many artistic styles" in text,
+        "the example chain is relationships, not a fixed pipeline":
+            "THE EXACT TOOLS MAY CHANGE" in text,
+        "the requirement is control of the relationships between stages":
+            "understand and control the relationships BETWEEN these production stages" in text,
+        "the video's contents are explicitly uninspected":
+            "ITS CONTENTS HAVE NOT BEEN INDEPENDENTLY INSPECTED OR DOCUMENTED" in text,
+        "reference outcomes are target capability anchors":
+            "TARGET CAPABILITY ANCHORS" in text,
+        "a discovered gap routes through continuous development intake":
+            "capturable through continuous development intake" in text,
+        "the traceability goal is recorded and not implemented":
+            "NO TRACEABILITY MECHANISM IS BUILT, DESIGNED OR AUTHORIZED" in text,
+        "it is not an already-satisfied acceptance test":
+            "it is NOT an acceptance test that has already been satisfied" in text,
+        "no phase is complete because the reference was recorded":
+            "NO CURRENT PHASE IS COMPLETE MERELY BECAUSE THIS REFERENCE HAS BEEN" in text,
+        "reproducing or imitating referenced work is not authorized":
+            "reproducing or imitating any referenced work" in text,
+        "ADR-SEED-018 layer ownership is unchanged":
+            "ADR-SEED-018's layer ownership is unchanged" in text,
+    }
+    missing = [name for name, found in facts.items() if not found]
+    check(f"27j. all {len(facts)} reference-outcome facts are readable from the decision row",
+          not missing, missing)
+
+    conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        # Matched on the node ids and the reference URL, not on the bare studio
+        # name: a 2026-06 build_phase row contains the word "exclusion", and a
+        # substring match on it would report build state as contaminated by a
+        # record written four months later.
+        queue_hits = conn.execute(
+            "SELECT COUNT(*) FROM queue_items WHERE UPPER(title) LIKE '%CONTROL CENTER%' "
+            "OR title LIKE '%LUSION_CLASS%' OR title LIKE '%lusion.co%' "
+            "OR COALESCE(body_md, '') LIKE '%LUSION_CLASS%' "
+            "OR COALESCE(body_md, '') LIKE '%lusion.co%'").fetchone()[0]
+        state_hits = conn.execute(
+            "SELECT COUNT(*) FROM project_state WHERE (value LIKE '%CONTROL_CENTER%' "
+            "OR value LIKE '%LUSION_CLASS%' OR value LIKE '%lusion.co%') "
+            "AND key != 'external_dev_checkpoint'").fetchone()[0]
+    finally:
+        conn.close()
+    check("27k. no queue item was created for the Control Center or the reference",
+          queue_hits == 0, queue_hits)
+    check("27l. the reference was not written into build state",
+          state_hits == 0, state_hits)
+
+
 def run():
     before_fingerprint = protected_fingerprint()
     conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
@@ -943,6 +1097,7 @@ def run():
     test_current_build_state_is_unchanged(before_fingerprint)
     test_architecture_is_recoverable_through_the_canonical_chain()
     test_continuous_development_intake_is_recorded(model)
+    test_reference_outcome_is_recorded(model)
 
     for r in results:
         print(r)
