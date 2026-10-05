@@ -285,16 +285,34 @@ def test_queue_is_shown_never_triaged(model):
 
     check("5a. the queue total is the live count, not a cached one",
           queue["total_items"] == live_total, f"{queue['total_items']} vs {live_total}")
-    # COUNT UPDATED 56 -> 57, NOT WEAKENED. ADR-PIPE-009 clause 8 recovered queue
-    # item 4.10, which the original extraction silently dropped, with scope and
-    # need_status deliberately left NULL so no classification was invented -- so
-    # it joins the awaiting-triage set and the prepared 56-item triage proposal
-    # does not cover it. The claim this check exists to make is that the read
-    # model's count is the LIVE one rather than a cached or hardcoded figure, and
-    # both halves of that are still asserted.
-    check("5b. 57 items are reported awaiting triage, matching the live unclassified set",
-          queue["awaiting_triage"] == live_unclassified == 57,
+    # COUNT UPDATED 57 -> 0, NOT WEAKENED, and this is the semantic change
+    # Formal Queue Triage was performed to produce. On 2026-10-04 the triage
+    # pass classified BOTH fields on all 57 rows that carried neither -- the 56
+    # of the prepared proposal plus item 4.10, which ADR-PIPE-009 clause 8 had
+    # recovered with both fields deliberately NULL so that recovering an item
+    # could not be mistaken for classifying one. The claim this check exists to
+    # make is unchanged and both halves are still asserted: the read model's
+    # count is the LIVE one rather than a cached or hardcoded figure. Zero is
+    # now the honest expected value, and the equality with the live query is
+    # what still proves the count is not fabricated -- note that a read model
+    # returning a stale 57 would now FAIL this, which is the direction that
+    # matters.
+    check("5b. no item is reported awaiting triage, matching the live unclassified set",
+          queue["awaiting_triage"] == live_unclassified == 0,
           f"model {queue['awaiting_triage']}, live {live_unclassified}")
+    # The two-field reading, asserted SEPARATELY from the ADR-PIPE-006 count
+    # above so triage completion cannot be claimed from one number. 13 rows
+    # carry need_status with scope still NULL. They were NEVER in the triage
+    # population -- ADR-PIPE-001 bounds the pass to rows carrying NEITHER field
+    # -- so they remain PARTIALLY CLASSIFIED, and that residual is asserted
+    # rather than left to be rediscovered.
+    check("5b-ii. the partially-classified residual is reported, not absorbed",
+          queue["partially_classified"] == 13
+          and queue["fully_classified"] == 120
+          and queue["fully_classified"] + queue["partially_classified"]
+              + queue["awaiting_triage"] == queue["total_items"],
+          f"full {queue['fully_classified']}, partial {queue['partially_classified']}, "
+          f"awaiting {queue['awaiting_triage']}, total {queue['total_items']}")
     check("5c. the counts come from the build-path read model's own definition",
           queue["counts"]["unclassified"] == queue["awaiting_triage"],
           "a second definition of 'unclassified' could disagree with the Build Path screen")
@@ -1025,7 +1043,17 @@ def test_scratch_db_proves_nothing_is_hardcoded():
                 "INSERT INTO project_state (key, value, source, created_at) VALUES "
                 "('build_phase', 'Phase P3 of the P0-P6 sequence', 'manual', "
                 "'2099-01-01T00:00:00+00:00')")
+            # The scratch database must end up OBSERVABLY different from
+            # production or this test cannot tell which one the read model
+            # read. It used to delete the awaiting-triage rows, which stopped
+            # being a mutation at all once Formal Queue Triage left zero of
+            # them on 2026-10-04 -- the DELETE matched nothing and the count
+            # stayed equal to production's, so the check failed while the
+            # property it guards was still true. Deleting a tier is a
+            # mutation that cannot silently become a no-op: the assertion
+            # below proves the tier is gone rather than assuming it.
             conn.execute("DELETE FROM queue_items WHERE need_status IS NULL AND scope IS NULL")
+            conn.execute("DELETE FROM queue_items WHERE tier = 4")
             conn.commit()
         finally:
             conn.close()
@@ -1034,10 +1062,22 @@ def test_scratch_db_proves_nothing_is_hardcoded():
         check("24a. the trajectory follows the scratch roadmap, not production's",
               [s["id"] for s in model["trajectory"]["steps"]] == ["ALPHA", "BETA", "GAMMA"],
               [s["id"] for s in model["trajectory"]["steps"]])
-        check("24b. the queue counts follow the scratch database",
+        # Compared against the LIVE production count read here rather than a
+        # literal, so this cannot rot the next time the queue grows.
+        prod = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+        try:
+            prod_total = prod.execute("SELECT COUNT(*) FROM queue_items").fetchone()[0]
+            prod_tier4 = prod.execute(
+                "SELECT COUNT(*) FROM queue_items WHERE tier = 4").fetchone()[0]
+        finally:
+            prod.close()
+        check("24b. the queue counts follow the scratch database, not production's",
               model["queue"]["awaiting_triage"] == 0
-              and model["counts"]["queue_items"] < 132,
-              model["counts"]["queue_items"])
+              and prod_tier4 > 0
+              and model["counts"]["queue_items"] == prod_total - prod_tier4
+              and model["counts"]["queue_items"] < prod_total,
+              f"scratch {model['counts']['queue_items']}, production {prod_total}, "
+              f"tier-4 removed {prod_tier4}")
         check("24c. a build_phase naming a phase outside the chain is reported, not guessed",
               model["current_build"]["build_path"]["progress"]["current_phase_note"]
               and "not a stage" in

@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: 0959ccd555ea3944 -->
+<!-- state_revision: fbb00dbb456da007 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -445,6 +445,12 @@ prove nothing about whether the check on it works.
 Briefing renders, hash stable, goal_reference 12 exists. Two 2026-08-22
 throwaways also sit at the gate (`"test"`, `"smoke check"`) — close those.
 
+**Need: DONE.**
+
+**Scope:** REPO — the approval record in eric_gate_approvals, written by tools/eric_gate/record_decision.py
+
+<!-- cis:scope="REPO — the approval record in eric_gate_approvals, written by tools/eric_gate/record_decision.py" -->
+
 ### 1.9 Two approval paths, and the documented one does not continue the run
 **Found 2026-08-30 while trying to action 1.2. This is very likely why 1.1 has
 never happened.**
@@ -470,6 +476,12 @@ background thread to carry on. This one works.
 Failure mode 11 — a silent gate failure, inside the gate. An operator following
 the written instructions gets a success message and a run that never moves, with
 nothing anywhere saying why.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the two approval paths: tools/eric_gate/record_decision.py and runtime/api/relay.py
+
+<!-- cis:scope="CONTAINER — the two approval paths: tools/eric_gate/record_decision.py and runtime/api/relay.py" -->
 
 ### 1.10 Assistant work reaches the code without ever passing a gate
 **Eric, 2026-08-30, after a full day of repairs he could not independently
@@ -609,6 +621,12 @@ the commit or only record the objection; is Class 1 approval required or is
 notification enough; do Work Orders live in the repo (versioned with the change)
 or the spine (queryable).
 
+**Need: OPEN.**
+
+**Scope:** REPO — the pre-commit hook, the existing briefing renderer, and record_decision.py
+
+<!-- cis:scope="REPO — the pre-commit hook, the existing briefing renderer, and record_decision.py" -->
+
 ### 1.11 An API refusal is reported as the model misbehaving
 **Found 2026-08-30 by `run-4bbeea78056e2607-1788121167`, the first code-writing
 run.** It escalated with:
@@ -653,6 +671,12 @@ a reviewer or the verifier will fail this way.
 *Related:* 1.3 (no failure routing), 1.4 (retry policy retries the
 non-retryable), 2.10 (silent-by-design).
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — gateway response handling and the relay's retry path
+
+<!-- cis:scope="CONTAINER — gateway response handling and the relay's retry path" -->
+
 ### 1.12 The gate briefing omits the reviewers entirely
 **Eric, 2026-08-30, while a run was in flight:** *"Will the reviewers deliver an
 explanation of what I am approving?"* Checked: **no.**
@@ -691,6 +715,12 @@ reached consensus, so agreement is indistinguishable from silence. A reviewer
 that agreed *and said why* should not render identically to one that said
 nothing. *Related:* 1.8, 2.9, and 1.1's record of what the reviewers caught.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — build_briefing.py and the agent_trajectories rows it does not read
+
+<!-- cis:scope="CONTAINER — build_briefing.py and the agent_trajectories rows it does not read" -->
+
 ### 1.13 A timed-out agent reports no cause, and no warning precedes it
 **Found 2026-08-30 by `run-4bbeea78056e2607-1788122307`**, which died as:
 
@@ -727,6 +757,12 @@ four non-goals. It exceeded 300s twice.
 
 *Related:* 1.11 (a failure reported as the wrong thing), 1.7, 1.4.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — exception formatting and the heartbeat in pipeline_relay.py
+
+<!-- cis:scope="CONTAINER — exception formatting and the heartbeat in pipeline_relay.py" -->
+
 ### 1.3 Failure routing — NOT IN CODE
 **Checked:** `human_review_required`, `retry_pending`, `failed_timeout`,
 `contradiction_detected` appear **0 times** in `pipeline_relay.py` and
@@ -736,6 +772,12 @@ There is no third outcome, no escalation ladder, no defined next action per
 failure state.
 *Reference when building:* Execution Layer Contract §21.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the relay state machine in runtime/abstraction/pipeline_relay.py and runtime/api/relay.py
+
+<!-- cis:scope="CONTAINER — the relay state machine in runtime/abstraction/pipeline_relay.py and runtime/api/relay.py" -->
+
 ### 1.4 Retry and escalation for agent failures — NOT IN CODE
 **Checked:** the only retry in the relay is `_db_retry` (database contention,
 3 attempts) and `MAX_BRAIN_ROUNDS=2` / `MAX_DRAFT_ROUNDS=3`, which are
@@ -743,11 +785,23 @@ deliberation round caps. There is one repair prompt for malformed output.
 **No retry on agent failure, no timeout policy, no escalation after N attempts.**
 *Reference:* Execution Layer Contract §19-20.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — retry and escalation policy in pipeline_relay.py
+
+<!-- cis:scope="CONTAINER — retry and escalation policy in pipeline_relay.py" -->
+
 ### 1.5 Commit route — approved work does not become canonical
 **Checked:** `pipeline_relay.py` is the only thing in `runtime/` that writes to
 `knowledge_messages`. Nothing promotes an approved run's *output artefact* into
 the knowledge layer as a canonical record.
 A run is approved, the implementer writes a file, and the file is just a file.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — pipeline_relay.py is the only writer of knowledge_messages under runtime/
+
+<!-- cis:scope="CONTAINER — pipeline_relay.py is the only writer of knowledge_messages under runtime/" -->
 
 ### 1.6 Prompt size is never measured — NOT IN CODE
 **Checked:** `agent_trajectories.tokens_in > 0` on **0 of 479** rows.
@@ -755,10 +809,22 @@ Across 469 calls the prompts averaged 12k chars, 62 exceeded 20k, max 63,802 —
 and the three largest went to VERIFICATION, the phase whose job is checking
 claims. Over-length input fails silently.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the agent-call path that writes agent_trajectories
+
+<!-- cis:scope="CONTAINER — the agent-call path that writes agent_trajectories" -->
+
 ### 1.7 Stream agent completions
 **In code:** nothing. Liveness is inferred from a gateway log that menter never
 writes during a call (elapsed 180s / idle 180s). Gateways support streaming;
 token cost is zero.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the gateway call in pipeline_relay.py
+
+<!-- cis:scope="CONTAINER — the gateway call in pipeline_relay.py" -->
 
 ---
 
@@ -910,6 +976,12 @@ are all from the session that wrote the item.
 ## From the 2026-08/09 mining pass — added 2026-09-01
 
 Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the Eric Gate briefing output and the role overlays
+
+<!-- cis:scope="CONTAINER — the Eric Gate briefing output and the role overlays" -->
 
 ### 1.14 Give the pipeline a stop button and validate its input
 
@@ -1504,6 +1576,12 @@ the run continues.
 **Highest-value item on this list. The detection code already exists.** Audit
 all 30 and decide per guardrail whether its default should enforce.
 
+**Need: NEEDS ERIC.**
+
+**Scope:** CONTAINER — the 30 guardrail functions in runtime/abstraction/guardrails.py, called on every container run
+
+<!-- cis:scope="CONTAINER — the 30 guardrail functions in runtime/abstraction/guardrails.py, called on every container run" -->
+
 ### 2.2 Four guardrails were never written
 **Checked:** absent from `guardrails.py`.
 - **Honesty Reporter** — PASS/SKIP/FAIL counters in every gate script. Failure
@@ -1513,6 +1591,12 @@ all 30 and decide per guardrail whether its default should enforce.
   comparison, not research.
 - Position Randomizer — positional bias in option ordering.
 - Example Diversifier — anchoring on prompt examples.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — guardrails.py
+
+<!-- cis:scope="CONTAINER — guardrails.py" -->
 
 ### 2.3 `sequential_review` is dead code
 **Checked:** defined in `guardrails.py`, never appended to any report. It is the
@@ -1613,6 +1697,12 @@ that would destroy the independence the nine checks confirmed. It is a
 what goes to Eric. Both properties then hold: independent first pass, genuine
 deliberation second.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — guardrails.py plus the single-POST call shape at pipeline_relay.py:1175
+
+<!-- cis:scope="CONTAINER — guardrails.py plus the single-POST call shape at pipeline_relay.py:1175" -->
+
 ### 2.4 No validation layer — 23 independent recognitions in the record
 **Checked:** `needs_review` — the quarantine flag — exists in **no table and no
 code**. No validation of `project_id` existence, `source_type` against known
@@ -1621,15 +1711,33 @@ cross-field consistency. Constraints are declared (224 NOT NULL, 45 CHECK,
 7 UNIQUE, 4 FK) and largely unenforced — see 0.1.
 > *"No validation layer exists for any component — all bug detection is manual."*
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — spine writes and the absent needs_review quarantine flag
+
+<!-- cis:scope="CONTAINER — spine writes and the absent needs_review quarantine flag" -->
+
 ### 2.5 No schema versioning or migration — NOT IN CODE
 **Checked:** `schema_versions`, `schema_migrations`, `migration_log` — **all
 three tables absent**. This already caused damage: the `workflow_runs_old`
 references in 0.1 are a rename that left dependent rows orphaned.
 
+**Need: OPEN.**
+
+**Scope:** REPO/CONTAINER — the spine schema and runtime/schema/migrations
+
+<!-- cis:scope="REPO/CONTAINER — the spine schema and runtime/schema/migrations" -->
+
 ### 2.6 Tool calls are not captured
 **Checked:** `agent_trajectories` records prompt and output only. No
 `tool_calls` table. Nothing records which files an agent read.
 **Blocks 2.7 and any evidence-based gate.**
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — agent_trajectories and the MCP tool surface
+
+<!-- cis:scope="CONTAINER — agent_trajectories and the MCP tool surface" -->
 
 ### 2.7 Never-guess gate — an agent may not assert what it did not open
 Needs 2.6. `capability_claim_verifier` already exists in BLOCK mode and can be
@@ -1653,6 +1761,12 @@ path was within its declared scope. An empty search outside scope is not
 evidence of absence. Failure mode 2 — hallucinated claims as fact — reproduced
 in the reviewer role on its first call.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — capability_claim_verifier in guardrails.py
+
+<!-- cis:scope="CONTAINER — capability_claim_verifier in guardrails.py" -->
+
 ### 2.8 Verification results change nothing
 **Checked:** `gate_outcomes` (4,375 rows) IS read — but only to *display*:
 a FAIL list for one run, and a recent-200 listing. Nothing aggregates across
@@ -1662,10 +1776,22 @@ Six loops are named in the record — correction, governance,
 retrieval-improvement, archive-learning, continuity/memory, project-output.
 None exist.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the gate_outcomes readers
+
+<!-- cis:scope="CONTAINER — the gate_outcomes readers" -->
+
 ### 2.9 Conflict register records but never blocks
 **Checked:** `active_blockers` has 7 rows; six files read it — the briefing
 builder, the export generator, the session-init scripts. **None blocks on it.**
 The original rule was *"session close is blocked if unresolved conflicts exist."*
+
+**Need: OPEN.**
+
+**Scope:** REPO/CONTAINER — active_blockers and its six readers
+
+<!-- cis:scope="REPO/CONTAINER — active_blockers and its six readers" -->
 
 ### 2.10 Silent-by-design code patterns — now measured
 **Checked across `runtime/` (excluding venv and rails):**
@@ -1676,10 +1802,22 @@ The original rule was *"session close is blocked if unresolved conflicts exist."
 That is the scope of the audit. Mechanical fix, bounded, and every one is a
 place where the system can fail without saying so.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — runtime/, excluding venv and rails
+
+<!-- cis:scope="CONTAINER — runtime/, excluding venv and rails" -->
+
 ### 2.11 No contract between a CIS task and an agent task
 **In code:** `pipeline_relay.py` builds a prompt per role with no contract
 governing size, required sections, or what the role is expected to produce.
 This is why 1.6 (unmeasured prompts) and 3.9 (draft scored as code) both exist.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — prompt construction in pipeline_relay.py
+
+<!-- cis:scope="CONTAINER — prompt construction in pipeline_relay.py" -->
 
 ### 2.12 Primer and runtime diverge silently
 **Two instances as originally found:** `gateway_status_qwen` claims Qwen is
@@ -1755,6 +1893,12 @@ four-times-ruled fact was rediscovered from scratch and fixed as a novelty. What
 this item still needs is the check — something that compares what the primer
 asserts against what the runtime does, and fails when they disagree.
 
+**Need: HALF DONE.**
+
+**Scope:** REPO/CONTAINER — the primer documents and the runtime they assert about
+
+<!-- cis:scope="REPO/CONTAINER — the primer documents and the runtime they assert about" -->
+
 ### 2.13 Runs are not linked to what they advance
 **Checked:** `build_plan_nodes.workflow_run_id` is NULL on all 30 rows. The
 Eric Gate briefing's Dependency Node and Tier Advanced fields render blank.
@@ -1828,6 +1972,12 @@ one design;** the ordering and the reasoning are recorded in 3.21, and 1.26 sits
 behind both. The open decision above is unchanged by the fold and is still
 Eric's to make.
 
+**Need: NEEDS ERIC.**
+
+**Scope:** UNDETERMINED — rests on build_plan_nodes, which ADR-PIPE-006 declares RETIRED
+
+<!-- cis:scope="UNDETERMINED — rests on build_plan_nodes, which ADR-PIPE-006 declares RETIRED" -->
+
 ### 2.15 Thirty-three of fifty-one gate scripts have never fired
 **Checked:** 51 gate scripts exist in `enforcement/mwl-proof-v2/gates/`.
 `gate_outcomes` has recorded 47 distinct names ever. Cross-referencing, **33
@@ -1856,6 +2006,12 @@ these, confirm it is still relevant rather than assuming.
 **This is the same shape as 2.1 but worse:** 2.1 is code that runs and cannot
 act; this is code that never runs at all.
 
+**Need: OPEN.**
+
+**Scope:** REPO — enforcement/mwl-proof-v2/gates/ and the gate_outcomes table
+
+<!-- cis:scope="REPO — enforcement/mwl-proof-v2/gates/ and the gate_outcomes table" -->
+
 ### 2.16 `runtime/tier7r/` is an orphaned subsystem
 **Checked:** eight modules — `process_manager.py`, `approval_gate.py`,
 `classifier.py`, `dead_letter.py`, `scope_registry.py`, `work_intent.py`,
@@ -1866,6 +2022,12 @@ This is the Tier 7R Intent-to-Workflow architecture — the thing
 `build_plan_nodes` marks COMPLETE across nodes 7R.1 through 7R.7. It was built
 and never connected. Decide: wire it, or record it as superseded by
 `pipeline_relay.py` and stop counting it as complete.
+
+**Need: NEEDS ERIC.**
+
+**Scope:** UNDETERMINED — runtime/tier7r/, orphaned, and counted COMPLETE on the retired build_plan_nodes
+
+<!-- cis:scope="UNDETERMINED — runtime/tier7r/, orphaned, and counted COMPLETE on the retired build_plan_nodes" -->
 
 ### 2.17 Every gate approval ever recorded has a NULL primary key
 **Checked 2026-08-30, on the live spine:** `eric_gate_approvals` holds 26 rows.
@@ -1893,6 +2055,12 @@ one column in one INSERT, plus a decision on whether to backfill ids for the 26
 existing rows. Note the supersede path has never actually been exercised: no run
 has more than one approval, so nothing is currently mis-linked.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the insert at runtime/api/relay.py:663, which omits the id column
+
+<!-- cis:scope="CONTAINER — the insert at runtime/api/relay.py:663, which omits the id column" -->
+
 ### 2.18 Placeholders are not marked as placeholders — gate candidate
 **Carried from NEXT_SESSION.md F15, 2026-08-30. This was missed when the list
 was built; the coverage audit found it.**
@@ -1910,6 +2078,12 @@ row, in a table whose whole purpose is an immutable audit record.
 exists. That is the difference between this list and the documents in the
 reference table — those describe; nothing verifies.
 
+**Need: OPEN.**
+
+**Scope:** REPO/CONTAINER — the declared-versus-exists check across specs and code
+
+<!-- cis:scope="REPO/CONTAINER — the declared-versus-exists check across specs and code" -->
+
 ### 2.14 Operator routes execute runtime scripts directly
 Failure mode 9 in CLAUDE.md. **Verify current state before building** — a 2026-05-01
 build manifest records this as eliminated, so the recognition may be stale.
@@ -1920,6 +2094,12 @@ build manifest records this as eliminated, so the recognition may be stale.
 ## From the 2026-08/09 mining pass — added 2026-09-01
 
 Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+**Need: UNCLEAR.**
+
+**Scope:** UNDETERMINED — the item itself flags its recognition as possibly stale
+
+<!-- cis:scope="UNDETERMINED — the item itself flags its recognition as possibly stale" -->
 
 ### 2.19 Build the verification snapshot and provenance gaps
 
@@ -2336,6 +2516,12 @@ either alone leaves the other: fix the fallback and the gate still passes on
 empty content; fix this and the gate still cannot see a substitution, because the
 artifact is full.
 
+**Need: OPEN.**
+
+**Scope:** REPO — the ordering in enforcement/mwl-proof-v2/gates/gate_export_agreement.sh
+
+<!-- cis:scope="REPO — the ordering in enforcement/mwl-proof-v2/gates/gate_export_agreement.sh" -->
+
 ### 2.36 AN AGENT'S PROJECT_BRIEF IS 16% OF THE DOCUMENT IT IS NAMED AFTER
 **Found 2026-09-07 while checking how far the 2.35 failure reached.**
 `pipeline_relay.py:729` builds PROJECT_BRIEF from `AGENTS.md` and truncates:
@@ -2385,6 +2571,12 @@ answering which.
 
 **Related:** 2.35 (the other defect on this path), 3.23 (payload composition).
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the truncation at pipeline_relay.py:729
+
+<!-- cis:scope="CONTAINER — the truncation at pipeline_relay.py:729" -->
+
 ### 2.37 NOTHING TESTS THE ARTIFACTS FOR WHETHER ANYTHING EXERCISES THEM
 **Found 2026-09-07.** This list's own header test — *is this capability in the
 code today* — has only ever been pointed at the queue. **Nothing points it at the
@@ -2415,6 +2607,12 @@ is how the seventh gets found by accident too.
 
 **Not a retirement proposal.** Establishing that nothing reads a thing is not the
 same as deciding it should go. See the HCP disposition note in 3.27.
+
+**Need: OPEN.**
+
+**Scope:** REPO — the 13 generated exports and whatever reads them
+
+<!-- cis:scope="REPO — the 13 generated exports and whatever reads them" -->
 
 
 ### 2.34 PER-ROLE STATE SLICES, DERIVED NOT AUTHORED
@@ -2630,9 +2828,21 @@ rather than at reviews.
 
 - **3.1** `ask_history` does not merge FTS5 with vector search. The relay does;
   `ask_history` does not.
+
+**Need: OPEN.**
+
+**Scope:** REPO — tools/ask_history.py, host tooling
+
+<!-- cis:scope="REPO — tools/ask_history.py, host tooling" -->
 - **3.2** No pre-delete or archive-policy validation. **Checked: absent.** On
   2026-08-29 a 4.9GB Chroma segment directory was deleted after a manual ad-hoc
   check. Nothing but care stood between that and deleting something live.
+
+**Need: OPEN.**
+
+**Scope:** REPO/HOST — the deletion paths over data/chroma_data
+
+<!-- cis:scope="REPO/HOST — the deletion paths over data/chroma_data" -->
 - **3.3** Container pre-flight checks are partial. **Checked:** `run_container.sh`
   has 3 file/directory tests — one hand-written case for the secrets file being a
   directory. No systematic mount verification, and mounts were added today.
@@ -2676,10 +2886,28 @@ This file is a dispatch snapshot of the card attached to queue_items[3.3], not a
 Before editing an existing source file save its preimage under this directory/backups/, preserving relative paths. Explain the proof then carry out this one bounded card; Eric's current instruction authorizes the complete implementation and evidence handoff rather than stopping after each file write.
 Write evidence.md here with commands, raw results, limitations and claimed acceptance outcomes. Write completion.json here LAST, with card_id, status (READY_FOR_VERIFICATION or BLOCKED), changed_files, tests, evidence_path, and remaining_limitations. Never label your own result VERIFIED. If permissions or account limits prevent completion, report BLOCKED accurately. The supervising Codex process captures your final response and exit status automatically; Eric should not relay anything.
 
+**Need: HALF DONE.**
+
+**Scope:** CONTAINER — the pre-flight in enforcement/mwl-proof-v2/run_container.sh plus the assigned kb-health repair
+
+<!-- cis:scope="CONTAINER — the pre-flight in enforcement/mwl-proof-v2/run_container.sh plus the assigned kb-health repair" -->
+
 - **3.4** Two manifest directories, canonical status unresolved.
   `logs/manifests/` vs `runtime/manifests/`, with an unenforced "do not write
   there".
+
+**Need: OPEN.**
+
+**Scope:** REPO — logs/manifests versus runtime/manifests
+
+<!-- cis:scope="REPO — logs/manifests versus runtime/manifests" -->
 - **3.5** Export gate warns "expected 12 artifacts, found 13" on every commit.
+
+**Need: OPEN.**
+
+**Scope:** REPO — gate_export_agreement.sh, same root cause as 2.35
+
+<!-- cis:scope="REPO — gate_export_agreement.sh, same root cause as 2.35" -->
 - **3.6** `projects.id` is `'cis'`, `build_plan_nodes.project_id` is `'CIS'`.
   A plain join returns 0 of 30 rows; `relay.py:1058` papers over it with
   COLLATE NOCASE.
@@ -2769,16 +2997,40 @@ Write evidence.md here with commands, raw results, limitations and claimed accep
   classify each hit. See 2.35.
 - **3.7** `data/` is gitignored — `container_sessions/` and `drive_imports/`
   are not in version control.
+
+**Need: NEEDS ERIC.**
+
+**Scope:** REPO — the .gitignore policy over data/
+
+<!-- cis:scope="REPO — the .gitignore policy over data/" -->
 - **3.8** Memory store has no governance: no access control, no audit trail, no
   deletion capability, no lifecycle management, no retention policy.
+
+**Need: NO CHECK WRITTEN.**
+
+**Scope:** UNDETERMINED — which store is meant is not named
+
+<!-- cis:scope="UNDETERMINED — which store is meant is not named" -->
 - **3.9** `effort_metric` scores DRAFT by code complexity; draft writes prose.
   `guardrails.py:3012` adjusts for brain/review1/review2 and omits draft.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — guardrails.py:3012
+
+<!-- cis:scope="CONTAINER — guardrails.py:3012" -->
 - **3.10** The seven `SKILL.md` files have never been audited against what the
   guardrails enforce. `enforcement/mwl-proof-v2/cis-pipeline-architecture/SKILL.md`
   plus one per role (brain, draft, review1, review2, menter, verify) — **these
   are what the container agents actually read at runtime**, along with their
   `references/pitfalls.md`. If an agent is told to do something no gate checks,
   or a gate checks something no agent was told, that gap is invisible today.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the seven SKILL.md files the container agents read at runtime
+
+<!-- cis:scope="CONTAINER — the seven SKILL.md files the container agents read at runtime" -->
 - **3.12** `data/drive_imports/` is outside the knowledge base entirely.
   **Measured 2026-08-30: 11,763 files, 5.8GB, 0 chunks.** Not partial coverage —
   absent from both the keyword and the semantic index. 3.7 mentions the
@@ -2795,6 +3047,12 @@ Write evidence.md here with commands, raw results, limitations and claimed accep
   container infrastructure. Recorded so the gap is deliberate and visible
   rather than merely unnoticed — which is 2.18's whole point.
 
+**Need: NEEDS ERIC.**
+
+**Scope:** REPO/HOST — data/drive_imports/
+
+<!-- cis:scope="REPO/HOST — data/drive_imports/" -->
+
 - **3.11** `cis_kernel/source/architecture_maps/13_RUNTIME_TOPOLOGY.md` claims
   *"Status: OPERATIONAL — populated from verified runtime truth as of
   2026-05-05"* and answers *"how does the system actually run?"*. Four months
@@ -2807,6 +3065,12 @@ Write evidence.md here with commands, raw results, limitations and claimed accep
 ## From the 2026-08/09 mining pass — added 2026-09-01
 
 Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+**Need: OPEN.**
+
+**Scope:** REPO — cis_kernel/source/architecture_maps/13_RUNTIME_TOPOLOGY.md
+
+<!-- cis:scope="REPO — cis_kernel/source/architecture_maps/13_RUNTIME_TOPOLOGY.md" -->
 
 ### 3.13 Resolve the memory seed failure
 
@@ -3336,6 +3600,12 @@ before it is sent, and no number of lineages substitutes for it.
 body), 2.18 (a gap that announces nothing), 1.20 (the dual-review measure this
 bounds), 2.35 and 2.37 (checks that cannot fail for the reason they exist).
 
+**Need: OPEN.**
+
+**Scope:** REPO — the survey method used before a schema change
+
+<!-- cis:scope="REPO — the survey method used before a schema change" -->
+
 ### 3.27 DANGLING CONSUMERS IN THE EXPORT PATH
 **Checked 2026-09-07.** Three readers point at files that do not exist:
 
@@ -3378,6 +3648,12 @@ functionality are.* Recorded here rather than acted on, in either direction.
 
 **Related:** 2.35, 2.36, 2.37, 3.4 (two manifest directories, canonical status
 unresolved).
+
+**Need: OPEN.**
+
+**Scope:** REPO — collab_rounds.py:1091, collect_all_material.py:196-200, synthesize_full.py:79, synthesize_phased.py:60
+
+<!-- cis:scope="REPO — collab_rounds.py:1091, collect_all_material.py:196-200, synthesize_full.py:79, synthesize_phased.py:60" -->
 
 ### 3.24 Corpus and spine share one database — an open question, not work
 
@@ -3428,6 +3704,12 @@ figure currently in `CLAUDE.md`, off by one. **77.**
 **Related:** 2.12 (the `runtime/spine.db` decoy, and why "the spine" needed
 settling at all), 0.1 (FK enforcement, which pays the traversal cost described
 above), 0.3 (the same contention problem solved for Chroma).
+
+**Need: NEEDS ERIC.**
+
+**Scope:** UNDETERMINED — the item states it is not a task
+
+<!-- cis:scope="UNDETERMINED — the item states it is not a task" -->
 
 ### 3.28 THE TEST SUITE CANNOT BE RUN ON THIS HOST — pytest IS NOT INSTALLED
 
@@ -3496,15 +3778,63 @@ pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates po
 # TIER 4 — after the infrastructure works
 
 - **4.1** Nothing triggers session ingest. Both ingest tools work; neither fires.
+
+**Need: OPEN.**
+
+**Scope:** REPO — the closeout hook in tools/closeout.sh
+
+<!-- cis:scope="REPO — the closeout hook in tools/closeout.sh" -->
 - **4.2** Container agent history does not reach the KB. State now persists.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — container session history and the knowledge base
+
+<!-- cis:scope="CONTAINER — container session history and the knowledge base" -->
 - **4.3** What the container regulates itself vs what needs a human trigger.
   Approval must never automate.
+
+**Need: NEEDS ERIC.**
+
+**Scope:** UNDETERMINED — the self-regulation boundary is not drawn anywhere
+
+<!-- cis:scope="UNDETERMINED — the self-regulation boundary is not drawn anywhere" -->
 - **4.4** No learning loop from approve/reject decisions.
+
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the approve/reject record and whatever would read it
+
+<!-- cis:scope="CONTAINER — the approve/reject record and whatever would read it" -->
 - **4.5** 601 mined asks -> cards. Hours of local GPU, ~8% yield.
+
+**Need: NEEDS ERIC.**
+
+**Scope:** REPO/HOST — data/mining_archive
+
+<!-- cis:scope="REPO/HOST — data/mining_archive" -->
 - **4.6** A hermes agent in these working sessions.
+
+**Need: NEEDS ERIC.**
+
+**Scope:** HOST — the host Hermes profiles
+
+<!-- cis:scope="HOST — the host Hermes profiles" -->
 - **4.7** Role theory into the agents. **Sequencing decision on the record:**
   agents come after deterministic workflows are stable.
+
+**Need: OPEN.**
+
+**Scope:** UNDETERMINED — the agents, after deterministic workflows are stable
+
+<!-- cis:scope="UNDETERMINED — the agents, after deterministic workflows are stable" -->
 - **4.8** Archive processing — prose vs software split, Troy's drive excluded.
+
+**Need: OPEN.**
+
+**Scope:** HOST — /mnt/archive
+
+<!-- cis:scope="HOST — /mnt/archive" -->
 - **4.10 THE HARNESS SELF-IMPROVEMENT LOOP — Eric's design, 2026-08-30.**
   *"The pipeline should go through its code and make recommendations for
   improvements. The pipeline won't be able to modify its own files but it can
@@ -3585,6 +3915,12 @@ pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates po
   Recorded here so the container is judged against ending it, not against
   producing more of it.
 
+**Need: OPEN.**
+
+**Scope:** CONTAINER — the hardcoded prompts in runtime/abstraction/pipeline_relay.py; the guidance/evaluation boundary spans guardrails.py and the gate scripts
+
+<!-- cis:scope="CONTAINER — the hardcoded prompts in runtime/abstraction/pipeline_relay.py; the guidance/evaluation boundary spans guardrails.py and the gate scripts" -->
+
 - **4.9** The documentation-gap loop, named in the record and still running:
   *"Undocumented configuration -> failure -> recovery -> no documentation ->
   future failure (negative loop)."* This list is itself evidence — an earlier
@@ -3598,6 +3934,12 @@ pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates po
 ## From the 2026-08/09 mining pass — added 2026-09-01
 
 Evidence for every item below is in `data/mining_archive/MINED_TASKS.md`. Scope says whether the finding was verified against the container in production or against code the container does not execute; the latter is not the same as irrelevant.
+
+**Need: OPEN.**
+
+**Scope:** REPO — the documentation-gap loop, with 2.18 as its enforcement handle
+
+<!-- cis:scope="REPO — the documentation-gap loop, with 2.18 as its enforcement handle" -->
 
 ### 4.11 Automate the ADR-048 intake and handoff package
 

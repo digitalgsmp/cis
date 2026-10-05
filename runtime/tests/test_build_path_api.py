@@ -58,6 +58,17 @@ def phase(model, phase_id):
     return next((p for p in model["phases"] if p["id"] == phase_id), None)
 
 
+def live_count(sql):
+    """A count read straight from the production spine, read-only. Lets a
+    check prove a reported number is the LIVE one without pinning a literal
+    that goes stale the next time the queue legitimately changes."""
+    conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        return conn.execute(sql).fetchone()[0]
+    finally:
+        conn.close()
+
+
 def migration_rules(ph):
     return {m["migration"]: m for m in (ph or {}).get("migrations", [])}
 
@@ -126,10 +137,20 @@ def test_queue_triage_is_next(model):
     check("3c. the next pointer agrees with the phase list",
           model["next"] and model["next"]["phase_id"] == "QUEUE_TRIAGE",
           model.get("next"))
+    # The '> 0' half was dropped, NOT the assertion. It was a liveness proxy --
+    # a hardcoded zero would have passed the equality while the queue still had
+    # unclassified rows -- and it stopped being true on 2026-10-04 when Formal
+    # Queue Triage classified all 57 rows that carried neither field. Liveness
+    # is now proven directly against the database instead of inferred from the
+    # number being non-zero, which is a stronger check than the one it replaces
+    # and does not assume the count never reaches its target.
+    live_unclassified = live_count(
+        "SELECT COUNT(*) FROM queue_items WHERE need_status IS NULL AND scope IS NULL")
     check("3d. triage shows the live unclassified queue_items count",
-          triage["queue_classification"]["unclassified"] ==
-          model["queue"]["unclassified"] and model["queue"]["unclassified"] > 0,
-          model["queue"]["unclassified"])
+          triage["queue_classification"]["unclassified"]
+          == model["queue"]["unclassified"] == live_unclassified,
+          f"stage {triage['queue_classification']['unclassified']}, "
+          f"model {model['queue']['unclassified']}, live {live_unclassified}")
     constraints = {c["constraint"]: c for c in triage["constraints"]}
     check("3e. triage notes 'bounded mechanical classification', quoted from ADR-PIPE-006",
           "bounded mechanical classification" in constraints

@@ -1,10 +1,11 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-04 22:49 UTC | Run: run-14371cc0f491
+Generated: 2026-10-05 12:15 UTC | Run: run-fc25b5b3e851
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-05 | [ADR-WIASW-006] Executive development path / development journey — a derived architect-facing orientation layer, not ano | The architect reported, in his own words, that he has lost track of development  | DECIDED | spine record |
 | 2026-10-04 | [ADR-PIPE-009] Queue recovery must be identity-safe: machine-owned scope marker, evidence-derived item identifiers, and  | Found while proving OQ-TRIAGE-002 requirement 15 and then measured on a copy of  | DECIDED | spine record |
 | 2026-10-04 | [ADR-WIASW-005] Reference outcome — cross-discipline creative and software production, and the Creative/Software Control | ADR-WIASW-001 through 003 recorded WHAT the destination is and ADR-WIASW-004 rec | DECIDED | spine record |
 | 2026-10-04 | [ADR-WIASW-004] Continuous development intake and build-order integration is a destination requirement: Records the CONT | Development-relevant input arrives continuously and incidentally -- a feature th | DECIDED | spine record |

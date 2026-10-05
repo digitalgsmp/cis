@@ -1,7 +1,55 @@
 # Files Changed Recently
-Generated: 2026-10-04 22:49 UTC | Run: run-14371cc0f491
+Generated: 2026-10-05 12:15 UTC | Run: run-fc25b5b3e851
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 81d12aa queue: make whole-queue recovery identity-safe before formal triage
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## docs/review_packets/OQ-TRIAGE-003/QUESTION_FOR_CHATGPT.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/tests/test_project_intelligence_api.py 
+
+## tools/queue/extract_queue_items.py 
+
+## tools/queue/queue_add.py 
+
+## tools/queue/queue_set.py 
+
+## tools/queue/render_build_list.py 
+
+## tools/queue/tests/test_recovery_identity.py 
 
 ## 58cb461 architecture: record the reference outcome that sets the destination bar
 
@@ -592,9 +640,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## config/hcp_static.yaml 
 
 ## tools/export/generate_agents_md.py 
-
-## 6cf9167 workbench: harden oidc preview and complete login proof
-
-## runtime/tests/test_oidc_preview_boundary.py 
-
-## tools/development/oidc_preview.py 
