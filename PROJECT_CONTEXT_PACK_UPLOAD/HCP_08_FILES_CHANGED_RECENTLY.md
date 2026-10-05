@@ -1,7 +1,45 @@
 # Files Changed Recently
-Generated: 2026-10-05 12:15 UTC | Run: run-fc25b5b3e851
+Generated: 2026-10-05 12:21 UTC | Run: run-21667dd00ebe
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 6efc331 queue: execute reconciled formal queue triage over the live 57-item population
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/tests/test_build_path_api.py 
+
+## runtime/tests/test_project_intelligence_api.py 
 
 ## 81d12aa queue: make whole-queue recovery identity-safe before formal triage
 
@@ -630,13 +668,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/export/tests/test_precommit_export_safety.py 
 
 ## tools/hooks/pre-commit 
-
-## 6d78850 governance: persist functionality-first development rule
-
-## AGENTS.md 
-
-## config/agents_static.yaml 
-
-## config/hcp_static.yaml 
-
-## tools/export/generate_agents_md.py 

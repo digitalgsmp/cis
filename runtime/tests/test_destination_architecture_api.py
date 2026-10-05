@@ -75,6 +75,91 @@ def check(label, cond, detail=""):
         results.append(f"{label}: FAIL — {detail}")
 
 
+# ── what "build state" actually is ──────────────────────────────────────
+#
+# These checks exist to prove recorded destination architecture never gets
+# written into the state that says WHAT IS BEING BUILT NOW. They used to assert
+# that no project_state row outside external_dev_checkpoint mentions a
+# destination node at all, which worked until a row needed to name a
+# destination capability IN ORDER TO DENY IT -- the Queue Triage closeout of
+# 2026-10-05 records "Do not implement the Executive Development Path",
+# "Do not implement continuous development intake" and "Do not implement the
+# Control Center" in next_action precisely so the next model recovering from
+# the spine does not start on them. A blanket substring ban cannot tell a
+# prohibition from an activation, and it would have forced the closeout to go
+# quiet about exactly the distinction it exists to draw.
+#
+# So the ban is now STRICTER where it matters and explicit where it does not.
+# BUILD_STATE_KEYS carry build order, phase and current direction: a
+# destination mention there is still a hard failure, with no exemption of any
+# kind. Every other key is NARRATIVE, and a narrative row may name a
+# destination only if it is in the allowlist below AND its own text denies
+# activation -- so a NEW key cannot silently acquire destination content, which
+# is the property actually worth protecting.
+BUILD_STATE_KEYS = (
+    "pipeline_roadmap", "build_phase", "current_direction", "current_queue_item",
+    "next_tier", "completed_tier", "last_verified_closeout_tier",
+)
+NARRATIVE_KEYS_ALLOWED_TO_DENY = ("next_action", "queue_projection_observation")
+CHECKPOINT_KEY = "external_dev_checkpoint"
+
+# A row in the allowlist must carry one of these, which is what makes it a
+# denial rather than a claim.
+DENIAL_MARKERS = ("Do not implement", "NOT_ACTIVATED", "PARTIAL_SUBSTRATE",
+                  "is RECORDED", "destination architecture")
+
+
+def destination_mentions(conn, like_clauses):
+    """Rows whose value matches any of `like_clauses`, grouped into the three
+    categories that matter. Returns (build_state, undeclared, denied).
+
+    THE TWO HALVES ARE SCOPED DIFFERENTLY, ON PURPOSE.
+
+    BUILD_STATE_KEYS are judged across ALL rows, superseded history included.
+    If destination architecture ever reached build order or phase state, that
+    happened, and appending a clean row afterwards must not make the check
+    pass.
+
+    Every other key is judged on its LIVE row only -- the newest row for that
+    key, which is what the read models actually read (recency by created_at;
+    see _latest_state in build_path.py). project_state is append-only and
+    correcting a row means SUPERSEDING it, so a check that failed on the
+    superseded version could only ever be satisfied by editing history, which
+    the governance rules forbid. Judging the live row is what "was this written
+    into state" means operationally.
+    """
+    where = " OR ".join(f"value LIKE '{c}'" for c in like_clauses)
+    rows = conn.execute(
+        f"SELECT id, key, value FROM project_state WHERE ({where}) AND key != ?",
+        (CHECKPOINT_KEY,)).fetchall()
+    live_ids = {
+        key: row_id for key, row_id in conn.execute(
+            "SELECT key, id FROM project_state WHERE id IN ("
+            "  SELECT id FROM project_state p WHERE p.created_at = ("
+            "    SELECT MAX(created_at) FROM project_state q WHERE q.key = p.key)"
+            ") GROUP BY key HAVING id = MAX(id)").fetchall()}
+    build_state, undeclared, denied = [], [], []
+    for row_id, key, value in rows:
+        if key in BUILD_STATE_KEYS:
+            build_state.append((row_id, key))
+            continue
+        if live_ids.get(key) != row_id:
+            continue  # superseded history, not live state
+        if key not in NARRATIVE_KEYS_ALLOWED_TO_DENY:
+            undeclared.append((row_id, key))
+        elif not any(m in value for m in DENIAL_MARKERS):
+            undeclared.append((row_id, key, "names it without denying activation"))
+        else:
+            denied.append((row_id, key))
+    return build_state, undeclared, denied
+
+
+def check_not_in_build_state(label, conn, like_clauses):
+    build_state, undeclared, _ = destination_mentions(conn, like_clauses)
+    check(label, not build_state and not undeclared,
+          f"build_state={build_state} undeclared={undeclared}")
+
+
 def node(model, node_id):
     return next((n for n in model["nodes"] if n["id"] == node_id), None)
 
@@ -142,7 +227,7 @@ def test_read_model_builds_from_live_authority():
     check("1c. the architecture is read from the ADR-WIASW decision family",
           [d["id"] for d in model["decisions"]]
           == ["ADR-WIASW-001", "ADR-WIASW-002", "ADR-WIASW-003", "ADR-WIASW-004",
-              "ADR-WIASW-005"],
+              "ADR-WIASW-005", "ADR-WIASW-006"],
           [d["id"] for d in model["decisions"]])
     check("1d. every decision row is DECIDED and not superseded",
           all(d["status"] == "DECIDED" and not d["superseded_by"]
@@ -265,9 +350,10 @@ def test_cis_is_the_substrate_beneath_wiasw(model):
 
 def test_relationship_semantics_are_explicit(model):
     defined = {r["name"]: r for r in model["relationships"]}
-    check("6a. all eight relationship classes are defined by the authority",
-          sorted(defined) == ["anchors", "contains", "controls", "executes-through",
-                             "feeds", "orchestrates", "supports", "uses"],
+    check("6a. all nine relationship classes are defined by the authority",
+          sorted(defined) == ["anchors", "contains", "controls", "derives-from",
+                              "executes-through", "feeds", "orchestrates",
+                              "supports", "uses"],
           sorted(defined))
     check("6b. every definition is non-empty and carries its own provenance",
           all(r["definition"] and r["authority_ref"]["decision_id"].startswith("ADR-WIASW-")
@@ -336,7 +422,17 @@ def test_activation_is_not_progress(model):
           and {n["id"] for n in model["nodes"]
                if n["activation_state"] == "PARTIAL_SUBSTRATE"}
           == {"DEVELOPMENT_INTAKE", "INTAKE_CLASSIFICATION", "INTAKE_DEPENDENCY_ORDER",
-              "INTAKE_VISIBILITY", "INTAKE_DURABILITY"},
+              "INTAKE_VISIBILITY", "INTAKE_DURABILITY",
+              # ADR-WIASW-006 joined the family with five of its eight nodes on
+              # PARTIAL_SUBSTRATE, because build_path.py, project_intelligence.py,
+              # destination_architecture.py, canonical_state.py and
+              # recovery_packet.py already derive PARTS of those answers. The
+              # three that answer the mainline-versus-detour question keep the
+              # NOT_ACTIVATED default, which is the honest reading: no
+              # machine-readable state records that distinction at all.
+              "EXECUTIVE_DEVELOPMENT_PATH", "DEVPATH_DESTINATION",
+              "DEVPATH_POSITION", "DEVPATH_DESTINATION_RECORDING",
+              "DEVPATH_DERIVATION"},
           sorted(n["id"] for n in model["nodes"]
                  if n["activation_state"] == "PARTIAL_SUBSTRATE"))
     check("7d. every activation state used is defined in the authority's vocabulary",
@@ -726,14 +822,11 @@ def test_current_build_state_is_unchanged(before_fingerprint):
         phase = conn.execute(
             "SELECT value FROM project_state WHERE key = 'build_phase' "
             "ORDER BY created_at DESC, id DESC LIMIT 1").fetchone()[0]
-        # Every project_state key EXCEPT external_dev_checkpoint: the checkpoint
-        # row is supposed to describe what was pushed (ADR-XDEV-002 makes that
-        # visibility a requirement), so naming WIASW there is correct. Anywhere
-        # else in project_state would mean the destination architecture had been
-        # written into build state, which is the thing being guarded against.
-        wiasw_rows = conn.execute(
-            "SELECT COUNT(*) FROM project_state WHERE value LIKE '%WIASW%' "
-            "AND key != 'external_dev_checkpoint'").fetchone()[0]
+        # The checkpoint row is supposed to describe what was pushed
+        # (ADR-XDEV-002 makes that visibility a requirement), so naming WIASW
+        # there is correct. See BUILD_STATE_KEYS for how the rest is judged.
+        wiasw_build_state, wiasw_undeclared, wiasw_denied = destination_mentions(
+            conn, ["%WIASW%"])
         queue_wiasw = conn.execute(
             "SELECT COUNT(*) FROM queue_items WHERE title LIKE '%WIASW%' "
             "OR COALESCE(body_md, '') LIKE '%WIASW%'").fetchone()[0]
@@ -744,8 +837,12 @@ def test_current_build_state_is_unchanged(before_fingerprint):
           roadmap[:60])
     check("24c. build_phase still reports P0, not a destination phase",
           "Phase P0" in phase and "WIASW" not in phase, phase[:80])
-    check("24d. no project_state row outside the push checkpoint was given WIASW content",
-          wiasw_rows == 0, wiasw_rows)
+    check("24d. no build-state row was given WIASW content, and no undeclared row names it",
+          not wiasw_build_state and not wiasw_undeclared,
+          f"build_state={wiasw_build_state} undeclared={wiasw_undeclared}")
+    check("24d-ii. where a narrative row does name WIASW, it does so to deny activation",
+          all(key in NARRATIVE_KEYS_ALLOWED_TO_DENY for _, key in wiasw_denied),
+          wiasw_denied)
     check("24e. no queue item was created for WIASW",
           queue_wiasw == 0, queue_wiasw)
 
@@ -756,7 +853,7 @@ def test_architecture_is_recoverable_through_the_canonical_chain():
     state = cs.get_canonical_state()
     family = [d for d in state["active_decisions"] if d["id"].startswith("ADR-WIASW-")]
     check("25a. the canonical state read model carries the ADR-WIASW decisions",
-          len(family) == 5, [d["id"] for d in family])
+          len(family) == 6, [d["id"] for d in family])
     text = " ".join(d["decision"] for d in family)
     facts = {
         "WIASW is Word, Image, Action, Sound + Web":
@@ -894,9 +991,7 @@ def test_continuous_development_intake_is_recorded(model):
             "OR UPPER(title) LIKE '%CONTINUOUS DEVELOPMENT INTAKE%' "
             "OR UPPER(COALESCE(body_md, '')) LIKE '%CONTINUOUS DEVELOPMENT INTAKE%'"
         ).fetchone()[0]
-        state_hits = conn.execute(
-            "SELECT COUNT(*) FROM project_state WHERE value LIKE '%DEVELOPMENT_INTAKE%' "
-            "AND key != 'external_dev_checkpoint'").fetchone()[0]
+        intake_state = destination_mentions(conn, ["%DEVELOPMENT_INTAKE%"])
     finally:
         conn.close()
     check("26g. the implementation gap exists as an OPEN question, not as executable work",
@@ -909,7 +1004,8 @@ def test_continuous_development_intake_is_recorded(model):
     check("26i. no queue item was created for the intake capability",
           queue_hits == 0, queue_hits)
     check("26j. the capability was not written into build state",
-          state_hits == 0, state_hits)
+          not intake_state[0] and not intake_state[1],
+          f"build_state={intake_state[0]} undeclared={intake_state[1]}")
 
 
 # ── 8. the reference outcome and Control Center (ADR-WIASW-005) ──────────
@@ -1043,16 +1139,183 @@ def test_reference_outcome_is_recorded(model):
             "OR title LIKE '%LUSION_CLASS%' OR title LIKE '%lusion.co%' "
             "OR COALESCE(body_md, '') LIKE '%LUSION_CLASS%' "
             "OR COALESCE(body_md, '') LIKE '%lusion.co%'").fetchone()[0]
-        state_hits = conn.execute(
-            "SELECT COUNT(*) FROM project_state WHERE (value LIKE '%CONTROL_CENTER%' "
-            "OR value LIKE '%LUSION_CLASS%' OR value LIKE '%lusion.co%') "
-            "AND key != 'external_dev_checkpoint'").fetchone()[0]
+        ref_state = destination_mentions(
+            conn, ["%CONTROL_CENTER%", "%LUSION_CLASS%", "%lusion.co%"])
     finally:
         conn.close()
     check("27k. no queue item was created for the Control Center or the reference",
           queue_hits == 0, queue_hits)
     check("27l. the reference was not written into build state",
-          state_hits == 0, state_hits)
+          not ref_state[0] and not ref_state[1],
+          f"build_state={ref_state[0]} undeclared={ref_state[1]}")
+
+
+# ── 9. the executive development path (ADR-WIASW-006) ───────────────────
+#
+# Recorded because the architect reported losing track of development: the
+# Workbench shows accurate detailed state at ONE visual level, and nothing in
+# authority said which work is the mainline, which is a temporary prerequisite,
+# which merely records a future destination, or what condition returns
+# development to the mainline. These checks prove the requirement is readable
+# from authority, that recording it implemented and authorized NOTHING, and --
+# the part that matters most for this particular capability -- that it is
+# recorded as SUBORDINATE to the authorities it would summarise. A narrative
+# layer able to disagree with them would be the most readable surface in the
+# system and the least authoritative one.
+
+def test_executive_development_path_is_recorded(model):
+    path = node(model, "EXECUTIVE_DEVELOPMENT_PATH")
+    check("28a. the capability is declared under CIS, not as a target of its own",
+          path is not None and path["kind"] == "destination_capability_group"
+          and has_edge(model, "CIS", "contains", "EXECUTIVE_DEVELOPMENT_PATH")
+          and path["depth"] == 1,
+          path and (path["kind"], path["depth"]))
+    children = [e["target"] for e in model["edges"]
+                if e["source"] == "EXECUTIVE_DEVELOPMENT_PATH"
+                and e["relationship"] == "contains"]
+    check("28b. it carries the seven named orientation capabilities",
+          sorted(children) == sorted([
+              "DEVPATH_DESTINATION", "DEVPATH_POSITION", "DEVPATH_MAINLINE_VS_DETOUR",
+              "DEVPATH_RETURN_CONDITION", "DEVPATH_DESTINATION_RECORDING",
+              "DEVPATH_DERIVATION", "DEVPATH_ALTITUDE"]),
+          sorted(children))
+
+    # The subordination is an EDGE, not only prose, so a future reader of the
+    # graph alone cannot mistake this for a peer authority.
+    derives = [e for e in model["edges"] if e["relationship"] == "derives-from"]
+    check("28c. it derives from CIS through a declared relationship, and is the only such edge",
+          len(derives) == 1
+          and derives[0]["source"] == "EXECUTIVE_DEVELOPMENT_PATH"
+          and derives[0]["target"] == "CIS",
+          [(e["source"], e["target"]) for e in derives])
+    rel = {r["name"]: r for r in model["relationships"]}.get("derives-from")
+    check("28d. derives-from subordinates the source and denies being a build-order edge",
+          rel is not None
+          and "can never outrank, contradict or substitute for the target" in rel["definition"]
+          and "never a build-order, phase or chronology edge" in rel["definition"]
+          and "never a claim that the source is implemented" in rel["definition"],
+          rel and rel["definition"][:120])
+
+    # Activation is the honest half: the three capabilities that answer the
+    # architect's actual question have NO substrate and must not read as if
+    # they do.
+    states = {n["id"]: n["activation_state"] for n in model["nodes"]}
+    check("28e. the three mainline-versus-detour capabilities are NOT_ACTIVATED",
+          all(states.get(n) == "NOT_ACTIVATED" for n in (
+              "DEVPATH_MAINLINE_VS_DETOUR", "DEVPATH_RETURN_CONDITION",
+              "DEVPATH_ALTITUDE")),
+          {n: states.get(n) for n in ("DEVPATH_MAINLINE_VS_DETOUR",
+                                      "DEVPATH_RETURN_CONDITION", "DEVPATH_ALTITUDE")})
+    check("28f. nothing in this family is reported as activated implementation",
+          all(states.get(n) in ("NOT_ACTIVATED", "PARTIAL_SUBSTRATE")
+              for n in ["EXECUTIVE_DEVELOPMENT_PATH"] + children),
+          {n: states.get(n) for n in ["EXECUTIVE_DEVELOPMENT_PATH"] + children})
+
+    text = next((d["decision"] for d in model["decisions"]
+                 if d["id"] == "ADR-WIASW-006"), "")
+    facts = {
+        "the architect's reported problem is recorded, not inferred":
+            "the architect reported losing track of development" in text,
+        "the defect is not missing data":
+            "must not be repaired by adding more of it" in text,
+        "all eight orientation questions are recorded verbatim":
+            all(q in text for q in (
+                "what is the main development path",
+                "where are we on that path",
+                "why are we working here instead of on the contained pipeline",
+                "which work represents the mainline",
+                "which work is a temporary prerequisite or detour",
+                "which work merely records future destination architecture",
+                "what condition returns us to the mainline",
+                "what is the next major destination")),
+        "topology is distinguished from narrative":
+            "PROJECT TOPOLOGY IS NOT DEVELOPMENT NARRATIVE" in text,
+        "the three work categories are named":
+            all(k in text for k in ("MAINLINE:", "DETOUR OR PREREQUISITE:",
+                                    "DESTINATION RECORDING:")),
+        "a detour must name four things including its return condition":
+            "what condition ends the detour" in text
+            and "where development returns afterward" in text,
+        "a detour without a return condition is called drift":
+            "indistinguishable from drift" in text,
+        "destination recording must not imply construction":
+            "MUST NOT VISUALLY IMPLY THAT THOSE CAPABILITIES ARE CURRENTLY BEING BUILT"
+            in text,
+        "the conceptual destination sequence is not build-order authority":
+            "NOT BUILD-ORDER AUTHORITY AND CONFERS NO PERMISSION TO ALTER IT" in text,
+        "the altitude ceiling is a requirement, not a style preference":
+            "five to ten high-level facts" in text
+            and "NOT another comprehensive dashboard" in text,
+        "growing into a dashboard is declared a failure to implement it":
+            "it has not implemented this requirement" in text,
+        "it may never become a competing authority":
+            "DERIVED, NEVER A COMPETING AUTHORITY" in text,
+        "each existing authority is named and left owning its own question":
+            all(a in text for a in ("pipeline_roadmap", "queue_items and queue_edges",
+                                    "project_decisions", "open_questions",
+                                    "external_dev_checkpoint",
+                                    "docs/UNIFIED_BUILD_LIST.md")),
+        "an underivable answer must be reported, not composed":
+            "SHALL say so rather than compose a plausible one" in text,
+        "reading it can never advance state":
+            "must never be capable of advancing a phase" in text,
+        "the gap is named rather than left implicit":
+            "OQ-DEVPATH-001" in text,
+        "the narrative was validated against live state, not transcribed":
+            "VALIDATED AGAINST LIVE AUTHORITATIVE STATE" in text,
+        "the one clause live state contradicted is recorded as a correction":
+            "ONE CORRECTION TO THE PROPOSED NARRATIVE" in text
+            and "P0 closeout is not blocked by any of the governance or recovery "
+                "prerequisites" in text,
+        "the sequencing authorities are unamended":
+            "are all UNAMENDED" in text,
+    }
+    missing = [name for name, found in facts.items() if not found]
+    check(f"28g. all {len(facts)} orientation contract facts are readable from the decision row",
+          not missing, missing)
+
+    conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        gap = conn.execute(
+            "SELECT status, question FROM open_questions WHERE id = 'OQ-DEVPATH-001'"
+        ).fetchone()
+        queue_hits = conn.execute(
+            "SELECT COUNT(*) FROM queue_items "
+            "WHERE UPPER(title) LIKE '%EXECUTIVE DEVELOPMENT PATH%' "
+            "OR UPPER(COALESCE(body_md, '')) LIKE '%EXECUTIVE DEVELOPMENT PATH%' "
+            "OR COALESCE(body_md, '') LIKE '%ADR-WIASW-006%' "
+            "OR COALESCE(scope, '') LIKE '%DEVPATH%'").fetchone()[0]
+        # '%DEVPATH%' rather than an escaped '%DEVPATH\_%': SQLite's LIKE takes
+        # no backslash escape without an ESCAPE clause, so the escaped form
+        # would have matched a literal backslash and nothing else -- a check
+        # that passes by never matching. The broader pattern also catches
+        # OQ-DEVPATH-001, which is what a contaminated row would most likely
+        # name.
+        path_state = destination_mentions(
+            conn, ["%EXECUTIVE_DEVELOPMENT_PATH%", "%DEVPATH%"])
+    finally:
+        conn.close()
+    check("28h. the implementation gap exists as an OPEN question, not as executable work",
+          gap is not None and gap[0] == "OPEN"
+          and "IMPLEMENTATION GAP AND ITS PLACEMENT IN THE GOVERNED BUILD PATH" in gap[1],
+          gap and gap[0])
+    check("28i. the gap question states it blocks nothing currently sequenced",
+          gap is not None
+          and "NOT A BLOCKER TO ANYTHING CURRENTLY SEQUENCED" in gap[1]
+          and "does not block P1" in gap[1], None)
+    check("28j. the gap question does not put itself ahead of the governed path",
+          gap is not None and "do NOT insert it ahead of P1" in gap[1], None)
+    check("28k. no queue item was created for the orientation capability",
+          queue_hits == 0, queue_hits)
+    check("28l. the capability was not written into build state",
+          not path_state[0] and not path_state[1],
+          f"build_state={path_state[0]} undeclared={path_state[1]}")
+    # The closeout row that names it must say DON'T BUILD IT, which is the
+    # whole reason the narrative allowance exists. Asserted directly rather
+    # than left to the generic denial-marker test.
+    check("28m. the next_action closeout names it only to forbid implementing it",
+          any(key == "next_action" for _, key in path_state[2]),
+          path_state[2])
 
 
 def run():
@@ -1098,6 +1361,7 @@ def run():
     test_architecture_is_recoverable_through_the_canonical_chain()
     test_continuous_development_intake_is_recorded(model)
     test_reference_outcome_is_recorded(model)
+    test_executive_development_path_is_recorded(model)
 
     for r in results:
         print(r)
