@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: c3886f3a096cedcc -->
+<!-- state_revision: e56ca9f434fc6278 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -3815,7 +3815,7 @@ pause_notify.py is one-way by design (replies arrive unthreaded; a getUpdates po
 <!-- cis:scope="REPO/HOST — data/mining_archive" -->
 - **4.6** A hermes agent in these working sessions.
 
-**Need: NEEDS ERIC.**
+**Need: OPEN.**
 
 **Scope:** HOST — the host Hermes profiles
 

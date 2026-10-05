@@ -1,7 +1,57 @@
 # Files Changed Recently
-Generated: 2026-10-05 15:43 UTC | Run: run-a9a02c4dc50a
+Generated: 2026-10-05 19:23 UTC | Run: run-ab1a189a14dc
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## f2ef263 governance: record the remote acceptance of 23f245b and prepare the ADR-PIPE-006 triage review
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/CLASSIFICATIONS_TIER_1.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/CLASSIFICATIONS_TIER_2.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/CLASSIFICATIONS_TIER_3.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/CLASSIFICATIONS_TIER_4.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/INDEX.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/QUESTION_FOR_CHATGPT.md 
+
+## docs/review_packets/ADR-PIPE-006-TRIAGE-REVIEW/RESIDUAL_PARTIAL_ROWS.md 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/queue/render_triage_review_packet.py 
 
 ## 23f245b governance: record the executive development path and the OQ-TRIAGE-003 verification
 
@@ -622,41 +672,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## runtime/tests/test_braingate_conversation_boundary.py 
-
-## 21922b3 workbench: honor projects capability boundary
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/ui/src/App.jsx 
-
-## runtime/ui/src/App.test.jsx 
-
-## runtime/ui/src/SignIn.test.jsx 
