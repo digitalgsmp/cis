@@ -308,15 +308,21 @@ def _system_health():
             except Exception:
                 services.append({"name": label, "healthy": False, "url": f"localhost:{port}"})
 
-        # ── ChromaDB ────────────────────────────────────────────────────────
+        # ── ChromaDB (embedded — no HTTP server; read-only metadata check) ───
         try:
-            hresult = _subproc.run(
-                ["curl", "-s", "--max-time", "3", "http://localhost:8000/api/v1/heartbeat"],
-                capture_output=True, text=True, timeout=5
-            )
-            services.append({"name": "ChromaDB", "healthy": hresult.returncode == 0 and "nanosecond" in hresult.stdout.lower(), "url": "localhost:8000"})
-        except Exception:
-            services.append({"name": "ChromaDB", "healthy": False, "url": "localhost:8000"})
+            from chroma_health import check_embedded_chroma_health
+            result = check_embedded_chroma_health()
+            services.append({
+                "name": "Chroma (embedded knowledge store)",
+                "healthy": result["healthy"],
+                "detail": result["detail"],
+            })
+        except Exception as e:
+            services.append({
+                "name": "Chroma (embedded knowledge store)",
+                "healthy": False,
+                "detail": f"health check raised {type(e).__name__}",
+            })
 
     except Exception as e:
         return jsonify({"error": str(e), "containers": containers, "gateways": gateways, "services": services}), 500
