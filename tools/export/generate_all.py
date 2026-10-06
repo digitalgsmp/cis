@@ -29,6 +29,12 @@ MANIFEST_PATH = REPO_ROOT / "runtime" / "manifests" / "EXPORT_MANIFEST.json"
 sys.path.insert(0, str(REPO_ROOT / "tools" / "state"))
 import canonical_state  # noqa: E402
 
+# Imported for CHAR_LIMIT alone, so the limit this manifest reports margin
+# against is the same constant the guard enforces rather than a second copy
+# of the number that can drift from it (WB1-D18).
+sys.path.insert(0, str(REPO_ROOT / "tools" / "export"))
+import generate_agents_md  # noqa: E402
+
 GENERATE_AGENTS = REPO_ROOT / "tools" / "export" / "generate_agents_md.py"
 GENERATE_HCP = REPO_ROOT / "tools" / "export" / "generate_hcp.py"
 GENERATE_DEV_PIVOT = REPO_ROOT / "tools" / "export" / "generate_dev_pivot_manifest.py"
@@ -266,7 +272,14 @@ def run_generator(command, label):
             return False, stdout
         if stderr:
             print(f"[generate_all] {label} stderr: {stderr}")
-        print(f"[generate_all] {label}: {stdout.split(chr(10))[-1] if stdout else 'OK'}")
+        # Every line, not just the last. A generator's size/margin diagnostics
+        # (WB1-D18) are useless if the orchestrator the closeout path actually
+        # runs drops everything above the final summary line.
+        for line in (stdout.split("\n") if stdout else []):
+            if line.strip():
+                print(f"[generate_all] {label}: {line}")
+        if not stdout:
+            print(f"[generate_all] {label}: OK")
         return True, stdout
     except Exception as e:
         print(f"[generate_all] ERROR: {label} failed: {e}")
@@ -426,6 +439,11 @@ def main():
             "sha256": sha,
             "size_bytes": size,
             "char_count": chars,
+            # WB1-D18: the guard's limit and this run's remaining margin,
+            # recorded rather than merely printed, so proximity to the hard
+            # limit is inspectable after the fact from the manifest alone.
+            "char_limit": generate_agents_md.CHAR_LIMIT,
+            "char_margin": generate_agents_md.CHAR_LIMIT - chars,
             "line_count": lines,
         })
 

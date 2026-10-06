@@ -3,12 +3,14 @@
 generate_agents_md.py — Tier 5.1
 Reads SQLite spine + config/agents_static.yaml.
 Writes /mnt/projects/cis/AGENTS.md.
-Output must stay under 20,000 characters.
+Output must stay under 20,000 characters; every run reports the size it
+produced, that limit and the margin between them (WB1-D18).
 
 Usage: python3 tools/export/generate_agents_md.py [--db PATH] [--config PATH] [--out PATH] [--run-id ID] [--dry-run]
 """
 
 import argparse
+import re
 import sqlite3
 import sys
 import yaml
@@ -20,6 +22,64 @@ DEFAULT_DB = REPO_ROOT / "data" / "cis_memory.db"
 DEFAULT_CONFIG = REPO_ROOT / "config" / "agents_static.yaml"
 DEFAULT_OUT = REPO_ROOT / "AGENTS.md"
 CHAR_LIMIT = 20000
+
+# ── size observability (WB1-D18) ───────────────────────────────────────────
+#
+# CHAR_LIMIT above is a hard, fail-closed guard and stays one. What WB1-D18
+# recorded was not a defect in the guard but the absence of any warning
+# before it fires: section 1 of this projection is nothing but the two spine
+# values project_state.build_phase and current_direction, a correction to
+# them is routinely longer than the prose it replaces, and the first visible
+# symptom of crossing 20,000 characters was a seeding assertion failing in
+# an apparently unrelated test suite rather than "your state text is too
+# long".
+#
+# So: every successful generation now states size, limit and remaining
+# margin; a generation that is under the limit but close to it says so; and
+# a generation over the limit still writes nothing and now names both the
+# overage and the sections that account for it. None of this changes what
+# is generated — the numbers are read off the finished projection, never fed
+# back into it, so authoritative content is never shortened to satisfy the
+# guard.
+
+# Margin at or below which a successful generation also warns. Advisory
+# only: nothing fails under CHAR_LIMIT, and raising CHAR_LIMIT is not the
+# response to either signal — shortening the two spine values is.
+MARGIN_WARN_CHARS = 1500
+
+SECTION_HEADING_RE = re.compile(r"^## .*$", re.MULTILINE)
+
+
+def section_sizes(output):
+    """Characters attributable to each '## ' section of `output`, largest
+    first. A pure function of the rendered text — the same projection always
+    yields the same breakdown — so it can be reported without making
+    generation any less deterministic."""
+    starts = [m.start() for m in SECTION_HEADING_RE.finditer(output)]
+    sizes = []
+    if starts:
+        sizes.append(("(file header)", starts[0]))
+    for start, end in zip(starts, starts[1:] + [len(output)]):
+        heading = output[start:end].split("\n", 1)[0][len("## "):].strip()
+        sizes.append((heading, end - start))
+    return sorted(sizes, key=lambda item: -item[1])
+
+
+def size_report(output):
+    """Size, limit and remaining margin for a rendered projection, plus the
+    per-section breakdown. `char_margin` is negative exactly when the hard
+    guard must refuse the write."""
+    char_count = len(output)
+    return {
+        "char_count": char_count,
+        "char_limit": CHAR_LIMIT,
+        "char_margin": CHAR_LIMIT - char_count,
+        "sections": section_sizes(output),
+    }
+
+
+def format_sections(sections, top=3):
+    return "; ".join(f"{name} {count} chars" for name, count in sections[:top])
 
 
 def load_static(config_path):
@@ -320,18 +380,33 @@ def main():
                     build_state, eric_gate=eric_gate, handoff=handoff,
                     run_id=args.run_id)
 
-    char_count = len(output)
-    if char_count > CHAR_LIMIT:
-        print(f"ERROR: Output is {char_count} chars, exceeds {CHAR_LIMIT} limit.")
+    report = size_report(output)
+    char_count = report["char_count"]
+    margin = report["char_margin"]
+    sections = format_sections(report["sections"])
+
+    if margin < 0:
+        print(f"ERROR: Output is {char_count} chars, exceeds {CHAR_LIMIT} limit "
+              f"by {-margin} chars. Nothing was written to {args.out}.")
+        print(f"ERROR: largest sections: {sections}.")
+        print("ERROR: section '1. Current Build Phase' is exactly "
+              "project_state.build_phase + current_direction. Shorten those "
+              "two spine values — do not raise the limit and do not truncate "
+              "authoritative state.")
         sys.exit(1)
 
     if args.dry_run:
         print(output)
-        print(f"\n--- {char_count} chars (limit {CHAR_LIMIT}) ---")
+        print(f"\n--- {char_count} chars (limit {CHAR_LIMIT}, "
+              f"margin {margin} chars) ---")
         sys.exit(0)
 
     Path(args.out).write_text(output)
-    print(f"PASS: AGENTS.md written to {args.out} ({char_count} chars)")
+    if margin <= MARGIN_WARN_CHARS:
+        print(f"WARN: only {margin} chars of margin remain under the "
+              f"{CHAR_LIMIT} limit. Largest sections: {sections}.")
+    print(f"PASS: AGENTS.md written to {args.out} ({char_count} chars, "
+          f"limit {CHAR_LIMIT}, margin {margin} chars)")
 
 
 if __name__ == "__main__":
