@@ -1,0 +1,107 @@
+RETRIEVAL PROOF — preserved phase handoff
+store: knowledge_messages (Chroma) · model: all-MiniLM-L6-v2 · path: tools/ask_history.py semantics (n_results=50, k=5, MIN_CHARS=200, PER_SOURCE=2)
+
+PROBE  Hermes is an implementation, not the permanent definition of the backend
+  ask_history result slot for the handoff : 4
+  deep raw rank (n_results=400)           : 4
+  sources ask_history returned            : {'claude_export': 1, 'cis_kernel': 2, 'cis_handoff_packets': 1, 'cis_docs': 1}
+    1.     [claude_export] 12c296cc-2b6f-4478-ade0-b14d79ef51ed:CIS session briefing and st
+            1. there are 3 separate installations of hermes with their own config files and roles or personalities, but th
+    2.     [cis_kernel] cis_kernel/extraction/functional_intents/ai_execution_infrastruc
+            **Architectural Significance:** Hermes is explicitly NOT the brain of the system. Hermes is the local executio
+    3.     [cis_kernel] cis_kernel/extraction/functional_intents/collab_rounds_extractio
+            2. **Hermes has a constrained role**: Hermes is explicitly prohibited from executing or deciding—it is a steno
+    4. <<< [cis_handoff_packets] CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/INDEPENDENT_EXT
+            A future CIS module should be describable using properties such as: architectural layer; responsibility; trust
+    5.     [cis_docs] Hermes Agent Full Documentation.md:2783
+            `my_backend_web_package` must expose a top-level `register` function. See [Distribute via pip](/guides/build-a
+
+PROBE  record once derive everywhere
+  ask_history result slot for the handoff : not in the 5 returned
+  deep raw rank (n_results=400)           : 7
+  sources ask_history returned            : {'cis_docs': 2, 'cis_contracts': 1, 'cis_kernel': 2}
+    1.     [cis_docs] contracts/CIS Source Manifest Contract.md:11
+            Cardinality: one source manifest produces zero or many knowledge_record objects. Zero is valid — a manifest wi
+    2.     [cis_contracts] cis_contracts/CIS Source Manifest Contract.md#r2
+            Cardinality: one source manifest produces zero or many knowledge_record objects. Zero is valid — a manifest wi
+    3.     [cis_kernel] cis_kernel/source/other_docs/CIS Source Manifest Contract.md#r11
+            Cardinality: one source manifest produces zero or many knowledge_record objects. Zero is valid — a manifest wi
+    4.     [cis_docs] claude_chat_transcripts/2026-04-18_Session execution and image p
+            Every extraction run should record:  | Field | Purpose | |---|---| | `id` | Auto increment | | `source_id` | W
+    5.     [cis_kernel] cis_kernel/source/other_docs/2026-04-18_Session execution and im
+            Every extraction run should record:  | Field | Purpose | |---|---| | `id` | Auto increment | | `source_id` | W
+
+PROBE  cards are projections of structured Execution Contracts
+  ask_history result slot for the handoff : not in the 5 returned
+  deep raw rank (n_results=400)           : 1
+  sources ask_history returned            : {'cis_docs': 2, 'cis_kernel': 2, 'claude_transcripts': 1}
+    1.     [cis_docs] claude_chat_transcripts/ChatGTP_Project_Primer/archive/PROJECT_P
+            RUNTIME IMPLEMENTATION CONTRACTS define:   - scheduling   - queue mechanics   - runtime execution details   - 
+    2.     [cis_kernel] cis_kernel/source/other_docs/PROJECT_PRIMER_UPDATE.md#r2
+            RUNTIME IMPLEMENTATION CONTRACTS define:   - scheduling   - queue mechanics   - runtime execution details   - 
+    3.     [claude_transcripts] claude_transcripts/ChatGTP_Project_Primer/archive/PROJECT_PRIMER
+            RUNTIME IMPLEMENTATION CONTRACTS define:   - scheduling   - queue mechanics   - runtime execution details   - 
+    4.     [cis_kernel] cis_kernel/source/transcripts_claude/PROJECT_PRIMER_UPDATE.md#r2
+            RUNTIME IMPLEMENTATION CONTRACTS define:   - scheduling   - queue mechanics   - runtime execution details   - 
+    5.     [cis_docs] architecture_atlas/cis_chat_2026_04_001_extraction_analysis.md:2
+            ## 3.2 Runtime Reality Superseded Design Assumptions  The transcript reveals:  implemented behavior > planned 
+
+PROBE  DeepSeek Harness replaceability test
+  ask_history result slot for the handoff : 3
+  deep raw rank (n_results=400)           : 4
+  sources ask_history returned            : {'hermes_v4pro': 2, 'cis_handoff_packets': 1, 'claude-external-advisor': 1, 'claude_export': 1}
+    1.     [hermes_v4pro] hermes_session/v4pro/session_20260821_104755_56fd0142/1.1
+            [asked] dig into cords to help me understand what it is and does. the give me a spec on how to integrate the d
+    2.     [hermes_v4pro] hermes_session/v4pro/session_20260822_010944_d9f7e0/1.1
+            [asked] dig into cords to help me understand what it is and does. the give me a spec on how to integrate the d
+    3. <<< [cis_handoff_packets] CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/INDEPENDENT_EXT
+            Current CIS evidence gives DeepSeek Harness **no architectural authority or adoption status**. Therefore:  - d
+    4.     [claude-external-advisor] claude-session-20260701-container-msg33-chunk0#r3
+            Next action: run that, paste the output. This is the definitive test — it either shows warnings starting aroun
+    5.     [claude_export] 79b09538-8341-4bbd-b1f4-43aebf029cc4:Hermes update recovery and 
+            Its Step 4/5 behavioral test is the right instrument — a tiny live call against 8643/8645/8646, inspecting res
+
+PROBE  dependency architecture versus trust deployment topology
+  ask_history result slot for the handoff : not in the 5 returned
+  deep raw rank (n_results=400)           : 1
+  sources ask_history returned            : {'cis_kernel': 2, 'swa_project': 2}
+    1.     [cis_kernel] cis_kernel/extraction/functional_intents/1777610766000000000_202
+            ## Discovery 3: Four-Zone Intake Trust Model - **Architectural Significance**: Downloads (untrusted) → inbox (
+    2.     [swa_project] swa_project/social_work_ai/swa_kernel/extraction/functional_inte
+            4. **Version Pinning as Governance Policy**: Exact version pinning is a governance mechanism that enforces rep
+    3.     [cis_kernel] cis_kernel/extraction/functional_intents/adr_048_staged_draft_in
+            ## Discovery 2: Trust Zone Model Emergence - **Architectural Significance**: Introduces formalized trust progr
+    4.     [swa_project] swa_project/social_work_ai/swa_kernel/extraction/functional_inte
+            ## Discovery 6: `truststore` as Security Governance Object - **Architectural Significance**: `truststore==0.10
+
+PROBE  WIASW destination extensibility test
+  ask_history result slot for the handoff : not in the 5 returned
+  deep raw rank (n_results=400)           : 1
+  sources ask_history returned            : {'hermes_prime': 2, 'cis_docs': 1, 'hermes_v4pro': 1, 'claude_export': 1}
+    1.     [hermes_prime] hermes_session/prime/session_api-2e7fec3b01623808/0.2
+            [asked] [TEST MODE] Respond in 3 sentences or fewer. Be direct.  REVISION REQUEST — Round 2  Original topic: S
+    2.     [hermes_prime] hermes_session/prime/session_api-3bd24b265e5d3274/0.3
+            [asked] [TEST MODE] Respond in 3 sentences or fewer. Be direct.  REVISION REQUEST — Round 2  Original topic: T
+    3.     [cis_docs] DEV-PIVOT-09_FRONT_DOOR_BUILD_PLAN.md:81
+            End-to-end integration test that validates the full Front Door pipeline: signal detection → classification → d
+    4.     [hermes_v4pro] hermes_session/v4pro/session_api-83929828558570d4/0.1
+            [asked] [TEST MODE] Respond in 3 sentences or fewer. Be direct.  Test: orchestrator 6.3 canary v3  ## Context 
+    5.     [claude_export] ae0abd35-a502-47fc-8064-d61c1fcb41b0:Persistent Hermes container
+            Risk (one line): these are *shell* checks (fast, deterministic) — they prove mounts and permissions, but not t
+
+PROBE  revision 127 precedes reconstruction
+  ask_history result slot for the handoff : 2
+  deep raw rank (n_results=400)           : 3
+  sources ask_history returned            : {'claude_code': 2, 'cis_handoff_packets': 1, 'claude_export': 2}
+    1.     [claude_code] claude_code/-home-eric/df648739-8790-4c5f-b4c6-0d7887392304/3.18
+            [asked] CARD — Finish and Commit Card 04 Correction Round Project root: `/mnt/projects/cis` This task is not a
+    2. <<< [cis_handoff_packets] CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/INDEPENDENT_EXT
+            Sequence unchanged: P0 closed → queue triage (blocked on OQ-TRIAGE-001) → independent review of triage → P1 | 
+    3.     [claude_code] claude_code/-home-eric/ffcbced5-6fc3-4f55-ae70-a4e653e8fc40/0.44
+            [asked] You are working in:  /mnt/projects/cis  CARD  WB.1 — D13 Pre-Commit Safety Closeout + D10 Commit Final
+    4.     [claude_export] 90d0bbec-02d8-4186-8210-c2fd5555e158:Tier 11C specification with
+            So the move is clean and it's already where the pipeline points: send the revised spec to r1 for re-review. Th
+    5.     [claude_export] 14087432-9ac5-4763-b286-e28f36955992:Session handoff with file o
+            Then re-attach the actual revised file. I won’t clear it from the disk report alone, because the last failure 
+
+SUMMARY: handoff among ask_history's 5 results for 3/7 probes; present in deep recall for 7/7.

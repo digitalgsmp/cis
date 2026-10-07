@@ -190,6 +190,72 @@ def unresolved_discoveries(conn, task):
     ]
 
 
+def _spine_path(conn):
+    """The file this connection is attached to, or None for in-memory."""
+    try:
+        for _seq, name, path in conn.execute("PRAGMA database_list"):
+            if name == "main":
+                return os.path.realpath(path) if path else None
+    except Exception:
+        return None
+    return None
+
+
+def _kb_coverage_measured(conn=None):
+    """Whether the KB coverage check actually ran, for the evidence record.
+    Same two skip conditions as _kb_coverage_blockers, asked separately so a
+    skip is reported rather than indistinguishable from a clean pass."""
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from kb import source_policy as sp
+    except ImportError:
+        return False
+    if not os.path.exists(sp.POLICY_PATH):
+        return False
+    return conn is None or _spine_path(conn) == os.path.realpath(sp.DB_PATH)
+
+
+def _kb_coverage_blockers(conn=None):
+    """KB source-coverage blockers for a stage closeout, or [] if clean.
+
+    Deliberately NOT task-scoped, unlike everything else in check_closeout:
+    durable-knowledge coverage is a property of the repository, not of one
+    task, and a stage that closes while its own development reasoning never
+    reached the KB has closed on an unrecoverable record. The authority for
+    which families may block is config/kb_source_policy.yaml, read through
+    the one function the coverage gate also uses — there is no second list.
+
+    Two deliberate skips, both about not measuring the wrong thing:
+
+      - the policy or the kb package is absent on this host. Closeout predates
+        the coverage gate, and a host without it has no declaration to check.
+      - the closeout is being run against a spine that is NOT the production
+        one. The KB lives in the production spine, so measuring it while
+        someone exercises closeout mechanics on a scratch database would
+        report a condition that has nothing to do with the thing being closed
+        — and would make every temp-spine test depend on today's corpus.
+
+    It does NOT skip on a policy that exists but cannot be measured: coverage
+    that cannot be established is not coverage, and closeout_verdict() returns
+    that as a blocker on its own.
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from kb import source_policy as sp
+    except ImportError:
+        return []
+    if not os.path.exists(sp.POLICY_PATH):
+        return []
+    if conn is not None and _spine_path(conn) != os.path.realpath(sp.DB_PATH):
+        return []
+    return [{"type": "kb_source_coverage",
+             "family": b["family"],
+             "summary": "; ".join(b["violations"])}
+            for b in sp.closeout_verdict()["blocking"]]
+
+
 def check_closeout(conn, task, dev_conn=None):
     """Deterministic ready-to-close check for `task`. Never raises for a
     task with no events at all (an untouched task is trivially ready).
@@ -199,9 +265,14 @@ def check_closeout(conn, task, dev_conn=None):
       - malformed discoveries (undispositioned consequential work);
       - unresolved BEFORE_STAGE_CLOSEOUT discoveries;
       - unresolved plain (non-discovery) unfinished_work events;
-      - unresolved contradiction events.
+      - unresolved contradiction events;
+      - KB source-coverage violations in a required, MEASURABLE family
+        (added 2026-10-07; see _kb_coverage_blockers for why this one is
+        repository-scoped rather than task-scoped, and why families whose
+        ingestion path does not exist are reported rather than blocking).
     Task-scoped throughout (cs.list_events already filters by task), so an
-    unrelated task's own open items never appear here."""
+    unrelated task's own open items never appear here — the KB check is the
+    single, documented exception."""
     dev_conn = dev_conn or conn
     if not cs.is_initialized(dev_conn):
         return {
@@ -240,6 +311,9 @@ def check_closeout(conn, task, dev_conn=None):
             blockers.append({"type": "unresolved_contradiction", "revision": e["revision"],
                               "summary": e["summary"]})
 
+    kb_blockers = _kb_coverage_blockers(dev_conn)
+    blockers.extend(kb_blockers)
+
     return {
         "task": task,
         "ready_to_close": len(blockers) == 0,
@@ -247,6 +321,10 @@ def check_closeout(conn, task, dev_conn=None):
         "evidence_checked": {
             "total_events": len(events),
             "discoveries_checked": len(discoveries),
+            # Reported either way, so a closeout can never pass while silently
+            # having skipped coverage — "false" names the skip out loud.
+            "kb_coverage_checked": _kb_coverage_measured(dev_conn),
+            "kb_coverage_blockers": len(kb_blockers),
         },
     }
 

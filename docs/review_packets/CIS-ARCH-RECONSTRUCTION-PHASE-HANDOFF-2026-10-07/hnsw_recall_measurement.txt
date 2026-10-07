@@ -1,0 +1,30 @@
+collection count: 493,377
+
+PROBE: dependency architecture versus trust deployment topology
+  n_results=  50  handoff_rank=    1  best_distance=0.7594  handoff_distance= 0.7594
+  n_results= 100  handoff_rank=    1  best_distance=0.7594  handoff_distance= 0.7594
+  n_results= 200  handoff_rank=    1  best_distance=0.7594  handoff_distance= 0.7594
+  n_results= 400  handoff_rank=    1  best_distance=0.7594  handoff_distance= 0.7594
+  n_results= 800  handoff_rank=    1  best_distance=0.7594  handoff_distance= 0.7594
+
+PROBE: WIASW destination extensibility test
+  n_results=  50  handoff_rank= None  best_distance=1.0949  handoff_distance=      —
+  n_results= 100  handoff_rank= None  best_distance=1.0949  handoff_distance=      —
+  n_results= 200  handoff_rank=    1  best_distance=0.9424  handoff_distance= 0.9424
+  n_results= 400  handoff_rank=    1  best_distance=0.9424  handoff_distance= 0.9424
+  n_results= 800  handoff_rank=    1  best_distance=0.9424  handoff_distance= 0.9424
+
+PROBE: record once derive everywhere
+  n_results=  50  handoff_rank= None  best_distance=0.8825  handoff_distance=      —
+  n_results= 100  handoff_rank= None  best_distance=0.8825  handoff_distance=      —
+  n_results= 200  handoff_rank= None  best_distance=0.8825  handoff_distance=      —
+  n_results= 400  handoff_rank=    7  best_distance=0.8825  handoff_distance= 0.9789
+  n_results= 800  handoff_rank=    7  best_distance=0.8825  handoff_distance= 0.9789
+
+PROBE: cards are projections of structured Execution Contracts
+  n_results=  50  handoff_rank= None  best_distance=0.8278  handoff_distance=      —
+  n_results= 100  handoff_rank= None  best_distance=0.8278  handoff_distance=      —
+  n_results= 200  handoff_rank=    1  best_distance=0.7602  handoff_distance= 0.7602
+  n_results= 400  handoff_rank=    1  best_distance=0.7602  handoff_distance= 0.7602
+  n_results= 800  handoff_rank=    1  best_distance=0.7602  handoff_distance= 0.7602
+

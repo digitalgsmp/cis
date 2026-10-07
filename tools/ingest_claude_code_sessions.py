@@ -33,7 +33,14 @@ import sqlite3
 import sys
 
 DB_PATH = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
-DEFAULT_GLOB = os.path.expanduser("~/.claude/projects/*/*.jsonl")
+#   Two shapes, not one. A delegated run writes its transcript to
+#   <project>/<session>/subagents/agent-*.jsonl, which the single-level glob never
+#   matched — so six subagent transcripts totalling 2.1 MB of reasoning were
+#   invisible to the KB while the tool reported success. Same material, same
+#   source, same keys.
+DEFAULT_GLOBS = ("~/.claude/projects/*/*.jsonl",
+                 "~/.claude/projects/*/*/subagents/*.jsonl")
+DEFAULT_GLOB = ",".join(DEFAULT_GLOBS)
 SOURCE = "claude_code"
 # The embedding model (all-MiniLM-L6-v2) has max_seq_length 256 tokens — about
 # 1,000 characters. Anything past that is silently TRUNCATED at embed time, so a
@@ -166,14 +173,16 @@ def split_long(exchange):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sessions", default=DEFAULT_GLOB)
+    ap.add_argument("--sessions", default=DEFAULT_GLOB,
+                    help="comma-separated glob(s) of transcripts to ingest")
     ap.add_argument("--db", default=DB_PATH)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-embed", action="store_true",
                     help="skip Chroma; ask_history will not see the new rows")
     args = ap.parse_args()
 
-    files = sorted(glob.glob(os.path.expanduser(args.sessions)))
+    files = sorted({p for pattern in args.sessions.split(",")
+                    for p in glob.glob(os.path.expanduser(pattern.strip()))})
     if not files:
         print(f"no transcripts matched {args.sessions}", file=sys.stderr)
         return 1

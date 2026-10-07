@@ -1,0 +1,224 @@
+# KB SOURCE POLICY — what belongs in CIS durable knowledge, declared once.
+#
+# This file is the ONLY place that says which source families are expected in the
+# knowledge base. tools/kb/source_policy.py measures against it and
+# tools/gates/gate_kb_source_coverage.py fails on it, so there is no second list
+# for anyone to keep in step. Discovery is from the filesystem every run: adding a
+# document to a declared root makes it eligible with no edit here.
+#
+# It is NOT an authority registry. Nothing in this file makes a source
+# authoritative — authority_class below records what retrieval should TREAT a
+# family as, and the CIS Context Contract's two-layer model decides which layer a
+# family belongs to in the first place.
+#
+# freshness:
+#   current  — the ingested copy must match the file on disk by sha256. A changed
+#              file is a violation the moment it changes.
+#   bounded  — new material is allowed to lag by max_age_days; older material must
+#              be present. Changed files are still reported.
+#   none     — presence is not measured.
+#
+# grace_hours delays the "missing" verdict for very new files, so a session being
+# written right now is not a gate failure.
+version: 1
+
+families:
+
+  # ---------------------------------------------------------------- Layer 2 ----
+  # Repository documentation. CLAUDE.md names docs/ as the governance spec
+  # directory; the CIS Context Contract source hierarchy ends at "older markdown
+  # documents", which only works if they are reachable. The existing loader
+  # tools/catalog/convert_to_knowledge.py:convert_cis_docs() already targets this
+  # exact tree and already skips diagrams/ and audits/ — those exclusions are
+  # inherited, not invented. docs/CIS_Creative_Intelligence_System_v1/ is kept IN:
+  # the separate cis_v1_vault source covers a different root and only 1,525 rows,
+  # so excluding the in-repo v1 documentation would lose it.
+  repository_docs:
+    kb_source: cis_docs
+    root: docs
+    key_style: path_colon_index
+    include: ["**/*.md", "**/*.txt"]
+    exclude:
+      - "_archive/**"          # superseded legacy build files, kept as artefacts
+      - "**/diagrams/**"       # rendered images, not text
+      - "**/audits/**"         # generated audit output
+    min_bytes: 64              # a 20-byte stub is not a document
+    required: true
+    freshness: current
+    min_coverage: 1.0
+    require_provenance: true
+    authority_class: mixed
+    note: >
+      Mixed on purpose: docs/ holds accepted decisions, superseded proposals and
+      working notes side by side. Retrieval must not infer currency from
+      membership. Current authority is project_decisions and project_state.
+
+  # External-development handoffs, review packets and recovery packets. ADR-XDEV-001
+  # makes external-developer work durable only once independently verified, and
+  # ADR-XDEV-002 requires the repository checkpoint to be visible in the recovery
+  # chain. Neither is satisfiable if the packets that carry the reasoning are
+  # unreachable from retrieval.
+  external_dev_handoffs:
+    kb_source: cis_handoff_packets
+    root: data/agent_handoffs
+    key_style: path_colon_index
+    include: ["**/*.md", "**/*.txt"]
+    exclude:
+      - "**/backups/**"        # pre-change copies of files already covered elsewhere
+      - "**/evidence/**"       # command output; regenerate it, do not retrieve it
+      - "**/*secret*"
+    min_bytes: 64                    # a 0-byte stderr capture carries no finding
+    required: true
+    freshness: bounded
+    max_age_days: 7
+    grace_hours: 12
+    min_coverage: 1.0
+    require_provenance: true
+    authority_class: evidence
+    note: >
+      Historical/causal evidence. A handoff records what was proposed and found,
+      not what is currently true. dev_continuity_events carries the disposition.
+      This root is MACHINE-LOCAL: .gitignore excludes /data/*, so nothing here is
+      remotely recoverable. A handoff that must survive loss of this VM gets a
+      curated copy under docs/review_packets/<PACKET>/ — tracked, and covered by
+      the repository_docs family above. Local staging here, remote durability
+      there; that split is the existing convention, not a second mechanism.
+
+  # The functional-intent extractions and build/identity material under
+  # cis_kernel/. Ingested in part on 2026-08-29; the extraction/ subtree never
+  # was, and that subtree is where per-module intent lives.
+  cis_kernel:
+    kb_source: cis_kernel
+    root: cis_kernel
+    key_style: path_hash_index
+    key_root: "."
+    include: ["**/*.md", "**/*.txt"]
+    exclude:
+      - "source/obsidian_vault/**"   # third-party vault, already in the archive family
+      - "**/_archive/**"
+      - "source/SESSION_LOG.md"      # the extractor daemon's append-only run log:
+                                     # 12.4 MB, 14,211 chunks, changes every run.
+                                     # Runtime output, not a document — closeout.sh
+                                     # already classifies it as generated. Ingesting
+                                     # it is noise bought to raise a percentage.
+    min_bytes: 64
+    required: true
+    freshness: bounded
+    max_age_days: 14
+    min_coverage: 0.95
+    require_provenance: false        # pre-dates the manifest; backfilled on re-ingest
+    authority_class: evidence
+
+  # Claude Code session transcripts. tools/ingest_claude_code_sessions.py is the
+  # sanctioned path: deterministic, idempotent by source_key, secret-filtered at
+  # index time, writes both stores. Nothing schedules it — that is the gap this
+  # family exists to make visible.
+  claude_code_sessions:
+    kb_source: claude_code
+    root: "~/.claude/projects"
+    key_style: session_triplet
+    include:
+      - "*/*.jsonl"                   # main session transcripts
+      - "*/*/subagents/*.jsonl"       # delegated subagent reasoning, same material
+    min_bytes: 4096                   # below this a transcript is a /clear and nothing else
+    required: true
+    freshness: bounded
+    max_age_days: 2
+    grace_hours: 24                  # a session being written now is not a failure
+    min_coverage: 1.0
+    require_provenance: false        # a transcript grows; sha256 would thrash
+    authority_class: evidence
+    ingest: "python3.12 tools/ingest_claude_code_sessions.py"
+    note: >
+      Raw development reasoning. Highest causal value, lowest authority. Secrets
+      are dropped at Chroma index time by filter_for_index() and masked on every
+      read path by redact_secrets(); SQLite retains the raw text.
+
+  # ------------------------------------------------- declared, not measurable ----
+  # Browser-product histories. There is no filesystem source to discover: the only
+  # input is a manual account export, and the newest one on disk is months old.
+  # Measured as UNMEASURABLE rather than 0% — a denominator we cannot see is not
+  # the same as material we know is missing.
+  chatgpt_sessions:
+    kb_source: chatgpt_export
+    root: /mnt/backup-win
+    key_style: opaque
+    include: ["chatgtp_data.zip"]
+    required: true
+    freshness: bounded
+    max_age_days: 30
+    measurable: false
+    authority_class: evidence
+    ingestion_path: MISSING
+    note: >
+      INGESTION PATH MISSING — ARCHITECTURE DECISION REQUIRED. Last export
+      2026-06-13. ChatGPT is where independent review happens, so this family
+      carries verifier reasoning that exists nowhere else.
+
+  claude_ai_sessions:
+    kb_source: claude_export
+    root: /mnt/archive/anthropic_exports
+    key_style: opaque
+    include: ["*/conversations.json"]
+    required: true
+    freshness: bounded
+    max_age_days: 30
+    measurable: false
+    authority_class: evidence
+    ingestion_path: MISSING
+    note: >
+      INGESTION PATH MISSING — ARCHITECTURE DECISION REQUIRED. Last export
+      2026-06-25.
+
+  # ------------------------------------------------------- explicitly excluded ----
+  # Layer 1 of the CIS Context Contract: structured state, retrieved by query and
+  # projected into AGENTS.md/HCP, NOT by semantic search. Its projection chain is
+  # already gated by tools/gates/gate_export_agreement.sh; measuring it here would
+  # be the second source of truth this policy exists to avoid.
+  authoritative_db_records:
+    required: false
+    measurable: false
+    authority_class: authority
+    note: >
+      project_decisions, project_state, open_questions, dev_continuity_events,
+      queue_items. Layer 1 — CIS_CONTEXT_CONTRACT.md "Two-Layer Knowledge System".
+      Reachable via /api/relay/kb/decisions, AGENTS.md and the HCP export.
+
+  hermes_sessions:
+    kb_source: hermes_*
+    root: "~/.hermes-*"
+    required: false
+    measurable: false
+    authority_class: transient
+    ingest: "python3.12 tools/ingest_hermes_sessions_v2.py"
+    note: >
+      POLICY-DEPENDENT, currently excluded from the coverage requirement. The
+      seven gateway session directories hold 3,664 model-execution transcripts;
+      a full re-ingest measures 171,731 new chunks, a ~36% increase in the
+      CIS-relevant corpus, and the sample is model chatter ("Reply in one
+      sentence: Hermes Agent is connected to the local llama.cpp backend"), not
+      development reasoning. 176,000 chunks from these gateways are already in
+      the KB through 2026-09-07. The durable residue of a Hermes run is Layer 1:
+      workflow_runs, deliberation_rounds, gate_outcomes, agent_trajectories.
+      Whether the raw turns belong in retrieval at all is an architecture
+      decision, recorded here so the choice is visible rather than implicit.
+
+  cards:
+    root: cards
+    required: false
+    measurable: false
+    authority_class: projection
+    note: >
+      POLICY-DEPENDENT, currently excluded. The destination specification treats
+      cards as early manual projections of a future Execution Contract rather than
+      authority. Their durable outcome is recorded in dev_continuity_events, and
+      the card text itself is the operator's instruction, not a finding.
+
+  runtime_logs:
+    required: false
+    measurable: false
+    authority_class: transient
+    note: >
+      gate_runner_payload.jsonl, hook_payload.jsonl, logs/, plugin_load.log and
+      the Hermes gateway runtime logs. Transient runtime material. The durable
+      residue is gate_outcomes and workflow_runs, both Layer 1.

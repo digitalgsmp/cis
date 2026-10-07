@@ -145,6 +145,16 @@ proposals/
 runtime/eric_gate/briefings/*.json
 20260617_session_files/
 
+# KB ingestion ledger — a per-file record (sha256/chunks/ingested_at) of what
+# THIS HOST has ingested into a knowledge base that is itself not tracked. It is
+# machine-local runtime state, not a provenance checkpoint over tracked
+# artifacts: in a fresh checkout it would be confidently wrong rather than
+# useful, and tools/kb/ingest_files.py regenerates it as a side effect of the
+# only operation that can make it true. Contrast runtime/manifests/
+# EXPORT_MANIFEST.json, which IS tracked because it checkpoints the tracked
+# spine projections that gate_export_agreement.sh verifies against it.
+runtime/manifests/KB_SOURCE_MANIFEST.json
+
 # Knowledge-base corpus and exports — data, not code. Lives on disk + ChromaDB.
 # Anthropic export moved to /mnt/archive/anthropic_exports/ (2026-06-27)
 enforcement/mwl-proof-v2/tagging_input/
