@@ -36,6 +36,14 @@ WHAT THIS IS NOT, and why that matters more than what it is:
   tests. When that cannot be established the answer is "undetermined", and
   undetermined always widens verification rather than narrowing it.
 
+  AND THAT DERIVATION ANSWERS ONE QUESTION ONLY: which tests live with a
+  changed file. It does not — and structurally cannot — say which OTHER
+  components depend on that file. Directory layout records no dependency
+  edges, so a changed file having a nearby test directory is never treated
+  here as proof that the full set of affected components is known. That
+  second question is reported separately and explicitly, as
+  `changed_scope.dependency_impact`; see the dependency-impact section below.
+
 THE REUSE RULE (card section 3). A prior result is reused only when all five
 hold, each checked explicitly and reported per item in `validity_checks`:
 
@@ -46,11 +54,22 @@ hold, each checked explicitly and reported per item in `validity_checks`:
     5. no mandatory policy requires fresh execution
 
 Condition 4 is the one that is easy to fake. It is answered from the actual
-changed files, not from "the last task said PASS", and it fails closed: if
-ANY changed file's owning component cannot be determined, impact is not
-fully determined, and every item is invalidated with that reason. A changed
-SHA alone does not invalidate everything — an unrelated documentation commit
-leaves a component's test evidence intact — but an unknown does.
+changed files, not from "the last task said PASS", and it fails closed in
+two independent directions:
+
+  - if ANY changed file's owning component cannot be determined, component
+    ownership is unresolved and every item is invalidated with that reason;
+  - and even when every owner IS resolved, non-overlap with the changed
+    components is NOT by itself a reason to reuse. Reuse additionally
+    requires that cross-component dependency impact be established — which
+    directory structure cannot do (see below). Where it is not established,
+    the result is invalidated, verification widens, and the uncertainty is
+    stated in `limitations`.
+
+A changed SHA alone still does not invalidate everything: a documentation
+commit changes no behaviour any component can depend on, so component test
+evidence survives it. Executable change is the case where the honest answer
+is "the affected set is not known".
 
 WHY THIS IS NOT FOLDED INTO AN EXISTING MODULE. Three near misses, each
 rejected for a concrete reason:
@@ -69,14 +88,26 @@ half of it through the recovery path so a fresh session after `/clear` is
 handed the verification baseline instead of re-deriving it.
 
 A NOTE ON THE PENDING EVIDENCE-CLASSIFICATION CORRECTION (card section 11).
-That correction concerns `config/kb_source_policy.yaml`'s classification of
-required-but-unmeasurable source families (the browser-history families
-reported `POLICY UNDECIDED` by `gate_kb_source_coverage.py`). This module
-does not touch it and cannot relax it: KB source coverage is listed in
-`MANDATORY_CHECKS`, is therefore never reusable under condition 5, and
-continues to be enforced where it already was, inside
+That correction concerns one inconsistency in `config/kb_source_policy.yaml`:
+the SAME external-development handoff material is classified differently
+depending on which root retrieval reaches it through. The local copies under
+`data/agent_handoffs/` enter the KB as the `external_dev_handoffs` family and
+are classified `authority_class: evidence`; the curated, remotely durable
+copies of the same handoffs under `docs/review_packets/<PACKET>/` enter
+through the `repository_docs` family, which is classified `authority_class:
+mixed`. Local staging and remote durability are the existing convention for
+one artifact — `data/agent_handoffs/` is machine-local (.gitignore excludes
+/data/*), so a handoff that must survive loss of the VM gets a tracked copy
+under docs/ — but the two classifications are not the same claim about how
+retrieval should treat it.
+
+This module does not touch that correction and cannot relax it: KB source
+coverage is listed in `MANDATORY_CHECKS`, is therefore never reusable under
+condition 5, and continues to be enforced where it already was, inside
 `discovery._kb_coverage_blockers`. The two tasks stay separate by
-construction, not by convention.
+construction, not by convention. (Nothing here implements or prejudges the
+correction; XDEV-VERIFY-01A forbids that, and the classification decision is
+not this module's to make.)
 """
 import json
 import os
@@ -147,7 +178,10 @@ MANDATORY_CHECKS = (
         "when": "every_closeout",
         "why": "already enforced inside the existing closeout gate "
                "(discovery._kb_coverage_blockers), repository-scoped rather "
-               "than task-scoped. Its POLICY UNDECIDED families are the "
+               "than task-scoped. The inconsistent authority_class of the "
+               "external-development handoffs (evidence under "
+               "data/agent_handoffs, mixed where the same packets are reached "
+               "through repository_docs under docs/review_packets) is the "
                "subject of a separate pending evidence-classification "
                "correction, so this check is never reused and never relaxed "
                "here.",
@@ -375,6 +409,175 @@ def classify_path(path, test_map):
     }
 
 
+# ── dependency impact (card XDEV-VERIFY-01A, finding 2) ──────────────────
+#
+# WHAT DIRECTORY STRUCTURE CAN AND CANNOT ESTABLISH. `derive_test_map` answers
+# "which tests live with this changed file". Reuse depends on a different
+# question: "which OTHER components does this change affect". Nothing in a
+# directory layout records that, so the two must not be reported as one
+# answer. The first version of this module reported them as one: every
+# changed file resolving to a component set `impact_fully_determined` True,
+# and condition 4 then reused any evidence whose component simply did not
+# appear in the changed set. That is a structural approximation presented as
+# proof. It would hold only if no component depended on another, which in
+# this repository is false — `tools/state/recovery_packet.py` imports
+# `tools/development`, so a change under tools/development can invalidate
+# tools/state evidence that structurally "does not overlap" with it.
+#
+# Dependency impact is therefore its own reported answer, ESTABLISHED only
+# where it genuinely can be:
+#
+#   NO_CHANGE            nothing changed, so nothing can be affected.
+#   NO_EXECUTABLE_CHANGE documentation only. Prose is not imported and no
+#                        component's behaviour can depend on it. (The two
+#                        risks a document does carry — a secret in the index,
+#                        a generated projection drifting from the spine — are
+#                        covered repository-wide by gate_no_secrets and
+#                        gate_export_agreement, both mandatory and never
+#                        reusable.)
+#   UNDETERMINED         an executable change. Reuse is withheld,
+#                        verification widens to the repository-wide suites,
+#                        and the uncertainty is stated in `limitations`
+#                        instead of being hidden behind a narrower plan.
+#   NOT_DETERMINABLE     the changed scope itself could not be established.
+#
+# One narrower path can still establish it for an individual item while the
+# scope-level answer stays UNDETERMINED: an existing record naming the
+# dependency fact (`recorded_dependency_evidence`), applied per item inside
+# condition 4. No graph is built and no registry is maintained to do any of
+# this. Nothing records such a fact in this repository today, so the honest
+# answer for an executable change is UNDETERMINED — and saying so, rather
+# than deriving a narrower plan from a structural approximation, is the
+# correction.
+
+DEPENDENCY_EVIDENCE_KEY = "component_dependency_evidence"
+
+_STRUCTURE_IS_NOT_DEPENDENCY_PROOF = (
+    "a changed file having a nearby test directory establishes which tests "
+    "live with it, not which other components depend on it; directory layout "
+    "records no dependency edges"
+)
+
+
+def recorded_dependency_evidence(baseline):
+    """Dependency facts ALREADY recorded in the checkpoint authority, if any.
+
+    This builds no dependency graph and maintains no registry — card section 7
+    and card XDEV-VERIFY-01A both forbid that. It reads one OPTIONAL list from
+    the existing `project_state.external_dev_checkpoint` packet, the same
+    record every other evidence item here is read from, and honours an entry
+    only when it is complete:
+
+        {"component": "tools/state",
+         "independent_of": ["tools/development"],
+         "verified_at_sha": "<sha resolvable in this checkout>",
+         "source": "who established it"}
+
+    An entry means: at that SHA, `component` was established not to depend on
+    each component in `independent_of`. It is read, never inferred, and never
+    strengthened — the plan reports which SHA the fact was established at and
+    leaves the reviewer to judge it. An incomplete entry is ignored and
+    reported rather than half-applied.
+
+    Nothing in this repository writes this key today, and that is the honest
+    answer to "use existing dependency evidence if available": there is none,
+    so dependency impact for an executable change is UNDETERMINED and
+    verification widens.
+    """
+    raw = (baseline or {}).get(DEPENDENCY_EVIDENCE_KEY) or []
+    if isinstance(raw, dict):
+        raw = [raw]
+    entries, ignored = [], []
+    for item in raw if isinstance(raw, (list, tuple)) else []:
+        if not isinstance(item, dict):
+            ignored.append({"entry": str(item)[:160], "why": "not an object"})
+            continue
+        comp = item.get("component")
+        indep = item.get("independent_of") or []
+        sha = item.get("verified_at_sha")
+        if isinstance(indep, str):
+            indep = [indep]
+        missing = [k for k, v in (("component", comp), ("independent_of", indep),
+                                   ("verified_at_sha", sha)) if not v]
+        if missing:
+            ignored.append({"entry": str(item)[:160],
+                            "why": f"incomplete; missing {missing}"})
+            continue
+        entries.append({"component": comp, "independent_of": sorted(set(indep)),
+                        "verified_at_sha": sha,
+                        "source": item.get("source") or "source not named"})
+    note = (f"{len(entries)} recorded dependency fact(s) read from "
+            f"project_state.{CHECKPOINT_KEY}.{DEPENDENCY_EVIDENCE_KEY}"
+            if entries else
+            f"no dependency evidence is recorded in project_state."
+            f"{CHECKPOINT_KEY}.{DEPENDENCY_EVIDENCE_KEY}")
+    return {"present": bool(entries), "entries": entries, "ignored": ignored,
+            "note": note}
+
+
+def independence_from_record(covered, changed_components, entries, repo_root=None):
+    """Whether a RECORDED fact establishes that `covered` does not depend on
+    anything this task changed. Returns (established, detail).
+
+    Deliberately strict: one entry must name the covered component, must list
+    every changed component as something it is independent of, and must name a
+    commit this checkout can actually resolve. Partial coverage establishes
+    nothing."""
+    repo_root = repo_root or REPO_ROOT
+    changed = set(changed_components or ())
+    for entry in entries or ():
+        if entry["component"] not in (covered or ()):
+            continue
+        if not changed <= set(entry["independent_of"]):
+            continue
+        if not _commit_exists(repo_root, entry["verified_at_sha"]):
+            continue
+        return True, (
+            f"recorded dependency evidence ({entry['source']}) establishes "
+            f"{entry['component']} as independent of "
+            f"{sorted(changed)} at {entry['verified_at_sha']}")
+    return False, None
+
+
+def dependency_impact(*, determinable, ownership_resolved, documentation_only,
+                       changed_file_count, dep_evidence):
+    """The dependency half of condition 4, reported as its own answer rather
+    than inferred from the test-location mapping. See the section comment
+    above for the four states and for the per-item recorded-evidence path."""
+    ev_note = (dep_evidence or {}).get("note")
+    if not determinable:
+        return {"state": "NOT_DETERMINABLE", "established": False,
+                "basis": "the changed scope itself could not be established, so "
+                         "cross-component dependency impact cannot be assessed",
+                "dependency_evidence": ev_note}
+    if not ownership_resolved:
+        return {"state": "NOT_DETERMINABLE", "established": False,
+                "basis": "a changed file has no derivable owning component, so "
+                         "cross-component dependency impact cannot be assessed",
+                "dependency_evidence": ev_note}
+    if not changed_file_count:
+        return {"state": "NO_CHANGE", "established": True,
+                "basis": "no file changed against the accepted baseline, so no "
+                         "component's behaviour or dependencies are affected",
+                "dependency_evidence": ev_note}
+    if documentation_only:
+        return {"state": "NO_EXECUTABLE_CHANGE", "established": True,
+                "basis": "the change is documentation only; prose is not imported, "
+                         "so no component's behaviour can depend on it (secret "
+                         "exposure and projection drift stay covered by the "
+                         "mandatory repository-wide gates)",
+                "dependency_evidence": ev_note}
+    return {
+        "state": "UNDETERMINED", "established": False,
+        "basis": ("cross-component dependency impact is NOT established: "
+                  + _STRUCTURE_IS_NOT_DEPENDENCY_PROOF + ", and "
+                  + (ev_note or "no dependency evidence is recorded")
+                  + ". Verification is widened to the repository-wide suites and "
+                    "no evidence is reused on structural non-overlap alone"),
+        "dependency_evidence": ev_note,
+    }
+
+
 # ── accepted baseline (project_state.external_dev_checkpoint) ────────────
 
 def accepted_baseline(conn):
@@ -444,6 +647,9 @@ def accepted_baseline(conn):
         "live_gates_at_record_time": packet.get("live_gates_at_record_time") or "",
         "continuity_refs": packet.get("continuity_refs"),
         "authority": packet.get("authority"),
+        # Optional, and absent on every row written to date. Read-only input to
+        # `recorded_dependency_evidence`; nothing here writes or maintains it.
+        DEPENDENCY_EVIDENCE_KEY: packet.get(DEPENDENCY_EVIDENCE_KEY),
     })
     if superseded:
         base["note"] = ("the newest checkpoint row for this key is marked "
@@ -517,17 +723,30 @@ def _commit_exists(repo_root, sha):
 
 # ── changed scope (card section 4, section 7) ────────────────────────────
 
-def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=None):
+def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=None,
+                   dep_evidence=None):
     """What this task actually changes, relative to the accepted baseline.
 
     Fails closed in every direction:
       - no baseline SHA, or a baseline SHA this checkout does not contain
         -> determinable=False. Impact unknown, so nothing may be reused.
       - a changed file whose owning component cannot be derived
-        -> impact_fully_determined=False, and that file's name is reported.
+        -> component_ownership_resolved=False, and that file's name is
+           reported.
+      - an executable change with no recorded dependency evidence
+        -> dependency_impact.state=UNDETERMINED. Ownership being fully
+           resolved is NOT upgraded to "the affected set is known"; see the
+           dependency-impact section above.
+
+    `impact_fully_determined` means BOTH halves hold, and is the only field
+    condition 4 may read as "impact is known". Each half is also reported on
+    its own so a reader can see which one is missing.
     """
     repo_root = repo_root or REPO_ROOT
     test_map = test_map or derive_test_map(repo_root)
+    dep_evidence = dep_evidence if dep_evidence is not None else \
+        {"present": False, "entries": [], "ignored": [],
+         "note": "no dependency evidence was supplied to this derivation"}
 
     scope = {
         "baseline_sha": baseline_sha,
@@ -542,35 +761,53 @@ def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=
         "security_sensitive": [],
         "security_labels": [],
         "documentation_only": False,
+        "component_ownership_resolved": False,
+        "dependency_impact": None,
         "impact_fully_determined": False,
         "test_map_ok": test_map.get("ok", False),
         "repo_wide_suites": test_map.get("repo_wide_suites", []),
     }
 
+    def _finish():
+        """Fill in the dependency half and the combined answer, on every exit
+        path — including the early failures, so no caller can read a scope
+        whose dependency_impact was never computed."""
+        scope["dependency_impact"] = dependency_impact(
+            determinable=scope["determinable"],
+            ownership_resolved=scope["component_ownership_resolved"],
+            documentation_only=scope["documentation_only"],
+            changed_file_count=scope["changed_file_count"],
+            dep_evidence=dep_evidence,
+        )
+        scope["impact_fully_determined"] = bool(
+            scope["component_ownership_resolved"]
+            and scope["dependency_impact"]["established"])
+        return scope
+
     if not baseline_sha:
         scope["reason"] = ("no accepted baseline SHA is recorded, so the changed "
                            "scope cannot be established")
-        return scope
+        return _finish()
     if not _commit_exists(repo_root, baseline_sha):
         scope["reason"] = (f"accepted baseline {baseline_sha} is not present in this "
                            "checkout, so the changed scope cannot be established")
-        return scope
+        return _finish()
     if not test_map.get("ok"):
         scope["reason"] = f"test-location mapping unavailable: {test_map.get('error')}"
-        return scope
+        return _finish()
 
     ok, out, err = _git(repo_root, "diff", "--name-only", "-z",
                         f"{baseline_sha}..HEAD")
     if not ok:
         scope["reason"] = f"git diff against the baseline failed: {err}"
-        return scope
+        return _finish()
     changed = set(_nul_fields(out))
 
     if include_worktree:
         ok, status, err = _git(repo_root, "status", "--porcelain", "-z")
         if not ok:
             scope["reason"] = f"working-tree status unavailable: {err}"
-            return scope
+            return _finish()
         changed.update(_porcelain_paths(status))
 
     scope["determinable"] = True
@@ -610,14 +847,14 @@ def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=
     scope["documentation_only"] = bool(classified) and all(
         c["documentation"] for c in classified
     )
-    scope["impact_fully_determined"] = not undetermined
+    scope["component_ownership_resolved"] = not undetermined
     if undetermined:
         scope["reason"] = (
             f"{len(undetermined)} changed file(s) have no derivable owning "
             "component, so their impact cannot be established; broader "
             "verification is required and no evidence may be reused"
         )
-    return scope
+    return _finish()
 
 
 # ── evidence candidates, read from existing records ──────────────────────
@@ -796,12 +1033,21 @@ def _sha_in(text):
 
 # ── validity classification (card section 3) ─────────────────────────────
 
-def classify_evidence(items, scope, repo_root=None):
+def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
     """Apply the five reuse conditions to each candidate, and report which
-    one failed. Returns (reusable, invalidated)."""
+    one failed. Returns (reusable, invalidated).
+
+    Condition 4 has two independent halves and both must hold (card
+    XDEV-VERIFY-01A, finding 2): the changed files' owning components must be
+    resolved, AND the item's covered components must be established as
+    unaffected. Structural non-overlap answers only the first half; it is
+    reported as what it is and never as the second."""
     repo_root = repo_root or REPO_ROOT
     changed_components = set(scope.get("components") or {})
-    impact_ok = bool(scope.get("determinable")) and bool(scope.get("impact_fully_determined"))
+    ownership_ok = (bool(scope.get("determinable"))
+                    and bool(scope.get("component_ownership_resolved")))
+    dep = scope.get("dependency_impact") or {}
+    dep_entries = (dep_evidence or {}).get("entries") or []
     active_labels = set(scope.get("security_labels") or [])
 
     reusable, invalidated = [], []
@@ -834,7 +1080,7 @@ def classify_evidence(items, scope, repo_root=None):
         })
 
         covered = item.get("covered_components")
-        if not impact_ok:
+        if not ownership_ok:
             cond4_ok = False
             cond4_detail = (scope.get("reason") or
                             "the changed scope could not be fully established")
@@ -843,10 +1089,28 @@ def classify_evidence(items, scope, repo_root=None):
             cond4_detail = (item.get("coverage_note") or
                             "what this result covers cannot be established")
         else:
+            changed_list = sorted(changed_components)
             overlap = sorted(set(covered) & changed_components)
-            cond4_ok = not overlap
-            cond4_detail = (f"covers {covered}; this task changes {sorted(changed_components)}"
-                            + (f" — overlap {overlap}" if overlap else " — no overlap"))
+            prefix = f"covers {covered}; this task changes {changed_list}"
+            if overlap:
+                cond4_ok, cond4_detail = False, f"{prefix} — overlap {overlap}"
+            elif dep.get("established"):
+                cond4_ok = True
+                cond4_detail = f"{prefix} — no overlap, and {dep.get('basis')}"
+            else:
+                recorded, why = independence_from_record(
+                    covered, changed_components, dep_entries, repo_root)
+                if recorded:
+                    cond4_ok, cond4_detail = True, f"{prefix} — no overlap, and {why}"
+                else:
+                    # THE CORRECTION (card XDEV-VERIFY-01A, finding 2). Absence
+                    # of overlap in a directory-derived component map is not
+                    # evidence of independence, so it does not carry reuse.
+                    cond4_ok = False
+                    cond4_detail = (
+                        f"{prefix} — no overlap, but non-overlap is not proof "
+                        f"that this task leaves {covered} unaffected: "
+                        + (dep.get("basis") or _STRUCTURE_IS_NOT_DEPENDENCY_PROOF))
         checks.append({
             "condition": 4,
             "rule": "this task does not change the behaviour or dependencies covered",
@@ -914,7 +1178,10 @@ def required_new_evidence(scope, test_map):
                     + (" ..." if len(entry["files"]) > 8 else "")),
             "reuse_permitted": False,
             "basis": ("test-location mapping derived from the repository's own "
-                      "layout (git ls-files), not a maintained registry"),
+                      "layout (git ls-files), not a maintained registry. It "
+                      "names the tests that live with the changed files; it "
+                      "does NOT establish which other components depend on "
+                      "them — see dependency_impact"),
             "security_labels": entry["security_labels"],
         })
 
@@ -925,6 +1192,15 @@ def required_new_evidence(scope, test_map):
             + ", ".join(scope["undetermined_files"][:8])
             + (" ..." if scope.get("undetermined_truncated") else "")
         )
+
+    # Card XDEV-VERIFY-01A, finding 2: ownership fully resolved still leaves
+    # "which other components does this affect" unanswered. Widen rather than
+    # let the component list read as the complete affected set. (Unreachable
+    # when ownership is unresolved — that case widened immediately above.)
+    dep = scope.get("dependency_impact") or {}
+    if scope.get("component_ownership_resolved") and not dep.get("established"):
+        _repo_wide(dep.get("basis") or
+                   "cross-component dependency impact is not established")
 
     for label in scope.get("security_labels") or []:
         paths = sorted({s["path"] for s in scope["security_sensitive"]
@@ -1072,12 +1348,15 @@ def build_plan(conn, *, task=None, repo_root=None, include_worktree=True,
     dev_conn = dev_conn or conn
     test_map = derive_test_map(repo_root)
     baseline = accepted_baseline(conn)
+    dep_evidence = recorded_dependency_evidence(baseline)
     git_state = observed_git(repo_root, include_remote=include_remote)
     scope = changed_scope(baseline.get("accepted_baseline_sha"), repo_root=repo_root,
-                          include_worktree=include_worktree, test_map=test_map)
+                          include_worktree=include_worktree, test_map=test_map,
+                          dep_evidence=dep_evidence)
     candidates = evidence_candidates(conn, task, baseline, test_map,
                                       repo_root=repo_root, dev_conn=dev_conn)
-    reusable, invalidated = classify_evidence(candidates, scope, repo_root=repo_root)
+    reusable, invalidated = classify_evidence(candidates, scope, repo_root=repo_root,
+                                               dep_evidence=dep_evidence)
 
     limitations = []
     if not test_map.get("ok"):
@@ -1094,8 +1373,16 @@ def build_plan(conn, *, task=None, repo_root=None, include_worktree=True,
         limitations.append(f"git state unavailable: {git_state.get('error')}")
     if not scope.get("determinable"):
         limitations.append(f"changed scope not determinable: {scope.get('reason')}")
-    elif not scope.get("impact_fully_determined"):
+    elif not scope.get("component_ownership_resolved"):
         limitations.append(scope.get("reason"))
+    elif not (scope.get("dependency_impact") or {}).get("established"):
+        # Reported, never silently absorbed: the plan is narrower than the
+        # truth it can establish, and the reader is told which part is open.
+        limitations.append((scope.get("dependency_impact") or {}).get("basis"))
+    for ignored in dep_evidence.get("ignored") or []:
+        limitations.append(
+            f"a recorded dependency-evidence entry was ignored ({ignored['why']}): "
+            f"{ignored['entry']}")
     if not include_remote:
         limitations.append(
             "push confirmation was NOT performed by this plan (no network call). "
@@ -1171,7 +1458,15 @@ def review_handoff(conn, *, task=None, repo_root=None, question=None,
         "changed_files": scope.get("changed_files"),
         "changed_file_count": scope.get("changed_file_count"),
         "changed_files_truncated": scope.get("changed_files_truncated"),
-        "components_and_dependencies": sorted(scope.get("components") or {}),
+        # Card section 9 asks for "components and dependencies affected". Only
+        # the first half is derivable here, so it is reported as the first half
+        # and the second is reported as an explicit state rather than implied
+        # by a list that cannot contain it (card XDEV-VERIFY-01A, finding 2).
+        "changed_components": sorted(scope.get("components") or {}),
+        "dependency_impact": (scope.get("dependency_impact") or {}).get("state"),
+        "dependency_impact_established":
+            (scope.get("dependency_impact") or {}).get("established"),
+        "dependency_impact_basis": (scope.get("dependency_impact") or {}).get("basis"),
         "undetermined_impact_files": scope.get("undetermined_files"),
         "required_new_evidence": plan["required_new_evidence"],
         "reused_evidence": [
@@ -1224,9 +1519,13 @@ def render_return_packet(handoff, *, status=None, next_action=None, what_changed
     if what_changed:
         lines.append(f"   {what_changed}")
     n = g.get("changed_file_count") or 0
-    comps = g.get("components_and_dependencies") or []
-    lines.append(f"   {n} file(s) across {len(comps)} component(s): "
+    comps = g.get("changed_components") or []
+    lines.append(f"   {n} file(s) across {len(comps)} changed component(s): "
                  f"{', '.join(comps) if comps else 'no component resolved'}")
+    lines.append(f"   cross-component dependency impact: {g.get('dependency_impact')}"
+                 + ("" if g.get("dependency_impact_established")
+                    else " — the changed components are NOT established as the "
+                         "complete affected set"))
     if g.get("undetermined_impact_files"):
         lines.append(f"   impact undetermined for: "
                      f"{', '.join(g['undetermined_impact_files'][:6])}")

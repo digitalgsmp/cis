@@ -359,7 +359,8 @@ def _cmd_verification_plan(a):
 
     Exit code carries the one fact a script most needs: 0 when the plan is
     complete and trustworthy, 1 when something about it could not be
-    established (no accepted baseline, undetermined impact, unreadable git).
+    established (no accepted baseline, a changed file with no derivable owner,
+    cross-component dependency impact not established, unreadable git).
     A nonzero exit here is not a failure of the work — it means verification
     must be broader than the minimum."""
     conn = cs.connect(a.db)

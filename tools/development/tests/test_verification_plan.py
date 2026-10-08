@@ -203,12 +203,224 @@ def test_scenario_b_changed_component_invalidates_only_its_own_evidence():
               any("condition 4" in i["invalidation_reason"]
                   for i in plan["invalidated_evidence"] if i["name"] == "test_alpha.py"),
               [i["invalidation_reason"] for i in plan["invalidated_evidence"]])
-        check("B: the UNAFFECTED component's evidence is still reused — a changed "
-              "SHA does not invalidate everything",
-              names(plan["reusable_evidence"]) == ["test_beta.py"],
+        # CORRECTED BY CARD XDEV-VERIFY-01A, FINDING 2. The first version of
+        # this scenario asserted that a structurally non-overlapping
+        # component's evidence "is still reused". That treated the
+        # directory-derived component map as proof that nothing else depends
+        # on the changed component, which it cannot be. Reuse on structural
+        # non-overlap alone is now withheld; see the cross-component
+        # regression tests below for the dependency this would have missed.
+        check("B: a non-overlapping component's evidence is NOT reused on "
+              "structural non-overlap alone",
+              names(plan["reusable_evidence"]) == [],
               names(plan["reusable_evidence"]))
-        check("B: the unaffected component's suite is NOT required",
-              "tools/beta" not in required_scopes(plan), required_scopes(plan))
+        check("B: and the refusal says why — non-overlap is not proof of "
+              "independence",
+              any("not proof" in i["invalidation_reason"]
+                  for i in plan["invalidated_evidence"] if i["name"] == "test_beta.py"),
+              [i["invalidation_reason"] for i in plan["invalidated_evidence"]])
+        check("B: no narrower per-component scope is invented for the "
+              "unaffected component; the widening is repository-wide",
+              "tools/beta" not in required_scopes(plan) and
+              "repository" in required_scopes(plan), required_scopes(plan))
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+# ── cross-component dependencies (card XDEV-VERIFY-01A, finding 2) ───────
+#
+# The structural test map answers "which tests live with this file". These
+# cases cover the question it cannot answer — "which OTHER components does
+# this change affect" — and assert the module never reports the first as the
+# second. The fixture makes the dependency real: tools/beta imports
+# tools.alpha, exactly as tools/state/recovery_packet.py imports
+# tools/development in the live repository.
+
+def make_repo_with_cross_component_dependency():
+    root, _ = make_repo()
+    sha = commit(root, {
+        "tools/beta/core.py": "from tools.alpha.core import ALPHA\n\nBETA = ALPHA + 1\n",
+    }, "beta depends on alpha")
+    return root, sha
+
+
+def test_structural_non_overlap_is_not_treated_as_dependency_proof():
+    """Changing alpha invalidates beta's evidence too, because nothing here
+    can establish that beta does not depend on alpha — and in this fixture it
+    does. The old behaviour reused beta's result on non-overlap alone."""
+    root, base = make_repo_with_cross_component_dependency()
+    db, conn = make_spine(base)
+    try:
+        commit(root, {"tools/alpha/core.py": "ALPHA = 99\n"}, "change alpha")
+        plan = plan_for(root, conn, task="T")
+        scope = plan["changed_scope"]
+        check("every changed file's owner resolves, and that alone does NOT "
+              "make impact fully determined",
+              scope["component_ownership_resolved"] and
+              not scope["impact_fully_determined"] and
+              scope["dependency_impact"]["state"] == "UNDETERMINED",
+              scope["dependency_impact"])
+        check("the basis names the actual limit of the structural mapping",
+              "not which other components depend on it"
+              in scope["dependency_impact"]["basis"],
+              scope["dependency_impact"]["basis"])
+        check("evidence for the component that really does depend on the "
+              "changed one is NOT reused",
+              "test_beta.py" not in names(plan["reusable_evidence"]) and
+              "test_beta.py" in names(plan["invalidated_evidence"]),
+              (names(plan["reusable_evidence"]),
+               names(plan["invalidated_evidence"])))
+        check("the invalidation cites condition 4 and says non-overlap is not "
+              "proof",
+              any("condition 4" in i["invalidation_reason"] and
+                  "not proof" in i["invalidation_reason"]
+                  for i in plan["invalidated_evidence"] if i["name"] == "test_beta.py"),
+              [i["invalidation_reason"] for i in plan["invalidated_evidence"]])
+        check("verification widens to the repository-wide suites instead",
+              "repository" in required_scopes(plan) and
+              any("dependency impact" in r["why"]
+                  for r in plan["required_new_evidence"]),
+              [(r["scope"], r["why"][:60]) for r in plan["required_new_evidence"]])
+        check("and the uncertainty is reported in limitations, not implied by "
+              "a narrower plan",
+              any("dependency impact is NOT established" in l
+                  for l in plan["limitations"]), plan["limitations"])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_dependency_impact_is_established_only_where_it_actually_can_be():
+    """The two cases where the answer is genuinely knowable keep their reuse:
+    nothing changed, and a change no component can depend on."""
+    root, base = make_repo_with_cross_component_dependency()
+    db, conn = make_spine(base)
+    try:
+        plan = plan_for(root, conn, task="T")
+        check("no change at all: dependency impact is NO_CHANGE and evidence "
+              "is still reusable",
+              plan["changed_scope"]["dependency_impact"]["state"] == "NO_CHANGE" and
+              plan["changed_scope"]["impact_fully_determined"] and
+              names(plan["reusable_evidence"]) == ["test_alpha.py", "test_beta.py"],
+              (plan["changed_scope"]["dependency_impact"]["state"],
+               names(plan["reusable_evidence"])))
+
+        commit(root, {"docs/NOTES.md": "prose\n"}, "docs only")
+        plan = plan_for(root, conn, task="T")
+        check("documentation only: NO_EXECUTABLE_CHANGE, because prose is not "
+              "imported — reuse is preserved where its validity holds",
+              plan["changed_scope"]["dependency_impact"]["state"]
+              == "NO_EXECUTABLE_CHANGE" and
+              names(plan["reusable_evidence"]) == ["test_alpha.py", "test_beta.py"] and
+              required_scopes(plan) == [],
+              (plan["changed_scope"]["dependency_impact"],
+               names(plan["reusable_evidence"]), required_scopes(plan)))
+
+        commit(root, {"tools/beta/settings.yaml": "a: 2\n"}, "component config")
+        plan = plan_for(root, conn, task="T")
+        check("a .yaml inside a component is NOT documentation: its owner "
+              "resolves, dependency impact is UNDETERMINED, and the "
+              "non-overlapping component's evidence is not reused",
+              plan["changed_scope"]["component_ownership_resolved"] and
+              plan["changed_scope"]["dependency_impact"]["state"] == "UNDETERMINED" and
+              names(plan["reusable_evidence"]) == [],
+              (plan["changed_scope"]["dependency_impact"]["state"],
+               names(plan["reusable_evidence"])))
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_recorded_dependency_evidence_is_used_when_it_exists():
+    """"Use existing dependency evidence if available": a complete entry in
+    the existing checkpoint record carries reuse; an incomplete one is ignored
+    and reported, never half-applied. Nothing writes this key today, which is
+    why the normal answer is UNDETERMINED."""
+    root, base = make_repo_with_cross_component_dependency()
+    db, conn = make_spine(base)
+    try:
+        commit(root, {"tools/alpha/core.py": "ALPHA = 7\n"}, "change alpha")
+
+        def _with_dependency_evidence(entries):
+            row = conn.execute(
+                "SELECT id, value FROM project_state WHERE key='external_dev_checkpoint' "
+                "ORDER BY id DESC LIMIT 1").fetchone()
+            packet = json.loads(row["value"])
+            packet[vplan.DEPENDENCY_EVIDENCE_KEY] = entries
+            conn.execute("UPDATE project_state SET value=? WHERE id=?",
+                         (json.dumps(packet), row["id"]))
+            return plan_for(root, conn, task="T")
+
+        plan = _with_dependency_evidence([{
+            "component": "tools/beta",
+            "independent_of": ["tools/alpha"],
+            "verified_at_sha": base,
+            "source": "recorded by the independent reviewer at this SHA",
+        }])
+        check("a complete recorded entry establishes independence and carries "
+              "reuse for the component it names",
+              names(plan["reusable_evidence"]) == ["test_beta.py"],
+              (names(plan["reusable_evidence"]),
+               [i["invalidation_reason"] for i in plan["invalidated_evidence"]]))
+        check("the reuse basis names the record and the SHA it was established "
+              "at, rather than asserting independence itself",
+              any("recorded dependency evidence" in (i.get("reuse_basis") or "") and
+                  base in (i.get("reuse_basis") or "")
+                  for i in plan["reusable_evidence"]),
+              [i.get("reuse_basis") for i in plan["reusable_evidence"]])
+        check("the changed component's own evidence is still invalidated",
+              "test_alpha.py" in names(plan["invalidated_evidence"]),
+              names(plan["invalidated_evidence"]))
+
+        plan = _with_dependency_evidence([{
+            "component": "tools/beta",
+            "independent_of": ["tools/alpha"],
+            "verified_at_sha": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        }])
+        check("an entry naming a SHA this checkout cannot resolve establishes "
+              "nothing",
+              plan["reusable_evidence"] == [], names(plan["reusable_evidence"]))
+
+        plan = _with_dependency_evidence([{"component": "tools/beta"}])
+        check("an incomplete entry is ignored AND reported, never "
+              "half-applied",
+              plan["reusable_evidence"] == [] and
+              any("dependency-evidence entry was ignored" in l
+                  for l in plan["limitations"]), plan["limitations"])
+
+        plan = _with_dependency_evidence([{
+            "component": "tools/beta",
+            "independent_of": ["tools/gamma"],   # not the changed component
+            "verified_at_sha": base, "source": "partial",
+        }])
+        check("an entry that does not cover every changed component "
+              "establishes nothing",
+              plan["reusable_evidence"] == [], names(plan["reusable_evidence"]))
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_return_packet_states_dependency_uncertainty():
+    """The short packet a reviewer reads must not present the changed
+    components as the complete affected set."""
+    root, base = make_repo_with_cross_component_dependency()
+    db, conn = make_spine(base)
+    try:
+        commit(root, {"tools/alpha/core.py": "ALPHA = 11\n"}, "change alpha")
+        handoff = vplan.review_handoff(conn, task="T", repo_root=root)
+        text = vplan.render_return_packet(handoff, status="AWAITING REVIEW")
+        check("the return packet prints the dependency-impact state and says "
+              "the changed components are not established as complete",
+              "cross-component dependency impact: UNDETERMINED" in text and
+              "NOT established as the complete affected set" in text, text[:900])
+        check("and it reuses nothing while that is true",
+              "none reused" in text, text[:900])
     finally:
         conn.close()
         shutil.rmtree(root, ignore_errors=True)
@@ -229,6 +441,11 @@ def test_scenario_c_unknown_impact_never_assumes_validity():
               scope["undetermined_files"] == ["loose_helper.py"], scope)
         check("C: impact_fully_determined is False",
               not scope["impact_fully_determined"], scope)
+        check("C: and dependency impact is NOT_DETERMINABLE, not merely "
+              "unmentioned, while the changed scope has an unknown in it",
+              not scope["component_ownership_resolved"] and
+              scope["dependency_impact"]["state"] == "NOT_DETERMINABLE",
+              scope["dependency_impact"])
         check("C: NOTHING is reused when impact cannot be established",
               plan["reusable_evidence"] == [],
               names(plan["reusable_evidence"]))
@@ -764,13 +981,25 @@ def test_review_handoff_identifies_everything_section_nine_requires():
                                         question="Is the migration reversible?")
         required = [
             "pushed_sha", "accepted_baseline_sha", "changed_files",
-            "components_and_dependencies", "required_new_evidence",
+            # Card section 9's "components and dependencies affected" is
+            # carried as the two answers it actually is: the derivable changed
+            # components, plus an explicit dependency-impact state. A single
+            # list named for both would claim the half that is not derivable
+            # (card XDEV-VERIFY-01A, finding 2).
+            "changed_components", "dependency_impact",
+            "dependency_impact_established", "dependency_impact_basis",
+            "required_new_evidence",
             "reused_evidence", "mandatory_gates", "security_sensitive_changes",
             "question_requiring_independent_judgment",
         ]
         missing = [k for k in required if k not in handoff]
         check("section 9: the handoff carries every field the card enumerates",
               not missing, missing)
+        check("section 9: no field claims the changed components are the "
+              "complete set of affected dependencies",
+              "components_and_dependencies" not in handoff and
+              handoff["dependency_impact_established"] is False,
+              sorted(handoff))
         check("section 9: security-sensitive changes are called out",
               handoff["security_labels"] and handoff["security_sensitive_changes"],
               handoff["security_labels"])
@@ -792,11 +1021,15 @@ def test_return_packet_has_the_eight_sections_and_stays_short():
     root, base = make_repo()
     db, conn = make_spine(base)
     try:
-        commit(root, {"tools/alpha/core.py": "ALPHA = 5\n"}, "alpha")
+        # A documentation change, so there IS reused evidence to render by
+        # reference — which is what this test is about. The code-change
+        # rendering (nothing reusable, dependency impact undetermined) is
+        # covered by test_return_packet_states_dependency_uncertainty.
+        commit(root, {"docs/NOTES.md": "revised\n"}, "docs")
         handoff = vplan.review_handoff(conn, task="T", repo_root=root)
         text = vplan.render_return_packet(
             handoff, status="IMPLEMENTED, PUSHED, AWAITING REVIEW",
-            what_changed="one constant in tools/alpha",
+            what_changed="one line in docs/NOTES.md",
             next_action="independent review of the pushed SHA")
         headings = ["1. STATUS", "2. SHAs", "3. WHAT CHANGED",
                     "4. NEW VERIFICATION REQUIRED", "5. REUSED EVIDENCE",
@@ -901,6 +1134,10 @@ def run():
     test_test_map_is_derived_not_registered()
     test_scenario_a_documentation_change_triggers_no_unrelated_tests()
     test_scenario_b_changed_component_invalidates_only_its_own_evidence()
+    test_structural_non_overlap_is_not_treated_as_dependency_proof()
+    test_dependency_impact_is_established_only_where_it_actually_can_be()
+    test_recorded_dependency_evidence_is_used_when_it_exists()
+    test_return_packet_states_dependency_uncertainty()
     test_scenario_c_unknown_impact_never_assumes_validity()
     test_scenario_c_unresolvable_baseline_blocks_all_reuse()
     test_no_baseline_at_all_requires_full_verification()
