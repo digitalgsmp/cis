@@ -90,8 +90,16 @@ CARD_01_REVIEWED_CANONICAL_STATE_SHA256 = (
 # authoritative current-state view and deliberately stopped duplicating such
 # fields itself (CARD_02_REVIEW_CORRECTION), which is why the field landed
 # here rather than in a second copy inside the HCP projection.
+# XDEV-VERIFY-01 follow-up, same justification: the section's first version
+# labeled the checkpoint ROW's lifecycle_state as `accepted_baseline_lifecycle`,
+# so a row appended for an unreviewed push rendered as
+# "accepted_baseline_lifecycle: PUSHED_AWAITING_INDEPENDENT_REVIEW" — inviting
+# exactly the misreading the section exists to prevent. Renamed to
+# checkpoint_lifecycle_state / checkpoint_row / checkpoint_recorded_at, with
+# accepted_baseline_independently_verified added beside the SHA. Field renames
+# only; no behaviour, cap or authority statement changed.
 R1_REVIEWED_RECOVERY_PACKET_SHA256 = (
-    "502553e6067f4c1cac284b9e9a6635349651cc820ae4e4d028a31513bb85d45f"
+    "94bbd07223c51875baa9dc7dc4c67e588c74ee0c3405332b1c71e6f14a44bcfb"
 )
 
 results = []

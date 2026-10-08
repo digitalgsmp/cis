@@ -506,6 +506,11 @@ def test_scenario_g_recovery_path_supplies_baseline_and_pending_review():
           isinstance(vb, dict) and "accepted_baseline_sha" in vb, vb)
     check("G: it names the accepted baseline SHA from the checkpoint authority",
           bool(vb.get("accepted_baseline_sha")), vb.get("accepted_baseline_sha"))
+    check("G: the checkpoint ROW's lifecycle is not labeled as the accepted "
+          "baseline's — a row appended for an unreviewed push must not read as "
+          "the accepted baseline being unaccepted",
+          "accepted_baseline_lifecycle" not in vb and
+          "checkpoint_lifecycle_state" in vb, sorted(vb))
     check("G: it states the independent-review state explicitly",
           vb.get("independent_review_state") in (
               "ACCEPTED_AT_THIS_COMMIT", "PENDING_INDEPENDENT_REVIEW",

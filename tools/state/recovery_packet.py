@@ -191,10 +191,19 @@ def get_verification_baseline(db_path=None):
                   "external_dev_checkpoint, ADR-XDEV-001). Everything derived "
                   "from the worktree is observed at generation time."),
         "accepted_baseline_sha": baseline.get("accepted_baseline_sha"),
-        "accepted_baseline_lifecycle": baseline.get("lifecycle_state"),
-        "accepted_baseline_recorded_at": baseline.get("recorded_at"),
-        "accepted_baseline_row": baseline.get("row_id"),
-        "accepted_baseline_superseded": baseline.get("superseded"),
+        # Named for what it actually is. The checkpoint row's lifecycle_state
+        # describes the ROW — the latest push it records — not the accepted
+        # baseline SHA beside it. The first version of this section called it
+        # `accepted_baseline_lifecycle`, and the moment a row was appended for
+        # an unreviewed push it read "accepted_baseline_lifecycle:
+        # PUSHED_AWAITING_INDEPENDENT_REVIEW", inviting a recovering reader to
+        # conclude the accepted baseline was not accepted. That is the precise
+        # misreading this section exists to prevent.
+        "checkpoint_lifecycle_state": baseline.get("lifecycle_state"),
+        "checkpoint_recorded_at": baseline.get("recorded_at"),
+        "checkpoint_row": baseline.get("row_id"),
+        "checkpoint_row_superseded": baseline.get("superseded"),
+        "accepted_baseline_independently_verified": baseline.get("independently_verified"),
         "verification_source": baseline.get("verification_source"),
         "evidence_at_accepted_baseline": baseline.get("evidence_at_this_sha"),
         "observed_head": git_state.get("head"),
