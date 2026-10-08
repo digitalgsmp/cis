@@ -487,6 +487,19 @@ def external_checkpoint(conn):
         "latest_pushed_sha": pushed,
         "latest_remote_verified_sha": verified,
         "pushed_sha_is_independently_verified": bool(pushed) and pushed == verified,
+        # XDEV-VERIFY-01: the checkpoint is the ACCEPTED baseline that
+        # incremental verification reuses evidence against, and the screen
+        # that shows a checkpoint should say outright whether a review is
+        # still outstanding rather than leaving a reader to compare two
+        # SHAs. Still a presentation field computed per request; nothing is
+        # persisted and no acceptance is ever inferred here (ADR-XDEV-001 —
+        # only the independent reviewer can establish that).
+        "accepted_baseline_sha": verified,
+        "independent_review_state": (
+            "NO_CHECKPOINT_SHA" if not pushed else
+            "ACCEPTED_AT_THIS_COMMIT" if pushed == verified else
+            "PENDING_INDEPENDENT_REVIEW"
+        ),
         "remote_review_required": packet.get("remote_review_required"),
         "independently_verified": packet.get("independently_verified"),
         "remote_ref": packet.get("remote_ref"),

@@ -1,7 +1,87 @@
 # Files Changed Recently
-Generated: 2026-10-07 19:26 UTC | Run: run-4b6fff3c56e4
+Generated: 2026-10-08 00:41 UTC | Run: run-c4706f999087
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 8ca190a recovery: durably preserve the KB recovery mechanism and the architecture phase handoff
+
+## .gitignore 
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## config/kb_source_policy.yaml 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/INDEPENDENT_EXTERNAL_REVIEW_AND_PHASE_HANDOFF.md 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/KB_SOURCE_COVERAGE_AND_DEVELOPMENT_HISTORY_RECOVERY_REPORT.md 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/README.md 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/SOURCE_EVIDENCE_MAP.md 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/hnsw_recall_measurement.txt 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/recall_probe.py 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/retrieval_probe.py 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/retrieval_proof.txt 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/secret_scan.txt 
+
+## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/test_summary.md 
+
+## enforcement/mwl-proof-v2/gates/gate_kb_source_coverage.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## tools/development/discovery.py 
+
+## tools/ingest_claude_code_sessions.py 
+
+## tools/kb/__init__.py 
+
+## tools/kb/ingest_files.py 
+
+## tools/kb/install_session_end_hook.py 
+
+## tools/kb/session_end_ingest.sh 
+
+## tools/kb/source_policy.py 
+
+## tools/kb/tests/__init__.py 
+
+## tools/kb/tests/test_install_session_end_hook.py 
+
+## tools/kb/tests/test_kb_coverage.py 
 
 ## bf01df4 exports: report AGENTS.md size margin (WB1-D18) and correct the stale P0 credential state (WB1-D24)
 
@@ -592,39 +672,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/state/project_intelligence.py 
 
 ## tools/state/project_intelligence_vocabulary.json 
-
-## 1718e3b workbench: scope the no-WIASW-in-build-state check past the push checkpoint
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/tests/test_destination_architecture_api.py 

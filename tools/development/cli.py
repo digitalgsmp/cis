@@ -42,6 +42,30 @@
                                                 --resolution-result R --expect-revision N
     python3 -m tools.development.cli discoveries <task> [--all]   # unresolved-only by default
     python3 -m tools.development.cli closeout-check <task>   # exit 0 iff ready_to_close
+    python3 -m tools.development.cli verification-plan [--task T] [--no-worktree]
+                                                [--check-remote]
+                                                # XDEV-VERIFY-01: reusable evidence,
+                                                # required new evidence, mandatory
+                                                # gates, invalidated evidence and the
+                                                # independent-review requirement,
+                                                # derived read-only from the accepted
+                                                # baseline + git + existing records.
+                                                # Records nothing. Normally there is
+                                                # no need to run this by hand:
+                                                # `prepare` already carries the same
+                                                # plan.
+    python3 -m tools.development.cli review-handoff <task> [--question Q]
+                                                [--format {json,text}] [--status S]
+                                                [--what-changed W] [--next-action N]
+                                                [--check-remote]
+                                                # --format text is the short return
+                                                # packet; json is the reviewer
+                                                # handoff. Never asserts acceptance.
+
+XDEV-VERIFY-01: `prepare` (and therefore every handoff packet built from it)
+carries packet["verification_plan"] automatically, so ordinary development gets
+incremental verification and evidence reuse without anyone invoking a separate
+optimization command.
 
 --db defaults to $CIS_SPINE_PATH or the production spine for READS (prepare,
 check, events). Commands that WRITE dev_continuity_* (publish, reconcile,
@@ -62,6 +86,7 @@ from . import kb_read  # noqa: F401  (re-exported for callers/tests)
 from . import launcher
 from . import packet as packet_mod
 from . import transcript_import
+from . import verification_plan as vplan
 
 
 def _cmd_prepare(a):
@@ -327,6 +352,46 @@ def _cmd_handoff(a):
     return 0 if (result.get("dry_run") or result.get("launched")) else 1
 
 
+def _cmd_verification_plan(a):
+    """XDEV-VERIFY-01: print the incremental-verification plan. Read-only —
+    writes nothing, so it can be run as often as wanted and can never
+    produce a duplicate evidence record.
+
+    Exit code carries the one fact a script most needs: 0 when the plan is
+    complete and trustworthy, 1 when something about it could not be
+    established (no accepted baseline, undetermined impact, unreadable git).
+    A nonzero exit here is not a failure of the work — it means verification
+    must be broader than the minimum."""
+    conn = cs.connect(a.db)
+    plan = vplan.build_plan(
+        conn, task=a.task, include_worktree=not a.no_worktree,
+        include_remote=a.check_remote,
+    )
+    print(json.dumps(plan, indent=2, default=str))
+    return 0 if not plan["limitations"] else 1
+
+
+def _cmd_review_handoff(a):
+    """XDEV-VERIFY-01 sections 8/9: the independent-review handoff, and in
+    --format text the short return packet. Both are projections of existing
+    records; neither writes anything and neither can assert acceptance."""
+    conn = cs.connect(a.db)
+    handoff = vplan.review_handoff(
+        conn, task=a.task, question=a.question,
+        include_worktree=not a.no_worktree, include_remote=a.check_remote,
+    )
+    if a.format == "text":
+        print(vplan.render_return_packet(
+            handoff, status=a.status, next_action=a.next_action,
+            what_changed=a.what_changed,
+        ))
+    else:
+        print(json.dumps(handoff, indent=2, default=str))
+    # Nonzero while independent review is still outstanding, so no caller can
+    # treat a produced handoff as an accepted one.
+    return 0 if not handoff["independent_review_required"] else 1
+
+
 def _cmd_init_dev_schema(a):
     conn = cs.connect(a.db)
     try:
@@ -423,6 +488,38 @@ def build_parser():
                           "match exactly, binding the directive to a specific request.")
     sp.add_argument("--timeout", type=int, default=30)
     sp.set_defaults(func=_cmd_handoff)
+
+    sp = sub.add_parser(
+        "verification-plan",
+        help="XDEV-VERIFY-01: reusable evidence, required new evidence, mandatory "
+             "gates, invalidated evidence and the independent-review requirement. "
+             "Read-only; records nothing. `prepare` already carries this plan, so "
+             "ordinary development need not call it.",
+    )
+    sp.add_argument("--task", default=None,
+                     help="scope continuity-recorded evidence to one task")
+    sp.add_argument("--no-worktree", action="store_true",
+                     help="compare baseline..HEAD only, ignoring uncommitted changes")
+    sp.add_argument("--check-remote", action="store_true",
+                     help="also run git ls-remote (network) to confirm the push")
+    sp.set_defaults(func=_cmd_verification_plan)
+
+    sp = sub.add_parser(
+        "review-handoff",
+        help="XDEV-VERIFY-01 sections 8/9: the delta an independent reviewer needs "
+             "(--format json) or the short return packet (--format text). Never "
+             "asserts acceptance; exits nonzero while review is outstanding.",
+    )
+    sp.add_argument("task")
+    sp.add_argument("--question", default=None,
+                     help="the specific question requiring independent judgment")
+    sp.add_argument("--format", choices=["json", "text"], default="json")
+    sp.add_argument("--status", default=None, help="--format text: section 1")
+    sp.add_argument("--what-changed", default=None, help="--format text: section 3")
+    sp.add_argument("--next-action", default=None, help="--format text: section 8")
+    sp.add_argument("--no-worktree", action="store_true")
+    sp.add_argument("--check-remote", action="store_true")
+    sp.set_defaults(func=_cmd_review_handoff)
 
     sp = sub.add_parser("init-dev-schema")
     sp.add_argument("--allow-prod-init", action="store_true")

@@ -46,7 +46,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(REPO_ROOT))
 import canonical_state as cs  # noqa: E402
+from tools.development import continuity_store as _cstore  # noqa: E402
 from tools.development import process_identity as pident  # noqa: E402
+from tools.development import verification_plan as vplan  # noqa: E402
 
 _CAP = 25  # max list items kept per section before truncation is reported
 
@@ -150,6 +152,66 @@ def get_workbench_state():
     }
 
 
+def get_verification_baseline(db_path=None):
+    """The verification baseline and pending-review state, for the recovery
+    path (XDEV-VERIFY-01 Scenario G; ADR-XDEV-002's visibility requirement).
+
+    WHY HERE. After a fresh session or `/clear`, whoever picks the work up
+    must be told two things before they verify anything: which SHA was
+    independently ACCEPTED, and whether the current commit is still awaiting
+    review. Both already exist in `project_state.external_dev_checkpoint`,
+    but a rule that is persisted and never surfaced still depends on someone
+    thinking to go looking — which is exactly what ADR-XDEV-002 exists to
+    prevent. HCP_05 already names this generator as the authoritative
+    current-state view and deliberately stopped duplicating such fields
+    itself (CARD_02_REVIEW_CORRECTION), so this is the one place to put it
+    rather than a second copy in the HCP projection.
+
+    Read-only, like every other section here, and degrades to an explicit
+    error field rather than taking the packet down with it. It carries the
+    BASELINE half of the plan, not the plan: a recovering session's worktree
+    is whatever it happens to be, so required/reusable evidence must be
+    re-derived at the moment of work (`cli.py verification-plan`), never
+    read from a stale snapshot.
+    """
+    try:
+        conn = _cstore.connect(db_path)
+        try:
+            baseline = vplan.accepted_baseline(conn)
+            git_state = vplan.observed_git(str(REPO_ROOT))
+            review = vplan.independent_review_status(baseline, git_state)
+        finally:
+            conn.close()
+    except Exception as e:  # noqa: BLE001 — recovery must degrade, not raise
+        return {"error": f"{type(e).__name__}: {e}",
+                "effect": "no verification baseline is available; treat all "
+                          "evidence as unestablished and verify in full"}
+    return {
+        "_note": ("the accepted baseline is authoritative (project_state."
+                  "external_dev_checkpoint, ADR-XDEV-001). Everything derived "
+                  "from the worktree is observed at generation time."),
+        "accepted_baseline_sha": baseline.get("accepted_baseline_sha"),
+        "accepted_baseline_lifecycle": baseline.get("lifecycle_state"),
+        "accepted_baseline_recorded_at": baseline.get("recorded_at"),
+        "accepted_baseline_row": baseline.get("row_id"),
+        "accepted_baseline_superseded": baseline.get("superseded"),
+        "verification_source": baseline.get("verification_source"),
+        "evidence_at_accepted_baseline": baseline.get("evidence_at_this_sha"),
+        "observed_head": git_state.get("head"),
+        "observed_upstream_ref": git_state.get("upstream_ref"),
+        "observed_upstream_sha": git_state.get("upstream_sha"),
+        "independent_review_state": review.get("state"),
+        "independent_review_required": review.get("required"),
+        "independent_review_basis": review.get("basis"),
+        "may_claim_acceptance": False,
+        "acceptance_authority": review.get("acceptance_authority"),
+        "how_to_get_the_current_plan": (
+            "python3 -m tools.development.cli verification-plan --task <task> "
+            "— re-derives reusable evidence, required new evidence, mandatory "
+            "gates and invalidations against the live worktree. Read-only."),
+    }
+
+
 def build_recovery_packet(issue=None, db_path=None):
     if issue and issue not in ISSUE_AREAS:
         raise ValueError(f"unknown issue area {issue!r}; known: {sorted(ISSUE_AREAS)}")
@@ -182,6 +244,11 @@ def build_recovery_packet(issue=None, db_path=None):
             "dirty_file_count": state["observed_runtime_health"]["dirty_file_count"],
         },
         "workbench_state": get_workbench_state(),
+        # Always present regardless of focus: a recovering session that is
+        # told the project state but not the verification baseline will
+        # re-verify what is already accepted, or worse, treat its own push
+        # as accepted (XDEV-VERIFY-01; ADR-XDEV-002).
+        "verification_baseline": get_verification_baseline(db_path),
         "relevant_paths": {
             "spine_db": state["source"],
             "canonical_read_model": "tools/state/canonical_state.py",

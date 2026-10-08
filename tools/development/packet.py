@@ -22,6 +22,7 @@ import uuid
 from . import continuity_store as cs
 from . import kb_read
 from . import queue_refs
+from . import verification_plan as vplan
 
 
 def _sha256(text):
@@ -126,7 +127,8 @@ def _follow_queue_references(conn, body_md, kb_evidence, kb_provenance):
 
 
 def prepare_packet(conn, *, task, actor, concept_queries=None, kb_ids=None,
-                    kb_limit=8, dev_conn=None, follow_queue_references=True):
+                    kb_limit=8, dev_conn=None, follow_queue_references=True,
+                    include_verification_plan=True):
     """Build a packet for `task`.
 
     conn: connection to the DB holding queue_items/queue_item_events and
@@ -139,6 +141,15 @@ def prepare_packet(conn, *, task, actor, concept_queries=None, kb_ids=None,
     caller can disable it (e.g. a narrow re-check) but prepare_packet's
     normal contract is to follow the queue's own references, not only what
     the developer explicitly supplied.
+    include_verification_plan: XDEV-VERIFY-01 — on by default, and that
+    default is the whole mechanism. `prepare` is the first step of every
+    external-development task and the thing a handoff packet is built from,
+    so carrying verification_plan.build_plan() here is what makes evidence
+    reuse and incremental verification the SYSTEM's behaviour rather than
+    something Eric or an external model has to remember to ask for. It is
+    read-only and records nothing; a failure degrades to an explicit error
+    field, because a packet that silently omits the plan would read as
+    "nothing to verify".
     """
     dev_conn = dev_conn or conn
     concept_queries = concept_queries or []
@@ -199,6 +210,17 @@ def prepare_packet(conn, *, task, actor, concept_queries=None, kb_ids=None,
         for rid, r in sorted(kb_evidence.items())
     ]
 
+    if include_verification_plan:
+        try:
+            plan = vplan.build_plan(conn, task=task, dev_conn=dev_conn)
+        except Exception as e:  # noqa: BLE001 — see include_verification_plan
+            plan = {"plan_kind": vplan.PLAN_KIND, "ok": False,
+                    "error": f"{type(e).__name__}: {e}",
+                    "effect": "treat impact as undetermined and run broader "
+                              "verification; no evidence may be reused"}
+    else:
+        plan = None
+
     packet = {
         "packet_id": str(uuid.uuid4()),
         "task": task,
@@ -216,6 +238,7 @@ def prepare_packet(conn, *, task, actor, concept_queries=None, kb_ids=None,
             "unresolved": refs_unresolved,
         },
         "file_evidence": file_evidence,
+        "verification_plan": plan,
         "fingerprint": {
             "queue": queue_fp,
             "dev_latest_revision": dev_latest_revision,
@@ -238,6 +261,15 @@ def check_freshness(conn, packet, dev_conn=None):
     re-fetch-failed KB/file row is reported as kb_missing/kb_changed/
     file evidence missing-or-changed (NOT folded into "unchanged") — a
     failed read is not a freshness pass.
+
+    XDEV-VERIFY-01: `packet["verification_plan"]` is deliberately NOT bound
+    into the fingerprint and so is deliberately not compared here. It is a
+    derivation of live git + spine state, not a captured input: it changes
+    whenever the worktree does, by design, and binding it would make every
+    packet stale the moment a file was edited. The thing freshness is
+    protecting — the packet's INPUTS — is unaffected. Re-derive the plan
+    (`cli.py verification-plan`) rather than reading an old one; it records
+    nothing, so re-deriving is free.
     """
     if not packet.get("ok"):
         return {"stale": True, "reasons": ["packet itself was not ok at prepare time"]}

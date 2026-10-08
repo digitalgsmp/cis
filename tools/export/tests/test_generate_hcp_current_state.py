@@ -73,8 +73,25 @@ CARD_01_REVIEWED_CANONICAL_STATE_SHA256 = (
 #    current_focus/active_blockers passthrough so a packet-only reader can
 #    identify 4.32 even when queue_focus is truncated. See
 #    .../WB-RECOVERY-04-recovery-drill-closeout/correction-R1/completion.json.
+#
+# XDEV-VERIFY-01 updated this pin a third time, deliberately and for the same
+# class of reason as (2): a recovery packet that tells a fresh reader the
+# project state but not the VERIFICATION state leaves them to re-establish an
+# already-accepted baseline, or — the real hazard — to read their own pushed
+# commit as accepted. recovery_packet.py gained get_verification_baseline()
+# and one always-present "verification_baseline" section, carrying the
+# accepted baseline SHA and the pending-review state from the existing
+# project_state.external_dev_checkpoint authority. This is ADR-XDEV-002's
+# visibility requirement, which says in terms that a rule persisted and never
+# surfaced still depends on someone going looking. The addition is read-only,
+# writes nothing, degrades to an explicit error field, and sets
+# may_claim_acceptance permanently False; no existing section, cap or
+# authority statement was altered. HCP_05 already names this generator as the
+# authoritative current-state view and deliberately stopped duplicating such
+# fields itself (CARD_02_REVIEW_CORRECTION), which is why the field landed
+# here rather than in a second copy inside the HCP projection.
 R1_REVIEWED_RECOVERY_PACKET_SHA256 = (
-    "c0f9efebc9bcaf134ff953453f5c79c9f0ac6c1730e4a6e15dd2e557e449a83d"
+    "502553e6067f4c1cac284b9e9a6635349651cc820ae4e4d028a31513bb85d45f"
 )
 
 results = []
