@@ -1130,6 +1130,361 @@ def test_live_repository_observations():
         conn.close()
 
 
+# ── evidence currency (card XDEV-VERIFY-01D) ─────────────────────────────
+#
+# Condition 4 used to measure from the ACCEPTED BASELINE and never from the
+# evidence item's own tested_identity. These cases pin both directions that
+# omission failed in. The dangerous one is case 2/the live regression: with the
+# baseline advanced to the reviewed SHA the baseline delta is empty, dependency
+# impact reads NO_CHANGE, and evidence measured against an EARLIER
+# implementation was reported reusable for the new one.
+
+def _cond(item, n):
+    return next(c for c in item["validity_checks"] if c["condition"] == n)
+
+
+def test_currency_01_evidence_measured_at_the_reviewed_sha_stays_eligible():
+    """CASE 1. A result measured at the very state under review is the
+    strongest evidence there is — nothing has changed since it was taken. The
+    old rule invalidated it anyway, because its component appears in the
+    baseline delta."""
+    root, base = make_repo()
+    head = commit(root, {"tools/alpha/core.py": "ALPHA = 2\n"}, "change alpha")
+    db, conn = make_spine(base, pushed_sha=head, evidence="test_alpha.py 10/10")
+    try:
+        plan = plan_for(root, conn, task="T")
+        check("1: evidence measured at the reviewed SHA is reused",
+              "test_alpha.py" in names(plan["reusable_evidence"]),
+              (names(plan["reusable_evidence"]),
+               [i["invalidation_reason"] for i in plan["invalidated_evidence"]]))
+        item = next(i for i in plan["reusable_evidence"] if i["name"] == "test_alpha.py")
+        check("1: and the basis names the state it was measured at, not the baseline",
+              f"measured at {head}" in _cond(item, 4)["detail"],
+              _cond(item, 4)["detail"])
+        check("1: its currency reports nothing changed since the measurement",
+              item["evidence_currency"]["established"] is True and
+              item["evidence_currency"]["changed_since_measurement"] == [] and
+              item["evidence_currency"]["measured_at"] == head,
+              item["evidence_currency"])
+        check("1: reuse does NOT narrow what must be verified — the changed "
+              "component's suite is still required",
+              "tools/alpha" in required_scopes(plan), required_scopes(plan))
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_02_earlier_sha_evidence_is_invalidated_when_its_component_changed():
+    """CASE 2, the unsafe direction. Evidence measured BEFORE the change must
+    not carry, even when the accepted-baseline delta says nothing changed."""
+    root, base = make_repo()
+    head = commit(root, {"tools/alpha/core.py": "ALPHA = 2\n"}, "change alpha")
+    # The baseline has ADVANCED to the reviewed state, exactly as an acceptance
+    # does. The old rule then read NO_CHANGE and reused the stale result.
+    db, conn = make_spine(head, evidence="test_alpha.py 10/10 at " + base,
+                          pushed_sha=head)
+    try:
+        cs.publish_event(
+            conn, task="T", kind="verified_result", status="VERIFIED",
+            actor="claude_code", summary=f"test_alpha.py 10/10 PASS at {base}",
+            expected_prev_revision=0,
+        )
+        plan = plan_for(root, conn, task="T")
+        check("2: the accepted-baseline delta really is empty — the old rule's "
+              "reason for reusing stale evidence",
+              plan["changed_scope"]["changed_file_count"] == 0 and
+              plan["changed_scope"]["dependency_impact"]["state"] == "NO_CHANGE",
+              plan["changed_scope"]["dependency_impact"])
+        stale = [i for i in plan["invalidated_evidence"]
+                 if i["name"] == "test_alpha.py" and i["tested_identity"] == base]
+        check("2: evidence measured at the earlier implementation is NOT reused",
+              bool(stale) and "test_alpha.py" not in
+              [i["name"] for i in plan["reusable_evidence"]
+               if i["tested_identity"] == base],
+              (names(plan["reusable_evidence"]), len(stale)))
+        check("2: and condition 4 says the overlap is against what changed "
+              "SINCE the measurement",
+              all("condition 4" in i["invalidation_reason"] and
+                  f"measured at {base}" in i["invalidation_reason"] and
+                  "tools/alpha" in i["invalidation_reason"] for i in stale),
+              [i["invalidation_reason"] for i in stale])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_03_later_sha_evidence_is_not_reused_for_an_earlier_state():
+    """CASE 3. Evidence from a commit the reviewed state does not descend from
+    cannot be read as "what changed since"; it fails closed rather than
+    diffing two unrelated states."""
+    root, base = make_repo()
+    later = commit(root, {"tools/alpha/core.py": "ALPHA = 2\n"}, "later work")
+    _git(root, "reset", "--hard", base)  # HEAD is back at base; `later` is not an ancestor
+    db, conn = make_spine(base, pushed_sha=later, evidence="test_alpha.py 10/10")
+    try:
+        plan = plan_for(root, conn, task="T")
+        check("3: the reviewed state is base again, so the baseline delta is "
+              "empty — the old rule would have reused the later result",
+              plan["changed_scope"]["changed_file_count"] == 0,
+              plan["changed_scope"]["changed_file_count"])
+        bad = [i for i in plan["invalidated_evidence"] if i["name"] == "test_alpha.py"]
+        check("3: later-SHA evidence is not reused for the earlier state",
+              bool(bad) and "test_alpha.py" not in names(plan["reusable_evidence"]),
+              names(plan["reusable_evidence"]))
+        check("3: and the refusal says the measurement is not an ancestor",
+              all("not an ancestor" in _cond(i, 4)["detail"] for i in bad),
+              [_cond(i, 4)["detail"] for i in bad])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_04_absent_or_ambiguous_provenance_fails_closed():
+    """CASE 4. A documentation-only change leaves dependency impact ESTABLISHED
+    and nothing overlapping, so these items would all have been reused. They
+    are refused because their provenance does not say what they measured."""
+    root, base = make_repo()
+    second = commit(root, {"docs/NOTES.md": "n2\n"}, "docs only")
+    db, conn = make_spine(base)
+    try:
+        cs.publish_event(
+            conn, task="T", kind="verified_result", status="VERIFIED",
+            actor="claude_code", summary="test_alpha.py 10/10 PASS",  # no SHA at all
+            expected_prev_revision=0,
+        )
+        cs.publish_event(
+            conn, task="T", kind="verified_result", status="VERIFIED", actor="claude_code",
+            summary=f"test_beta.py 8/8 PASS at {base} and re-run at {second}",
+            expected_prev_revision=1,
+        )
+        plan = plan_for(root, conn, task="T")
+        check("4: the change is documentation only, so impact IS established — "
+              "nothing but provenance is refusing these",
+              plan["changed_scope"]["dependency_impact"]["state"]
+              == "NO_EXECUTABLE_CHANGE",
+              plan["changed_scope"]["dependency_impact"])
+        absent = [i for i in plan["invalidated_evidence"]
+                  if i["name"] == "test_alpha.py"
+                  and i["source"].startswith("dev_continuity_events")]
+        check("4a: absent provenance fails condition 4, not only condition 2",
+              bool(absent) and all(not _cond(i, 4)["ok"] and
+                                   "no tested commit identity" in _cond(i, 4)["detail"]
+                                   for i in absent),
+              [_cond(i, 4)["detail"] for i in absent])
+        ambig = [i for i in plan["invalidated_evidence"]
+                 if i["name"] == "test_beta.py"
+                 and i["source"].startswith("dev_continuity_events")]
+        check("4b: a record naming two distinct resolvable commits is ambiguous "
+              "and fails closed",
+              bool(ambig) and all(i["tested_identity_ambiguous"] is True and
+                                  "ambiguous" in _cond(i, 4)["detail"] for i in ambig),
+              [(i["tested_identity_candidates"], _cond(i, 4)["detail"]) for i in ambig])
+        # Only the continuity items are under test: the checkpoint row carries
+        # its own same-named evidence at `base`, which this documentation-only
+        # change legitimately leaves reusable (case 6).
+        check("4b: neither continuity item is reused",
+              not [i for i in plan["reusable_evidence"]
+                   if i["source"].startswith("dev_continuity_events")],
+              [(i["name"], i["source"]) for i in plan["reusable_evidence"]])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_04c_one_commit_named_twice_is_not_ambiguous():
+    """The guard on 4b. This repository's records routinely name one commit in
+    both short and long form in the same sentence. Counting those as two
+    commits would invent ambiguity and refuse valid evidence, so identity is
+    de-duplicated by RESOLVED commit, not by token text."""
+    root, base = make_repo()
+    commit(root, {"docs/NOTES.md": "n2\n"}, "docs only")
+    db, conn = make_spine(base)
+    try:
+        cs.publish_event(
+            conn, task="T", kind="verified_result", status="VERIFIED", actor="claude_code",
+            summary=f"test_beta.py 8/8 PASS at {base[:8]}, confirmed at {base}",
+            expected_prev_revision=0,
+        )
+        plan = plan_for(root, conn, task="T")
+        items = [i for i in plan["reusable_evidence"] + plan["invalidated_evidence"]
+                 if i["name"] == "test_beta.py"
+                 and i["source"].startswith("dev_continuity_events")]
+        check("4c: the same commit in two lengths resolves to ONE identity",
+              bool(items) and all(i["tested_identity_ambiguous"] is False and
+                                  len(i["tested_identity_candidates"]) == 1
+                                  for i in items),
+              [(i["tested_identity_candidates"], i["tested_identity_ambiguous"])
+               for i in items])
+        check("4c: and it is still reusable across the documentation-only change",
+              any(i["name"] == "test_beta.py" and
+                  i["source"].startswith("dev_continuity_events")
+                  for i in plan["reusable_evidence"]),
+              [i["invalidation_reason"] for i in plan["invalidated_evidence"]
+               if i["name"] == "test_beta.py"])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_05_unresolved_component_ownership_still_blocks_reuse():
+    """CASE 5. The scope-level ownership gate is untouched by this correction
+    and still refuses first: evidence measured at the reviewed SHA — eligible
+    on currency alone — is still invalidated while any changed file has no
+    owning component. This correction resolves no ownership gap."""
+    root, base = make_repo()
+    head = commit(root, {"new_loose.py": "Y = 1\n"}, "a file no component owns")
+    db, conn = make_spine(base, pushed_sha=head, evidence="test_alpha.py 10/10")
+    try:
+        plan = plan_for(root, conn, task="T")
+        scope = plan["changed_scope"]
+        check("5: ownership is unresolved and the file is named",
+              scope["component_ownership_resolved"] is False and
+              "new_loose.py" in scope["undetermined_files"], scope["undetermined_files"])
+        bad = [i for i in plan["invalidated_evidence"] if i["name"] == "test_alpha.py"]
+        check("5: evidence measured at the reviewed SHA is STILL not reused",
+              bool(bad) and names(plan["reusable_evidence"]) == [],
+              names(plan["reusable_evidence"]))
+        check("5: and the reason is the ownership gate, which precedes currency",
+              all("no derivable owning component" in _cond(i, 4)["detail"] and
+                  i["evidence_currency"] is None for i in bad),
+              [_cond(i, 4)["detail"] for i in bad])
+        check("5: verification widens to the repository-wide suites",
+              "repository" in required_scopes(plan), required_scopes(plan))
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_06_valid_unchanged_evidence_remains_reusable():
+    """CASE 6. The reuse the contract does establish is preserved: nothing
+    changed, and a change no component's behaviour can depend on."""
+    root, base = make_repo()
+    db, conn = make_spine(base)
+    try:
+        plan = plan_for(root, conn, task="T")
+        check("6: with nothing changed, component evidence is reused",
+              {"test_alpha.py", "test_beta.py"} <= set(names(plan["reusable_evidence"])),
+              (names(plan["reusable_evidence"]),
+               [i["invalidation_reason"] for i in plan["invalidated_evidence"]]))
+        commit(root, {"docs/NOTES.md": "changed prose\n"}, "docs only")
+        plan = plan_for(root, conn, task="T")
+        check("6: and a documentation-only change still carries it",
+              {"test_alpha.py", "test_beta.py"} <= set(names(plan["reusable_evidence"])),
+              (names(plan["reusable_evidence"]),
+               [i["invalidation_reason"] for i in plan["invalidated_evidence"]]))
+        check("6: mandatory gates are still never reused",
+              not [i for i in plan["reusable_evidence"] if i["kind"] == "gate"],
+              [i["name"] for i in plan["reusable_evidence"] if i["kind"] == "gate"])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_07_matching_sha_is_not_enough_when_the_worktree_moved():
+    """A matching SHA is not sufficient on its own. Uncommitted changes are
+    part of the state under verification, so evidence measured at HEAD with
+    relevant working-tree modifications is still refused."""
+    root, base = make_repo()
+    head = commit(root, {"tools/alpha/core.py": "ALPHA = 2\n"}, "change alpha")
+    db, conn = make_spine(base, pushed_sha=head, evidence="test_alpha.py 10/10")
+    try:
+        with open(os.path.join(root, "tools/alpha/core.py"), "w", encoding="utf-8") as f:
+            f.write("ALPHA = 3\n")  # uncommitted, same component
+        plan = plan_for(root, conn, task="T")
+        bad = [i for i in plan["invalidated_evidence"] if i["name"] == "test_alpha.py"]
+        check("7: evidence measured at HEAD is refused while the working tree "
+              "changes the component it covers",
+              bool(bad) and "test_alpha.py" not in names(plan["reusable_evidence"]),
+              names(plan["reusable_evidence"]))
+        check("7: and the refusal names the overlap, not the matching SHA",
+              all("tools/alpha" in _cond(i, 4)["detail"] and
+                  f"measured at {head}" in _cond(i, 4)["detail"] for i in bad),
+              [_cond(i, 4)["detail"] for i in bad])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
+def test_currency_08_live_regression_of_the_reported_unsafe_case():
+    """THE REPORTED CASE, asserted against the REAL repository, read-only.
+
+    A test_verification_plan.py result measured at 280723da was reported
+    reusable for b1a757a9, across three commits that rewrote
+    verification_plan.py itself. The assertion is written against the live
+    tree rather than a fixture, and it strengthens as HEAD advances: every
+    future commit leaves 280723da further behind.
+    """
+    measured_at = "280723da8d435b78153d31fe68f74cba5e7b9d13"
+    tm = vplan.derive_test_map()
+    if not tm.get("ok"):
+        check("8 live (read-only): test map available", False, tm.get("error"))
+        return
+    if not vplan._commit_exists(vplan.REPO_ROOT, measured_at):
+        check("8 live (read-only): 280723da is present in this checkout",
+              False, "commit not found; the regression cannot be asserted here")
+        return
+
+    changed_since = vplan.changed_scope(measured_at, include_worktree=False,
+                                         test_map=tm)
+    check("8 live (read-only): tools/development really did change after "
+          "280723da, so its evidence is genuinely stale",
+          "tools/development" in changed_since["components"],
+          sorted(changed_since["components"]))
+    check("8 live (read-only): and that delta's own ownership resolves, so the "
+          "refusal below cannot be the ownership gate in disguise",
+          changed_since["component_ownership_resolved"] is True,
+          changed_since["undetermined_files"])
+
+    # The state under verification is HEAD with nothing outstanding, which is
+    # the condition under which the old rule read NO_CHANGE and reused.
+    head = vplan._git(vplan.REPO_ROOT, "rev-parse", "HEAD")[1].strip()
+    scope = vplan.changed_scope(head, include_worktree=False, test_map=tm)
+    check("8 live (read-only): against HEAD the accepted-baseline delta is "
+          "empty and impact reads NO_CHANGE",
+          scope["changed_file_count"] == 0 and
+          scope["dependency_impact"]["state"] == "NO_CHANGE",
+          scope["dependency_impact"])
+
+    stale = {
+        "id": "regression:stale", "check_id": "test_verification_plan.py",
+        "kind": "test_suite", "name": "test_verification_plan.py",
+        "source": "card XDEV-VERIFY-01D live regression",
+        "authority": "implementing_developer", "is_independent_acceptance": False,
+        "tested_identity": measured_at, "tested_identity_ambiguous": False,
+        "tested_identity_candidates": [measured_at], "superseded": False,
+        "covered_components": ["tools/development"], "coverage_note": None,
+    }
+    current = dict(stale, id="regression:current", tested_identity=head,
+                   tested_identity_candidates=[head])
+    reusable, invalidated = vplan.classify_evidence(
+        [stale, current], scope, repo_root=vplan.REPO_ROOT, test_map=tm)
+
+    bad = [i for i in invalidated if i["id"] == "regression:stale"]
+    check("8 live (read-only): the 280723da result is NOT accepted as proof of "
+          "the implementation now under verification",
+          bool(bad) and "regression:stale" not in [i["id"] for i in reusable],
+          [i["id"] for i in reusable])
+    check("8 live (read-only): and the reason is the overlap since its own "
+          "measurement",
+          all("condition 4" in i["invalidation_reason"] and
+              f"measured at {measured_at}" in i["invalidation_reason"] and
+              "tools/development" in i["invalidation_reason"] for i in bad),
+          [i["invalidation_reason"][:200] for i in bad])
+    check("8 live (read-only): while a result measured at the state under "
+          "verification remains eligible",
+          "regression:current" in [i["id"] for i in reusable],
+          [i.get("invalidation_reason", "")[:160] for i in invalidated
+           if i["id"] == "regression:current"])
+
+
 def run():
     test_test_map_is_derived_not_registered()
     test_scenario_a_documentation_change_triggers_no_unrelated_tests()
@@ -1161,6 +1516,15 @@ def run():
     test_review_handoff_identifies_everything_section_nine_requires()
     test_return_packet_has_the_eight_sections_and_stays_short()
     test_cli_subcommands_work_and_exit_honestly()
+    test_currency_01_evidence_measured_at_the_reviewed_sha_stays_eligible()
+    test_currency_02_earlier_sha_evidence_is_invalidated_when_its_component_changed()
+    test_currency_03_later_sha_evidence_is_not_reused_for_an_earlier_state()
+    test_currency_04_absent_or_ambiguous_provenance_fails_closed()
+    test_currency_04c_one_commit_named_twice_is_not_ambiguous()
+    test_currency_05_unresolved_component_ownership_still_blocks_reuse()
+    test_currency_06_valid_unchanged_evidence_remains_reusable()
+    test_currency_07_matching_sha_is_not_enough_when_the_worktree_moved()
+    test_currency_08_live_regression_of_the_reported_unsafe_case()
     test_live_repository_observations()
 
     failures = [r for r in results if "FAIL" in r]

@@ -71,6 +71,20 @@ commit changes no behaviour any component can depend on, so component test
 evidence survives it. Executable change is the case where the honest answer
 is "the affected set is not known".
 
+AND CONDITION 4 IS MEASURED FROM THE EVIDENCE, NOT FROM THE BASELINE (card
+XDEV-VERIFY-01D). "Is this result still valid" is a question about what has
+changed since the result was MEASURED, so the delta condition 4 reads runs
+from the item's own `tested_identity` to the state under verification — HEAD
+plus the working tree. Anchoring it at the accepted baseline instead was a
+defect in both directions: it invalidated evidence measured at the very state
+under review, and — once the baseline advanced to that state — it reused
+evidence measured against EARLIER implementations as proof of the new one.
+The second direction was demonstrated against this module itself, so the
+regression is asserted on it. What is REQUIRED is still derived from the
+accepted-baseline scope, because the unit an independent reviewer accepts is
+the whole unaccepted delta (ADR-XDEV-001), not the increment since a
+developer's last test run. See the evidence-currency section below.
+
 WHY THIS IS NOT FOLDED INTO AN EXISTING MODULE. Three near misses, each
 rejected for a concrete reason:
   - `packet.py` binds and freshness-checks CONTEXT (queue row, KB rows, file
@@ -721,10 +735,44 @@ def _commit_exists(repo_root, sha):
     return ok
 
 
+def _resolve_commit(repo_root, sha):
+    """The full 40-character SHA for a commit-ish token, or None.
+
+    Needed to tell genuine ambiguity from mere abbreviation: this
+    repository's records routinely name one commit in both short and long
+    form in the same sentence ("pushed at 280723da ... 280723da8d43..."),
+    and counting those as two commits would invent ambiguity that is not
+    there. Resolution is what makes them one.
+    """
+    if not sha or not _SHA_RE.match(str(sha)):
+        return None
+    ok, out, _ = _git(repo_root, "rev-parse", "--verify", f"{sha}^{{commit}}")
+    if not ok:
+        return None
+    full = (out or "").strip()
+    return full or None
+
+
+def _is_ancestor(repo_root, maybe_ancestor, descendant="HEAD"):
+    """Whether `maybe_ancestor` is reachable from `descendant`.
+
+    Used to establish that an evidence item was measured at a state the
+    current one actually descends from. A commit that is NOT an ancestor —
+    a later commit, or one on a diverged branch — cannot have its delta to
+    HEAD read as "what changed since this evidence was taken", so reuse
+    fails closed rather than diffing two unrelated states.
+    """
+    if not maybe_ancestor or not _SHA_RE.match(str(maybe_ancestor)):
+        return False
+    ok, _, _ = _git(repo_root, "merge-base", "--is-ancestor",
+                    maybe_ancestor, descendant)
+    return ok
+
+
 # ── changed scope (card section 4, section 7) ────────────────────────────
 
 def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=None,
-                   dep_evidence=None):
+                   dep_evidence=None, worktree_paths=None):
     """What this task actually changes, relative to the accepted baseline.
 
     Fails closed in every direction:
@@ -766,6 +814,12 @@ def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=
         "impact_fully_determined": False,
         "test_map_ok": test_map.get("ok", False),
         "repo_wide_suites": test_map.get("repo_wide_suites", []),
+        # The uncommitted paths this derivation actually used, UNCAPPED and
+        # kept verbatim so a per-item currency scope (see evidence_currency)
+        # measures the same working tree instead of re-reading a tree that
+        # may have moved underneath it mid-derivation.
+        "include_worktree": bool(include_worktree),
+        "worktree_paths": [],
     }
 
     def _finish():
@@ -804,11 +858,14 @@ def changed_scope(baseline_sha, repo_root=None, include_worktree=True, test_map=
     changed = set(_nul_fields(out))
 
     if include_worktree:
-        ok, status, err = _git(repo_root, "status", "--porcelain", "-z")
-        if not ok:
-            scope["reason"] = f"working-tree status unavailable: {err}"
-            return _finish()
-        changed.update(_porcelain_paths(status))
+        if worktree_paths is None:
+            ok, status, err = _git(repo_root, "status", "--porcelain", "-z")
+            if not ok:
+                scope["reason"] = f"working-tree status unavailable: {err}"
+                return _finish()
+            worktree_paths = _porcelain_paths(status)
+        scope["worktree_paths"] = list(worktree_paths)
+        changed.update(worktree_paths)
 
     scope["determinable"] = True
     scope["changed_file_count"] = len(changed)
@@ -963,6 +1020,10 @@ def evidence_candidates(conn, task, baseline, test_map, repo_root=None, dev_conn
                     "is_independent_acceptance": authority == "independent_reviewer",
                     "tested_identity": subject_sha,
                     "tested_identity_is_accepted_baseline": subject_sha == accepted_sha,
+                    # A checkpoint row names ONE subject SHA, so its evidence
+                    # has unambiguous provenance by construction.
+                    "tested_identity_candidates": [subject_sha] if subject_sha else [],
+                    "tested_identity_ambiguous": False,
                     "superseded": bool(baseline.get("superseded")),
                     "covered_components": covered,
                     "coverage_note": cov_note,
@@ -993,6 +1054,18 @@ def evidence_candidates(conn, task, baseline, test_map, repo_root=None, dev_conn
             names = set(_EVIDENCE_TEST_RE.findall(prose))
             if not names:
                 continue
+            # WHICH COMMIT DID THIS EVENT MEASURE AT? A continuity event records
+            # WHEN, not against which commit, so the identity is read from its
+            # own prose. An event naming several resolvable commits does not say
+            # which one its results came from; that is recorded as ambiguous and
+            # fails reuse closed rather than crediting the first token found.
+            prose_shas = _shas_in(prose)
+            resolved, resolvable = [], []
+            for s in prose_shas:
+                full = _resolve_commit(repo_root, s)
+                if full and full not in resolved:
+                    resolved.append(full)
+                    resolvable.append(s)
             for name in sorted(names):
                 covered, cov_note = _coverage(name)
                 items.append({
@@ -1009,7 +1082,9 @@ def evidence_candidates(conn, task, baseline, test_map, repo_root=None, dev_conn
                     # A continuity event records WHEN, not against which commit.
                     # Absent an explicit SHA in its own prose, its tested
                     # identity is unknown, and condition 2 fails.
-                    "tested_identity": _sha_in(prose),
+                    "tested_identity": prose_shas[0] if prose_shas else None,
+                    "tested_identity_candidates": resolvable,
+                    "tested_identity_ambiguous": len(resolvable) > 1,
                     "superseded": e["revision"] in reconciled,
                     "covered_components": covered,
                     "coverage_note": cov_note,
@@ -1025,15 +1100,148 @@ def _excerpt(prose, name, width=70):
     return prose[max(0, i - 10):i + width].strip()
 
 
-def _sha_in(text):
+def _shas_in(text):
+    """Every DISTINCT commit-shaped token in an event's prose, in order.
+
+    An event naming more than one resolvable commit does not say which one its
+    test results were measured at. That is ambiguous provenance, and condition
+    4 fails closed on it rather than picking the first token and hoping.
+    """
+    seen, out = set(), []
     for token in re.findall(r"\b[0-9a-f]{7,40}\b", text or ""):
-        return token
-    return None
+        if token not in seen:
+            seen.add(token)
+            out.append(token)
+    return out
+
+
+def _sha_in(text):
+    shas = _shas_in(text)
+    return shas[0] if shas else None
+
+
+# ── evidence currency (card XDEV-VERIFY-01D) ─────────────────────────────
+#
+# THE DEFECT THIS CORRECTS. Condition 4 used to compare an item's covered
+# components against the scope changed since the ACCEPTED BASELINE, and never
+# against the item's own `tested_identity`. The module DERIVED correct
+# provenance (see evidence_candidates, where checkpoint evidence is bound to
+# the row's own subject SHA) and then ignored it in the one check whose job is
+# to decide whether that provenance is still good enough. That single omission
+# failed in both directions:
+#
+#   - evidence measured AT the state under review was invalidated exactly like
+#     evidence from an older commit, because its component appears in the
+#     baseline delta. Avoidable re-runs; fails safe.
+#   - and when the baseline ADVANCED to the reviewed SHA, the baseline delta
+#     became empty, dependency impact read NO_CHANGE, and evidence measured at
+#     EARLIER implementations was reused as proof for the new one. Fails
+#     UNSAFE, and it was demonstrated against this very module: a
+#     test_verification_plan.py result measured at 280723da was reported
+#     reusable for b1a757a9, across three commits that rewrote
+#     verification_plan.py itself.
+#
+# THE CORRECTION. Reuse is judged against the delta from the state the evidence
+# was MEASURED at to the state now under verification, which is what "is this
+# result still valid" actually means. The question is answered by calling
+# `changed_scope` with the item's own tested identity as the baseline, so there
+# is ONE classification rule, not a second parallel one: the same -z path
+# readers, the same documentation rule, the same ownership gate and the same
+# `dependency_impact` states apply. Nothing about what verification is REQUIRED
+# changes — `required_new_evidence` still derives from the accepted-baseline
+# scope, because the unit an independent reviewer accepts is the whole
+# unaccepted delta (ADR-XDEV-001), not the increment since a developer's last
+# test run.
+#
+# WHAT STILL FAILS CLOSED, unchanged or newly:
+#   - the scope-level component-ownership gate still blocks every item first;
+#     this correction never relaxes it and resolves no ownership gap.
+#   - absent identity (condition 2's case) now also fails condition 4.
+#   - AMBIGUOUS identity — an event naming more than one resolvable commit —
+#     fails closed instead of silently crediting the first token found.
+#   - an identity that is NOT an ancestor of the state under verification
+#     (a later commit, a diverged branch) fails closed: its delta to HEAD
+#     cannot be read as "what changed since this evidence was taken".
+#   - a matching SHA is NOT sufficient on its own. Uncommitted changes are
+#     part of the state under verification, so an item measured at HEAD with
+#     relevant working-tree modifications is still invalidated.
+#   - gates keep `covered_components = None` and are refused before any of
+#     this, and mandatory gates additionally fail condition 5.
+
+_CURRENCY_CACHE_KEY = "_currency_cache"
+
+
+def evidence_currency(item, scope, repo_root=None, test_map=None, dep_evidence=None,
+                       cache=None):
+    """What changed between the state an item was MEASURED at and the state
+    now under verification. Returns a dict with:
+
+        established  whether the delta could be established at all
+        basis        why, in the item's own terms, always populated
+        scope        the full `changed_scope` result for that delta, or None
+
+    Establishing the delta is NOT the same as permitting reuse; the caller
+    still applies the overlap and dependency-impact rules to `scope`.
+    """
+    repo_root = repo_root or REPO_ROOT
+    identity = item.get("tested_identity")
+
+    if not identity:
+        return {"established": False, "scope": None,
+                "basis": "no tested commit identity is recorded, so what has "
+                         "changed since this result was measured cannot be "
+                         "established"}
+    if item.get("tested_identity_ambiguous"):
+        candidates = item.get("tested_identity_candidates") or []
+        return {"established": False, "scope": None,
+                "basis": ("the record this result came from names "
+                          f"{len(candidates)} resolvable commits "
+                          f"({', '.join(c[:12] for c in candidates[:4])}"
+                          f"{' ...' if len(candidates) > 4 else ''}), so the "
+                          "commit it was measured at is ambiguous")}
+    if not _commit_exists(repo_root, identity):
+        return {"established": False, "scope": None,
+                "basis": (f"recorded identity {identity} is not resolvable in this "
+                          "checkout, so the change since it cannot be established")}
+    if not _is_ancestor(repo_root, identity):
+        return {"established": False, "scope": None,
+                "basis": (f"this result was measured at {identity}, which is not an "
+                          "ancestor of the state under verification; the change "
+                          "between them cannot be read as what happened since")}
+
+    key = (identity, bool(scope.get("include_worktree")))
+    cache = cache if cache is not None else {}
+    if key not in cache:
+        # Same derivation, different baseline. The working-tree paths are the
+        # ones the accepted-baseline scope already read, so both measure one
+        # tree even if the real tree changes mid-derivation.
+        cache[key] = changed_scope(
+            identity, repo_root=repo_root,
+            include_worktree=bool(scope.get("include_worktree")),
+            test_map=test_map, dep_evidence=dep_evidence,
+            worktree_paths=scope.get("worktree_paths"),
+        )
+    since = cache[key]
+
+    if not since.get("determinable"):
+        return {"established": False, "scope": since,
+                "basis": (f"the change since {identity} could not be established: "
+                          + (since.get("reason") or "reason not reported"))}
+    if not since.get("component_ownership_resolved"):
+        return {"established": False, "scope": since,
+                "basis": (f"since {identity}, "
+                          + (since.get("reason") or
+                             "a changed file has no derivable owning component"))}
+    return {"established": True, "scope": since,
+            "basis": (f"measured at {identity}; "
+                      f"{since.get('changed_file_count')} file(s) changed between "
+                      "it and the state under verification")}
 
 
 # ── validity classification (card section 3) ─────────────────────────────
 
-def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
+def classify_evidence(items, scope, repo_root=None, dep_evidence=None,
+                       test_map=None):
     """Apply the five reuse conditions to each candidate, and report which
     one failed. Returns (reusable, invalidated).
 
@@ -1041,14 +1249,17 @@ def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
     XDEV-VERIFY-01A, finding 2): the changed files' owning components must be
     resolved, AND the item's covered components must be established as
     unaffected. Structural non-overlap answers only the first half; it is
-    reported as what it is and never as the second."""
+    reported as what it is and never as the second.
+
+    The second half is measured from the item's OWN tested identity, not from
+    the accepted baseline (card XDEV-VERIFY-01D); see evidence_currency."""
     repo_root = repo_root or REPO_ROOT
-    changed_components = set(scope.get("components") or {})
+    test_map = test_map or derive_test_map(repo_root)
     ownership_ok = (bool(scope.get("determinable"))
                     and bool(scope.get("component_ownership_resolved")))
-    dep = scope.get("dependency_impact") or {}
     dep_entries = (dep_evidence or {}).get("entries") or []
     active_labels = set(scope.get("security_labels") or [])
+    currency_cache = {}
 
     reusable, invalidated = [], []
     for item in items:
@@ -1080,7 +1291,11 @@ def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
         })
 
         covered = item.get("covered_components")
+        currency = None
         if not ownership_ok:
+            # The scope-level ownership gate is unchanged and still comes
+            # first: if any changed file in the reviewed delta has no owning
+            # component, nothing is reusable regardless of provenance.
             cond4_ok = False
             cond4_detail = (scope.get("reason") or
                             "the changed scope could not be fully established")
@@ -1089,28 +1304,45 @@ def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
             cond4_detail = (item.get("coverage_note") or
                             "what this result covers cannot be established")
         else:
-            changed_list = sorted(changed_components)
-            overlap = sorted(set(covered) & changed_components)
-            prefix = f"covers {covered}; this task changes {changed_list}"
-            if overlap:
-                cond4_ok, cond4_detail = False, f"{prefix} — overlap {overlap}"
-            elif dep.get("established"):
-                cond4_ok = True
-                cond4_detail = f"{prefix} — no overlap, and {dep.get('basis')}"
+            # CARD XDEV-VERIFY-01D. Judge the item against the change since it
+            # was MEASURED, not since the accepted baseline. Absent, ambiguous,
+            # unresolvable, non-ancestor or unownable provenance fails closed.
+            currency = evidence_currency(item, scope, repo_root=repo_root,
+                                         test_map=test_map, dep_evidence=dep_evidence,
+                                         cache=currency_cache)
+            if not currency["established"]:
+                cond4_ok, cond4_detail = False, currency["basis"]
             else:
-                recorded, why = independence_from_record(
-                    covered, changed_components, dep_entries, repo_root)
-                if recorded:
-                    cond4_ok, cond4_detail = True, f"{prefix} — no overlap, and {why}"
+                since = currency["scope"]
+                since_components = set(since.get("components") or {})
+                since_dep = since.get("dependency_impact") or {}
+                changed_list = sorted(since_components)
+                overlap = sorted(set(covered) & since_components)
+                prefix = (f"covers {covered}; since this result was measured at "
+                          f"{item.get('tested_identity')} the state under "
+                          f"verification changes {changed_list}")
+                if overlap:
+                    cond4_ok, cond4_detail = False, (
+                        f"{prefix} — overlap {overlap}, so this result does not "
+                        "describe the implementation now under verification")
+                elif since_dep.get("established"):
+                    cond4_ok = True
+                    cond4_detail = f"{prefix} — no overlap, and {since_dep.get('basis')}"
                 else:
-                    # THE CORRECTION (card XDEV-VERIFY-01A, finding 2). Absence
-                    # of overlap in a directory-derived component map is not
-                    # evidence of independence, so it does not carry reuse.
-                    cond4_ok = False
-                    cond4_detail = (
-                        f"{prefix} — no overlap, but non-overlap is not proof "
-                        f"that this task leaves {covered} unaffected: "
-                        + (dep.get("basis") or _STRUCTURE_IS_NOT_DEPENDENCY_PROOF))
+                    recorded, why = independence_from_record(
+                        covered, since_components, dep_entries, repo_root)
+                    if recorded:
+                        cond4_ok, cond4_detail = True, f"{prefix} — no overlap, and {why}"
+                    else:
+                        # CARD XDEV-VERIFY-01A, FINDING 2, preserved verbatim in
+                        # effect: absence of overlap in a directory-derived
+                        # component map is not evidence of independence.
+                        cond4_ok = False
+                        cond4_detail = (
+                            f"{prefix} — no overlap, but non-overlap is not proof "
+                            f"that those changes leave {covered} unaffected: "
+                            + (since_dep.get("basis")
+                               or _STRUCTURE_IS_NOT_DEPENDENCY_PROOF))
         checks.append({
             "condition": 4,
             "rule": "this task does not change the behaviour or dependencies covered",
@@ -1136,6 +1368,17 @@ def classify_evidence(items, scope, repo_root=None, dep_evidence=None):
         failed = [c for c in checks if not c["ok"]]
         record = dict(item)
         record["validity_checks"] = checks
+        # Provenance is reported, never just consumed: the reader can see which
+        # state this result was measured at and what moved since.
+        record["evidence_currency"] = None if currency is None else {
+            "established": currency["established"],
+            "basis": currency["basis"],
+            "measured_at": item.get("tested_identity"),
+            "changed_since_measurement": sorted(
+                (currency["scope"] or {}).get("components") or {}),
+            "changed_file_count_since_measurement": (
+                (currency["scope"] or {}).get("changed_file_count")),
+        }
         if failed:
             record["invalidation_reason"] = "; ".join(
                 f"condition {c['condition']} ({c['rule']}): {c['detail']}" for c in failed
@@ -1356,7 +1599,8 @@ def build_plan(conn, *, task=None, repo_root=None, include_worktree=True,
     candidates = evidence_candidates(conn, task, baseline, test_map,
                                       repo_root=repo_root, dev_conn=dev_conn)
     reusable, invalidated = classify_evidence(candidates, scope, repo_root=repo_root,
-                                               dep_evidence=dep_evidence)
+                                               dep_evidence=dep_evidence,
+                                               test_map=test_map)
 
     limitations = []
     if not test_map.get("ok"):
