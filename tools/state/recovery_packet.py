@@ -186,26 +186,35 @@ def get_verification_baseline(db_path=None):
         return {"error": f"{type(e).__name__}: {e}",
                 "effect": "no verification baseline is available; treat all "
                           "evidence as unestablished and verify in full"}
+    # EVERY FIELD IS NAMED FOR THE THING IT DESCRIBES, and the two things are
+    # easy to confuse: the ACCEPTED BASELINE (the SHA an independent reviewer
+    # passed) and the CHECKPOINT ROW (the latest push, which may be awaiting
+    # review). The first version of this section conflated them three times —
+    # `accepted_baseline_lifecycle`, `accepted_baseline_independently_verified`
+    # and `evidence_at_accepted_baseline` all carried ROW fields. The moment a
+    # row was appended for an unreviewed push, it rendered an independently
+    # accepted baseline as "PUSHED_AWAITING_INDEPENDENT_REVIEW" and
+    # "independently_verified: False" — the precise misreading this section
+    # exists to prevent. Row-derived fields are therefore prefixed
+    # `checkpoint_`; only a genuinely baseline-scoped fact may be called
+    # `accepted_baseline_*`.
     return {
         "_note": ("the accepted baseline is authoritative (project_state."
-                  "external_dev_checkpoint, ADR-XDEV-001). Everything derived "
-                  "from the worktree is observed at generation time."),
+                  "external_dev_checkpoint, ADR-XDEV-001). accepted_baseline_sha "
+                  "being populated IS the record that an independent reviewer "
+                  "accepted that SHA; the checkpoint_* fields describe the LATEST "
+                  "ROW, which may record a push that is still awaiting review. "
+                  "Everything derived from the worktree is observed at generation "
+                  "time."),
         "accepted_baseline_sha": baseline.get("accepted_baseline_sha"),
-        # Named for what it actually is. The checkpoint row's lifecycle_state
-        # describes the ROW — the latest push it records — not the accepted
-        # baseline SHA beside it. The first version of this section called it
-        # `accepted_baseline_lifecycle`, and the moment a row was appended for
-        # an unreviewed push it read "accepted_baseline_lifecycle:
-        # PUSHED_AWAITING_INDEPENDENT_REVIEW", inviting a recovering reader to
-        # conclude the accepted baseline was not accepted. That is the precise
-        # misreading this section exists to prevent.
         "checkpoint_lifecycle_state": baseline.get("lifecycle_state"),
         "checkpoint_recorded_at": baseline.get("recorded_at"),
         "checkpoint_row": baseline.get("row_id"),
         "checkpoint_row_superseded": baseline.get("superseded"),
-        "accepted_baseline_independently_verified": baseline.get("independently_verified"),
-        "verification_source": baseline.get("verification_source"),
-        "evidence_at_accepted_baseline": baseline.get("evidence_at_this_sha"),
+        "checkpoint_row_claims_independent_verification": baseline.get("independently_verified"),
+        "checkpoint_verification_source": baseline.get("verification_source"),
+        "checkpoint_pushed_sha": baseline.get("checkpoint_pushed_sha"),
+        "evidence_at_checkpoint_pushed_sha": baseline.get("evidence_at_this_sha"),
         "observed_head": git_state.get("head"),
         "observed_upstream_ref": git_state.get("upstream_ref"),
         "observed_upstream_sha": git_state.get("upstream_sha"),

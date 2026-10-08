@@ -448,6 +448,57 @@ def test_scenario_f_self_verification_is_never_independent_authority():
         shutil.rmtree(os.path.dirname(db), ignore_errors=True)
 
 
+def test_push_only_checkpoint_row_does_not_lend_independent_authority():
+    """A checkpoint row that records a PUSH awaiting review still carries an
+    `evidence_at_this_sha` and may still say independently_verified. Its
+    evidence describes the PUSHED SHA, not the accepted baseline, so it must
+    not be attributed to the independent reviewer — and must not be tagged as
+    having been tested at the accepted baseline."""
+    root, base = make_repo()
+    pushed = None
+    db, conn = make_spine(base)
+    try:
+        pushed = commit(root, {"tools/alpha/core.py": "ALPHA = 6\n"}, "push")
+        # Append a push-only row the way the real procedure does: the accepted
+        # baseline stays put, the pushed SHA advances.
+        conn.execute(
+            "UPDATE project_state SET superseded_at='2026-10-08T00:00:00+00:00' "
+            "WHERE key='external_dev_checkpoint'")
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+            ("external_dev_checkpoint", json.dumps({
+                "lifecycle_state": "PUSHED_AWAITING_INDEPENDENT_REVIEW",
+                "latest_local_sha": pushed, "latest_pushed_sha": pushed,
+                "latest_remote_verified_sha": base,
+                # Deliberately hostile input: the row claims verification and
+                # names an external source, but it is about the PUSH.
+                "independently_verified": True,
+                "verification_source": "Independent ChatGPT reviewer, GitHub remote",
+                "pushed_by": "Claude Code, CIS implementation agent",
+                "evidence_at_this_sha": "test_alpha.py 10/10; test_beta.py 8/8",
+            }), "test", "2026-10-08T01:00:00+00:00"))
+        plan = plan_for(root, conn, task="T")
+        items = [i for i in plan["reusable_evidence"] + plan["invalidated_evidence"]
+                 if i["source"].startswith("project_state")]
+        check("a push-only checkpoint row's evidence is NOT independent acceptance",
+              items and all(i["authority"] == "implementing_developer" and
+                            i["is_independent_acceptance"] is False for i in items),
+              [(i["name"], i["authority"]) for i in items])
+        check("its evidence is bound to the PUSHED sha, not the accepted baseline",
+              items and all(i["tested_identity"] == pushed and
+                            i["tested_identity_is_accepted_baseline"] is False
+                            for i in items),
+              [(i["name"], i["tested_identity"]) for i in items])
+        check("and the reason names the push/acceptance distinction",
+              items and all("records a push, not an acceptance" in i["authority_basis"]
+                            for i in items),
+              [i["authority_basis"] for i in items])
+    finally:
+        conn.close()
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(os.path.dirname(db), ignore_errors=True)
+
+
 def test_continuity_recorded_results_are_developer_evidence_only():
     root, base = make_repo()
     db, conn = make_spine(base)
@@ -506,11 +557,15 @@ def test_scenario_g_recovery_path_supplies_baseline_and_pending_review():
           isinstance(vb, dict) and "accepted_baseline_sha" in vb, vb)
     check("G: it names the accepted baseline SHA from the checkpoint authority",
           bool(vb.get("accepted_baseline_sha")), vb.get("accepted_baseline_sha"))
-    check("G: the checkpoint ROW's lifecycle is not labeled as the accepted "
-          "baseline's — a row appended for an unreviewed push must not read as "
+    check("G: no checkpoint-ROW field is labeled as a property of the accepted "
+          "baseline — a row appended for an unreviewed push must not read as "
           "the accepted baseline being unaccepted",
-          "accepted_baseline_lifecycle" not in vb and
-          "checkpoint_lifecycle_state" in vb, sorted(vb))
+          not {"accepted_baseline_lifecycle",
+               "accepted_baseline_independently_verified",
+               "evidence_at_accepted_baseline"} & set(vb) and
+          {"checkpoint_lifecycle_state",
+           "checkpoint_row_claims_independent_verification",
+           "evidence_at_checkpoint_pushed_sha"} <= set(vb), sorted(vb))
     check("G: it states the independent-review state explicitly",
           vb.get("independent_review_state") in (
               "ACCEPTED_AT_THIS_COMMIT", "PENDING_INDEPENDENT_REVIEW",
@@ -856,6 +911,7 @@ def run():
     test_superseded_checkpoint_fails_condition_three()
     test_scenario_f_pushed_commit_is_not_promoted_to_accepted()
     test_scenario_f_self_verification_is_never_independent_authority()
+    test_push_only_checkpoint_row_does_not_lend_independent_authority()
     test_continuity_recorded_results_are_developer_evidence_only()
     test_evidence_with_no_tested_commit_identity_is_not_reused()
     test_scenario_g_recovery_path_supplies_baseline_and_pending_review()

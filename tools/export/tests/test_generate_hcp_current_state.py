@@ -90,16 +90,21 @@ CARD_01_REVIEWED_CANONICAL_STATE_SHA256 = (
 # authoritative current-state view and deliberately stopped duplicating such
 # fields itself (CARD_02_REVIEW_CORRECTION), which is why the field landed
 # here rather than in a second copy inside the HCP projection.
-# XDEV-VERIFY-01 follow-up, same justification: the section's first version
-# labeled the checkpoint ROW's lifecycle_state as `accepted_baseline_lifecycle`,
-# so a row appended for an unreviewed push rendered as
-# "accepted_baseline_lifecycle: PUSHED_AWAITING_INDEPENDENT_REVIEW" — inviting
-# exactly the misreading the section exists to prevent. Renamed to
-# checkpoint_lifecycle_state / checkpoint_row / checkpoint_recorded_at, with
-# accepted_baseline_independently_verified added beside the SHA. Field renames
-# only; no behaviour, cap or authority statement changed.
+# XDEV-VERIFY-01 follow-up, same justification, applied once: the section's
+# first version conflated the ACCEPTED BASELINE (the SHA an independent
+# reviewer passed) with the CHECKPOINT ROW (the latest push, possibly awaiting
+# review) in three field names — accepted_baseline_lifecycle,
+# accepted_baseline_independently_verified and evidence_at_accepted_baseline
+# all carried ROW fields. The moment a row was appended for an unreviewed push
+# it rendered an independently accepted baseline as
+# "PUSHED_AWAITING_INDEPENDENT_REVIEW" and "independently_verified: False",
+# which is exactly the misreading the section exists to prevent, reproduced on
+# the first real row rather than hypothetically. Every row-derived field is now
+# prefixed checkpoint_ and only genuinely baseline-scoped facts keep
+# accepted_baseline_. Field names and the _note only; no behaviour, cap or
+# authority statement changed, and may_claim_acceptance stays a constant False.
 R1_REVIEWED_RECOVERY_PACKET_SHA256 = (
-    "94bbd07223c51875baa9dc7dc4c67e588c74ee0c3405332b1c71e6f14a44bcfb"
+    "c493f7b01e091a3aac3a4e05eb2c0cef9528b0bbc581e4132130369b0983f3a1"
 )
 
 results = []

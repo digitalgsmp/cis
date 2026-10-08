@@ -670,10 +670,29 @@ def evidence_candidates(conn, task, baseline, test_map, repo_root=None, dev_conn
         return [comp], None
 
     if baseline.get("present"):
+        # WHICH SHA DOES THIS ROW'S EVIDENCE DESCRIBE? The checkpoint's
+        # `evidence_at_this_sha` describes the SHA the ROW is about — its
+        # latest_pushed_sha — which equals latest_remote_verified_sha only
+        # when the row records an ACCEPTANCE. A row that records a PUSH
+        # awaiting review has them differ, and binding its evidence to the
+        # accepted baseline SHA would attribute a developer's fresh test run
+        # to a commit an independent reviewer passed. So the evidence is
+        # bound to the row's own subject SHA, and independent authority is
+        # credited only when that subject IS the accepted baseline.
+        subject_sha = (baseline.get("checkpoint_pushed_sha")
+                       or baseline.get("checkpoint_local_sha")
+                       or baseline.get("accepted_baseline_sha"))
+        accepted_sha = baseline.get("accepted_baseline_sha")
         authority, authority_basis = _authority_of(
             baseline.get("verification_source"), baseline.get("pushed_by"),
             baseline.get("independently_verified"),
         )
+        if authority == "independent_reviewer" and subject_sha != accepted_sha:
+            authority = "implementing_developer"
+            authority_basis = (
+                f"this checkpoint row's evidence describes {subject_sha}, which is "
+                f"not the independently accepted baseline {accepted_sha}; the row "
+                "records a push, not an acceptance (ADR-XDEV-001)")
         prose = " ".join(filter(None, [
             baseline.get("evidence_at_this_sha"),
             baseline.get("live_gates_at_record_time"),
@@ -705,7 +724,8 @@ def evidence_candidates(conn, task, baseline, test_map, repo_root=None, dev_conn
                     "authority": authority,
                     "authority_basis": authority_basis,
                     "is_independent_acceptance": authority == "independent_reviewer",
-                    "tested_identity": baseline.get("accepted_baseline_sha"),
+                    "tested_identity": subject_sha,
+                    "tested_identity_is_accepted_baseline": subject_sha == accepted_sha,
                     "superseded": bool(baseline.get("superseded")),
                     "covered_components": covered,
                     "coverage_note": cov_note,
