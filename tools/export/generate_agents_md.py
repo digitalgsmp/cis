@@ -18,6 +18,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _state_authority():
+    """The one canonical project_state resolver. Imported lazily so this
+    generator still runs against the reduced-column fixture spines in
+    tools/export/tests/."""
+    runtime_dir = str(REPO_ROOT / "runtime")
+    if runtime_dir not in sys.path:
+        sys.path.insert(0, runtime_dir)
+    from db import state_authority
+    return state_authority
+
+
 DEFAULT_DB = REPO_ROOT / "data" / "cis_memory.db"
 DEFAULT_CONFIG = REPO_ROOT / "config" / "agents_static.yaml"
 DEFAULT_OUT = REPO_ROOT / "AGENTS.md"
@@ -140,15 +153,12 @@ def query_spine(db_path):
     ).fetchall()
     blockers = list(bp_blockers) + list(ab_blockers)
 
-    state_rows = conn.execute(
-        """SELECT key, value FROM project_state
-           WHERE superseded_at IS NULL
-           AND id = (
-               SELECT MAX(id) FROM project_state ps2
-               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
-           )"""
-    ).fetchall()
-    build_state = {row["key"]: row["value"] for row in state_rows}
+    # Resolved through the one canonical resolver rather than this file's
+    # own `superseded_at IS NULL AND id = MAX(id)` query, which served
+    # whichever duplicate had the higher id. A conflicted key now renders
+    # as an explicit AUTHORITY CONFLICT marker in the generated file
+    # instead of as one of several candidate values.
+    build_state = _state_authority().current_state_map(conn)
 
     # Eric Gate approval status
     eric_gate = conn.execute(

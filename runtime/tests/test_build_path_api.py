@@ -359,9 +359,15 @@ CREATE TABLE project_decisions (
     reason TEXT, status TEXT NOT NULL DEFAULT 'DECIDED', decided_at TEXT NOT NULL,
     superseded_by TEXT
 );
+-- Supersession columns included, matching
+-- runtime/schema/migrations/0002_project_state.sql. The read model resolves
+-- "current" through runtime/db/state_authority, which needs superseded_at
+-- to exist to answer at all; a fixture without it is not the real schema
+-- (corrected 2026-10-09).
 CREATE TABLE project_state (
     id INTEGER PRIMARY KEY, key TEXT NOT NULL, value TEXT NOT NULL,
-    source TEXT NOT NULL, created_at TEXT NOT NULL
+    source TEXT NOT NULL, created_at TEXT NOT NULL,
+    superseded_at TEXT, superseded_by INTEGER REFERENCES project_state(id)
 );
 CREATE TABLE open_questions (
     id TEXT PRIMARY KEY, question TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'OPEN',

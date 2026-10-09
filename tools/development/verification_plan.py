@@ -127,11 +127,24 @@ import json
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 
 from . import continuity_store as cs
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _state_authority():
+    """The one canonical project_state resolver. Imported lazily so this
+    module keeps importing on a fixture DB with no project_state table at
+    all, which `accepted_baseline` already treats as normal."""
+    runtime_dir = os.path.join(REPO_ROOT, "runtime")
+    if runtime_dir not in sys.path:
+        sys.path.insert(0, runtime_dir)
+    from db import state_authority
+    return state_authority
+
 
 PLAN_KIND = "cis_incremental_verification_plan"
 HANDOFF_KIND = "cis_external_review_handoff"
@@ -598,32 +611,68 @@ def accepted_baseline(conn):
     """The independently accepted baseline, read from the existing
     checkpoint authority. Never re-derived and never written.
 
-    The newest UNSUPERSEDED row wins. If the newest row for the key is
-    superseded, that is reported rather than quietly falling back — a
-    superseded checkpoint fails reuse condition 3, which is the point.
+    RESOLVED, NOT RANKED BY RECENCY. This used to take the newest
+    unsuperseded row (`ORDER BY created_at DESC, id DESC LIMIT 1`), which is
+    the exact reader a forged acceptance row exploits: revision 152
+    demonstrated that a raw INSERT claiming lifecycle_state REMOTE_VERIFIED
+    for an arbitrary SHA leaves TWO live rows under this key, and a
+    newest-wins read would then serve the forged SHA as the accepted
+    baseline. The one canonical resolver
+    (runtime/db/state_authority.resolve_current) serves a baseline only
+    when exactly one live row exists; two live rows produce no baseline at
+    all, which fails reuse closed and names the conflicting rows.
+
+    If there is no live row but superseded rows exist, that is reported
+    rather than quietly falling back — a superseded checkpoint fails reuse
+    condition 3, which is the point.
     """
     base = {"present": False, "superseded": False, "accepted_baseline_sha": None,
             "lifecycle_state": None, "independently_verified": None,
-            "error": None, "note": None}
+            "error": None, "note": None, "authority_conflict": None}
     try:
-        row = conn.execute(
-            "SELECT id, value, source, created_at, superseded_at FROM project_state "
-            "WHERE key = ? AND superseded_at IS NULL "
-            "ORDER BY created_at DESC, id DESC LIMIT 1", (CHECKPOINT_KEY,),
-        ).fetchone()
-        superseded = False
-        if row is None:
-            row = conn.execute(
-                "SELECT id, value, source, created_at, superseded_at FROM project_state "
-                "WHERE key = ? ORDER BY created_at DESC, id DESC LIMIT 1",
-                (CHECKPOINT_KEY,),
-            ).fetchone()
-            superseded = row is not None
+        resolution = _state_authority().resolve_current(conn, CHECKPOINT_KEY)
     except Exception as e:  # noqa: BLE001 — a fixture DB without project_state is normal
         base["error"] = f"could not read project_state: {type(e).__name__}: {e}"
         base["note"] = ("no accepted baseline is available on this database, so "
                         "no evidence may be reused")
         return base
+
+    sa = _state_authority()
+    if resolution["status"] == sa.UNREADABLE:
+        base["error"] = f"could not read project_state: {resolution['note']}"
+        base["note"] = ("no accepted baseline is available on this database, so "
+                        "no evidence may be reused")
+        return base
+
+    if resolution["status"] == sa.CONFLICT:
+        base["authority_conflict"] = {
+            "resolver": sa.RESOLVER_ID,
+            "live_row_count": resolution["live_row_count"],
+            "row_ids": [r.get("id") for r in resolution["live_rows"]],
+            "violations": resolution["violations"],
+        }
+        base["error"] = resolution["note"]
+        base["note"] = (
+            f"project_state.{CHECKPOINT_KEY} is the acceptance authority (ADR-XDEV-001) "
+            "and its current state is AMBIGUOUS, so there is no accepted baseline and no "
+            "evidence may be reused. Serving one of the candidate rows is how a forged "
+            "acceptance row becomes the accepted baseline; this reader will not do it.")
+        return base
+
+    row = resolution["row"]
+    superseded = False
+    if row is None:
+        # No live row. Report the most recent superseded one so the caller
+        # can see that acceptance was withdrawn rather than never recorded.
+        try:
+            row = conn.execute(
+                "SELECT id, value, source, created_at, superseded_at FROM project_state "
+                "WHERE key = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+                (CHECKPOINT_KEY,),
+            ).fetchone()
+        except Exception:  # noqa: BLE001
+            row = None
+        superseded = row is not None
 
     if row is None:
         base["note"] = (f"no project_state row with key={CHECKPOINT_KEY!r}; there is "

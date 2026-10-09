@@ -44,6 +44,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DB = os.environ.get("CIS_SPINE_PATH", str(REPO_ROOT / "data" / "cis_memory.db"))
 
+# The one canonical project_state current-record resolver. Imported here
+# rather than re-implemented, and re-exported as `canonical_state.sa` so
+# every read model in this directory reaches the same resolver through one
+# import site instead of each doing its own sys.path juggling.
+_RUNTIME_DIR = REPO_ROOT / "runtime"
+if str(_RUNTIME_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNTIME_DIR))
+from db import state_authority as sa  # noqa: E402
+
 # Tables treated as authoritative sources for the read model, each paired
 # with the column that marks recency. Used both to compute the state
 # revision and to report per-source freshness.
@@ -333,12 +342,19 @@ def get_current_focus(conn):
     authority, for a Card 04 packet reader to actually locate current work
     -- never inferred from queue tier order or generated-file prose.
 
-    - current_queue_item_pointer: the latest project_state row with
+    - current_queue_item_pointer: the CURRENT project_state row with
       key='current_queue_item' -- the same row an operator sets via
-      queue_set.py/set_current_item.py. Whichever row has the newest
-      created_at wins; this table is not superseded_at-maintained in
-      practice (older pointer rows are simply left with superseded_at
-      NULL), so recency by timestamp is the real signal, not a flag.
+      queue_set.py/set_current_item.py -- resolved through the one
+      canonical resolver (runtime/db/state_authority.resolve_current).
+      THIS USED TO BE "whichever row has the newest created_at wins",
+      justified by the table not being superseded_at-maintained in
+      practice. That justification was measured and found wrong at
+      dev_continuity_events revision 152: the table IS
+      superseded_at-maintained for this key (its chain is fully linked),
+      and recency-wins is precisely the rule under which a superseded row
+      becomes current whenever it carries a later timestamp. The pointer is
+      now served only when authority is unambiguous; a conflict is reported
+      in current_queue_item_authority instead of being decided here.
     - current_queue_item_detail: that pointer's own queue_items row
       (title, need_status, full body_md -- which is where an item's own
       recorded scope/return-point language actually lives).
@@ -353,11 +369,8 @@ def get_current_focus(conn):
     - a named fetch handle for the full per-task history this is bounded
       from, so a capped view never silently implies there is nothing more.
     """
-    pointer_row = conn.execute(
-        "SELECT id, key, value, source, created_at FROM project_state "
-        "WHERE key = 'current_queue_item' ORDER BY created_at DESC, id DESC LIMIT 1"
-    ).fetchone()
-    pointer = _row_to_dict(pointer_row)
+    pointer_resolution = sa.resolve_current(conn, "current_queue_item")
+    pointer = pointer_resolution["row"]
     pointer_detail = _item_detail(conn, pointer["value"]) if pointer else None
 
     recent_activity = [_row_to_dict(r) for r in conn.execute(
@@ -371,6 +384,14 @@ def get_current_focus(conn):
     return {
         "current_queue_item_pointer": pointer,
         "current_queue_item_detail": pointer_detail,
+        "current_queue_item_authority": {
+            "resolver": sa.RESOLVER_ID,
+            "status": pointer_resolution["status"],
+            "live_row_count": pointer_resolution["live_row_count"],
+            "note": pointer_resolution["note"],
+            "conflicting_rows": (pointer_resolution["live_rows"]
+                                 if pointer_resolution["status"] == sa.CONFLICT else []),
+        },
         "recent_task_activity": recent_activity,
         "recent_task_activity_fetch_handle": (
             "python3 -m tools.development.cli events <task>  -- full event "
@@ -378,15 +399,42 @@ def get_current_focus(conn):
         ),
         "recent_task_queue_items": recent_task_queue_items,
         "note": (
-            "current_queue_item_pointer is read straight from the latest "
-            "project_state row with key='current_queue_item' -- never "
-            "advanced, inferred, or defaulted by this module. "
+            "current_queue_item_pointer is the project_state row with "
+            "key='current_queue_item' that the canonical resolver reports as "
+            "current -- never advanced, inferred, defaulted, or chosen by "
+            "recency by this module, and null while the key's authority is in "
+            "conflict (see current_queue_item_authority). "
             "recent_task_activity is the most recent dev_continuity_events "
             "rows across all tasks, ordered by id, capped at "
             f"{RECENT_TASK_ACTIVITY_LIMIT}; a task's own queue_items row "
             "(need_status, body_md) is looked up for each distinct task "
             "named there."
         ),
+    }
+
+
+def get_project_state_authority(conn):
+    """Whether project_state's single-valued authority contract currently
+    holds, from the one resolver -- so "what does CIS look like" cannot
+    report a confident current value for a key whose authority is in fact
+    ambiguous.
+
+    This is a report, never a repair: a failure here names the key and the
+    conflicting row ids and stops. Choosing between them is an authority
+    decision."""
+    report = sa.integrity_report(conn)
+    return {
+        "resolver": sa.RESOLVER_ID,
+        "contract_holds": report["passed"],
+        "single_valued_keys": report["single_valued_keys"],
+        "multi_valued_keys": report["multi_valued_keys"],
+        "failures": report["failures"],
+        "warnings": report["warnings"],
+        "observations": report["observations"],
+        "checks_unavailable": report["checks_unavailable"],
+        "note": ("project_state keys whose authority contract requires exactly one "
+                 "current record. A failure names the key and every conflicting row; "
+                 "nothing here selects a winner or repairs a chain."),
     }
 
 
@@ -502,6 +550,7 @@ def get_canonical_state(db_path=None):
             "active_blockers": get_active_blockers(conn, freshness["active_blockers"]["dormant"]),
             "discoveries_requiring_attention": get_discoveries_requiring_attention(conn, db_path=db_path),
             "current_focus": get_current_focus(conn),
+            "project_state_authority": get_project_state_authority(conn),
             "source_table_freshness": freshness,
             "generated_artifact_freshness": get_artifact_freshness(conn, revision),
             "observed_runtime_health": get_observed_runtime_health(),

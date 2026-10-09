@@ -73,6 +73,10 @@ if str(_STATE_DIR) not in sys.path:
 
 import canonical_state as cs  # noqa: E402  (shared DB default + revision)
 
+# The one canonical project_state resolver, reached through canonical_state
+# so there is a single import site for it in this directory.
+sa = cs.sa
+
 from tools.development import continuity_store as _continuity  # noqa: E402
 from tools.development import discovery as _discovery  # noqa: E402
 
@@ -141,16 +145,36 @@ def _connect(db_path=None):
     return conn
 
 
-def _latest_state(conn, key):
-    """The newest project_state row for `key`. Recency by created_at, the
-    same rule canonical_state.get_current_focus() documents (this table is
-    not superseded_at-maintained in practice)."""
-    row = conn.execute(
-        "SELECT id, key, value, source, created_at FROM project_state "
-        "WHERE key = ? ORDER BY created_at DESC, id DESC LIMIT 1",
-        (key,),
-    ).fetchone()
-    return dict(row) if row is not None else None
+def _latest_state(conn, key, conflicts=None):
+    """The CURRENT project_state row for `key`, from the one canonical
+    resolver (`runtime/db/state_authority.resolve_current`).
+
+    THIS USED TO BE "newest by created_at, superseded_at not consulted at
+    all" — a second, incompatible rule next to the two other readers, and
+    the one rule under which a SUPERSEDED row wins whenever it happens to
+    carry a later created_at than the live one. It agreed with the others
+    on the data of the day, so the divergence was latent rather than
+    visibly wrong (dev_continuity_events revision 152).
+
+    Returns the row only when authority is unambiguous. A key with two live
+    rows now yields None and appends its structured resolution to
+    `conflicts`, so the screen says "this authority is in conflict" instead
+    of presenting one of the candidates as the answer."""
+    res = sa.resolve_current(conn, key)
+    if res["status"] == sa.RESOLVED:
+        return res["row"]
+    if res["status"] == sa.CONFLICT and conflicts is not None:
+        conflicts.append(res)
+    return None
+
+
+def _conflict_note(conflicts, key, absent_note):
+    """The honest note for a key that produced no row: name the conflict
+    when there is one, and only say "no row" when there really is none."""
+    for res in conflicts:
+        if res["key"] == key:
+            return res["note"]
+    return absent_note
 
 
 def _table_exists(conn, name):
@@ -463,14 +487,23 @@ def roadmap_decisions(conn):
     return [dict(r) for r in rows]
 
 
-def external_checkpoint(conn):
+def external_checkpoint(conn, conflicts=None):
     """project_state.external_dev_checkpoint, parsed. ADR-XDEV-001's point
     is that a pushed SHA is not an accepted SHA, so the two SHAs are
-    compared here and the answer stated outright."""
-    row = _latest_state(conn, "external_dev_checkpoint")
+    compared here and the answer stated outright.
+
+    A SECOND LIVE ACCEPTANCE ROW IS NOT RESOLVED BY RECENCY. If the key is
+    in conflict the panel reports the conflict and serves no baseline:
+    revision 152 demonstrated that a forged REMOTE_VERIFIED row leaves two
+    live rows, and a newest-wins reader would then present the forged SHA
+    as accepted."""
+    conflicts = [] if conflicts is None else conflicts
+    row = _latest_state(conn, "external_dev_checkpoint", conflicts)
     if row is None:
         return {"present": False,
-                "note": "no project_state row with key='external_dev_checkpoint'"}
+                "note": _conflict_note(
+                    conflicts, "external_dev_checkpoint",
+                    "no project_state row with key='external_dev_checkpoint'")}
     try:
         packet = json.loads(row["value"])
     except (TypeError, ValueError) as e:
@@ -581,11 +614,15 @@ def _status_label(status, blocked):
 def get_build_path(db_path=None):
     conn = _connect(db_path)
     try:
-        roadmap_row = _latest_state(conn, ROADMAP_STATE_KEY)
-        phase_row = _latest_state(conn, PHASE_POINTER_STATE_KEY)
-        direction_row = _latest_state(conn, "current_direction")
-        next_action_row = _latest_state(conn, "next_action")
-        task_row = _latest_state(conn, CURRENT_TASK_STATE_KEY)
+        # Every project_state read on this screen goes through the one
+        # resolver, and any key whose authority is ambiguous lands here
+        # instead of being silently decided by recency.
+        authority_conflicts = []
+        roadmap_row = _latest_state(conn, ROADMAP_STATE_KEY, authority_conflicts)
+        phase_row = _latest_state(conn, PHASE_POINTER_STATE_KEY, authority_conflicts)
+        direction_row = _latest_state(conn, "current_direction", authority_conflicts)
+        next_action_row = _latest_state(conn, "next_action", authority_conflicts)
+        task_row = _latest_state(conn, CURRENT_TASK_STATE_KEY, authority_conflicts)
 
         stages, constraints_text, parse_note = parse_roadmap_sequence(
             roadmap_row["value"] if roadmap_row else None)
@@ -611,15 +648,19 @@ def get_build_path(db_path=None):
                 current_note = ("project_state.build_phase names no 'Phase P<n>' — "
                                 "current phase is unknown, not assumed")
         else:
-            current_note = "no project_state row with key='build_phase'"
+            current_note = _conflict_note(
+                authority_conflicts, PHASE_POINTER_STATE_KEY,
+                "no project_state row with key='build_phase'")
 
         current_task = task_row["value"] if task_row else None
         discoveries, discovery_note = ([], None)
         if current_task:
             discoveries, discovery_note = task_discoveries(current_task, db_path=db_path)
         else:
-            discovery_note = (f"no project_state row with key='{CURRENT_TASK_STATE_KEY}' — "
-                              "no task's discoveries are attributed to the current phase")
+            discovery_note = (_conflict_note(
+                authority_conflicts, CURRENT_TASK_STATE_KEY,
+                f"no project_state row with key='{CURRENT_TASK_STATE_KEY}'")
+                + " — no task's discoveries are attributed to the current phase")
         groups = _discovery_groups(discoveries)
         blockers = groups["blocking"]
 
@@ -694,6 +735,11 @@ def get_build_path(db_path=None):
         current = next((p for p in phases if p["id"] == current_id), None)
         following = next((p for p in phases if p["status"] == "next"), None)
 
+        # Resolved before the payload is assembled so that the
+        # authority_conflicts summary below counts a conflicted checkpoint
+        # too, rather than being computed before this call could append.
+        checkpoint = external_checkpoint(conn, authority_conflicts)
+
         return {
             "read_model": READ_MODEL_KIND,
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -718,7 +764,19 @@ def get_build_path(db_path=None):
                 "recorded_at": roadmap_row["created_at"] if roadmap_row else None,
                 "raw": roadmap_row["value"] if roadmap_row else None,
                 "constraints_text": constraints_text or None,
-                "parse_note": parse_note,
+                "parse_note": parse_note if roadmap_row else _conflict_note(
+                    authority_conflicts, ROADMAP_STATE_KEY, parse_note),
+            },
+            # Single-valued authority keys this screen reads that are
+            # currently ambiguous. Present (and empty) on every response so
+            # a reader can tell "no conflict" from "not checked"; a
+            # non-empty list means some panel below is intentionally blank
+            # rather than silently showing one of several candidates.
+            "authority_conflicts": {
+                "resolver": sa.RESOLVER_ID,
+                "count": len(authority_conflicts),
+                "keys": sorted({c["key"] for c in authority_conflicts}),
+                "detail": authority_conflicts,
             },
             "progress": {
                 "total_phases": len(phases),
@@ -761,7 +819,7 @@ def get_build_path(db_path=None):
             "discoveries": groups,
             "discoveries_note": discovery_note,
             "queue": queue,
-            "checkpoint": external_checkpoint(conn),
+            "checkpoint": checkpoint,
             "decisions": decisions,
             "mermaid": build_mermaid(phases, blockers, current_id),
         }

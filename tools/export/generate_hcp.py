@@ -150,16 +150,12 @@ def query_spine(db_path):
         except Exception:
             row_counts[table] = "?"
 
-    # Query canonical build state from project_state table (Tier 6.5 remediation)
-    state_rows = conn.execute(
-        """SELECT key, value FROM project_state
-           WHERE superseded_at IS NULL
-           AND id = (
-               SELECT MAX(id) FROM project_state ps2
-               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
-           )"""
-    ).fetchall()
-    build_state = {row["key"]: row["value"] for row in state_rows}
+    # Canonical build state, resolved through the one canonical resolver
+    # (Tier 6.5 remediation; resolver added 2026-10-09). The previous
+    # `superseded_at IS NULL AND id = MAX(id)` query silently served
+    # whichever duplicate had the higher id; a conflicted key now renders
+    # as an explicit AUTHORITY CONFLICT marker instead.
+    build_state = canonical_state.sa.current_state_map(conn)
 
     # Eric Gate approval status
     eric_gate = conn.execute(

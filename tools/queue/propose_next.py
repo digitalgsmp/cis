@@ -30,6 +30,10 @@ import sqlite3
 import subprocess
 import sys
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(REPO_ROOT, "runtime"))
+from db import state_authority as sa  # noqa: E402
+
 DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
 INGEST = os.environ.get(
     "CIS_INGEST_TOOL", "/mnt/projects/cis/tools/ingest_hermes_sessions_v2.py")
@@ -50,10 +54,14 @@ def fire_ingest():
 
 
 def current_item(conn):
-    row = conn.execute(
-        "SELECT value FROM project_state WHERE key='current_queue_item' "
-        "AND superseded_at IS NULL").fetchone()
-    return row[0] if row else None
+    """The current pointer, from the one canonical resolver.
+
+    The old query was a bare `superseded_at IS NULL` with fetchone() and no
+    ORDER BY — with two live pointer rows it returned whichever row SQLite
+    handed back first, which is an arbitrary selection rather than even a
+    documented newest-wins rule. A conflicted pointer now yields None, and
+    the caller reports it rather than proposing work against a guess."""
+    return sa.current_value(conn, "current_queue_item", strict=False)
 
 
 def status_plain(status):
@@ -86,9 +94,15 @@ def main():
     # stable sort: within the tier order, put RUNNABLE ahead of JUDGMENT
     rows.sort(key=lambda r: (_CLASS_RANK.get(r[4], 2)))
 
-    cur = current_item(conn)
+    pointer = sa.resolve_current(conn, "current_queue_item")
+    cur = pointer["value"] if pointer["status"] == sa.RESOLVED else None
 
     L = ["", "WHAT'S NEXT", "=" * 60, ""]
+
+    if pointer["status"] == sa.CONFLICT:
+        L.append("THE CURRENT-ITEM POINTER IS IN CONFLICT, so this does not say where")
+        L.append("you were. %s" % pointer["note"])
+        L.append("")
 
     if cur:
         cur_row = conn.execute(

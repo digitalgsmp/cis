@@ -674,12 +674,21 @@ def _next_action_mentions(discovery_id, state_texts):
     return out
 
 
-def build_problems(conn, db_path, vocabulary, current_task, state_texts):
+def build_problems(conn, db_path, vocabulary, current_task, state_texts,
+                   authority_unavailable=None):
     """Every recorded discovery, as a problem a non-programmer can read.
 
     Display status, "resolved" and "blocking" are NOT redefined here:
     bp.task_discoveries() is reused, so the Project Map, the Build Path screen
-    and the closeout gate cannot disagree about whether something is blocking."""
+    and the closeout gate cannot disagree about whether something is blocking.
+
+    `authority_unavailable` carries the authority keys that produced NO text to
+    quote, with the reason. It exists because the canonical resolver added on
+    2026-10-09 serves no value for a key with two live rows: `named_in_state`
+    then loses that key's evidence, and an absent quote on screen would read as
+    "the project never named this finding" when the truth is "the authority
+    that names it is in conflict". Failing closed is correct; failing closed
+    SILENTLY is the same class of defect this resolver was added to remove."""
     problems, problems_note = [], None
     tasks, note = _discovery_tasks(conn)
     if note:
@@ -738,6 +747,7 @@ def build_problems(conn, db_path, vocabulary, current_task, state_texts):
                 } if record["disposition"] == "EXPLICITLY_DEFERRED" else None,
                 "originating_stage": payload.get("originating_stage"),
                 "named_in_state": _next_action_mentions(record["id"], state_texts),
+                "named_in_state_unavailable": list(authority_unavailable or []),
                 "is_current_task": task == current_task,
                 "evidence": {
                     "table": "dev_continuity_events",
@@ -1304,10 +1314,27 @@ def get_project_intelligence(db_path=None):
         # composed build model rather than re-queried, so there is one reading
         # of project_state on this screen.
         state_texts = []
+        # The keys that produced no text, with the reason, so an absent quote
+        # is never mistaken for an absent authority. The conflict detail comes
+        # from the same composed build model, not a second read of
+        # project_state — see build_problems' docstring.
+        authority_unavailable = []
+        conflicted = {c["key"]: c for c in
+                      (((build or {}).get("authority_conflicts") or {}).get("detail") or [])}
         for key, block in (("next_action", (build or {}).get("next_action")),
                            ("current_direction", (build or {}).get("current_direction"))):
             if block and block.get("text"):
                 state_texts.append((key, block["text"]))
+            else:
+                res = conflicted.get(key)
+                authority_unavailable.append({
+                    "state_key": key,
+                    "reason": "authority_conflict" if res else "no_live_row",
+                    "note": res["note"] if res else
+                            f"no live project_state row for {key}",
+                    "conflicting_row_ids": [r.get("id") for r in (res or {}).get("live_rows", [])],
+                    "confidence_class": DERIVED,
+                })
         phase_evidence = ((build or {}).get("current") or {}).get("evidence") or {}
         if phase_evidence.get("value"):
             state_texts.append(("build_phase", phase_evidence["value"]))
@@ -1317,7 +1344,8 @@ def get_project_intelligence(db_path=None):
             state_texts, (build or {}).get("phases", []))
         anatomy = build_anatomy(vocabulary, capabilities)
         problems, problems_note, stale_problem_ids = build_problems(
-            conn, db_path, vocabulary, current_task, state_texts)
+            conn, db_path, vocabulary, current_task, state_texts,
+            authority_unavailable)
         queue = build_queue(conn, vocabulary, build)
     finally:
         conn.close()

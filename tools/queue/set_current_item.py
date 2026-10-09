@@ -37,6 +37,10 @@ import os
 import sqlite3
 import sys
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(REPO_ROOT, "runtime"))
+from db import state_authority as sa  # noqa: E402
+
 DB = os.environ.get("CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db")
 KEY = "current_queue_item"
 
@@ -49,18 +53,26 @@ def main():
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     conn = sqlite3.connect(DB)
 
-    live = conn.execute(
-        "SELECT id, value FROM project_state "
-        "WHERE key=? AND superseded_at IS NULL", (KEY,)).fetchone()
+    # Resolved through the one canonical resolver, not by this script's own
+    # SELECT. The old query was `... superseded_at IS NULL` with fetchone():
+    # with two live pointer rows it would have seen only one of them and
+    # superseded only that one, leaving the other live. It now refuses.
+    resolution = sa.resolve_current(conn, KEY)
+    if resolution["status"] == sa.CONFLICT:
+        print("REFUSED: %s" % resolution["note"])
+        print("Rows: %s" % ", ".join(str(r.get("id")) for r in resolution["live_rows"]))
+        print("Choosing between them is an authority decision, not this setter's.")
+        return 1
+    live = resolution["row"]
 
     if arg == "--clear":
         if not live:
             print("no current item set")
             return 0
         conn.execute("UPDATE project_state SET superseded_at=? WHERE id=?",
-                     (now, live[0]))
+                     (now, live["id"]))
         conn.commit()
-        print("cleared (was %s)" % live[1])
+        print("cleared (was %s)" % live["value"])
         return 0
 
     row = conn.execute(
@@ -75,19 +87,19 @@ def main():
         print("Pointing at finished work is the stale-pointer failure by hand.")
         return 1
 
-    if live:
-        conn.execute("UPDATE project_state SET superseded_at=? WHERE id=?",
-                     (now, live[0]))
-    cur = conn.execute(
-        "INSERT INTO project_state (key, value, source, created_at) "
-        "VALUES (?,?,?,?)", (KEY, arg, "manual", now))
-    if live:
-        conn.execute("UPDATE project_state SET superseded_by=? WHERE id=?",
-                     (cur.lastrowid, live[0]))
-    conn.commit()
+    # One atomic insert-and-supersede through the sanctioned writer. This
+    # used to be three separate statements here — insert, then UPDATE
+    # superseded_at, then UPDATE superseded_by — which is the "caller must
+    # remember the supersession" shape that left next_action with two live
+    # rows elsewhere in the repo.
+    try:
+        result = sa.set_state(conn, KEY, arg, "manual", created_at=now)
+    except sa.StateAuthorityError as e:
+        print("REFUSED: %s" % e)
+        return 1
     print("current item: %s  (%s)" % (arg, (row[2] or "")[:56]))
-    if live:
-        print("superseded:   %s" % live[1])
+    if result["superseded_row_ids"]:
+        print("superseded:   %s (row %s)" % (live["value"], result["superseded_row_ids"][0]))
     return 0
 
 

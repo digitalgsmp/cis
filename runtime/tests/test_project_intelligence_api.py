@@ -53,6 +53,7 @@ os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
 
 import build_path as bp  # noqa: E402
 import canonical_state as cs  # noqa: E402
+from db import state_authority as sa  # noqa: E402  (the sanctioned project_state writer)
 import destination_architecture as da  # noqa: E402
 import project_intelligence as pi  # noqa: E402
 
@@ -410,11 +411,52 @@ def test_problem_view(model):
           and d15["solution_direction"]["text"] is None
           and "not formally recorded" in d15["solution_direction"]["explanation"],
           d15["solution_direction"])
-    check("7f. the project's own next_action sentence naming it is quoted as evidence",
-          any(m["state_key"] == "next_action" and "WB1-D15" in m["quote"]
-              and m["confidence_class"] == "derived_from_evidence"
-              for m in d15["named_in_state"]),
-          [m["state_key"] for m in d15["named_in_state"]])
+    # EITHER the authority is quoted, OR the reason it cannot be quoted is
+    # named, OR the authority is readable and genuinely does not name this
+    # finding. Not a relaxation: before 2026-10-09 the reader resolved
+    # next_action by recency and always had a sentence to quote, including
+    # while TWO rows were live. The canonical resolver serves nothing for a
+    # conflicted key, and an unexplained empty named_in_state would read as
+    # "the project never named WB1-D15", which is false.
+    #
+    # THE THIRD BRANCH, added 2026-10-09. The inherited 161/166 next_action
+    # conflict was resolved by architect authority: both rows were superseded
+    # onto one replacement whose subject is the revision-127 trust-boundary
+    # remediation, so the live row is now unambiguous AND does not mention
+    # WB1-D15 (which revision 112 resolved). There is then nothing to quote
+    # and nothing unavailable, and the first two branches cannot both be
+    # false without this one. It is PROVED against the spine rather than
+    # inferred from the absence: an empty named_in_state with an empty
+    # named_in_state_unavailable is acceptable ONLY if the authority really
+    # was readable and really was silent on this finding. A conflicted key
+    # whose reason went unreported still fails, which is the defect the
+    # resolver exists to remove.
+    quoted = [m for m in d15["named_in_state"]
+              if m["state_key"] == "next_action" and "WB1-D15" in m["quote"]
+              and m["confidence_class"] == "derived_from_evidence"]
+    named_conflict = [u for u in d15["named_in_state_unavailable"]
+                      if u["state_key"] == "next_action"
+                      and u["reason"] in ("authority_conflict", "no_live_row")
+                      and u["note"]]
+    _ro = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        _na = sa.resolve_current(_ro, "next_action")
+    finally:
+        _ro.close()
+    readable_and_silent = (_na["status"] == sa.RESOLVED
+                           and "WB1-D15" not in (_na["value"] or ""))
+    check("7f. the project's own next_action sentence naming it is quoted as evidence, "
+          "or the reason it cannot be quoted is named, or the live authority is "
+          "readable and demonstrably does not name it",
+          [bool(quoted), bool(named_conflict), readable_and_silent].count(True) == 1,
+          {"quoted": [m["state_key"] for m in d15["named_in_state"]],
+           "unavailable": d15["named_in_state_unavailable"],
+           "next_action_status": _na["status"],
+           "next_action_names_d15": "WB1-D15" in (_na["value"] or "")})
+    check("7f-ii. an unavailable authority is never silently dropped",
+          all(u["note"] and u["confidence_class"] == "derived_from_evidence"
+              for u in d15["named_in_state_unavailable"]),
+          d15["named_in_state_unavailable"])
     check("7g. the capability it concerns is derived from a literal identifier match, quoted",
           d15["capability_ids"] == ["braingate_conversation"],
           d15["capability_ids"])
@@ -1035,14 +1077,19 @@ def test_scratch_db_proves_nothing_is_hardcoded():
         shutil.copy(cs.DB, scratch)
         conn = sqlite3.connect(scratch)
         try:
-            conn.execute(
-                "INSERT INTO project_state (key, value, source, created_at) VALUES "
-                "('pipeline_roadmap', 'ALPHA (first thing) -> BETA (second thing) -> "
-                "GAMMA (third thing). AUTHORITY: test.', 'manual', '2099-01-01T00:00:00+00:00')")
-            conn.execute(
-                "INSERT INTO project_state (key, value, source, created_at) VALUES "
-                "('build_phase', 'Phase P3 of the P0-P6 sequence', 'manual', "
-                "'2099-01-01T00:00:00+00:00')")
+            # Written through the sanctioned writer, not a raw INSERT.
+            # pipeline_roadmap and build_phase are single-valued authority
+            # keys: a bare INSERT on a copy of production leaves TWO live
+            # rows and the read model then (correctly) reports an authority
+            # conflict instead of the scratch value, so the old raw INSERT
+            # was only ever working because the reader resolved by recency
+            # (corrected 2026-10-09; see runtime/db/state_authority.py).
+            sa.set_state(conn, "pipeline_roadmap",
+                         "ALPHA (first thing) -> BETA (second thing) -> "
+                         "GAMMA (third thing). AUTHORITY: test.",
+                         "manual", created_at="2099-01-01T00:00:00+00:00")
+            sa.set_state(conn, "build_phase", "Phase P3 of the P0-P6 sequence",
+                         "manual", created_at="2099-01-01T00:00:00+00:00")
             # The scratch database must end up OBSERVABLY different from
             # production or this test cannot tell which one the read model
             # read. It used to delete the awaiting-triage rows, which stopped

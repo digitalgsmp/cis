@@ -57,8 +57,26 @@ PROD_DB = os.environ.get("CIS_SPINE_PATH", os.path.join(REPO_ROOT, "data", "cis_
 # lets a fresh reader identify the current task (4.32) and its OPEN status.
 # See data/agent_handoffs/WB-RECOVERY-04-recovery-drill-closeout/
 # correction-R1/completion.json for the justification and diff.
+#
+# UPDATED 2026-10-09 for the project_state single-valued authority repair —
+# an independently justified hard defect, which is the one condition
+# requirement 6 allows. canonical_state.get_current_focus() resolved the
+# current_queue_item pointer with "ORDER BY created_at DESC, id DESC
+# LIMIT 1" and a comment asserting the table "is not
+# superseded_at-maintained in practice". Both were measured false at
+# dev_continuity_events revision 152: the key's chain IS fully linked, and
+# recency-wins is the rule under which a SUPERSEDED row becomes current
+# whenever it carries a later timestamp — the same rule that would serve a
+# forged external_dev_checkpoint row as the accepted baseline. The pointer
+# now comes from the one canonical resolver
+# (runtime/db/state_authority.resolve_current), a conflict is reported in
+# current_queue_item_authority instead of decided, and
+# get_project_state_authority() was added so "what does CIS look like"
+# cannot report a confident value for an ambiguous key. Regression
+# assertions: runtime/tests/test_state_authority.py (92 checks) and
+# tools/state/tests/test_canonical_state.py.
 CARD_01_REVIEWED_CANONICAL_STATE_SHA256 = (
-    "8320e956fdcff11b12faeb79e1cb62e611079fff33bf0fa2a4521cd9d39ac8af"
+    "ce13a2d75c7836cca4f36dad6049584577182a5395272e0b153d86b43dc2c1a0"
 )
 # recovery_packet.py's hash as accepted (untouched) by CARD_02_REVIEW_CORRECTION.md
 # (R1) and required to stay untouched by CARD_02_REVIEW_CORRECTION_R2.md.

@@ -66,9 +66,17 @@ def git(sandbox, *args):
 def make_sandbox():
     """A real git repo holding real generator sources, with no exports yet."""
     sandbox = tempfile.mkdtemp(prefix="d13-")
-    for rel in ("tools/export", "tools/state", "config"):
+    # runtime/db is in this list because the generators' real dependency set
+    # grew on 2026-10-09: generate_agents_md and generate_hcp now resolve
+    # project_state through runtime/db/state_authority.py instead of each
+    # running its own `superseded_at IS NULL AND id = MAX(id)` query. A
+    # sandbox without it is no longer a complete copy of "real generator
+    # sources", and the generator correctly fails rather than falling back
+    # to a newest-row-wins read.
+    for rel in ("tools/export", "tools/state", "runtime/db", "config"):
         shutil.copytree(os.path.join(REPO_ROOT, rel), os.path.join(sandbox, rel),
-                        ignore=shutil.ignore_patterns("__pycache__", "tests"))
+                        ignore=shutil.ignore_patterns("__pycache__", "tests", "*.db",
+                                                      "cis_memory_db"))
     os.makedirs(os.path.join(sandbox, "docs"), exist_ok=True)
     os.makedirs(os.path.join(sandbox, "runtime", "manifests"), exist_ok=True)
     git(sandbox, "init", "-q")

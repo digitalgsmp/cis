@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime"))
 from db.database import init_db
+from db import state_authority as sa
 
 DEFAULT_DB = "/mnt/projects/cis/data/cis_memory.db"
 
@@ -89,17 +90,23 @@ def check_unresolved_objection(conn, workflow_run_id):
 def check_governance_tier(conn, workflow_run_id):
     """Check if the project is at Tier 6+ governance scope.
     
-    Reads project_state.next_tier. Returns True when next_tier >= 6.
+    Reads project_state.next_tier through the one canonical resolver.
     Note: this checks global project state, not per-run scope.
     Per-run governance detection deferred to future refinement.
+
+    The old query was `superseded_at IS NULL ORDER BY id DESC LIMIT 1` — a
+    newest-row-wins read that would have silently served one of two live
+    rows. An ambiguous next_tier now fails CLOSED to "escalation required":
+    not knowing the governance tier is a reason to escalate, never a reason
+    to skip it.
     """
-    state = conn.execute(
-        "SELECT value FROM project_state WHERE key = 'next_tier' AND superseded_at IS NULL ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-    if state:
+    resolution = sa.resolve_current(conn, "next_tier")
+    if resolution["status"] == sa.CONFLICT:
+        return True
+    value = resolution["value"]
+    if value is not None:
         try:
-            tier = int(state[0])
-            return tier >= 6
+            return int(value) >= 6
         except ValueError:
             pass
     return False

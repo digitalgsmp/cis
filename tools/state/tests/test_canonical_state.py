@@ -62,9 +62,14 @@ CREATE TABLE project_decisions (
     reason TEXT, status TEXT NOT NULL DEFAULT 'DECIDED', decided_at TEXT NOT NULL,
     superseded_by TEXT
 );
+-- Matches runtime/schema/migrations/0002_project_state.sql, supersession
+-- columns included: the current-record contract cannot be exercised on a
+-- fixture that has no way to express supersession, and a reduced fixture
+-- here was hiding exactly that (corrected 2026-10-09).
 CREATE TABLE project_state (
     id INTEGER PRIMARY KEY, key TEXT NOT NULL, value TEXT NOT NULL,
-    source TEXT NOT NULL, created_at TEXT NOT NULL
+    source TEXT NOT NULL, created_at TEXT NOT NULL,
+    superseded_at TEXT, superseded_by INTEGER REFERENCES project_state(id)
 );
 CREATE TABLE open_questions (
     id TEXT PRIMARY KEY, question TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'OPEN',
@@ -452,8 +457,19 @@ def test_discovery_delegation_against_real_spine_readonly():
 
 def test_current_focus_pointer_is_latest_project_state_row():
     """Card 04 R1 correction: current_focus.current_queue_item_pointer must
-    be the latest project_state row with key='current_queue_item' by
-    created_at, never a hardcoded/inferred 'next item'."""
+    be the CURRENT project_state row with key='current_queue_item', never a
+    hardcoded or inferred 'next item'.
+
+    CORRECTED 2026-10-09. This test used to assert "the latest row by
+    created_at", with a fixture holding two rows that were BOTH live. That
+    is the recency-wins rule, and it was measured at dev_continuity_events
+    revision 152 as the defect, not the contract: under it a SUPERSEDED row
+    becomes current whenever it carries a later timestamp, and two live
+    rows are silently reduced to one winner. What the card actually
+    requires — do not infer the pointer — is unchanged and still asserted;
+    what changed is that "current" now means the row the canonical resolver
+    reports as current (one live row, maintained chain), and two live rows
+    are a reported conflict instead of a race between timestamps."""
     tmp, path, conn = make_scratch_db()
     try:
         conn.execute(
@@ -467,9 +483,13 @@ def test_current_focus_pointer_is_latest_project_state_row():
             "('WB.1', 0, 'current work', '### WB.1 current work\\n\\nReturn point: "
             "do not resume automatically.', 'heading', 'OPEN', 2, 'x')"
         )
+        # A real pointer history: the old row superseded by the new one,
+        # which is exactly what tools/queue/set_current_item.py now writes.
         conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES "
-            "('current_queue_item', 'OLD.1', 'manual', '2026-01-01T00:00:00Z')"
+            "INSERT INTO project_state (key, value, source, created_at, superseded_at, "
+            "superseded_by) VALUES "
+            "('current_queue_item', 'OLD.1', 'manual', '2026-01-01T00:00:00Z', "
+            "'2026-06-01T00:00:00Z', 2)"
         )
         conn.execute(
             "INSERT INTO project_state (key, value, source, created_at) VALUES "
@@ -477,13 +497,45 @@ def test_current_focus_pointer_is_latest_project_state_row():
         )
         conn.commit()
         focus = cs.get_current_focus(conn)
-        check("current_focus picks the LATEST current_queue_item pointer by created_at, "
+        check("current_focus picks the CURRENT current_queue_item pointer, "
               "not the first/oldest row",
               focus["current_queue_item_pointer"]["value"] == "WB.1", focus["current_queue_item_pointer"])
         check("current_focus resolves the pointer's own queue_items detail (need_status, body_md)",
               focus["current_queue_item_detail"]["need_status"] == "OPEN"
               and "do not resume automatically" in focus["current_queue_item_detail"]["body_md"],
               focus["current_queue_item_detail"])
+        check("the pointer's authority is reported as resolved, through the one resolver",
+              focus["current_queue_item_authority"]["status"] == "RESOLVED"
+              and focus["current_queue_item_authority"]["live_row_count"] == 1,
+              focus["current_queue_item_authority"])
+
+        # And the inverse: a SUPERSEDED row carrying a later created_at than
+        # the live one must not be served, which recency-wins would do.
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at, superseded_at) VALUES "
+            "('current_queue_item', 'OLD.1', 'manual', '2026-09-01T00:00:00Z', "
+            "'2026-09-02T00:00:00Z')"
+        )
+        conn.commit()
+        focus = cs.get_current_focus(conn)
+        check("a superseded pointer row with a LATER created_at is never served as current",
+              focus["current_queue_item_pointer"]["value"] == "WB.1",
+              focus["current_queue_item_pointer"])
+
+        # Two LIVE pointer rows: a conflict, reported with its rows, not a
+        # timestamp race decided silently in favour of the newer one.
+        conn.execute(
+            "INSERT INTO project_state (key, value, source, created_at) VALUES "
+            "('current_queue_item', 'FORGED.9', 'manual', '2026-10-01T00:00:00Z')"
+        )
+        conn.commit()
+        focus = cs.get_current_focus(conn)
+        check("two live pointer rows yield NO pointer, not the newer one",
+              focus["current_queue_item_pointer"] is None, focus["current_queue_item_pointer"])
+        check("and the conflict is reported with both conflicting rows",
+              focus["current_queue_item_authority"]["status"] == "CONFLICT"
+              and len(focus["current_queue_item_authority"]["conflicting_rows"]) == 2,
+              focus["current_queue_item_authority"])
     finally:
         conn.close()
         shutil.rmtree(tmp, ignore_errors=True)

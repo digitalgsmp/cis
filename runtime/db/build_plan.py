@@ -9,6 +9,16 @@ ALLOWED_STATUSES = {'PENDING', 'IN_PROGRESS', 'COMPLETE', 'BLOCKED', 'DEFERRED',
 ALLOWED_DEPENDENCY_TYPES = {'HARD', 'SOFT'}
 
 
+def _state_authority():
+    """The canonical project_state resolver/writer (see database.py for why
+    both import spellings are tried)."""
+    try:
+        from . import state_authority
+    except ImportError:  # imported as a top-level module, not as db.build_plan
+        import state_authority  # type: ignore[no-redef]
+    return state_authority
+
+
 def create_node(conn, project_id, node_label, tier, sequence,
                 status='PENDING', blocked_reason=None,
                 required_role=None, allowed_mode=None):
@@ -86,7 +96,20 @@ def complete_node(conn, node_id, evidence_path=None, commit_hash=None, workflow_
 def sync_project_state_from_build_plan(conn, project_id='cis'):
     """Write project_state cache from build_plan_nodes.
     Source label: 'build_plan_spine' (not 'gate' — this is a cache sync, not a gate result).
-    Supersedes prior next_tier/next_action/build_phase rows."""
+    Supersedes prior next_tier/next_action/build_phase rows.
+
+    SUPERSESSION NOW GOES THROUGH THE SANCTIONED WRITER. This function used
+    to close the previous rows with a bulk
+    `UPDATE ... SET superseded_at=? WHERE key IN (...) AND superseded_at IS NULL`
+    that never set `superseded_by`, which is where a large share of the 104
+    unlinked supersessions in the table came from. `state_authority.set_state`
+    performs the insert and the supersession atomically and links both
+    columns, so the chain this writer produces stays reconstructible.
+
+    It also now FAILS CLOSED on an already-ambiguous key: with two live
+    `next_action` rows on the production spine (161 and 166), a sync raises
+    `AmbiguousStateError` and writes nothing, rather than appending a third
+    live row on top of a conflict it cannot resolve."""
     now = datetime.now(timezone.utc).isoformat()
 
     completed = conn.execute(
@@ -119,45 +142,22 @@ def sync_project_state_from_build_plan(conn, project_id='cis'):
             (project_id,)
         ).fetchone()
 
-    conn.execute(
-        """UPDATE project_state SET superseded_at=?
-           WHERE key IN ('next_tier','next_action','build_phase')
-             AND superseded_at IS NULL""",
-        (now,)
-    )
-
     completed_label = completed[0] if completed else "(none)"
+    source = "gate"
 
     if next_node:
         next_label = next_node[0]
         next_tier_val = next_node[1]
-        source = "gate"
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("next_tier", next_tier_val, source, now)
-        )
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("next_action", next_label, source, now)
-        )
         phase = f"{completed_label}. {next_label}."
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("build_phase", phase, source, now)
-        )
     else:
         # No IN_PROGRESS or unblocked PENDING node — all work complete or blocked
-        source = "gate"
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("next_tier", "—", source, now)
-        )
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("next_action", "(none — all nodes COMPLETE, BLOCKED, or DEFERRED)", source, now)
-        )
+        next_tier_val = "—"
+        next_label = "(none — all nodes COMPLETE, BLOCKED, or DEFERRED)"
         phase = f"{completed_label}. No active work — all remaining nodes BLOCKED or DEFERRED."
-        conn.execute(
-            "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
-            ("build_phase", phase, source, now)
-        )
+
+    # One atomic insert-and-supersede per key, in the caller's transaction.
+    # Any refusal propagates before a partial sync can be committed.
+    for key, value in (("next_tier", next_tier_val),
+                       ("next_action", next_label),
+                       ("build_phase", phase)):
+        _state_authority().set_state(conn, key, value, source, created_at=now)

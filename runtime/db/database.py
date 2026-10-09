@@ -44,6 +44,19 @@ ALLOWED_RESPONSE_STATUSES = {"EXPECTED", "TRANSMITTED", "RECEIVED", "INGESTED", 
 ALLOWED_HASH_MATCH_STATUSES = {"MATCH", "MISMATCH"}
 
 
+def _state_authority():
+    """The canonical project_state resolver/writer.
+
+    Imported lazily and by both names because this file is reached as
+    `db.database` from tools/ (with runtime/ on sys.path) and, in a few
+    older scripts, as a bare top-level `database` module."""
+    try:
+        from . import state_authority
+    except ImportError:  # imported as a top-level module, not as db.database
+        import state_authority  # type: ignore[no-redef]
+    return state_authority
+
+
 def init_db(db_path=None):
     """Open (or create) the SQLite database, enable foreign keys, and apply schema if needed."""
     path = db_path or DB_PATH
@@ -271,34 +284,72 @@ def insert_active_blocker(conn, id, description, status="ACTIVE", resolution=Non
 
 
 def insert_project_state(conn, key, value, source, evidence_hash=None, evidence_run_id=None, created_at=None):
-    """Insert one row into project_state (append-only)."""
+    """Record a new value for `key`, superseding the previous current row
+    for every key whose authority contract requires exactly one.
+
+    THIS USED TO BE APPEND-ONLY, and that was the defect. Supersession
+    lived in `supersede_project_state` below — a separate function with
+    zero call sites in tools/ or runtime/ — so whether a key ended up with
+    one live row or two depended on the caller remembering a second
+    operation. It held 31 of 32 times for `next_action` and failed once;
+    rows 161 and 166 are both still live because of it (measured at
+    dev_continuity_events revision 152).
+
+    The signature and the "caller commits" contract are unchanged. What
+    changed is that for a declared single-valued key the insert and the
+    supersession are now one atomic operation inside
+    `state_authority.set_state`, and an already-ambiguous key is REFUSED
+    (`AmbiguousStateError`) rather than quietly given a third live row.
+    Keys with no declared cardinality keep the old append behaviour, so
+    single-valued semantics are not imposed where no authority declared
+    them.
+    """
     if source not in ALLOWED_STATE_SOURCES:
         raise ValueError(f"Invalid source '{source}'. Allowed: {', '.join(sorted(ALLOWED_STATE_SOURCES))}")
-    from datetime import datetime, timezone
-    conn.execute(
-        """INSERT INTO project_state
-           (key, value, source, evidence_hash, evidence_run_id, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (key, value, source, evidence_hash, evidence_run_id,
-         created_at or datetime.now(timezone.utc).isoformat()),
-    )
+    sa = _state_authority()
+    card = sa.cardinality_of(key)
+    if card == sa.UNDECLARED:
+        from datetime import datetime, timezone
+        conn.execute(
+            """INSERT INTO project_state
+               (key, value, source, evidence_hash, evidence_run_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (key, value, source, evidence_hash, evidence_run_id,
+             created_at or datetime.now(timezone.utc).isoformat()),
+        )
+        return None
+    return sa.set_state(conn, key, value, source, evidence_hash=evidence_hash,
+                        evidence_run_id=evidence_run_id, created_at=created_at)
 
 
 def get_project_state(conn):
-    """Return current project state as {key: value} dict. Only newest unsuperseded row per key."""
-    rows = conn.execute(
-        """SELECT key, value FROM project_state
-           WHERE superseded_at IS NULL
-           AND id = (
-               SELECT MAX(id) FROM project_state ps2
-               WHERE ps2.key = project_state.key AND ps2.superseded_at IS NULL
-           )"""
-    ).fetchall()
-    return {row[0]: row[1] for row in rows}
+    """Current project state as `{key: value}` — resolved through the one
+    canonical resolver instead of this function's own SELECT.
+
+    IT NO LONGER PICKS A WINNER. The old query was
+    `superseded_at IS NULL AND id = (SELECT MAX(id) ...)`: with two live
+    rows for one key it silently served whichever had the higher id, which
+    is exactly how a forged acceptance row would have become the accepted
+    baseline. A conflicted key now maps to a `ConflictMarker` that says so,
+    and the returned `ProjectStateView` carries `.conflicts` with the
+    offending row ids. It is still a dict, so every existing caller and
+    `.get(key)` keeps working.
+    """
+    return _state_authority().current_state_map(conn)
 
 
 def supersede_project_state(conn, key, superseded_by_id):
-    """Mark all current rows for a key as superseded."""
+    """Mark all current rows for a key as superseded.
+
+    RETAINED FOR COMPATIBILITY ONLY — it has never had a call site in
+    tools/ or runtime/, and normal writes must not use it: a supported
+    write goes through `insert_project_state` (or
+    `state_authority.set_state`), which performs the supersession
+    atomically so there is nothing separate to remember. Calling this by
+    hand is still capable of leaving the table in a state the resolver will
+    report as a conflict; it is listed as a remaining bypass for that
+    reason.
+    """
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
