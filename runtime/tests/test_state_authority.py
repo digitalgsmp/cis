@@ -776,6 +776,44 @@ def test_9_history_is_intact():
             live_ids = [r["id"] for r in live.execute(
                 "SELECT id FROM project_state WHERE key='next_action' "
                 "AND superseded_at IS NULL")]
+            # 9k WALKS THE CHAIN INSTEAD OF PINNING ONE ROW ID. It used to
+            # assert that the successor of 161/166 was itself the live row,
+            # which held only until the next legitimate next_action write —
+            # and on 2026-10-09 there was one: architect authority corrected
+            # a single false sentence that row carried about the ADR-PIPE-006
+            # triage review (dev_continuity_events revision 160), writing a
+            # replacement through sa.set_state. Pinning the row id would
+            # assert that next_action may never be written again, which is
+            # the opposite of the contract this module establishes.
+            #
+            # The property that actually matters is not relaxed but
+            # strengthened: from that one successor, every step of the
+            # supersession chain is LINKED (superseded_by set, never a bare
+            # superseded_at), and the walk terminates at exactly the row
+            # that is live now. A row closed without a successor, a cycle,
+            # or a walk ending anywhere other than the live row all fail.
+            chain_ok, chain_walk = True, []
+            node = next(iter(successors)) if len(successors) == 1 else None
+            seen = set()
+            while node is not None:
+                if node in seen:
+                    chain_ok = False
+                    break
+                seen.add(node)
+                chain_walk.append(node)
+                row = live.execute(
+                    "SELECT id, key, superseded_at, superseded_by "
+                    "FROM project_state WHERE id = ?", (node,)).fetchone()
+                if row is None or row["key"] != "next_action":
+                    chain_ok = False
+                    break
+                if row["superseded_at"] is None:
+                    node = None          # reached the live head
+                elif row["superseded_by"] is None:
+                    chain_ok = False     # closed without a successor
+                    break
+                else:
+                    node = row["superseded_by"]
             live.close()
             check("9f. production project_state never loses a historical row "
                   "(at least the 183 this card inherited)", total >= 183,
@@ -801,9 +839,11 @@ def test_9_history_is_intact():
                   len(successors) == 1 and None not in successors
                   and all(prior[r]["superseded_at"] is not None for r in (161, 166)),
                   f"successors={successors}")
-            check("9k. that successor is the row now live",
-                  len(successors) == 1 and live_ids == list(successors),
-                  f"live={live_ids} successor={successors}")
+            check("9k. that successor's supersession chain is fully linked and "
+                  "terminates at the one row now live",
+                  chain_ok and len(chain_walk) >= 1
+                  and live_ids == chain_walk[-1:],
+                  f"live={live_ids} walk={chain_walk} linked={chain_ok}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

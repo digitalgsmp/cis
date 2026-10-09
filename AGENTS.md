@@ -1,11 +1,11 @@
 # CIS — AGENTS.md
-Generated: 2026-10-09 12:38 UTC | Run: run-0e9adb0c3f63 | Latest pipeline: run-4bbeea78056e2607-1788140226
+Generated: 2026-10-09 22:56 UTC | Run: run-4912eaeb371e | Latest pipeline: run-4bbeea78056e2607-1788140226
 Source: SQLite spine + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_agents_md.py
 
 ## 1. Current Build Phase
-Contained-pipeline build. Phase P0 of the P0-P6 sequence (ADR-PIPE-001) is COMPLETE AND CLOSED as of 2026-10-06. All four P0 acceptance conditions were proved on the authoritative production listener (runtime/container_app.py inside cis-pipeline, 0.0.0.0:5000, published to host 5000); current_direction holds each condition and its evidence. The WB1-D18 and WB1-D24 governance findings were discharged at continuity revisions 121 and 122, and the commit carrying that work, bf01df4d45a9de8981c2d057cf629e4cd24ba514, is independently REMOTE_VERIFIED (ADR-XDEV-001; project_state.external_dev_checkpoint). Do not re-run the P0 proofs and do not re-request the Brain provider credential: it was replaced 2026-10-05, loads at runtime and authenticates upstream. Card Factory and Card Runner remain BUILT_BUT_DORMANT - implementations intact, blueprints NOT registered, migrations 0036/0037 NOT applied (ADR-PIPE-005); dormant until P3 and P4. P1 IS NOT ACTIVATED and is not the next step: Queue Triage, itself blocked pending OQ-TRIAGE-001 (ADR-PIPE-007), and then an independent review of triage are sequenced between P0 and P1. An ARCHITECTURE RECOVERY initiative is open ahead of any clean-room reconstruction: see dev_continuity_events revisions 124 and 126. /mnt/projects/cis is the protected REFERENCE CIS ENVIRONMENT - do not clean, reorganize, or delete from it.
-Direction: P0 IS COMPLETE AND CLOSED (2026-10-06). THE FOUR CONDITIONS, all DONE: (1) the public Workbench origin reaches the authoritative listener - WB1-D17, Cloudflare ingress repointed 5055->5000, preview retired; (2) upstream model failures are honest and never persisted as successful role='brain' turns - WB1-D16, _call_brain_gateway fails closed on the gateway's own failure fields; (3) the Brain returns a real model reply through its intended provider/model path - WB1-D22 and WB1-D15 resolved at revisions 111 and 112, proof at revision 114, reply stored as workbench_messages id 4; (4) a real external browser login followed by an ordinary authenticated Brain conversation - revision 118, performed by Eric through the OIDC implementation whose commits b65a90e and 13b5a2b are REMOTE_VERIFIED at revision 115. CLOSEOUT: WB1-D18 and WB1-D24 discharged at revisions 121 and 122; SHA bf01df4d independently REMOTE_VERIFIED by ChatGPT read from the GitHub remote, recorded at revision 125. Migrations 0035+0038 applied, 0036+0037 not; workbench_app.workbench_bp, Card Factory and Card Runner unregistered. WB1-D14 and WB1-D26 remain EXPLICITLY_DEFERRED. NEXT: ARCHITECTURE RECOVERY (revision 126) for the clean-modular three-plane reconstruction, stopping at an independent ChatGPT architectural review; that card authorizes NO reconstruction, no new directory, and no container changes. NOT YET: Queue Triage, then its independent review, then P1. Sequencing authority unchanged: ADR-PIPE-001, ADR-PIPE-006, ADR-PIPE-007 and project_state.pipeline_roadmap.
+Contained-pipeline build. Phase P0 of the P0-P6 sequence (ADR-PIPE-001) is COMPLETE AND CLOSED as of 2026-10-06, proved on the authoritative production listener (runtime/container_app.py in cis-pipeline, host 5000); current_direction holds the four conditions and their evidence. Do not re-run the P0 proofs and do not re-request the Brain provider credential: it was replaced 2026-10-05, loads at runtime and authenticates upstream. THE TWO QUEUE PREREQUISITES ARE DISCHARGED, NOT PENDING - this row asserted them as blockers until continuity revision 160 measured otherwise: Queue Triage is COMPLETE (OQ-TRIAGE-001 RESOLVED 2026-10-05; of 133 queue_items, 0 carry neither classification field) and the ADR-PIPE-006 INDEPENDENT REVIEW OF TRIAGE IS SATISFIED (revision 105, TRIAGE_REVIEW_ACCEPTED, 2026-10-05). P1 IS STILL NOT ACTIVATED AND IS NOT THE NEXT STEP: a discharged prerequisite is not an authorization, and WB.1 is OPEN with revisions 127, 126 and 130 standing as stage-closeout blockers. Build Path still renders QUEUE_TRIAGE after P0 because stage status there is positional from this row - the gap at queue_projection_observation row 163, not a pending prerequisite. Migrations 0035+0038 applied, 0036/0037 NOT; workbench_app.workbench_bp unregistered, and Card Factory and Card Runner remain BUILT_BUT_DORMANT - implementations intact, blueprints NOT registered (ADR-PIPE-005), dormant until P3 and P4. /mnt/projects/cis is the protected REFERENCE CIS ENVIRONMENT - do not clean, reorganize, or delete from it.
+Direction: P0 IS COMPLETE AND CLOSED (2026-10-06). ITS FOUR CONDITIONS ARE ALL DONE, each with its evidence: the public Workbench origin reaches the authoritative listener (WB1-D17, Cloudflare ingress repointed 5055->5000, preview retired); upstream model failures fail closed and are never persisted as successful role='brain' turns (WB1-D16); the Brain returns a real model reply through its intended provider/model path (WB1-D22 and WB1-D15, resolved at revisions 111 and 112, proof at revision 114, reply stored as workbench_messages id 4); and a real external browser login followed by an ordinary authenticated Brain conversation, performed by Eric (revision 118, through the OIDC implementation whose commits b65a90e and 13b5a2b are REMOTE_VERIFIED at revision 115). CLOSEOUT: WB1-D18 and WB1-D24 discharged at revisions 121 and 122; SHA bf01df4d independently REMOTE_VERIFIED by ChatGPT from the GitHub remote at revision 125. WB1-D14 and WB1-D26 remain EXPLICITLY_DEFERRED. ALREADY DONE, NOT UPCOMING: Queue Triage and the ADR-PIPE-006 independent review of triage (revision 105); this line read 'NOT YET' on both until continuity revision 160 measured them discharged before it was written. NEXT: the revision-127 live public trust-boundary remediation, the WB.1 stage next action held in project_state.next_action - which remediation to apply is an architect decision Eric has not yet made. Alongside it the read-only ARCHITECTURE RECOVERY of revisions 124 and 126 stops at an independent ChatGPT architectural review and authorizes no reconstruction, no new directory and no container changes. NOT NEXT: P1, which IS NOT ACTIVATED. Sequencing authority unchanged: ADR-PIPE-001, ADR-PIPE-006, ADR-PIPE-007 and project_state.pipeline_roadmap.
 Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 
 ## 2. Do Not Start
@@ -35,13 +35,14 @@ Build order authority: docs/CIS_DEPENDENCY_GRAPH_BUILD_PLAN.md
 ### Gateways
 | Label | Profile | Port | Model | Reasoning | NeMo | Status |
 |-------|---------|------|-------|-----------|------|--------|
-| Brain | hermes-brainstorm | 8644 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Draft | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Review1 | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Review2 | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
+| Brain | hermes-brainstorm | 8644 | deepseek-v4-pro | xhigh | No | Running [1] |
+| Draft | hermes-v4pro | 8645 | deepseek-v4-pro | xhigh | No | Running [1] |
+| Review1 | hermes-r1 | 8643 | qwen/qwen3.7-max | xhigh | No | Running [1] |
+| Review2 | hermes-glm-reviewer | 8647 | z-ai/glm-5.2 | xhigh | No | Running [1] |
 | Menter | sandboxed-claude-code | n/a (kernel sandbox) | claude-code (sandboxed coder) | n/a | No | Sandboxed — dispatched via tools/run_claude_sandbox.sh (R1, menter-reviewer-connection) |
-| Verify | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running — verified 2026-07-07 via ss -tlnp |
-| Prime/Chat | hermes-prime | 8642 | deepseek-v4-pro | medium | Yes | Running — verified 2026-07-07 via ss -tlnp |
+| Verify | hermes-glm-verifier | 8648 | z-ai/glm-5.2 | xhigh | No | Running [1] |
+| Prime/Chat | hermes-prime | 8642 | deepseek-v4-pro | medium | Yes | Running [1] |
+[1] Running — verified 2026-07-07 via ss -tlnp
 
 ### Hermes Source Patches
 - /home/eric/.hermes/hermes-agent/run_agent.py:9782 — Added api.deepseek.com to _supports_reasoning_extra_body() allowlist
@@ -76,17 +77,17 @@ Full text/reasoning of any decision: `project_decisions` table in the spine DB �
 - [OQ-SEED-004] Closeout trigger design: define how CIS automatically requires closeout when a dependency-graph/build-plan node changes to COMPLETE. Should closeout be state-write triggered (node completion), gate-gated (runner must pass), or externally pulsed (cron watchdog)? Implementation likely in Tier 6 Pipeline Integration.
 
 ## 6. Next Actions
-- [Enforcement — Container Isolation (ADR-015/016)] (Tier ENFORCEMENT) Enforcement — Container Isolation (ADR-015/016)
+- [Enforcement — Container Isolation (ADR-015/016)] (Tier ENFORCEMENT)
 
 ## 7. Active Blockers
 - [BLK-SEED-004] Google Drive backup integrity unverified
 
 ## 8. Recent Pipeline Runs (last 5)
 - [run-4bbeea78056e2607-1788140226] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
-- [run-4bbeea78056e2607-1788129615] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
-- [run-4bbeea78056e2607-1788126284] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
-- [run-4bbeea78056e2607-1788122307] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
-- [run-4bbeea78056e2607-1788121167] Modify tools/ask_history.py so it merges keyword (FTS5) results with its existin — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788129615] (same goal as above) — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788126284] (same goal as above) — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788122307] (same goal as above) — PENDING (0 rounds, incomplete)
+- [run-4bbeea78056e2607-1788121167] (same goal as above) — PENDING (0 rounds, incomplete)
 
 ## 9. Eric Gate Status
 - Workflow run: run-e70293544935a92e-1787973534

@@ -221,12 +221,31 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
     lines.append("### Gateways")
     lines.append("| Label | Profile | Port | Model | Reasoning | NeMo | Status |")
     lines.append("|-------|---------|------|-------|-----------|------|--------|")
-    for gw in static.get("gateways", []):
+    # One status string was written out on six of the seven rows, carrying
+    # the same verification provenance six times. A status shared by more
+    # than one gateway is now stated ONCE, in a footnote under the table,
+    # and those rows carry its short form plus the footnote marker. Nothing
+    # is dropped and nothing is shortened away: the full string still
+    # appears verbatim below the table, and a status unique to one gateway
+    # is still printed in full on its own row.
+    shared = []
+    gateways = static.get("gateways", [])
+    for gw in gateways:
+        status = gw["status"]
+        if status not in shared and sum(1 for g in gateways
+                                       if g["status"] == status) > 1:
+            shared.append(status)
+    for gw in gateways:
         nemo = "Yes" if gw.get("nemo") else "No"
+        status = gw["status"]
+        if status in shared:
+            status = f"{status.split(' — ')[0]} [{shared.index(status) + 1}]"
         lines.append(
             f"| {gw['label']} | {gw['profile']} | {gw['port']} "
-            f"| {gw['model']} | {gw['reasoning']} | {nemo} | {gw['status']} |"
+            f"| {gw['model']} | {gw['reasoning']} | {nemo} | {status} |"
         )
+    for index, status in enumerate(shared, start=1):
+        lines.append(f"[{index}] {status}")
     lines.append("")
     lines.append("### Hermes Source Patches")
     patches = static.get("hermes_patches", {})
@@ -255,7 +274,15 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
     lines.append("## 6. Next Actions")
     for a in actions:
         tier = f"Tier {a['tier']}" if a["tier"] else "—"
-        lines.append(f"- [{a['id']}] ({tier}) {a['description']}")
+        # The build_plan_nodes branch of the section-6 query selects
+        # node_label as BOTH id and description, so this line printed the
+        # same label twice — "[X] (Tier T) X". Identical strings are
+        # printed once. Nothing is dropped: whenever id and description
+        # genuinely differ, both still render.
+        if a["description"] and a["description"] != a["id"]:
+            lines.append(f"- [{a['id']}] ({tier}) {a['description']}")
+        else:
+            lines.append(f"- [{a['id']}] ({tier})")
     lines.append("")
 
     lines.append("## 7. Active Blockers")
@@ -265,9 +292,20 @@ def render(static, runs, decisions, questions, actions, blockers, build_state,
 
     lines.append("## 8. Recent Pipeline Runs (last 5)")
     if runs:
+        # Re-running one goal is the normal shape of this table, so the
+        # same 80-character topic was repeated on up to five consecutive
+        # lines. The topic is printed on its first appearance and later
+        # runs of the SAME topic say so instead of repeating it. Every run
+        # still gets its own line with its own id, result and round count;
+        # only the duplicated prose is removed, and a topic that differs
+        # from the line above is always printed in full.
+        previous_topic = None
         for r in runs:
+            topic = (r["topic"] or "")[:80]
+            shown = "(same goal as above)" if topic == previous_topic else topic
+            previous_topic = topic
             lines.append(
-                f"- [{r['id']}] {r['topic'][:80]} — {r['result']} "
+                f"- [{r['id']}] {shown} — {r['result']} "
                 f"({r['rounds_completed']} rounds, {r['completed_at'] or 'incomplete'})"
             )
     else:
