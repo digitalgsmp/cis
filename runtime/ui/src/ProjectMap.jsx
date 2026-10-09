@@ -551,7 +551,25 @@ function QueueProblems({ model, mode }) {
             </span>
           </div>
           <div className="pm-triage-notice">
-            <strong>Queue triage has not been performed.</strong>
+            {/* DERIVED FROM THE LIVE COUNT, NOT HARDCODED. This headline was a
+                literal rendered unconditionally, so once the queue authority
+                reached zero awaiting it kept asserting the classification pass
+                was outstanding directly above pills reading "0 items awaiting
+                formal triage" — and it stated that unscoped, while the read
+                model's own statement below is scoped "by this screen".
+                Recorded as project_state rows 163 and 184 (observation 3).
+                NEITHER BRANCH MAKES A CLAIM ABOUT THE QUEUE_TRIAGE *STAGE*:
+                stage status is phase authority (ADR-PIPE-006), it is not
+                derived here, and the sequencing line below still reports it
+                exactly as the Build Path read model gives it. */}
+            {(queue.awaiting_triage ?? 0) > 0 ? (
+              <strong>Queue triage has not been performed.</strong>
+            ) : (
+              <strong>
+                Every one of the {queue.total_items ?? 0} queue items carries a
+                classification.
+              </strong>
+            )}
             <div className="muted bp-fineprint">{queue.triage_state?.statement}</div>
             {/* Where triage sits comes from the composed build model, not from
                 wording in this component — see triage_state.sequencing.note. */}

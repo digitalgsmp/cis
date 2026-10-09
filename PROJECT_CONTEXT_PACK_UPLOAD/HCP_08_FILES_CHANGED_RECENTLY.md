@@ -1,7 +1,83 @@
 # Files Changed Recently
-Generated: 2026-10-09 12:37 UTC | Run: run-a04e79bf5101
+Generated: 2026-10-09 12:38 UTC | Run: run-0e9adb0c3f63
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 407430d authority: enforce one live record per single-valued project_state key
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## docs/UNIFIED_BUILD_LIST.md 
+
+## enforcement/mwl-proof-v2/gates/gate_build_state_coherence.py 
+
+## runtime/db/build_plan.py 
+
+## runtime/db/database.py 
+
+## runtime/db/state_authority.py 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
+
+## runtime/schema/migrations/0040_project_state_single_live.sql 
+
+## runtime/tests/test_build_path_api.py 
+
+## runtime/tests/test_project_intelligence_api.py 
+
+## runtime/tests/test_state_authority.py 
+
+## tools/development/verification_plan.py 
+
+## tools/escalation/check_escalation_required.py 
+
+## tools/export/generate_agents_md.py 
+
+## tools/export/generate_hcp.py 
+
+## tools/export/tests/test_agents_md_size_guard.py 
+
+## tools/export/tests/test_generate_hcp_current_state.py 
+
+## tools/export/tests/test_precommit_export_safety.py 
+
+## tools/queue/propose_next.py 
+
+## tools/queue/set_current_item.py 
+
+## tools/state/build_path.py 
+
+## tools/state/canonical_state.py 
+
+## tools/state/project_intelligence.py 
+
+## tools/state/tests/test_canonical_state.py 
 
 ## f59c199 development: judge evidence reuse from the evidence, not from the baseline
 
@@ -608,39 +684,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/queue/render_build_list.py 
 
 ## tools/queue/tests/test_recovery_identity.py 
-
-## 58cb461 architecture: record the reference outcome that sets the destination bar
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## runtime/tests/test_destination_architecture_api.py 

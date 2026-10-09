@@ -680,6 +680,50 @@ describe("ProjectMap — Queue / Problems", () => {
       .toBeInTheDocument();
   });
 
+  // NEGATIVE TEST for the Workbench projection defect measured 2026-10-08.
+  // Already recorded twice as an observation and deliberately left unfixed:
+  // project_state.queue_projection_observation row 163, and
+  // project_state.external_dev_checkpoint row 184 non-blocking observation 3.
+  //
+  // The headline below used to be a HARDCODED LITERAL rendered
+  // unconditionally, so against the live production counts (awaiting_triage 0
+  // of 133) this panel asserted the classification pass was outstanding while
+  // its own pills, two lines above, read "0 items awaiting formal triage" and
+  // "133 already classified". The literal also DROPPED the "by this screen"
+  // qualifier that the read model's own triage_state.statement carries,
+  // converting a true statement about this component's read-only nature into a
+  // false one about the project's state.
+  //
+  // This asserts the unscoped claim is gone once the queue authority reports
+  // zero awaiting, and that the read model's scoped statement still shows. It
+  // deliberately asserts NOTHING about whether the QUEUE_TRIAGE *stage* is
+  // complete: stage status is phase authority (ADR-PIPE-006,
+  // project_state.pipeline_roadmap) and is not this component's to derive. The
+  // sequencing line below the headline still reports the stage exactly as the
+  // Build Path read model gives it.
+  it("does not claim the classification pass is outstanding once the queue authority reports zero awaiting", async () => {
+    const base = model();
+    await renderMap(() => Promise.resolve(ok(model({
+      queue: {
+        ...base.queue,
+        total_items: 133,
+        awaiting_triage: 0,
+        classified: 133,
+        counts: { ...base.queue.counts, total_items: 133, unclassified: 0,
+                  missing_need_status: 0 },
+      },
+    }))));
+    await goTo("Queue / Problems");
+    expect(screen.getByText("0 items awaiting formal triage")).toBeInTheDocument();
+    expect(screen.getByText("133 already classified")).toBeInTheDocument();
+    // The defect: this unscoped sentence must not survive a zero count.
+    expect(screen.queryByText("Queue triage has not been performed.")).toBeNull();
+    // The read model's own scoped statement is a read-only-boundary
+    // disclosure and must still be present either way.
+    expect(screen.getByText(/Queue triage has NOT been performed by this screen/))
+      .toBeInTheDocument();
+  });
+
   it("keeps problems and queue items as two separate lists", async () => {
     await renderMap();
     await goTo("Queue / Problems");
