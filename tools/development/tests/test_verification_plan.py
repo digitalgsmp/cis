@@ -1413,14 +1413,117 @@ def test_currency_07_matching_sha_is_not_enough_when_the_worktree_moved():
         shutil.rmtree(os.path.dirname(db), ignore_errors=True)
 
 
-def test_currency_08_live_regression_of_the_reported_unsafe_case():
-    """THE REPORTED CASE, asserted against the REAL repository, read-only.
+def _regression_item(**over):
+    """The reported case's evidence record, shaped like a real candidate."""
+    item = {
+        "id": "regression:stale", "check_id": "test_verification_plan.py",
+        "kind": "test_suite", "name": "test_verification_plan.py",
+        "source": "card XDEV-VERIFY-01D regression",
+        "authority": "implementing_developer", "is_independent_acceptance": False,
+        "tested_identity": None, "tested_identity_ambiguous": False,
+        "tested_identity_candidates": [], "superseded": False,
+        "covered_components": ["tools/development"], "coverage_note": None,
+    }
+    item.update(over)
+    return item
+
+
+def test_currency_08_the_reported_unsafe_case_in_a_bounded_fixture():
+    """THE REPORTED CASE, reproduced in a controlled repository.
 
     A test_verification_plan.py result measured at 280723da was reported
     reusable for b1a757a9, across three commits that rewrote
-    verification_plan.py itself. The assertion is written against the live
-    tree rather than a fixture, and it strengthens as HEAD advances: every
-    future commit leaves 280723da further behind.
+    verification_plan.py itself — while the accepted-baseline delta was empty
+    and impact read NO_CHANGE.
+
+    The fixture rebuilds exactly that shape: a `tools/development` component
+    that owns its own tests, a measurement taken before three commits rewrite
+    its implementation, and an acceptance that has since advanced to HEAD.
+    The changed scope here is bounded BY CONSTRUCTION — the only files in the
+    delta are the ones this test commits — so the refusal is attributable to
+    the measurement-currency rule and cannot drift when unrelated files
+    elsewhere in the real repository change. The live companion observation
+    below keeps the assertion anchored to the real 280723da.
+    """
+    root, _ = make_repo()
+    measured = commit(root, {
+        "tools/development/verification_plan.py": "RULE = 1\n",
+        "tools/development/tests/test_verification_plan.py":
+            "def test(): assert True\n",
+    }, "add the component under its own tests")
+    # The three commits that rewrote the implementation after the measurement.
+    for n in (2, 3, 4):
+        head = commit(root, {"tools/development/verification_plan.py":
+                             f"RULE = {n}\n"}, f"rewrite the rule ({n})")
+    tm = vplan.derive_test_map(root)
+    try:
+        changed_since = vplan.changed_scope(measured, repo_root=root,
+                                            include_worktree=False, test_map=tm)
+        check("8: tools/development really did change after the measurement, "
+              "so its evidence is genuinely stale",
+              "tools/development" in changed_since["components"],
+              sorted(changed_since["components"]))
+        check("8: and that delta's own ownership resolves, so the refusal "
+              "below cannot be the ownership gate in disguise",
+              changed_since["component_ownership_resolved"] is True,
+              changed_since["undetermined_files"])
+        check("8: the delta is bounded to the files this fixture committed",
+              changed_since["changed_files"] ==
+              ["tools/development/verification_plan.py"],
+              changed_since["changed_files"])
+
+        # The state under verification is HEAD with nothing outstanding, which
+        # is the condition under which the old rule read NO_CHANGE and reused.
+        scope = vplan.changed_scope(head, repo_root=root, include_worktree=False,
+                                    test_map=tm)
+        check("8: against HEAD the accepted-baseline delta is empty and impact "
+              "reads NO_CHANGE",
+              scope["changed_file_count"] == 0 and
+              scope["dependency_impact"]["state"] == "NO_CHANGE",
+              scope["dependency_impact"])
+
+        stale = _regression_item(tested_identity=measured,
+                                 tested_identity_candidates=[measured])
+        current = _regression_item(id="regression:current", tested_identity=head,
+                                   tested_identity_candidates=[head])
+        reusable, invalidated = vplan.classify_evidence(
+            [stale, current], scope, repo_root=root, test_map=tm)
+
+        bad = [i for i in invalidated if i["id"] == "regression:stale"]
+        check("8: the pre-rewrite result is NOT accepted as proof of the "
+              "implementation now under verification",
+              bool(bad) and "regression:stale" not in [i["id"] for i in reusable],
+              [i["id"] for i in reusable])
+        check("8: and the reason is the overlap since its own measurement",
+              all("condition 4" in i["invalidation_reason"] and
+                  f"measured at {measured}" in i["invalidation_reason"] and
+                  "tools/development" in i["invalidation_reason"] for i in bad),
+              [i["invalidation_reason"][:200] for i in bad])
+        check("8: while a result measured at the state under verification "
+              "remains eligible",
+              "regression:current" in [i["id"] for i in reusable],
+              [i.get("invalidation_reason", "")[:160] for i in invalidated
+               if i["id"] == "regression:current"])
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def test_currency_08_live_observation_of_the_reported_commit():
+    """The same case against the REAL repository, read-only.
+
+    This keeps the regression anchored to the actual 280723da rather than to a
+    fixture's idea of it, and asserts only what the live tree can establish
+    deterministically no matter what else changes in the repository:
+
+      - tools/development really did change after 280723da, permanently;
+      - a result measured there is NEVER reused for the current state;
+      - the refusal is condition 4, naming the commit it was measured at;
+      - and it is one of the two fail-closed outcomes, either the overlap or
+        the earlier, more conservative undetermined-ownership gate. WHICH of
+        them fires depends on whether every file in the live delta has a
+        derivable owner, which unrelated future files can change. The
+        attribution to the overlap specifically is asserted in the bounded
+        fixture above, so it is proven without being made hostage to that.
     """
     measured_at = "280723da8d435b78153d31fe68f74cba5e7b9d13"
     tm = vplan.derive_test_map()
@@ -1438,13 +1541,7 @@ def test_currency_08_live_regression_of_the_reported_unsafe_case():
           "280723da, so its evidence is genuinely stale",
           "tools/development" in changed_since["components"],
           sorted(changed_since["components"]))
-    check("8 live (read-only): and that delta's own ownership resolves, so the "
-          "refusal below cannot be the ownership gate in disguise",
-          changed_since["component_ownership_resolved"] is True,
-          changed_since["undetermined_files"])
 
-    # The state under verification is HEAD with nothing outstanding, which is
-    # the condition under which the old rule read NO_CHANGE and reused.
     head = vplan._git(vplan.REPO_ROOT, "rev-parse", "HEAD")[1].strip()
     scope = vplan.changed_scope(head, include_worktree=False, test_map=tm)
     check("8 live (read-only): against HEAD the accepted-baseline delta is "
@@ -1453,17 +1550,10 @@ def test_currency_08_live_regression_of_the_reported_unsafe_case():
           scope["dependency_impact"]["state"] == "NO_CHANGE",
           scope["dependency_impact"])
 
-    stale = {
-        "id": "regression:stale", "check_id": "test_verification_plan.py",
-        "kind": "test_suite", "name": "test_verification_plan.py",
-        "source": "card XDEV-VERIFY-01D live regression",
-        "authority": "implementing_developer", "is_independent_acceptance": False,
-        "tested_identity": measured_at, "tested_identity_ambiguous": False,
-        "tested_identity_candidates": [measured_at], "superseded": False,
-        "covered_components": ["tools/development"], "coverage_note": None,
-    }
-    current = dict(stale, id="regression:current", tested_identity=head,
-                   tested_identity_candidates=[head])
+    stale = _regression_item(tested_identity=measured_at,
+                             tested_identity_candidates=[measured_at])
+    current = _regression_item(id="regression:current", tested_identity=head,
+                               tested_identity_candidates=[head])
     reusable, invalidated = vplan.classify_evidence(
         [stale, current], scope, repo_root=vplan.REPO_ROOT, test_map=tm)
 
@@ -1472,11 +1562,17 @@ def test_currency_08_live_regression_of_the_reported_unsafe_case():
           "the implementation now under verification",
           bool(bad) and "regression:stale" not in [i["id"] for i in reusable],
           [i["id"] for i in reusable])
-    check("8 live (read-only): and the reason is the overlap since its own "
-          "measurement",
-          all("condition 4" in i["invalidation_reason"] and
-              f"measured at {measured_at}" in i["invalidation_reason"] and
-              "tools/development" in i["invalidation_reason"] for i in bad),
+    check("8 live (read-only): and condition 4 refuses it, naming the commit "
+          "it was measured at",
+          bool(bad) and all("condition 4" in i["invalidation_reason"] and
+                            measured_at in i["invalidation_reason"] for i in bad),
+          [i["invalidation_reason"][:200] for i in bad])
+    check("8 live (read-only): and the refusal is a fail-closed one — the "
+          "overlap, or the undetermined-ownership gate that precedes it",
+          bool(bad) and all(
+              "tools/development" in i["invalidation_reason"] or
+              "no derivable owning component" in i["invalidation_reason"]
+              for i in bad),
           [i["invalidation_reason"][:200] for i in bad])
     check("8 live (read-only): while a result measured at the state under "
           "verification remains eligible",
@@ -1524,7 +1620,8 @@ def run():
     test_currency_05_unresolved_component_ownership_still_blocks_reuse()
     test_currency_06_valid_unchanged_evidence_remains_reusable()
     test_currency_07_matching_sha_is_not_enough_when_the_worktree_moved()
-    test_currency_08_live_regression_of_the_reported_unsafe_case()
+    test_currency_08_the_reported_unsafe_case_in_a_bounded_fixture()
+    test_currency_08_live_observation_of_the_reported_commit()
     test_live_repository_observations()
 
     failures = [r for r in results if "FAIL" in r]
