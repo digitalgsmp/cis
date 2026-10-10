@@ -114,7 +114,12 @@ function DiscoveryLine({ record, mode }) {
       <StatusBadge status={record.status} />{" "}
       {atLeast(mode, "detail") && (
         <span className="muted">
-          ({record.disposition}
+          {/* A discovery record carries a disposition; a stage-closeout
+              blocker from the closeout gate carries a blocker type instead
+              (an unresolved plain unfinished_work event has no disposition
+              at all). Whichever this record has is shown — never an empty
+              parenthesis. */}
+          ({record.disposition || record.type}
           {atLeast(mode, "technical") && <>, rev {record.revision}</>})
         </span>
       )}
@@ -247,7 +252,13 @@ function CurrentAndNext({ model, mode }) {
 
       <h4>Next stage</h4>
       {!next ? (
-        <div className="muted">No following stage is recorded in the roadmap.</div>
+        /* A stage is named next only on phase-authority evidence, so "none"
+           usually means the authority establishes no next stage rather than
+           that the roadmap ran out. The read model says which, and that
+           reason is shown instead of the old flat "none recorded". */
+        <div className="muted">
+          {progress.next_phase_note || "No following stage is recorded in the roadmap."}
+        </div>
       ) : (
         <div>
           <strong>{next.label}</strong> <StatusBadge status={next.status} /> —{" "}
@@ -289,7 +300,8 @@ function Blockers({ model, mode }) {
       )}
       {blockers.length === 0 ? (
         <div className="muted">
-          No unresolved blocking discovery is recorded for the current task.
+          {model.stage_closeout?.note
+            || "No unresolved item blocks the current task's stage closeout."}
         </div>
       ) : (
         <ul className="sc-list">

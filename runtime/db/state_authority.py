@@ -86,6 +86,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -168,6 +169,23 @@ RESOLVER_ID = "runtime/db/state_authority.resolve_current"
 
 _REQUIRED_COLUMNS = ("key", "value", "superseded_at")
 
+# Migration 0040's partial unique index — the database-level half of
+# single-valued enforcement. Named here because three separate places have
+# to agree on it: the migration file, spine_schema.sql (so a FRESH database
+# is born with it), and `install_single_live_index` below (so an EXISTING
+# database acquires it when opened through database.init_db).
+SINGLE_LIVE_INDEX = "idx_project_state_one_live_per_single_valued_key"
+
+_SCHEMA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schema")
+MIGRATION_0040_PATH = os.path.join(
+    _SCHEMA_DIR, "migrations", "0040_project_state_single_live.sql")
+SPINE_SCHEMA_PATH = os.path.join(_SCHEMA_DIR, "spine_schema.sql")
+
+_SINGLE_LIVE_INDEX_RE = re.compile(
+    r"CREATE\s+UNIQUE\s+INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?" + SINGLE_LIVE_INDEX
+    + r"\b(.*?);", re.I | re.S)
+
 
 class StateAuthorityError(Exception):
     """Base for every refusal this module makes."""
@@ -187,6 +205,37 @@ class UndeclaredCardinalityError(StateAuthorityError):
     explicit `cardinality=`. Refused rather than guessed: guessing single
     would impose semantics no authority declared, and guessing multi would
     silently leave a new authority key unprotected."""
+
+
+class DuplicateLiveRowsError(StateAuthorityError):
+    """Migration 0040 cannot be installed because the data already violates
+    the constraint it declares: some single-valued key carries more than one
+    live row.
+
+    REFUSED, NOT REPAIRED. The index would have to pick a survivor, and
+    picking between two live authority rows is the authority decision this
+    whole module exists to stop a mechanism from making silently. The
+    conflicting keys and row ids are carried on `.conflicts` so the refusal
+    names exactly what an architect has to decide, and NOTHING is written —
+    no supersession, no winner, no backfill."""
+
+    def __init__(self, message, conflicts=None):
+        super().__init__(message)
+        self.conflicts = conflicts or []
+
+
+class MigrationKeyListDriftError(StateAuthorityError):
+    """The key list in migration 0040's DDL and the single-valued entries of
+    KEY_CARDINALITY have diverged, so installing the index would enforce a
+    different contract from the one this module declares. Refused at install
+    time as well as asserted by runtime/tests/test_state_authority.py: a
+    test catches drift in the repository, this catches drift in whatever
+    file a particular database is actually being migrated from."""
+
+    def __init__(self, message, only_in_migration=(), only_in_registry=()):
+        super().__init__(message)
+        self.only_in_migration = list(only_in_migration)
+        self.only_in_registry = list(only_in_registry)
 
 
 class SupersessionIntegrityError(StateAuthorityError):
@@ -723,6 +772,185 @@ def set_state(conn, key, value, source, *, evidence_hash=None, evidence_run_id=N
         "recorded_at": now,
         "committed_by": "set_state" if own_txn else "caller",
     }
+
+
+# ── migration 0040 installation (fresh databases and recovery) ────────────
+
+def parse_single_live_index_keys(sql_text):
+    """The key list of migration 0040's partial unique index, read out of
+    whatever SQL text declares it — the migration file, spine_schema.sql, or
+    a `.schema` dump of a live database.
+
+    Returns a sorted tuple of keys, or None when the text declares no such
+    index at all. None means "this file does not install it"; an empty tuple
+    would mean "it installs it constraining nothing", and the two must not
+    be confused."""
+    match = _SINGLE_LIVE_INDEX_RE.search(sql_text or "")
+    if not match:
+        return None
+    return tuple(sorted(set(re.findall(r"'([^']+)'", match.group(1)))))
+
+
+def migration_0040_keys(migration_path=None):
+    """The key list migration 0040 itself declares, read from the file."""
+    path = migration_path or MIGRATION_0040_PATH
+    with open(path, encoding="utf-8") as fh:
+        return parse_single_live_index_keys(fh.read())
+
+
+def single_live_index_present(conn):
+    """Whether THIS database carries the index, observed from its own
+    schema. The one question "is migration 0040 applied here" is answered
+    from sqlite_master and never from a migrations-applied table, a file
+    timestamp or a prose claim."""
+    try:
+        return conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='index' AND name = ?",
+            (SINGLE_LIVE_INDEX,)).fetchone() is not None
+    except sqlite3.Error:
+        return False
+
+
+def duplicate_live_single_valued_rows(conn):
+    """Every key registered single-valued in KEY_CARDINALITY that currently
+    carries more than one live row, with the offending row ids.
+
+    This is migration 0040's precondition, asked of the data BEFORE the
+    index is created, because `CREATE UNIQUE INDEX` on violating data fails
+    with SQLite's own message — which names neither the key nor the rows and
+    is therefore not an actionable refusal. Returns None when project_state
+    cannot answer the question at all."""
+    cols = _columns(conn)
+    if not cols or _missing_required(cols):
+        return None
+    keys = single_valued_keys()
+    if not keys:
+        return []
+    has_id = "id" in cols
+    placeholders = ", ".join("?" for _ in keys)
+    rows = conn.execute(
+        f"SELECT key{', id' if has_id else ''} FROM project_state "
+        f"WHERE superseded_at IS NULL AND key IN ({placeholders}) "
+        f"ORDER BY key{', id' if has_id else ''}", keys).fetchall()
+    by_key = {}
+    for row in rows:
+        by_key.setdefault(row[0], []).append(row[1] if has_id else None)
+    return [{
+        "key": key,
+        "live_row_count": len(ids),
+        "row_ids": [i for i in ids if i is not None],
+    } for key, ids in sorted(by_key.items()) if len(ids) > 1]
+
+
+def install_single_live_index(conn, *, migration_path=None):
+    """Install migration 0040 on `conn` if the index is absent, and do
+    nothing if it is already there.
+
+    WHY THIS EXISTS. The index was applied to the production spine by hand.
+    A migration that only ever reaches a database through a hand-run
+    `sqlite3 < file` is not installed by any supported path, so a fresh
+    database built from spine_schema.sql, or an existing one reopened
+    through `database.init_db`, silently came up WITHOUT the
+    database-level half of single-valued enforcement — leaving the
+    sanctioned writer as the only thing standing between a direct INSERT and
+    two live authority rows. That is the gap this closes.
+
+    IDEMPOTENT by observation of the live schema, not by bookkeeping: the
+    index's presence in sqlite_master is the applied/not-applied answer, so
+    calling this on every open costs one catalogue lookup and changes
+    nothing on an already-migrated database (the production spine included).
+
+    FAILS CLOSED on the one case that matters. If any single-valued key
+    already has two live rows, `DuplicateLiveRowsError` is raised naming the
+    keys and row ids, and not one row is touched: no winner is selected, no
+    row is superseded, no `superseded_by` is backfilled, and the index is
+    not created. A migration that resolved its own precondition by picking a
+    survivor would be the defect, not the fix.
+
+    Returns a result dict (never raises for an already-installed index):
+        status   applied | already_present | unavailable
+        applied  True only when this call created the index
+        keys     the key list the index constrains
+        note     why, in the unavailable case
+    """
+    path = migration_path or MIGRATION_0040_PATH
+    result = {
+        "index": SINGLE_LIVE_INDEX,
+        "migration": os.path.basename(path),
+        "status": None,
+        "applied": False,
+        "keys": [],
+        "conflicts": [],
+        "note": None,
+    }
+
+    cols = _columns(conn)
+    if not cols:
+        result.update({"status": "unavailable",
+                       "note": "project_state is absent on this database; there is no "
+                               "single-valued authority to enforce yet"})
+        return result
+    missing = _missing_required(cols)
+    if missing:
+        result.update({"status": "unavailable",
+                       "note": ("project_state lacks required column(s): "
+                                + ", ".join(missing)
+                                + " — a partial index over live rows cannot be "
+                                  "expressed, so enforcement is reported unavailable "
+                                  "rather than silently skipped")})
+        return result
+
+    if single_live_index_present(conn):
+        result.update({"status": "already_present",
+                       "keys": list(single_valued_keys()),
+                       "note": "index already in sqlite_master; nothing applied"})
+        return result
+
+    declared = set(single_valued_keys())
+    in_migration = migration_0040_keys(path)
+    if in_migration is None:
+        raise MigrationKeyListDriftError(
+            f"{os.path.basename(path)} declares no {SINGLE_LIVE_INDEX} index; refusing to "
+            "report migration 0040 installed from a file that does not install it.")
+    in_migration = set(in_migration)
+    if in_migration != declared:
+        raise MigrationKeyListDriftError(
+            f"refusing to install {SINGLE_LIVE_INDEX}: its key list in "
+            f"{os.path.basename(path)} does not match the single-valued entries of "
+            "KEY_CARDINALITY, so the database would enforce a different contract from "
+            "the one runtime/db/state_authority.py declares. Only in the migration: "
+            f"{sorted(in_migration - declared)}; only in the registry: "
+            f"{sorted(declared - in_migration)}.",
+            only_in_migration=sorted(in_migration - declared),
+            only_in_registry=sorted(declared - in_migration))
+
+    conflicts = duplicate_live_single_valued_rows(conn)
+    if conflicts:
+        named = "; ".join(
+            f"{c['key']} has {c['live_row_count']} live rows"
+            + (f" (ids {', '.join(str(i) for i in c['row_ids'])})" if c["row_ids"] else "")
+            for c in conflicts)
+        raise DuplicateLiveRowsError(
+            f"refusing to install {SINGLE_LIVE_INDEX}: the data already violates it — "
+            f"{named}. Nothing was written: no row was superseded, no winner was "
+            "selected and no supersession link was backfilled. Choosing which record is "
+            "current is an authority decision; supersede the others through "
+            "state_authority.set_state and reopen the database.",
+            conflicts=conflicts)
+
+    with open(path, encoding="utf-8") as fh:
+        conn.executescript(fh.read())
+    conn.commit()
+    if not single_live_index_present(conn):
+        raise StateAuthorityError(
+            f"{os.path.basename(path)} ran without error but {SINGLE_LIVE_INDEX} is still "
+            "absent from sqlite_master; enforcement is not installed and this is reported "
+            "rather than assumed.")
+    result.update({"status": "applied", "applied": True,
+                   "keys": sorted(declared),
+                   "note": f"installed from {os.path.basename(path)} after confirming no "
+                           "single-valued key carried duplicate live rows"})
+    return result
 
 
 # ── table-wide integrity, for the coherence gate ──────────────────────────

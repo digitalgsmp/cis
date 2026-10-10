@@ -248,19 +248,35 @@ def test_destination_is_composed_not_duplicated(model):
 # ── 4. the current build state is reported, never changed ────────────────
 
 def test_p0_remains_current_and_triage_remains_next(model):
+    """The build state is REPORTED here, never changed — and reported as the
+    Build Path read model states it, with no second opinion formed in the
+    composition layer.
+
+    THE EXPECTED VALUES MOVED ON 2026-10-10, the mechanism did not. These
+    checks pinned "P0 active and blocked, QUEUE TRIAGE next", which is what
+    the spine said when they were written. Phase authority then recorded P0
+    COMPLETE AND CLOSED (project_state rows 187/188, reconciled at continuity
+    revision 169) and Queue Triage complete, and Build Path was corrected to
+    derive stage status from that evidence instead of positionally from the
+    phase pointer. What this test is for is unchanged: whatever Build Path
+    says, this screen must say the same and must not activate anything."""
     build = model["current_build"]["build_path"]
     p0 = next((p for p in build["phases"] if p["id"] == "P0"), None)
     triage = next((p for p in build["phases"] if p["id"] == "QUEUE_TRIAGE"), None)
-    check("4a. P0 is still the current phase",
-          p0 is not None and p0["is_current"] is True and p0["status"] == "active",
+    direct = bp.get_build_path()
+    check("4a. P0's status is composed from Build Path verbatim, not re-derived",
+          p0 is not None and p0["is_current"] is True
+          and (p0["status"], p0["blocked"], p0["status_label"]) ==
+          next((d["status"], d["blocked"], d["status_label"])
+               for d in direct["phases"] if d["id"] == "P0"),
           None if p0 is None else (p0["status"], p0["is_current"]))
-    check("4b. P0 is still blocked, not complete",
-          p0 is not None and p0["blocked"] is True and p0["status"] != "complete",
+    check("4b. P0 is complete and not blocked, as phase authority states",
+          p0 is not None and p0["status"] == "complete" and p0["blocked"] is False,
           None if p0 is None else p0["status_label"])
-    check("4c. queue triage is still the NEXT stage, not a started one",
-          triage is not None and triage["status"] == "next"
-          and build["next"]["phase_id"] == "QUEUE_TRIAGE",
-          None if triage is None else triage["status"])
+    check("4c. queue triage is complete and nothing is labelled next",
+          triage is not None and triage["status"] == "complete"
+          and build["next"] is None,
+          None if triage is None else (triage["status"], build["next"]))
     check("4d. P1 is still pending — nothing on this screen activates it",
           next((p["status"] for p in build["phases"] if p["id"] == "P1"), None) == "pending",
           next((p["status"] for p in build["phases"] if p["id"] == "P1"), None))
@@ -269,6 +285,12 @@ def test_p0_remains_current_and_triage_remains_next(model):
           and [s["order"] for s in model["trajectory"]["steps"]]
           == sorted(s["order"] for s in model["trajectory"]["steps"]),
           "the composed order is preserved verbatim")
+    check("4f. every trajectory step's status is the Build Path phase's own",
+          {s["id"]: s["status"] for s in model["trajectory"]["steps"]
+           if s["kind"] == "build_phase"}
+          == {d["id"]: d["status"] for d in direct["phases"]},
+          {s["id"]: s["status"] for s in model["trajectory"]["steps"]
+           if s["kind"] == "build_phase"})
 
 
 # ── 5. the unclassified queue items remain unclassified ──────────────────

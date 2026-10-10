@@ -22,9 +22,11 @@ cis-pipeline container exactly as it does on the host.
 Route:
     GET /api/workbench/build-path
         The normalized P0..P6 build-path read model: phase sequence parsed
-        from project_state.pipeline_roadmap, current/next pointers, phase
-        display statuses, migration unlock points, queue hooks, blockers
-        from the discovery ledger, the external-developer checkpoint, the
+        from project_state.pipeline_roadmap, how the phase pointer resolved
+        (`phase_authority`), current/next pointers, evidence-derived phase
+        display statuses, migration unlock points, queue hooks, the
+        stage-closeout blockers the closeout gate itself reports, the
+        discovery ledger beside them, the external-developer checkpoint, the
         governing ADR rows, and generated Mermaid diagram source.
 
 Failure behavior: a failure inside the read model (unreachable spine,

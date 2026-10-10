@@ -866,6 +866,256 @@ def test_10_registry_and_migration_agree():
                                           "state_authority.py")).read()))
 
 
+# ── migration 0040 installation: fresh init and recovery ─────────────────
+#
+# The defect these cover is NOT a wrong answer, it is an ABSENT mechanism:
+# migration 0040 was applied to the production spine by hand and by no
+# supported path, so a fresh database built from spine_schema.sql and an
+# existing one reopened through database.init_db both came up without the
+# index — leaving the sanctioned writer as the only thing between a direct
+# INSERT and two live authority rows, which is precisely what the index
+# exists to stop. Each test below therefore asserts the installation
+# happens, is idempotent, and REFUSES rather than repairs when the data
+# already violates the constraint.
+
+SPINE_SCHEMA = os.path.join(_REPO_ROOT, "runtime", "schema", "spine_schema.sql")
+
+
+def _spine_schema_text():
+    with open(SPINE_SCHEMA, encoding="utf-8") as f:
+        return f.read()
+
+
+def _pre_0040_db(tmpdir, name="pre0040.db"):
+    """A realistic spine as it existed BEFORE migration 0040: the whole
+    schema with that one index statement removed. Not a reduced fixture —
+    database.init_db() applies spine_schema.sql wholesale when workflow_runs
+    is absent, so a fixture carrying only project_state would exercise a
+    code path no real database takes."""
+    path = os.path.join(tmpdir, name)
+    conn = sqlite3.connect(path)
+    conn.executescript(sa._SINGLE_LIVE_INDEX_RE.sub("", _spine_schema_text()))
+    conn.commit()
+    conn.row_factory = sqlite3.Row
+    return path, conn
+
+
+def _indexes_named(conn, name):
+    return conn.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name = ?",
+        (name,)).fetchone()[0]
+
+
+def test_11_fresh_initialization_installs_the_index():
+    tmp = tempfile.mkdtemp(prefix="cis-sa-11-")
+    try:
+        # (a) spine_schema.sql applied directly — a fresh database must be
+        # BORN with the index, not acquire it on some later open.
+        direct = os.path.join(tmp, "schema.db")
+        conn = sqlite3.connect(direct)
+        conn.executescript(_spine_schema_text())
+        check("11a. spine_schema.sql applies cleanly as an initialization script",
+              _indexes_named(conn, "idx_project_state_key_created") == 1)
+        check("11b. a fresh database from spine_schema.sql carries the 0040 index",
+              sa.single_live_index_present(conn))
+        conn.close()
+
+        # (b) the same database reached through the supported entry point.
+        path = os.path.join(tmp, "init.db")
+        conn = dbmod.init_db(path)
+        check("11c. database.init_db() on a new file installs the 0040 index",
+              sa.single_live_index_present(conn))
+        conn.close()
+
+        # (c) idempotent: reopening changes nothing and does not raise.
+        conn = dbmod.init_db(path)
+        check("11d. reopening through init_db() leaves exactly one such index",
+              _indexes_named(conn, sa.SINGLE_LIVE_INDEX) == 1,
+              _indexes_named(conn, sa.SINGLE_LIVE_INDEX))
+        result = sa.install_single_live_index(conn)
+        check("11e. a direct second install reports already_present and applies nothing",
+              result["status"] == "already_present" and result["applied"] is False,
+              result)
+        conn.close()
+
+        # (d) and the index it installed actually enforces: a direct INSERT
+        # bypassing set_state entirely is refused by the database.
+        conn = sqlite3.connect(path)
+        conn.execute("INSERT INTO project_state (key, value, source, created_at) "
+                     "VALUES ('build_phase', 'first', 'manual', '2026-01-01T00:00:00+00:00')")
+        conn.commit()
+        refused = False
+        try:
+            conn.execute(
+                "INSERT INTO project_state (key, value, source, created_at) "
+                "VALUES ('build_phase', 'forged', 'manual', '2026-01-02T00:00:00+00:00')")
+            conn.commit()
+        except sqlite3.IntegrityError:
+            refused = True
+        check("11f. on a freshly initialized database the index itself refuses a "
+              "second live row for a single-valued key", refused)
+        conn.close()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_12_clean_pre_0040_database_receives_the_index():
+    tmp = tempfile.mkdtemp(prefix="cis-sa-12-")
+    try:
+        path, conn = _pre_0040_db(tmp)
+        for key, value in (("build_phase", "Phase P0 is underway"),
+                           ("next_action", "do the thing"),
+                           ("pipeline_roadmap", "A (x) -> B (y)")):
+            raw_insert(conn, key, value)
+        check("12a. the fixture starts WITHOUT the index (this is the pre-0040 state)",
+              not sa.single_live_index_present(conn))
+        check("12b. and nothing in it violates the constraint",
+              sa.duplicate_live_single_valued_rows(conn) == [],
+              sa.duplicate_live_single_valued_rows(conn))
+        conn.close()
+
+        conn = dbmod.init_db(path)
+        check("12c. init_db() installs the 0040 index on a clean pre-0040 database",
+              sa.single_live_index_present(conn))
+        check("12d. the existing rows are untouched by the installation",
+              conn.execute("SELECT COUNT(*) FROM project_state").fetchone()[0] == 3
+              and conn.execute("SELECT COUNT(*) FROM project_state "
+                               "WHERE superseded_at IS NOT NULL").fetchone()[0] == 0)
+        check("12e. the sanctioned writer still works against the now-indexed table",
+              sa.set_state(conn, "build_phase", "Phase P1 is underway", "manual")["new_row_id"]
+              is not None)
+        check("12f. and leaves exactly one live row, satisfying the new index",
+              conn.execute("SELECT COUNT(*) FROM project_state WHERE key='build_phase' "
+                           "AND superseded_at IS NULL").fetchone()[0] == 1)
+        conn.close()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_13_duplicate_live_rows_refuse_the_migration():
+    """The precondition case, and the one that must not be 'helpfully'
+    resolved. Two live next_action rows is the exact shape the production
+    spine carried (161 and 166) when this migration was written."""
+    tmp = tempfile.mkdtemp(prefix="cis-sa-13-")
+    try:
+        path, conn = _pre_0040_db(tmp)
+        id_a = raw_insert(conn, "next_action", "candidate A",
+                          created_at="2026-01-01T00:00:00+00:00")
+        id_b = raw_insert(conn, "next_action", "candidate B",
+                          created_at="2026-02-01T00:00:00+00:00")
+        id_phase = raw_insert(conn, "build_phase", "Phase P0 is underway")
+        before = conn.execute(
+            "SELECT id, key, value, superseded_at, superseded_by FROM project_state "
+            "ORDER BY id").fetchall()
+        conn.close()
+
+        dups = None
+        probe = sqlite3.connect(path)
+        probe.row_factory = sqlite3.Row
+        dups = sa.duplicate_live_single_valued_rows(probe)
+        probe.close()
+        check("13a. the precondition check names the conflicting key and row ids",
+              dups == [{"key": "next_action", "live_row_count": 2,
+                        "row_ids": [id_a, id_b]}], dups)
+
+        raised = None
+        try:
+            dbmod.init_db(path)
+        except sa.DuplicateLiveRowsError as e:
+            raised = e
+        check("13b. init_db() FAILS CLOSED on a pre-0040 database with duplicate "
+              "live single-valued rows", raised is not None,
+              "no DuplicateLiveRowsError raised")
+        check("13c. the refusal names the key and both row ids in its message",
+              raised is not None and "next_action" in str(raised)
+              and str(id_a) in str(raised) and str(id_b) in str(raised),
+              raised and str(raised))
+        check("13d. the refusal carries the conflicts structurally, not only in prose",
+              raised is not None and raised.conflicts == dups,
+              raised and raised.conflicts)
+
+        after_conn = sqlite3.connect(path)
+        after_conn.row_factory = sqlite3.Row
+        after = after_conn.execute(
+            "SELECT id, key, value, superseded_at, superseded_by FROM project_state "
+            "ORDER BY id").fetchall()
+        check("13e. the index was NOT created",
+              not sa.single_live_index_present(after_conn))
+        check("13f. EVERY row is unchanged — no winner picked, nothing superseded, "
+              "no superseded_by backfilled",
+              [tuple(r) for r in after] == [tuple(r) for r in before],
+              f"before={[tuple(r) for r in before]} after={[tuple(r) for r in after]}")
+        check("13g. both candidate rows are still live",
+              after_conn.execute("SELECT COUNT(*) FROM project_state "
+                                 "WHERE key='next_action' AND superseded_at IS NULL"
+                                 ).fetchone()[0] == 2)
+
+        # And the resolver's verdict on the same database: CONFLICT, naming
+        # the rows, serving NO value. The failed migration must not have
+        # nudged the read model into answering.
+        res = sa.resolve_current(after_conn, "next_action")
+        check("13h. resolve_current() reports CONFLICT for the conflicted key",
+              res["status"] == sa.CONFLICT, res["status"])
+        check("13i. and returns NO chosen value, row_id or row",
+              res["value"] is None and res["row_id"] is None and res["row"] is None,
+              (res["value"], res["row_id"], res["row"]))
+        check("13j. the conflict names both live row ids",
+              sorted(r["id"] for r in res["live_rows"]) == sorted([id_a, id_b]),
+              res["live_rows"])
+        check("13k. a key that is NOT conflicted still resolves normally on the "
+              "same database (the refusal is per-key, not a table-wide outage)",
+              sa.resolve_current(after_conn, "build_phase")["row_id"] == id_phase,
+              sa.resolve_current(after_conn, "build_phase")["status"])
+        check("13l. the sanctioned writer also refuses the conflicted key",
+              _raises(sa.AmbiguousStateError, sa.set_state, after_conn,
+                      "next_action", "a third", "manual"))
+        after_conn.close()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_14_every_declaring_file_agrees_with_the_registry():
+    """Three places now declare the index: the migration, spine_schema.sql
+    (so a fresh database is born with it) and KEY_CARDINALITY. A key added
+    to one and not the others is a silent enforcement gap, so it fails here
+    instead."""
+    declared = set(sa.single_valued_keys())
+    from_migration = sa.migration_0040_keys()
+    from_schema = sa.parse_single_live_index_keys(_spine_schema_text())
+    check("14a. spine_schema.sql declares the 0040 index at all",
+          from_schema is not None,
+          "no CREATE UNIQUE INDEX for the single-live index in spine_schema.sql")
+    check("14b. spine_schema.sql's key list equals KEY_CARDINALITY's single-valued keys",
+          from_schema is not None and set(from_schema) == declared,
+          f"only in schema: {sorted(set(from_schema or ()) - declared)}; "
+          f"only in registry: {sorted(declared - set(from_schema or ()))}")
+    check("14c. the migration and spine_schema.sql declare the same key list",
+          from_schema is not None and set(from_schema) == set(from_migration or ()),
+          f"migration={sorted(from_migration or ())} schema={sorted(from_schema or ())}")
+    check("14d. a drifted key list is refused at install time, not only by this test",
+          _raises(sa.MigrationKeyListDriftError, _install_with_drifted_key_list))
+
+
+def _install_with_drifted_key_list():
+    """Install from a migration file whose key list has lost a key the
+    registry declares. The installer must refuse rather than create an index
+    enforcing a weaker contract than KEY_CARDINALITY states."""
+    tmp = tempfile.mkdtemp(prefix="cis-sa-14-")
+    try:
+        path, conn = _pre_0040_db(tmp, "drift.db")
+        with open(MIGRATION_0040, encoding="utf-8") as f:
+            text = f.read()
+        drifted = os.path.join(tmp, "0040_drifted.sql")
+        with open(drifted, "w", encoding="utf-8") as f:
+            f.write(text.replace("        'next_action',\n", ""))
+        try:
+            sa.install_single_live_index(conn, migration_path=drifted)
+        finally:
+            conn.close()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def _raises(exc, fn, *args, **kwargs):
     try:
         fn(*args, **kwargs)
@@ -888,6 +1138,10 @@ def run():
     test_8_non_single_valued_keys_are_not_enforced()
     test_9_history_is_intact()
     test_10_registry_and_migration_agree()
+    test_11_fresh_initialization_installs_the_index()
+    test_12_clean_pre_0040_database_receives_the_index()
+    test_13_duplicate_live_rows_refuse_the_migration()
+    test_14_every_declaring_file_agrees_with_the_registry()
 
     for r in results:
         print(r)

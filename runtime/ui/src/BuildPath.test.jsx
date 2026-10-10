@@ -446,8 +446,52 @@ describe("BuildPath (read-only build path visualization)", () => {
     expect(screen.getByText(/names no 'Phase P<n>'/)).toBeInTheDocument();
     expect(screen.getByText(/No phases were parsed from the roadmap row/)).toBeInTheDocument();
     expect(screen.getByText(/carried no diagram source/)).toBeInTheDocument();
-    expect(screen.getByText(/No unresolved blocking discovery is recorded/)).toBeInTheDocument();
+    expect(screen.getByText(/No unresolved item blocks the current task/)).toBeInTheDocument();
     expect(state.renderCalls).toHaveLength(0);
+  });
+
+  // A stage is named "next" only on phase-authority evidence, so an absent
+  // `next` is normally a REASON and not a dead end: once the phase the
+  // authority names is complete, which stage follows is that authority's
+  // decision. The screen must show the read model's own explanation rather
+  // than implying the roadmap simply ended.
+  it("explains why no stage is next instead of implying the roadmap ran out", async () => {
+    state.handler = vi.fn(async () => ok(fullModel({
+      next: null,
+      progress: {
+        total_phases: 9, complete: 2, current_order: 0, current_phase_note: null,
+        next_phase_note: "no roadmap stage is next: P0 is the phase "
+                         + "project_state.build_phase names and that row states it "
+                         + "COMPLETE, so which stage follows is a phase-authority "
+                         + "decision and is not projected here",
+      },
+    })));
+    render(<BuildPath onBack={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/which stage follows is a phase-authority decision/))
+        .toBeInTheDocument());
+    expect(screen.queryByText(/No following stage is recorded in the roadmap/)).toBeNull();
+  });
+
+  // A stage-closeout blocker from the closeout gate carries a blocker TYPE,
+  // not a discovery disposition — an unresolved plain unfinished_work event
+  // has no disposition at all. The detail line must show what the record
+  // actually has rather than an empty parenthesis.
+  it("labels a stage-closeout blocker by its type when it has no disposition",
+     async () => {
+    state.handler = vi.fn(async () => ok(fullModel({
+      blockers: [{
+        id: null, task: "WB.1", revision: 126, type: "unresolved_unfinished_work",
+        status: "blocking", scope: "task",
+        summary: "ARCHITECTURE RECOVERY FOR CLEAN-MODULAR THREE-PLANE RECONSTRUCTION",
+        summary_truncated: false,
+      }],
+    })));
+    render(<BuildPath onBack={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/ARCHITECTURE RECOVERY FOR CLEAN-MODULAR/))
+        .toBeInTheDocument());
+    expect(screen.getByText(/unresolved_unfinished_work/)).toBeInTheDocument();
   });
 
   it("calls onBack when the back control is used", async () => {

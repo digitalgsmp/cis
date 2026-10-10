@@ -104,6 +104,28 @@ def init_db(db_path=None):
     if cursor.fetchone() is None:
         migration_path = Path(SCHEMA_PATH).parent / "migrations" / "0011_build_plan_spine.sql"
         conn.executescript(migration_path.read_text())
+    # Apply migration 0040 (one live row per single-valued project_state key)
+    # if this database does not already carry its index.
+    #
+    # WHY HERE, AND WHY NOT AS ANOTHER `if table is None` BLOCK. Every
+    # migration above is detected by a TABLE it creates; 0040 creates no
+    # table, it creates a partial unique index, so its applied/not-applied
+    # question is answered from sqlite_master's index entry instead. Until
+    # this call existed, 0040 reached a database only by being run against it
+    # by hand: a fresh database and a reopened one both came up without the
+    # database-level half of single-valued enforcement, leaving the
+    # sanctioned writer as the only thing between a direct INSERT and two
+    # live authority rows.
+    #
+    # It is idempotent — one catalogue lookup and an early return on a
+    # database that already has the index, which includes the production
+    # spine — and it FAILS CLOSED: a database where some single-valued key
+    # already carries two live rows raises
+    # state_authority.DuplicateLiveRowsError naming the keys and row ids,
+    # with nothing written and no winner picked. That is deliberately loud.
+    # An init path that silently resolved the ambiguity to get the index
+    # created would be the defect this enforcement exists to prevent.
+    _state_authority().install_single_live_index(conn)
     return conn
 
 

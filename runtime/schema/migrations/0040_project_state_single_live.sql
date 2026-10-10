@@ -32,18 +32,24 @@
 -- forced into single-valued semantics by this index.
 --
 -- ───────────────────────────────────────────────────────────────────────────
--- PRECONDITION — NOT SATISFIED ON THE PRODUCTION SPINE AS OF 2026-10-09.
+-- PRECONDITION — CHECKED BY THE INSTALLER, NOT BY THE READER OF THIS FILE.
 -- ───────────────────────────────────────────────────────────────────────────
--- CREATE UNIQUE INDEX fails if the data already violates it. On
--- data/cis_memory.db, project_state.next_action has TWO live rows, 161 and
--- 166, so this migration WILL FAIL on production until an authority
--- decision supersedes one of them. That is correct behaviour, not a
--- blocker to work around: a migration that silently picked a winner would
--- be the defect this card exists to remove. Selecting between 161 and 166
--- is phase authority (see project_state row 163) and is explicitly outside
--- the scope of the card that wrote this file.
+-- CREATE UNIQUE INDEX fails if the data already violates it, and SQLite's
+-- own failure message names neither the key nor the rows. So the supported
+-- installer asks the question first:
 --
--- Run this before applying, and expect it to return no rows:
+--   runtime/db/state_authority.install_single_live_index(conn)
+--     — called by runtime/db/database.init_db() on every open. It checks
+--       sqlite_master for this index (absent => install, present => return,
+--       so it is idempotent), verifies the key list below still equals the
+--       single-valued entries of KEY_CARDINALITY, and then checks every
+--       such key for duplicate live rows. Duplicates raise
+--       DuplicateLiveRowsError NAMING THE KEYS AND ROW IDS, with nothing
+--       written: no row superseded, no winner selected, no superseded_by
+--       backfilled. A migration that resolved its own precondition by
+--       picking a survivor would be the defect, not the fix.
+--
+-- The equivalent by hand, expected to return no rows:
 --
 --   SELECT key, COUNT(*) AS live
 --     FROM project_state
@@ -51,21 +57,28 @@
 --      AND key IN (/* the key list below */)
 --    GROUP BY key HAVING COUNT(*) > 1;
 --
--- or equivalently:
+-- or, table-wide and including supersession-chain integrity:
 --
 --   python3 -m db.state_authority --integrity      # from runtime/, exit 0 required
 --
--- REMEDIATION REQUIRED BEFORE APPLYING (architect action, not automatic):
---   1. Decide which of next_action 161 / 166 is current.
---   2. Record the decision and supersede the other row through the
---      sanctioned writer, so superseded_at and superseded_by are both set.
---   3. Re-run the precondition query; it must return no rows.
---   4. Apply this file.
+-- IF IT REFUSES, the remediation is an architect action and is not
+-- automatic: decide which record is current, supersede the others through
+-- state_authority.set_state so superseded_at and superseded_by are both
+-- set, then reopen the database.
 --
--- Until step 4, single-valued enforcement on production comes from the
--- sanctioned writer and is DETECTED (not prevented) for direct database
--- mutation, by state_authority.resolve_current and by
--- tools/gates/gate_build_state_coherence.py.
+-- HISTORY, because this header previously read as a standing blocker. When
+-- this file was written, project_state.next_action carried two live rows,
+-- 161 and 166, and applying it to data/cis_memory.db would have failed.
+-- That conflict was resolved by authority decision, this index now exists
+-- on the production spine, and the installer above therefore returns
+-- already_present there and applies nothing. Where the index is NOT yet
+-- installed, single-valued enforcement comes from the sanctioned writer
+-- alone and direct database mutation is DETECTED rather than prevented, by
+-- state_authority.resolve_current and tools/gates/gate_build_state_coherence.py.
+--
+-- The same DDL is inlined in runtime/schema/spine_schema.sql so a fresh
+-- database is born with it; the two key lists and KEY_CARDINALITY are
+-- asserted equal by runtime/tests/test_state_authority.py.
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_project_state_one_live_per_single_valued_key
     ON project_state(key)

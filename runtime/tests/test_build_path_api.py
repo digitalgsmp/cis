@@ -7,17 +7,34 @@ Two kinds of test, deliberately:
 
   1. Against the LIVE spine, opened read-only. These prove the read model
      can actually be built from the current authority state and that it
-     reports that state honestly — P0 active/blocked rather than complete,
-     queue triage next, D15 blocking, D16/D17 resolved, the migration
-     unlock points and queue hooks on the phases the roadmap attaches them
-     to. A card assertion that passes only against a hand-built fixture
-     would prove nothing about the project's real state, which is the one
-     thing this screen exists to show.
+     reports that state honestly — P0 complete because build_phase row 187
+     says so, Queue Triage complete on its own evidence, P1 neither active
+     nor next, the revision-127 remediation still standing as the
+     stage-level next action, the WB.1 stage-closeout blockers the closeout
+     gate itself reports, and the migration unlock points and queue hooks
+     on the phases the roadmap attaches them to. A card assertion that
+     passes only against a hand-built fixture would prove nothing about the
+     project's real state, which is the one thing this screen exists to
+     show.
+
+     THESE ASSERTIONS WERE INVERTED UNTIL 2026-10-10, and deliberately so
+     at the time: they pinned "P0 is active, NOT complete" and "QUEUE TRIAGE
+     status is next", which was the state of the spine when they were
+     written. Phase authority moved (project_state rows 187/188, reconciled
+     at continuity revision 169) and the read model derived stage status
+     POSITIONALLY from the phase pointer, so it kept rendering a completed
+     P0 as active and a completed Queue Triage as "next" — and these tests
+     kept passing, because a positional rule and a positional assertion
+     agree with each other no matter what the authority says. The
+     expectations below are now tied to the evidence each one names.
 
   2. Against a SCRATCH database whose pipeline_roadmap row is deliberately
      DIFFERENT from production's. These prove the phase sequence is parsed
      from project_state.pipeline_roadmap rather than hardcoded in the
-     module — the failure mode a visualization like this invites.
+     module — the failure mode a visualization like this invites — and that
+     the stage-status rules hold on data production does not have: a
+     complete pointer phase, a triage stage with no acceptance record, and
+     an ambiguous phase authority.
 
 Nothing here writes to the live spine: the read model opens it with
 sqlite3's mode=ro URI, and a row-count/revision comparison before and
@@ -41,6 +58,9 @@ os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
 
 import build_path as bp  # noqa: E402
 import canonical_state as cs  # noqa: E402
+
+from tools.development import continuity_store as _continuity  # noqa: E402
+from tools.development import discovery as _discovery  # noqa: E402
 
 from container_app import app  # noqa: E402
 
@@ -67,6 +87,20 @@ def live_count(sql):
         return conn.execute(sql).fetchone()[0]
     finally:
         conn.close()
+
+
+def live_state_row_id(key):
+    """The id of the one live project_state row for `key`, read from the
+    spine. Lets a check prove the model is quoting the CURRENT authority row
+    without pinning a row number that goes stale the next time authority
+    legitimately moves."""
+    return live_count(
+        f"SELECT id FROM project_state WHERE key = '{key}' AND superseded_at IS NULL")
+
+
+def live_state_value(key):
+    return live_count(
+        f"SELECT value FROM project_state WHERE key = '{key}' AND superseded_at IS NULL")
 
 
 def migration_rules(ph):
@@ -101,42 +135,61 @@ def test_read_model_builds_from_live_authority():
     return model
 
 
-def test_p0_is_active_and_blocked_not_complete(model):
+def test_p0_is_complete_because_phase_authority_says_so(model):
+    """Card assertion 7. P0 renders complete, and for the right reason: the
+    phase-authority row's own words about the phase it names."""
     p0 = phase(model, "P0")
+    authority = model["phase_authority"]
     check("2a. P0 is present in the parsed sequence", p0 is not None)
-    check("2b. P0 is the current phase", p0 and p0["is_current"], p0 and p0["is_current"])
-    check("2c. P0 status is 'active', NOT 'complete'",
-          p0 and p0["status"] == "active", p0 and p0["status"])
-    check("2d. P0 is marked blocked", p0 and p0["blocked"] is True, p0 and p0["blocked"])
-    check("2e. P0's display label says active / blocked",
-          p0 and p0["status_label"] == "active / blocked", p0 and p0["status_label"])
-    check("2f. the current pointer agrees with the phase list",
+    check("2b. P0 is the phase the authority names", p0 and p0["is_current"],
+          p0 and p0["is_current"])
+    check("2c. P0 status is 'complete'", p0 and p0["status"] == "complete",
+          p0 and p0["status"])
+    check("2d. P0 is not marked blocked — a closed phase is not blocked by anything",
+          p0 and p0["blocked"] is False, p0 and p0["blocked"])
+    check("2e. phase authority resolved cleanly, from the one resolver",
+          authority["status"] == "RESOLVED"
+          and authority["resolver"] == "runtime/db/state_authority.resolve_current",
+          authority)
+    check("2f. the lifecycle is read as COMPLETE, and the row's own words are quoted",
+          authority["phase_lifecycle"] == "COMPLETE"
+          and "COMPLETE" in (authority["lifecycle_quote"] or "")
+          and authority["phase_id"] == "P0",
+          (authority["phase_lifecycle"], authority["lifecycle_quote"]))
+    check("2g. the completion claim is evidenced by the live build_phase row, "
+          "not by a literal in this module",
+          authority["row_id"] == live_state_row_id("build_phase")
+          and "COMPLETE" in (model["current"]["evidence"]["value"] or "").upper(),
+          (authority["row_id"], live_state_row_id("build_phase")))
+    check("2h. the current pointer agrees with the phase list and states why",
           model["current"] and model["current"]["phase_id"] == "P0"
-          and model["current"]["blocked"] is True,
+          and model["current"]["status"] == "complete"
+          and "build_phase" in model["current"]["status_reason"],
           model.get("current"))
-    check("2g. no phase anywhere is reported complete while P0 is current",
-          all(p["status"] != "complete" for p in model["phases"]),
-          [p["id"] for p in model["phases"] if p["status"] == "complete"])
-    check("2h. P0's current-phase claim carries its project_state evidence",
-          model["current"]["evidence"]["state_key"] == "build_phase"
-          and "P0" in (model["current"]["evidence"]["value"] or ""),
-          model["current"]["evidence"]["state_key"])
     check("2i. P0 shows migrations 0035 and 0038 applied, 'applied' observed from the schema",
           migration_rules(p0).get("0035", {}).get("applied") is True
           and migration_rules(p0).get("0038", {}).get("applied") is True,
           {k: v.get("applied") for k, v in migration_rules(p0).items()})
 
 
-def test_queue_triage_is_next(model):
+def test_queue_triage_is_complete_on_its_own_evidence(model):
+    """Card assertion 8. Queue Triage renders complete because its subject
+    is empty AND ADR-PIPE-006's independent review returned ACCEPT — not
+    because it happens to precede or follow anything."""
     triage = phase(model, "QUEUE_TRIAGE")
-    check("3a. QUEUE TRIAGE is the stage after P0",
+    completion = model["triage_completion"]
+    check("3a. QUEUE TRIAGE is the stage after P0 in the parsed chain",
           triage is not None and triage["order"] == phase(model, "P0")["order"] + 1,
           triage and triage["order"])
-    check("3b. QUEUE TRIAGE status is 'next'",
-          triage and triage["status"] == "next", triage and triage["status"])
-    check("3c. the next pointer agrees with the phase list",
-          model["next"] and model["next"]["phase_id"] == "QUEUE_TRIAGE",
-          model.get("next"))
+    check("3b. QUEUE TRIAGE status is 'complete', not 'next'",
+          triage and triage["status"] == "complete", triage and triage["status"])
+    check("3c. nothing is labelled 'next' merely for following P0",
+          model["next"] is None
+          and all(p["status"] != "next" for p in model["phases"]),
+          [p["id"] for p in model["phases"] if p["status"] == "next"])
+    check("3d. and the absence of a next stage is explained, not left blank",
+          "phase-authority decision" in (model["progress"]["next_phase_note"] or ""),
+          model["progress"]["next_phase_note"])
     # The '> 0' half was dropped, NOT the assertion. It was a liveness proxy --
     # a hardcoded zero would have passed the equality while the queue still had
     # unclassified rows -- and it stopped being true on 2026-10-04 when Formal
@@ -146,31 +199,91 @@ def test_queue_triage_is_next(model):
     # and does not assume the count never reaches its target.
     live_unclassified = live_count(
         "SELECT COUNT(*) FROM queue_items WHERE need_status IS NULL AND scope IS NULL")
-    check("3d. triage shows the live unclassified queue_items count",
+    check("3e. triage shows the live unclassified queue_items count",
           triage["queue_classification"]["unclassified"]
           == model["queue"]["unclassified"] == live_unclassified,
           f"stage {triage['queue_classification']['unclassified']}, "
           f"model {model['queue']['unclassified']}, live {live_unclassified}")
+    check("3f. the completion rests on the live classification counts",
+          completion["complete"] is True
+          and completion["unclassified"] == live_unclassified == 0
+          and completion["total_items"] == live_count(
+              "SELECT COUNT(*) FROM queue_items"),
+          {k: completion[k] for k in ("complete", "unclassified", "total_items")})
+    review = completion["independent_review"]
+    live_review_rev = live_count(
+        "SELECT MAX(revision) FROM dev_continuity_events "
+        "WHERE status = 'TRIAGE_REVIEW_ACCEPTED'")
+    check("3g. and on the ADR-PIPE-006 acceptance record, found by its own status "
+          "token and reported with the revision it was found at",
+          review["accepted"] is True and review["revision"] == live_review_rev,
+          (review["accepted"], review["revision"], live_review_rev))
+    check("3h. the stage carries its completion evidence in words, for the screen",
+          "neither scope nor need_status" in (completion["evidence"] or "")
+          and str(live_review_rev) in (completion["evidence"] or ""),
+          completion["evidence"])
+    check("3i. the same completion is attached to the stage, not only to the model",
+          triage["triage_completion"]["complete"] is True
+          and "ADR-PIPE-006" in (triage["status_reason"] or ""),
+          triage.get("status_reason"))
     constraints = {c["constraint"]: c for c in triage["constraints"]}
-    check("3e. triage notes 'bounded mechanical classification', quoted from ADR-PIPE-006",
+    check("3j. triage notes 'bounded mechanical classification', quoted from ADR-PIPE-006",
           "bounded mechanical classification" in constraints
           and constraints["bounded mechanical classification"]["source"] == "ADR-PIPE-006",
           list(constraints))
-    check("3f. triage notes 'no redesign', quoted from ADR-PIPE-006",
+    check("3k. triage notes 'no redesign', quoted from ADR-PIPE-006",
           "no redesign" in constraints
           and "NO item redesign" in constraints["no redesign"]["quote"],
           list(constraints))
 
 
-def test_later_phases_are_pending(model):
-    later = [p for p in model["phases"] if p["order"] > phase(model, "QUEUE_TRIAGE")["order"]]
-    check("4a. every stage after triage is pending",
+def test_p1_is_neither_active_nor_next(model):
+    """Card assertion 9. A discharged prerequisite is not an authorization:
+    completed triage must not advance anything to P1."""
+    p1 = phase(model, "P1")
+    later = [p for p in model["phases"] if p["order"] > p1["order"]]
+    check("4a. P1 is pending — not active, not next",
+          p1 and p1["status"] == "pending", p1 and p1["status"])
+    check("4b. P1 is not flagged as current or as next",
+          p1 and p1["is_current"] is False and p1["is_next"] is False,
+          (p1["is_current"], p1["is_next"]))
+    check("4c. P1's non-activation is read from phase authority and stated, "
+          "not inferred from the triage counts",
+          p1 and p1["explicitly_not_activated"] is True
+          and "NOT ACTIVATED" in p1["status_reason"]
+          and "P1" in model["phase_authority"]["not_activated_phases"],
+          (p1["explicitly_not_activated"], p1["status_reason"]))
+    check("4d. every stage after P1 is pending",
           later and all(p["status"] == "pending" for p in later),
           {p["id"]: p["status"] for p in later})
-    check("4b. the full P0..P6 sequence with triage and the Tier-0 card is present, in order",
+    check("4e. exactly the two stages with completion evidence are complete",
+          [p["id"] for p in model["phases"] if p["status"] == "complete"]
+          == ["P0", "QUEUE_TRIAGE"] and model["progress"]["complete"] == 2,
+          [p["id"] for p in model["phases"] if p["status"] == "complete"])
+    check("4f. the full P0..P6 sequence with triage and the Tier-0 card is present, in order",
           [p["id"] for p in model["phases"]] ==
           ["P0", "QUEUE_TRIAGE", "P1", "P2", "TIER_0_TRUST", "P3", "P4", "P5", "P6"],
           [p["id"] for p in model["phases"]])
+
+
+def test_stage_next_action_is_the_revision_127_remediation(model):
+    """Card assertion 10. The stage-level next action is the one project_state
+    holds, and it is kept distinct from the roadmap stage pointer."""
+    action = model["next_action"]
+    check("4g. the stage-level next action is served from project_state.next_action",
+          action is not None and action["state_key"] == "next_action"
+          and action["row_id"] == live_state_row_id("next_action"),
+          action and (action.get("state_key"), action.get("row_id")))
+    check("4h. it is the revision-127 trust-boundary remediation",
+          action and "127" in action["text"]
+          and "TRUST-BOUNDARY" in action["text"].upper(),
+          action and action["text"][:160])
+    check("4i. its text is the live row's, verbatim",
+          action and action["text"] == live_state_value("next_action"),
+          "next_action text does not match the live project_state row")
+    check("4j. it is explicitly NOT a roadmap stage pointer",
+          action and "NOT a roadmap stage pointer" in action["scope_note"],
+          action and action.get("scope_note"))
 
 
 def test_p1_p2_descriptions(model):
@@ -219,48 +332,100 @@ def test_queue_hooks(model):
           (hook_nums(phase(model, "P0")), hook_nums(phase(model, "P1"))))
 
 
-def test_blockers_and_resolved_discoveries(model):
+def test_blockers_are_the_closeout_gate_s_own(model):
+    """The blocker list must be the gate's, not the subset of it this screen
+    can see through the discovery tag. Asserted by COMPARING with the gate's
+    own function on the live spine rather than by pinning revision numbers,
+    so the two cannot drift apart silently — under-reporting a blocker is
+    exactly the failure this replaces."""
     blockers = model["blockers"]
-    d15 = discovery_by_id(blockers, "WB1-D15")
-    check("8a. WB1-D15 appears as a blocker", d15 is not None,
-          [b["id"] for b in blockers])
-    check("8b. WB1-D15's display status is 'blocking'",
-          d15 and d15["status"] == "blocking", d15 and d15["status"])
-    check("8c. WB1-D15 is unresolved and flagged blocking in the ledger itself",
-          d15 and d15["resolved"] is False and d15["blocking"] is True,
-          d15 and (d15["resolved"], d15["blocking"]))
-    check("8d. every blocker is genuinely unresolved and blocking (nothing padded in)",
-          all(b["resolved"] is False and b["blocking"] is True for b in blockers),
-          [(b["id"], b["resolved"], b["blocking"]) for b in blockers])
+    closeout = model["stage_closeout"]
+    conn = _continuity.connect(cs.DB)
+    try:
+        verdict = _discovery.check_closeout(conn, model["current"]["task"])
+    finally:
+        conn.close()
+    gate_task_revisions = sorted(
+        b["revision"] for b in verdict["blockers"]
+        if b["type"] not in ("kb_source_coverage",))
 
+    check("8a. the blocker set equals the closeout gate's task-scoped blockers",
+          sorted(b["revision"] for b in blockers) == gate_task_revisions,
+          f"model {sorted(b['revision'] for b in blockers)} "
+          f"gate {gate_task_revisions}")
+    check("8b. that includes the three WB.1 items standing at revision 169 — "
+          "revisions 126, 127 and 130",
+          sorted(b["revision"] for b in blockers) == [126, 127, 130],
+          sorted(b["revision"] for b in blockers))
+    check("8c. the plain unfinished_work blockers are carried, not only the "
+          "discovery-tagged one",
+          {b["revision"]: b["type"] for b in blockers} ==
+          {126: "unresolved_unfinished_work",
+           127: "unresolved_before_stage_closeout",
+           130: "unresolved_unfinished_work"},
+          {b["revision"]: b["type"] for b in blockers})
+    check("8d. every blocker is task-scoped and displayed as blocking",
+          all(b["scope"] == "task" and b["status"] == "blocking" for b in blockers),
+          [(b["revision"], b["scope"], b["status"]) for b in blockers])
+    check("8e. ready_to_close is passed through from the gate, not recomputed",
+          closeout["ready_to_close"] == verdict["ready_to_close"] is False
+          and closeout["source"] == "tools/development/discovery.check_closeout",
+          (closeout["ready_to_close"], closeout["source"]))
+    check("8f. the repository-scoped KB blocker type is reported separately, "
+          "never as a WB.1 stage finding",
+          all(b["type"] != "kb_source_coverage" for b in blockers)
+          and len(closeout["repository_blockers"]) ==
+          sum(1 for b in verdict["blockers"] if b["type"] == "kb_source_coverage"),
+          closeout["repository_blockers"])
+    check("8g. no complete phase is rendered blocked by them",
+          all(p["blocked"] is False for p in model["phases"]
+              if p["status"] == "complete"),
+          [(p["id"], p["blocked"]) for p in model["phases"] if p["blocked"]])
+
+
+def test_discovery_ledger_groups(model):
+    """The discovery ledger view, which sits BESIDE the blocker list rather
+    than feeding it: it carries resolved and deferred records the gate has
+    nothing to say about."""
+    blockers = model["blockers"]
+    blocker_revisions = {b["revision"] for b in blockers}
     resolved = model["discoveries"]["resolved"]
     d16 = discovery_by_id(resolved, "WB1-D16")
     d17 = discovery_by_id(resolved, "WB1-D17")
-    check("8e. WB1-D16 appears as resolved",
+    check("8h. WB1-D16 appears as resolved",
           d16 is not None and d16["status"] == "resolved" and d16["resolved"] is True,
           d16 and d16["status"])
-    check("8f. WB1-D17 appears as resolved",
+    check("8i. WB1-D17 appears as resolved",
           d17 is not None and d17["status"] == "resolved" and d17["resolved"] is True,
           d17 and d17["status"])
-    check("8g. neither D16 nor D17 is also listed as a blocker",
-          discovery_by_id(blockers, "WB1-D16") is None
-          and discovery_by_id(blockers, "WB1-D17") is None,
-          [b["id"] for b in blockers])
+    check("8j. no resolved discovery is also listed as a blocker",
+          all(d["revision"] not in blocker_revisions for d in resolved),
+          [d["revision"] for d in resolved if d["revision"] in blocker_revisions])
 
     deferred = model["discoveries"]["deferred"]
     d14 = discovery_by_id(deferred, "WB1-D14")
-    check("8h. WB1-D14 appears as deferred",
+    check("8k. WB1-D14 appears as deferred",
           d14 is not None and d14["status"] == "deferred", d14 and d14["status"])
+    check("8l. no validly deferred discovery is listed as a blocker",
+          all(d["revision"] not in blocker_revisions for d in deferred),
+          [d["revision"] for d in deferred if d["revision"] in blocker_revisions])
 
     p0 = phase(model, "P0")
-    check("8i. the discoveries are attached to the current phase and name their task",
-          p0["discoveries"]["counts"]["blocking"] == len(blockers)
-          and p0["task"] == model["current"]["task"],
-          (p0.get("task"), p0["discoveries"]["counts"]))
-    check("8j. every display status comes from the declared vocabulary",
+    check("8m. the ledger is attached to the phase the authority names, and names "
+          "its task",
+          p0["discoveries"] is not None and p0["task"] == model["current"]["task"],
+          (p0.get("task"), p0["discoveries"] and p0["discoveries"]["counts"]))
+    check("8n. every blocking discovery in the ledger is in the blocker list "
+          "(the gate's set is a superset, never a subset)",
+          all(d["revision"] in blocker_revisions
+              for d in model["discoveries"]["blocking"]),
+          [(d["revision"], d["revision"] in blocker_revisions)
+           for d in model["discoveries"]["blocking"]])
+    check("8o. every display status comes from the declared vocabulary",
           all(d["status"] in model["status_vocabulary"]
               for group in ("blocking", "open", "deferred", "resolved")
-              for d in model["discoveries"][group]),
+              for d in model["discoveries"][group])
+          and all(b["status"] in model["status_vocabulary"] for b in blockers),
           model["status_vocabulary"])
 
 
@@ -305,19 +470,28 @@ def test_mermaid_is_generated_from_the_same_phases(model):
           all(f'{a["id"]} --> {b["id"]}' in mermaid
               for a, b in zip(model["phases"], model["phases"][1:])),
           mermaid)
-    check("10d. the blocked current phase is styled as blocked, not as plain active",
-          "class P0 blockedPhase" in mermaid, mermaid)
-    check("10e. each blocker appears as a node pointing at the current phase",
-          all(f'|blocks closeout| {model["current"]["phase_id"]}' in mermaid
-              for _ in model["blockers"]) and (
-              "blocks closeout" in mermaid if model["blockers"] else True),
+    check("10d. the completed phases are styled as done, and none as active or blocked",
+          "class P0 donePhase" in mermaid and "class QUEUE_TRIAGE donePhase" in mermaid
+          and "activePhase\n" not in mermaid.replace("classDef activePhase", "")
+          and "class P0 blockedPhase" not in mermaid,
+          [l for l in mermaid.splitlines() if l.strip().startswith("class ")])
+    check("10e. each blocker is a node pointing at the stage-closeout node, NOT at "
+          "a phase the authority has closed",
+          model["blockers"] and "STAGE_CLOSEOUT[" in mermaid
+          and mermaid.count("-.->|blocks stage closeout| STAGE_CLOSEOUT")
+          == len(model["blockers"])
+          and f'| {model["current"]["phase_id"]}' not in mermaid,
           mermaid)
-    check("10f. no unescaped double quote leaked into a node label",
+    check("10f. the stage-closeout node names the task and the blocker count",
+          f'STAGE_CLOSEOUT["{model["current"]["task"]} closeout' in mermaid
+          and f'{len(model["blockers"])} unresolved item' in mermaid,
+          [l for l in mermaid.splitlines() if "STAGE_CLOSEOUT[" in l])
+    check("10g. no unescaped double quote leaked into a node label",
           all(line.count('"') % 2 == 0 for line in mermaid.splitlines()),
           [l for l in mermaid.splitlines() if l.count('"') % 2])
-    check("10g. P3's 0036 and P4's 0037 unlock markers are visible in the diagram",
+    check("10h. P3's 0036 and P4's 0037 unlock markers are visible in the diagram",
           "migration 0036" in mermaid and "migration 0037" in mermaid, mermaid)
-    check("10h. queue hooks 0.4, 0.6 and 1.23 are visible in the diagram",
+    check("10i. queue hooks 0.4, 0.6 and 1.23 are visible in the diagram",
           "queue 0.4" in mermaid and "queue 0.6" in mermaid and "queue 1.23" in mermaid,
           mermaid)
 
@@ -475,6 +649,219 @@ def test_sequence_is_parsed_from_the_roadmap_row_not_hardcoded():
               and "P0 --> SHAKEDOWN" in model["mermaid"]
               and "TIER_0_TRUST" not in model["mermaid"],
               model["mermaid"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+# ── 2b. the stage-status rules, on data production does not have ─────────
+#
+# Production carries exactly one shape: a COMPLETE pointer phase, a
+# complete triage, and an explicitly non-activated P1. These fixtures vary
+# each of those independently, so a check that passes on the live spine is
+# not passing by coincidence of a single arrangement.
+
+TRIAGE_ROADMAP = (
+    "P0 (stand up the thing) -> QUEUE TRIAGE (classify the queue) -> "
+    "P1 (first real surface) -> P2 (second surface). "
+    "CONSTRAINTS: triage after P0 and before P1."
+)
+PHASE_COMPLETE_VALUE = (
+    "Scratch build. Phase P0 of the sequence is COMPLETE AND CLOSED as of "
+    "2026-01-05, proved on the scratch listener (scratch_app.py in scratch, host 1). "
+    "QUEUE TRIAGE IS COMPLETE and its independent review is satisfied. "
+    "P1 IS STILL NOT ACTIVATED AND IS NOT THE NEXT STEP."
+)
+PHASE_ACTIVE_VALUE = "Scratch build. Phase P0 of the sequence is underway."
+
+
+def make_triage_scratch_db(*, phase_value=PHASE_COMPLETE_VALUE,
+                            triage_accepted=True, unclassified=0,
+                            duplicate_phase_rows=False):
+    """A scratch spine carrying a QUEUE TRIAGE stage, with each piece of
+    completion evidence switchable."""
+    tmp = tempfile.mkdtemp(prefix="cis_build_path_triage_")
+    path = os.path.join(tmp, "scratch.db")
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    conn.executescript(SCRATCH_SCHEMA)
+    rows = [
+        ("pipeline_roadmap", TRIAGE_ROADMAP, "manual", "2026-01-01T00:00:00+00:00"),
+        ("build_phase", phase_value, "manual", "2026-01-02T00:00:00+00:00"),
+        ("current_direction", "scratch direction", "manual", "2026-01-02T00:00:00+00:00"),
+        ("next_action", "scratch stage-level next action", "manual",
+         "2026-01-02T00:00:00+00:00"),
+        ("current_queue_item", "SCRATCH.1", "manual", "2026-01-02T00:00:00+00:00"),
+    ]
+    if duplicate_phase_rows:
+        # A SECOND LIVE build_phase row, written the way revision 152's forged
+        # row was: straight into the table, bypassing state_authority entirely.
+        rows.append(("build_phase",
+                     "Scratch build. Phase P2 of the sequence is underway.",
+                     "manual", "2026-01-03T00:00:00+00:00"))
+    conn.executemany(
+        "INSERT INTO project_state (key, value, source, created_at) VALUES (?,?,?,?)",
+        rows)
+    conn.execute(
+        "INSERT INTO project_decisions (id, label, decision, reason, decided_at) "
+        "VALUES ('ADR-PIPE-001', 'scratch sequence', ?, '', '2026-01-01T00:00:00+00:00')",
+        ("Canonical forward sequence. Nothing else.",))
+    for i in range(1, 4):
+        classified = i > unclassified
+        conn.execute(
+            "INSERT INTO queue_items (item_num, tier, title, body_md, form, scope, "
+            "need_status, source_line, source_sha) VALUES (?,1,?,'###','heading',?,?,?,'x')",
+            (f"1.{i}", f"scratch item {i}",
+             "CONTAINER" if classified else None,
+             "OPEN" if classified else None, i))
+    if triage_accepted:
+        conn.execute(
+            "INSERT INTO dev_continuity_events (task, revision, kind, status, actor, "
+            "summary, created_at) VALUES ('SCRATCH.1', 7, 'verified_result', "
+            "'TRIAGE_REVIEW_ACCEPTED', 'scratch-independent-reviewer', "
+            "'scratch independent review of triage returned ACCEPT', '2026-01-04')")
+    conn.commit()
+    return tmp, path, conn
+
+
+def test_complete_pointer_phase_renders_complete_and_names_no_next():
+    """Card assertions 7 and 9, on a fixture: the rule is in the module, not
+    in production's particular data."""
+    tmp, path, conn = make_triage_scratch_db()
+    try:
+        model = bp.get_build_path(db_path=path)
+        statuses = {p["id"]: p["status"] for p in model["phases"]}
+        check("20a. a pointer phase stated COMPLETE renders complete, not active",
+              statuses.get("P0") == "complete", statuses)
+        check("20b. the stage after it is NOT labelled next",
+              statuses.get("QUEUE_TRIAGE") != "next" and model["next"] is None,
+              (statuses, model["next"]))
+        check("20c. QUEUE TRIAGE is complete on its own evidence",
+              statuses.get("QUEUE_TRIAGE") == "complete"
+              and model["triage_completion"]["complete"] is True,
+              (statuses, model["triage_completion"]["missing"]))
+        check("20d. P1 is pending and flagged explicitly not activated",
+              statuses.get("P1") == "pending"
+              and phase(model, "P1")["explicitly_not_activated"] is True,
+              statuses)
+        check("20e. P2 is pending too — nothing is advanced to fill the gap",
+              statuses.get("P2") == "pending", statuses)
+        check("20f. the stage-level next action is still served from project_state",
+              model["next_action"]["text"] == "scratch stage-level next action",
+              model["next_action"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_an_active_pointer_phase_still_names_its_successor_next():
+    """The positional successor rule is NOT removed, only made conditional:
+    while the named phase is in progress, the stage after it is still next.
+    What was removed is applying that rule after the named phase closed."""
+    tmp, path, conn = make_triage_scratch_db(
+        phase_value=PHASE_ACTIVE_VALUE, triage_accepted=False, unclassified=2)
+    try:
+        model = bp.get_build_path(db_path=path)
+        statuses = {p["id"]: p["status"] for p in model["phases"]}
+        check("21a. a pointer phase with no completion claim renders active",
+              statuses.get("P0") == "active", statuses)
+        check("21b. and its immediate successor renders next",
+              statuses.get("QUEUE_TRIAGE") == "next"
+              and model["next"]["phase_id"] == "QUEUE_TRIAGE",
+              (statuses, model["next"]))
+        check("21c. with a reason naming the phase it follows, not a position",
+              "still in progress" in phase(model, "QUEUE_TRIAGE")["status_reason"],
+              phase(model, "QUEUE_TRIAGE")["status_reason"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_missing_triage_acceptance_is_not_a_completion():
+    """Card assertion 11. The ADR-PIPE-006 independent review is a separate
+    obligation from the classification pass: a fully classified queue with no
+    acceptance record must not read as a finished stage."""
+    tmp, path, conn = make_triage_scratch_db(triage_accepted=False)
+    try:
+        model = bp.get_build_path(db_path=path)
+        triage = model["triage_completion"]
+        check("22a. every row is classified in this fixture",
+              triage["classification_subject_empty"] is True
+              and triage["unclassified"] == 0, triage)
+        check("22b. but with no TRIAGE_REVIEW_ACCEPTED record the stage is NOT complete",
+              triage["complete"] is False
+              and phase(model, "QUEUE_TRIAGE")["status"] != "complete",
+              (triage["complete"], phase(model, "QUEUE_TRIAGE")["status"]))
+        check("22c. the missing half is named, not left as a silent false",
+              any("TRIAGE_REVIEW_ACCEPTED" in (m or "") for m in triage["missing"]),
+              triage["missing"])
+        check("22d. and no completion evidence string is fabricated",
+              triage["evidence"] is None, triage["evidence"])
+        check("22e. nor is the stage promoted to next or active to compensate",
+              phase(model, "QUEUE_TRIAGE")["status"] == "pending",
+              phase(model, "QUEUE_TRIAGE")["status"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_classified_queue_alone_is_not_a_completion():
+    """The mirror of the above: an accepted review over a queue that still
+    has unclassified rows is not a completion either."""
+    tmp, path, conn = make_triage_scratch_db(triage_accepted=True, unclassified=2)
+    try:
+        model = bp.get_build_path(db_path=path)
+        triage = model["triage_completion"]
+        check("23a. with rows still unclassified the stage is NOT complete, even "
+              "with the review accepted",
+              triage["complete"] is False
+              and triage["independent_review"]["accepted"] is True,
+              (triage["complete"], triage["unclassified"]))
+        check("23b. the remaining subject is counted in the reason",
+              any("neither scope nor need_status" in (m or "") for m in triage["missing"]),
+              triage["missing"])
+    finally:
+        conn.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_ambiguous_phase_authority_is_a_conflict_not_a_guess():
+    """Card assertion 12. Two live build_phase rows must produce an explicit
+    conflict — no phase named, nothing complete, nothing active, nothing
+    next — and never a phase picked by recency."""
+    tmp, path, conn = make_triage_scratch_db(duplicate_phase_rows=True)
+    try:
+        model = bp.get_build_path(db_path=path)
+        authority = model["phase_authority"]
+        check("24a. phase authority reports CONFLICT",
+              authority["status"] == "CONFLICT", authority["status"])
+        check("24b. no phase is named, by recency or otherwise",
+              authority["phase_id"] is None and model["current"] is None,
+              (authority["phase_id"], model["current"]))
+        check("24c. the conflict names the key and the conflicting rows",
+              "build_phase" in model["authority_conflicts"]["keys"]
+              and sorted(r["id"] for r in next(
+                  c for c in model["authority_conflicts"]["detail"]
+                  if c["key"] == "build_phase")["live_rows"]) == [2, 6],
+              model["authority_conflicts"])
+        check("24d. the note says the authority is ambiguous rather than reporting "
+              "an absent row",
+              "live rows" in (authority["note"] or "")
+              and "live rows" in (model["progress"]["current_phase_note"] or ""),
+              (authority["note"], model["progress"]["current_phase_note"]))
+        check("24e. NOTHING is rendered complete, active or next",
+              all(p["status"] == "pending" for p in model["phases"])
+              and model["next"] is None,
+              {p["id"]: p["status"] for p in model["phases"]})
+        check("24f. not even the stage whose own completion evidence is present — "
+              "stage status is phase authority's to establish",
+              phase(model, "QUEUE_TRIAGE")["status"] == "pending"
+              and model["triage_completion"]["complete"] is True,
+              phase(model, "QUEUE_TRIAGE")["status"])
+        check("24g. the resolver that reported it is named in the payload",
+              authority["resolver"] == bp.sa.RESOLVER_ID
+              and model["authority_conflicts"]["resolver"] == bp.sa.RESOLVER_ID,
+              authority["resolver"])
     finally:
         conn.close()
         shutil.rmtree(tmp, ignore_errors=True)
@@ -638,15 +1025,23 @@ def test_retired_and_generated_sources_are_not_used_as_authority():
 
 def run():
     model = test_read_model_builds_from_live_authority()
-    test_p0_is_active_and_blocked_not_complete(model)
-    test_queue_triage_is_next(model)
-    test_later_phases_are_pending(model)
+    test_p0_is_complete_because_phase_authority_says_so(model)
+    test_queue_triage_is_complete_on_its_own_evidence(model)
+    test_p1_is_neither_active_nor_next(model)
+    test_stage_next_action_is_the_revision_127_remediation(model)
     test_p1_p2_descriptions(model)
     test_migration_unlock_points(model)
     test_queue_hooks(model)
-    test_blockers_and_resolved_discoveries(model)
+    test_blockers_are_the_closeout_gate_s_own(model)
+    test_discovery_ledger_groups(model)
     test_checkpoint_and_authority(model)
     test_mermaid_is_generated_from_the_same_phases(model)
+
+    test_complete_pointer_phase_renders_complete_and_names_no_next()
+    test_an_active_pointer_phase_still_names_its_successor_next()
+    test_missing_triage_acceptance_is_not_a_completion()
+    test_classified_queue_alone_is_not_a_completion()
+    test_ambiguous_phase_authority_is_a_conflict_not_a_guess()
 
     test_sequence_is_parsed_from_the_roadmap_row_not_hardcoded()
     test_missing_roadmap_row_is_reported_not_invented()

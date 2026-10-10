@@ -41,11 +41,15 @@ DERIVATION SOURCES, per field.
                           actually creates
     phases[].queue_hooks  `queue N.N` mentions in the roadmap, resolved
                           against the queue_items rows
-    current / next        the phase named by project_state.build_phase,
-                          and its successor in the parsed chain
-    blockers              unresolved, blocking=true discoveries for the
-                          current task, via tools/development/discovery.py
-                          (the same mechanism the closeout gate uses)
+    current               the phase named by project_state.build_phase,
+                          with the lifecycle that row states for it
+                          (COMPLETE vs in progress), never advanced here
+    next                  a stage is named "next" ONLY on evidence — see
+                          `_stage_statuses` — and is null when the authority
+                          does not establish one
+    blockers              the task's stage-closeout blockers, from
+                          tools/development/discovery.check_closeout — the
+                          same function the closeout gate itself calls
     checkpoint            project_state.external_dev_checkpoint (JSON)
     mermaid               generated from the phases above, so the diagram
                           cannot disagree with the panel beside it
@@ -114,6 +118,20 @@ _STAGE_RE = re.compile(r"\s*([A-Z][A-Z0-9][A-Za-z0-9 \-]*?)\s*\(([^)]*)\)")
 _ARROW_RE = re.compile(r"\s*->\s*")
 # "Phase P0 of the P0-P6 sequence" -> P0
 _CURRENT_PHASE_RE = re.compile(r"\bPhase\s+(P[0-6])\b")
+# The lifecycle the phase-authority row states for the phase it names, read
+# from the clause that names it rather than from anywhere in the row. The
+# row also says "Queue Triage is COMPLETE" about a DIFFERENT stage, so an
+# unanchored search for "COMPLETE" would mark the named phase complete on
+# another stage's evidence.
+_PHASE_CLAUSE_END_RE = re.compile(r"[.;]\s")
+_PHASE_COMPLETE_RE = re.compile(
+    r"\bis\s+(?:now\s+)?COMPLETE(?:\s+AND\s+CLOSED)?\b|\bis\s+CLOSED\b", re.I)
+_PHASE_CLAUSE_WINDOW = 320
+# "P1 IS STILL NOT ACTIVATED", "NOT NEXT: P1, which IS NOT ACTIVATED".
+# A phase the authority explicitly says is not activated is never rendered
+# active or next, whatever its position in the chain.
+_NOT_ACTIVATED_RE = re.compile(
+    r"\b(P[0-6])\b[^.;]{0,60}?\bIS\s+(?:STILL\s+)?NOT\s+ACTIVATED\b", re.I)
 # "unlocks migration 0036"
 _UNLOCK_RE = re.compile(r"unlocks\s+migration\s+(\d{4})", re.I)
 # "queue 0.4 + 0.6" / "queue 1.23"
@@ -135,6 +153,28 @@ _TRIAGE_CONSTRAINT_PROBES = (
      re.compile(r"bounded mechanical classification[^.;]*", re.I)),
     ("no redesign", re.compile(r"NO item redesign[^.;]*", re.I)),
 )
+
+# The roadmap stage whose completion is evidenced by its own subject matter
+# rather than by the phase pointer, and the continuity status that carries
+# ADR-PIPE-006's independent-review-of-triage acceptance. The status token is
+# probed for, not a revision number: pinning "revision 105" here would make
+# the screen depend on a row id instead of on the evidence the authority
+# actually names.
+TRIAGE_STAGE_ID = "QUEUE_TRIAGE"
+TRIAGE_REVIEW_ACCEPTED_STATUS = "TRIAGE_REVIEW_ACCEPTED"
+
+# Phase-authority resolution statuses. Anything but RESOLVED means no phase
+# is named on this screen — fail closed, never a guessed phase.
+PHASE_AUTHORITY_RESOLVED = "RESOLVED"
+PHASE_AUTHORITY_CONFLICT = "CONFLICT"
+PHASE_AUTHORITY_ABSENT = "ABSENT"
+PHASE_AUTHORITY_UNPARSED = "UNPARSED"
+PHASE_AUTHORITY_PHASE_NOT_IN_ROADMAP = "PHASE_NOT_IN_ROADMAP"
+
+# The one repository-scoped blocker type check_closeout can return. Kept out
+# of this stage card's blocker list and reported separately, because a
+# repository-wide KB coverage violation is not a WB.1 stage finding.
+_REPOSITORY_BLOCKER_TYPES = ("kb_source_coverage",)
 
 
 # ── low-level reads ──────────────────────────────────────────────────────
@@ -241,6 +281,126 @@ def parse_roadmap_sequence(roadmap_value):
         pos = arrow.end()
 
     return stages, roadmap_value[pos:].strip(), note
+
+
+# ── phase authority ──────────────────────────────────────────────────────
+
+def parse_phase_authority(value):
+    """What project_state.build_phase actually asserts: WHICH phase it names,
+    and WHAT LIFECYCLE it states for that phase.
+
+    THE SECOND HALF USED TO BE MISSING, AND THAT WAS THE DEFECT. Only the
+    phase id was read, the named phase was then rendered "active", and every
+    later stage's status was derived by POSITION from it — so row 187, whose
+    own words are "Phase P0 ... is COMPLETE AND CLOSED", rendered P0 active
+    and QUEUE TRIAGE "next". Queue Triage was complete at the time, and row
+    187 says so in the same breath. The screen contradicted its own source.
+
+    The lifecycle is read from the CLAUSE THAT NAMES THE PHASE, not from the
+    row as a whole: the same row says "Queue Triage is COMPLETE" about a
+    different stage, and an unanchored search would attribute that stage's
+    completion to the named phase.
+
+    Returns {phase_id, lifecycle, lifecycle_quote, not_activated, note} with
+    lifecycle in ("COMPLETE", "ACTIVE", None). `not_activated` holds every
+    phase the row explicitly says is NOT ACTIVATED; such a phase is never
+    rendered active or next, however the chain is ordered."""
+    out = {"phase_id": None, "lifecycle": None, "lifecycle_quote": None,
+           "not_activated": [], "note": None}
+    if not value:
+        out["note"] = "no build_phase value to parse"
+        return out
+
+    out["not_activated"] = sorted({m.group(1).upper()
+                                   for m in _NOT_ACTIVATED_RE.finditer(value)})
+
+    match = _CURRENT_PHASE_RE.search(value)
+    if not match:
+        out["note"] = ("project_state.build_phase names no 'Phase P<n>' — "
+                       "current phase is unknown, not assumed")
+        return out
+    out["phase_id"] = match.group(1).upper()
+
+    window = value[match.start():match.start() + _PHASE_CLAUSE_WINDOW]
+    boundary = _PHASE_CLAUSE_END_RE.search(window, match.end() - match.start())
+    clause = window[:boundary.start() + 1] if boundary else window
+    complete = _PHASE_COMPLETE_RE.search(clause)
+    out["lifecycle"] = "COMPLETE" if complete else "ACTIVE"
+    out["lifecycle_quote"] = " ".join(clause.split())
+    return out
+
+
+def _stage_statuses(stages, *, current_id, lifecycle, not_activated, evidenced_complete):
+    """Each stage's display status, derived from EVIDENCE rather than from
+    its position after the phase the pointer names.
+
+    THE RULE, and the one it replaces. The old rule was purely positional:
+    `order < current` complete, `order == current` active,
+    `order == current + 1` next. It cannot express "the named phase is
+    finished", so the stage after a CLOSED P0 was labelled "next" for no
+    reason other than following it — while that stage's own completion
+    evidence sat unread two fields away.
+
+    Now:
+      * a stage before the named phase is complete (the pointer's own
+        sequencing claim, unchanged);
+      * the named phase is complete or active according to what the
+        phase-authority row says about it, and is never advanced here;
+      * any stage with its own completion evidence is complete wherever it
+        sits (Queue Triage, from the queue counts plus ADR-PIPE-006's
+        acceptance record);
+      * a stage the authority explicitly says is NOT ACTIVATED is pending,
+        never next;
+      * "next" is assigned ONLY to the immediate successor of a phase that
+        is still in progress, and only when that successor is neither
+        already complete nor declared not activated. Once the named phase is
+        COMPLETE, nothing is labelled next: which stage comes next is then a
+        phase-authority decision, and inventing one here is exactly the
+        positional guess being removed.
+      * with no resolved phase authority at all, every stage is pending and
+        nothing is claimed complete, active or next.
+
+    Returns {stage_id: (status, reason)}."""
+    order_of = {s["id"]: s["order"] for s in stages}
+    current_index = order_of.get(current_id)
+    pointer_complete = lifecycle == "COMPLETE"
+    out = {}
+    for stage in stages:
+        sid, order = stage["id"], stage["order"]
+        if current_index is None:
+            out[sid] = ("pending", "no resolved phase authority; no stage status is claimed")
+            continue
+        if sid == current_id:
+            if pointer_complete:
+                out[sid] = ("complete",
+                            "project_state.build_phase names this phase and states it COMPLETE")
+            else:
+                out[sid] = ("active",
+                            "project_state.build_phase names this phase and does not "
+                            "state it complete")
+            continue
+        if order < current_index:
+            out[sid] = ("complete",
+                        f"precedes {current_id}, the phase project_state.build_phase names")
+            continue
+        if sid in evidenced_complete:
+            out[sid] = ("complete", evidenced_complete[sid])
+            continue
+        if sid in not_activated:
+            out[sid] = ("pending",
+                        "project_state phase authority states this phase is NOT ACTIVATED")
+            continue
+        if not pointer_complete and order == current_index + 1:
+            out[sid] = ("next", f"immediate successor of {current_id}, which is still in progress")
+            continue
+        if pointer_complete:
+            out[sid] = ("pending",
+                        f"{current_id} is complete and the phase authority names no successor "
+                        "stage; advancing the pointer is an authority decision, not a "
+                        "projection")
+        else:
+            out[sid] = ("pending", f"follows {current_id} in the parsed roadmap chain")
+    return out
 
 
 # ── migration unlock points ──────────────────────────────────────────────
@@ -407,6 +567,82 @@ def queue_classification(conn):
     }
 
 
+def triage_review_acceptance(conn):
+    """ADR-PIPE-006's independent-review-of-triage acceptance, looked up by
+    the continuity STATUS that carries it rather than by revision number.
+
+    The review step ADR-PIPE-006 adds is a distinct obligation from the
+    classification pass itself, so "every row is classified" is not evidence
+    that it was met. Absence is reported as absence; nothing is inferred
+    from the classification counts."""
+    out = {"accepted": False, "status_searched": TRIAGE_REVIEW_ACCEPTED_STATUS,
+           "revision": None, "recorded_at": None, "actor": None,
+           "summary": None, "note": None}
+    if not _table_exists(conn, "dev_continuity_events"):
+        out["note"] = "dev_continuity_events table not present on this database"
+        return out
+    row = conn.execute(
+        "SELECT revision, task, status, actor, summary, created_at "
+        "FROM dev_continuity_events WHERE status = ? ORDER BY revision DESC LIMIT 1",
+        (TRIAGE_REVIEW_ACCEPTED_STATUS,)).fetchone()
+    if row is None:
+        out["note"] = (f"no dev_continuity_events row carries status "
+                       f"{TRIAGE_REVIEW_ACCEPTED_STATUS!r}; the ADR-PIPE-006 independent "
+                       "review of triage is not evidenced on this database")
+        return out
+    summary, truncated = _truncate(row["summary"])
+    out.update({"accepted": True, "revision": row["revision"], "task": row["task"],
+                "actor": row["actor"], "recorded_at": row["created_at"],
+                "summary": summary, "summary_truncated": truncated})
+    return out
+
+
+def triage_completion(conn, queue):
+    """Whether Queue Triage is complete, from the two things ADR-PIPE-006
+    makes it out of — and from nothing else.
+
+      1. ITS SUBJECT IS EMPTY. ADR-PIPE-006 defines the triage subject as
+         queue_items rows carrying neither scope nor need_status; triage is
+         done with that subject when the count reaches zero. Guarded against
+         an empty queue_items table, where "0 unclassified" is the absence
+         of a queue rather than the completion of a pass.
+      2. THE INDEPENDENT REVIEW RETURNED ACCEPT. The review step is a
+         separate obligation and is read from its own record.
+
+    BOTH are required. Either one alone produces `complete: False` with the
+    missing half named, so a classified-but-unreviewed queue cannot read as
+    a finished stage. And completion is never inferred the other way round:
+    a complete triage is not an authorization for the stage after it."""
+    review = triage_review_acceptance(conn)
+    subject_empty = bool(queue["total_items"]) and queue["unclassified"] == 0
+    reasons = []
+    if not queue["total_items"]:
+        reasons.append("queue_items is empty, so there is no classification pass to "
+                       "have completed")
+    elif not subject_empty:
+        reasons.append(f"{queue['unclassified']} queue_items row(s) still carry neither "
+                       "scope nor need_status (ADR-PIPE-006's triage subject)")
+    if not review["accepted"]:
+        reasons.append(review["note"])
+    complete = subject_empty and review["accepted"]
+    return {
+        "stage_id": TRIAGE_STAGE_ID,
+        "complete": complete,
+        "classification_subject_empty": subject_empty,
+        "unclassified": queue["unclassified"],
+        "total_items": queue["total_items"],
+        "independent_review": review,
+        "missing": reasons,
+        "evidence": (
+            (f"of {queue['total_items']} queue_items, {queue['unclassified']} carry neither "
+             "scope nor need_status (ADR-PIPE-006's own definition of the triage subject); "
+             f"the ADR-PIPE-006 independent review of triage is accepted at "
+             f"dev_continuity_events revision {review['revision']} "
+             f"({TRIAGE_REVIEW_ACCEPTED_STATUS})")
+            if complete else None),
+    }
+
+
 # ── discoveries / blockers ───────────────────────────────────────────────
 
 def _discovery_display_status(record):
@@ -458,6 +694,67 @@ def task_discoveries(task, db_path=None):
         })
     out.sort(key=lambda d: d["revision"])
     return out, None
+
+
+def stage_closeout(task, db_path=None):
+    """The task's stage-closeout state, from the SAME function the closeout
+    gate calls — tools/development/discovery.check_closeout.
+
+    WHY NOT THE DISCOVERY LIST. This screen used to take its blockers from
+    `list_discoveries(...)` filtered to `blocking is True`, which sees only
+    records tagged `_record_type: "discovery"`. The closeout gate blocks on
+    more than that: an unresolved PLAIN unfinished_work event and an
+    unresolved contradiction block a task's closeout too. On WB.1 that is
+    the difference between showing one blocker (revision 127) and showing
+    the three the gate actually reports (127, plus 126 and 130, which are
+    ordinary unfinished_work events). A card that under-reports the gate's
+    own blockers is the kind of quiet divergence this read model exists to
+    avoid, so the gate's function is reused rather than its rule restated.
+
+    The one blocker type check_closeout documents as repository-scoped
+    rather than task-scoped — KB source coverage — is separated out instead
+    of being shown as a WB.1 stage finding. `ready_to_close` is passed
+    through verbatim, so it still accounts for both."""
+    out = {"task": task, "ready_to_close": None, "blockers": [],
+           "repository_blockers": [], "evidence_checked": None,
+           "source": "tools/development/discovery.check_closeout", "note": None}
+    if not task:
+        out["note"] = "no task to check; stage-closeout blockers are not attributed"
+        return out
+    conn = _continuity.connect(db_path or cs.DB)
+    try:
+        if not _continuity.is_initialized(conn):
+            out["note"] = "dev_continuity_events table not present on this database"
+            return out
+        verdict = _discovery.check_closeout(conn, task)
+    except Exception as e:  # noqa: BLE001 — a missing/odd ledger must not 500 the screen
+        out["note"] = f"stage closeout unavailable: {type(e).__name__}: {e}"
+        return out
+    finally:
+        conn.close()
+
+    out["ready_to_close"] = verdict["ready_to_close"]
+    out["evidence_checked"] = verdict.get("evidence_checked")
+    for blocker in verdict["blockers"]:
+        summary, truncated = _truncate(blocker.get("summary"))
+        record = {
+            "id": _discovery_id(blocker.get("summary")),
+            "task": task,
+            "revision": blocker.get("revision"),
+            "type": blocker["type"],
+            "status": "blocking",
+            "summary": summary,
+            "summary_truncated": truncated,
+        }
+        if blocker["type"] in _REPOSITORY_BLOCKER_TYPES:
+            record["family"] = blocker.get("family")
+            record["scope"] = "repository"
+            out["repository_blockers"].append(record)
+        else:
+            record["scope"] = "task"
+            out["blockers"].append(record)
+    out["blockers"].sort(key=lambda b: (b["revision"] is None, b["revision"]))
+    return out
 
 
 def _discovery_groups(discoveries):
@@ -553,9 +850,14 @@ def _mermaid_text(value):
             .replace("\n", " ").strip())
 
 
-def build_mermaid(phases, blockers, current_id):
+def build_mermaid(phases, blockers, task=None):
     """Generated from the same `phases` the panel renders, so the diagram
-    and the status cards cannot disagree."""
+    and the status cards cannot disagree.
+
+    It no longer takes the current phase id: the only thing that needed it
+    was the blocker wiring, which pointed every blocker edge at the current
+    phase and is now wired to the stage-closeout node instead (see below).
+    Each phase's styling comes from the status already on the phase."""
     lines = ["flowchart TD"]
     for phase in phases:
         parts = [f"{phase['label']} — {phase['description']}",
@@ -576,14 +878,24 @@ def build_mermaid(phases, blockers, current_id):
     for a, b in zip(phases, phases[1:]):
         lines.append(f'  {a["id"]} --> {b["id"]}')
 
-    if blockers and current_id:
+    # Blockers hang off a STAGE CLOSEOUT node, not off a phase. They are the
+    # TASK's stage-closeout blockers, and the phase the authority names can
+    # be complete and closed while they stand — drawing an edge into that
+    # phase would say something blocks a phase that is finished, which is
+    # what this diagram did while P0 was rendered active.
+    if blockers:
+        label = _mermaid_text(f"{task or 'stage'} closeout — blocked by "
+                              f"{len(blockers)} unresolved item"
+                              f"{'s' if len(blockers) != 1 else ''}")
+        lines.append(f'  STAGE_CLOSEOUT["{label}"]')
         for blocker in blockers:
             node = "BLK_" + _slug(blocker["id"] or f"REV{blocker['revision']}")
-            text = _mermaid_text(f"{blocker['id'] or 'discovery'} "
+            text = _mermaid_text(f"{blocker['id'] or blocker.get('type') or 'finding'} "
                                  f"(rev {blocker['revision']}) blocking")
             lines.append(f'  {node}["{text}"]')
-            lines.append(f'  {node} -.->|blocks closeout| {current_id}')
+            lines.append(f'  {node} -.->|blocks stage closeout| STAGE_CLOSEOUT')
             lines.append(f"  class {node} blockerNode")
+        lines.append("  class STAGE_CLOSEOUT blockedPhase")
 
     for phase in phases:
         cls = {"complete": "donePhase", "active": "activePhase",
@@ -632,25 +944,60 @@ def get_build_path(db_path=None):
         unlock_points = parse_migration_unlock_points(
             (by_id.get("ADR-PIPE-001") or {}).get("decision"))
 
-        # Current phase: the one project_state.build_phase names. Never
-        # advanced or inferred from how much work looks done.
+        # Current phase: the one project_state.build_phase names, with the
+        # lifecycle that row states for it. Never advanced, and never
+        # inferred from how much work looks done.
+        #
+        # FAIL CLOSED. Anything other than a single resolved, parseable
+        # build_phase row naming a stage of the parsed chain leaves
+        # `current_id` None, which leaves every stage pending and both
+        # pointers null. The reason is reported in `phase_authority.status`
+        # and `progress.current_phase_note` instead of being papered over
+        # with the first stage in the chain.
+        authority = {
+            "state_key": PHASE_POINTER_STATE_KEY,
+            "resolver": sa.RESOLVER_ID,
+            "status": None,
+            "row_id": phase_row["id"] if phase_row else None,
+            "recorded_at": phase_row["created_at"] if phase_row else None,
+            "phase_id": None,
+            "phase_lifecycle": None,
+            "lifecycle_quote": None,
+            "not_activated_phases": [],
+            "note": None,
+        }
         current_id, current_note = None, None
-        if phase_row:
-            match = _CURRENT_PHASE_RE.search(phase_row["value"])
-            if match:
-                candidate = match.group(1).upper()
-                if any(s["id"] == candidate for s in stages):
-                    current_id = candidate
-                else:
-                    current_note = (f"build_phase names {candidate}, which is not a "
-                                    "stage in the parsed pipeline_roadmap chain")
-            else:
-                current_note = ("project_state.build_phase names no 'Phase P<n>' — "
-                                "current phase is unknown, not assumed")
-        else:
+        if phase_row is None:
+            conflicted = any(c["key"] == PHASE_POINTER_STATE_KEY
+                             for c in authority_conflicts)
+            authority["status"] = (PHASE_AUTHORITY_CONFLICT if conflicted
+                                   else PHASE_AUTHORITY_ABSENT)
             current_note = _conflict_note(
                 authority_conflicts, PHASE_POINTER_STATE_KEY,
                 "no project_state row with key='build_phase'")
+            authority["note"] = current_note
+        else:
+            parsed = parse_phase_authority(phase_row["value"])
+            authority.update({
+                "phase_id": parsed["phase_id"],
+                "phase_lifecycle": parsed["lifecycle"],
+                "lifecycle_quote": parsed["lifecycle_quote"],
+                "not_activated_phases": parsed["not_activated"],
+            })
+            if parsed["phase_id"] is None:
+                authority["status"] = PHASE_AUTHORITY_UNPARSED
+                current_note = authority["note"] = parsed["note"]
+            elif not any(s["id"] == parsed["phase_id"] for s in stages):
+                authority["status"] = PHASE_AUTHORITY_PHASE_NOT_IN_ROADMAP
+                current_note = authority["note"] = (
+                    f"build_phase names {parsed['phase_id']}, which is not a "
+                    "stage in the parsed pipeline_roadmap chain")
+            else:
+                authority["status"] = PHASE_AUTHORITY_RESOLVED
+                current_id = parsed["phase_id"]
+                authority["note"] = (
+                    f"{current_id} is named by project_state.build_phase row "
+                    f"{phase_row['id']} and stated {parsed['lifecycle']} there")
 
         current_task = task_row["value"] if task_row else None
         discoveries, discovery_note = ([], None)
@@ -662,7 +1009,10 @@ def get_build_path(db_path=None):
                 f"no project_state row with key='{CURRENT_TASK_STATE_KEY}'")
                 + " — no task's discoveries are attributed to the current phase")
         groups = _discovery_groups(discoveries)
-        blockers = groups["blocking"]
+        # The blocker list is the closeout gate's own, not the subset of it
+        # this screen can see through the discovery tag. See stage_closeout().
+        closeout = stage_closeout(current_task, db_path=db_path)
+        blockers = closeout["blockers"]
 
         # Triage constraints, quoted from ADR-PIPE-006 itself.
         triage_constraints = []
@@ -679,18 +1029,21 @@ def get_build_path(db_path=None):
         queue = queue_classification(conn)
         current_index = next((s["order"] for s in stages if s["id"] == current_id), None)
 
+        # Stage-specific completion evidence, keyed by stage id. Queue Triage
+        # is the only stage whose completion this read model can observe
+        # directly; every other stage's status comes from phase authority.
+        triage = triage_completion(conn, queue)
+        evidenced_complete = ({TRIAGE_STAGE_ID: triage["evidence"]}
+                              if triage["complete"] else {})
+        statuses = _stage_statuses(
+            stages, current_id=current_id,
+            lifecycle=authority["phase_lifecycle"],
+            not_activated=set(authority["not_activated_phases"]),
+            evidenced_complete=evidenced_complete)
+
         phases = []
         for stage in stages:
-            if current_index is None:
-                status = "pending"
-            elif stage["order"] < current_index:
-                status = "complete"
-            elif stage["order"] == current_index:
-                status = "active"
-            elif stage["order"] == current_index + 1:
-                status = "next"
-            else:
-                status = "pending"
+            status, status_reason = statuses[stage["id"]]
             blocked = status == "active" and bool(blockers)
 
             migrations = [dict(m) for m in unlock_points.get(stage["id"], [])]
@@ -711,10 +1064,13 @@ def get_build_path(db_path=None):
                 "order": stage["order"],
                 "description": stage["description"],
                 "status": status,
+                "status_reason": status_reason,
                 "blocked": blocked,
                 "status_label": _status_label(status, blocked),
                 "is_current": stage["id"] == current_id,
                 "is_next": status == "next",
+                "explicitly_not_activated": (
+                    stage["id"] in authority["not_activated_phases"]),
                 "migrations": migrations,
                 "queue_hooks": [_queue_item(conn, n)
                                 for n in _queue_hook_nums(stage["description"])],
@@ -722,9 +1078,10 @@ def get_build_path(db_path=None):
                 "discoveries": None,
             }
 
-            if stage["id"] == "QUEUE_TRIAGE":
+            if stage["id"] == TRIAGE_STAGE_ID:
                 phase["constraints"] = triage_constraints
                 phase["queue_classification"] = queue
+                phase["triage_completion"] = triage
             if stage["id"] == current_id:
                 phase["task"] = current_task
                 phase["discoveries"] = groups
@@ -734,6 +1091,15 @@ def get_build_path(db_path=None):
 
         current = next((p for p in phases if p["id"] == current_id), None)
         following = next((p for p in phases if p["status"] == "next"), None)
+        next_note = None
+        if following is None:
+            next_note = (
+                (f"no roadmap stage is next: {current_id} is the phase "
+                 "project_state.build_phase names and that row states it COMPLETE, so "
+                 "which stage follows is a phase-authority decision and is not projected "
+                 "here")
+                if current_id and authority["phase_lifecycle"] == "COMPLETE" else
+                (current_note or "no roadmap stage is next"))
 
         # Resolved before the payload is assembled so that the
         # authority_conflicts summary below counts a conflicted checkpoint
@@ -778,16 +1144,23 @@ def get_build_path(db_path=None):
                 "keys": sorted({c["key"] for c in authority_conflicts}),
                 "detail": authority_conflicts,
             },
+            # How the phase pointer resolved, said out loud. Any status but
+            # RESOLVED means no stage on this screen is complete, active or
+            # next — the ambiguity is reported instead of a phase being
+            # guessed from the chain's shape.
+            "phase_authority": authority,
             "progress": {
                 "total_phases": len(phases),
                 "complete": sum(1 for p in phases if p["status"] == "complete"),
                 "current_order": current_index,
                 "current_phase_note": current_note,
+                "next_phase_note": next_note,
             },
             "current": None if current is None else {
                 "phase_id": current["id"],
                 "label": current["label"],
                 "status": current["status"],
+                "status_reason": current["status_reason"],
                 "blocked": current["blocked"],
                 "status_label": current["status_label"],
                 "task": current_task,
@@ -796,18 +1169,28 @@ def get_build_path(db_path=None):
                     "row_id": phase_row["id"] if phase_row else None,
                     "recorded_at": phase_row["created_at"] if phase_row else None,
                     "value": phase_row["value"] if phase_row else None,
+                    "phase_lifecycle": authority["phase_lifecycle"],
+                    "lifecycle_quote": authority["lifecycle_quote"],
                 },
             },
             "next": None if following is None else {
                 "phase_id": following["id"],
                 "label": following["label"],
                 "status": following["status"],
+                "status_reason": following["status_reason"],
                 "description": following["description"],
             },
             "next_action": None if next_action_row is None else {
+                "state_key": "next_action",
+                "row_id": next_action_row["id"],
                 "recorded_at": next_action_row["created_at"],
                 "source": next_action_row["source"],
                 "text": next_action_row["value"],
+                "scope_note": (
+                    "the stage-level next action held in project_state.next_action. It is "
+                    "NOT a roadmap stage pointer and never advances one: `next` above names "
+                    "the next ROADMAP STAGE, and a stage is named there only on "
+                    "phase-authority evidence."),
             },
             "current_direction": None if direction_row is None else {
                 "recorded_at": direction_row["created_at"],
@@ -816,12 +1199,14 @@ def get_build_path(db_path=None):
             },
             "phases": phases,
             "blockers": blockers,
+            "stage_closeout": closeout,
             "discoveries": groups,
             "discoveries_note": discovery_note,
             "queue": queue,
+            "triage_completion": triage,
             "checkpoint": checkpoint,
             "decisions": decisions,
-            "mermaid": build_mermaid(phases, blockers, current_id),
+            "mermaid": build_mermaid(phases, blockers, task=current_task),
         }
     finally:
         conn.close()

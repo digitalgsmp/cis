@@ -1,4 +1,12 @@
-CREATE TABLE sqlite_sequence(name,seq);
+-- `CREATE TABLE sqlite_sequence(name,seq);` was the first line of this file —
+-- an artifact of the `.schema` dump it was produced from, and NOT applicable
+-- SQL: SQLite refuses it with "object name reserved for internal use:
+-- sqlite_sequence" and creates that table itself for any AUTOINCREMENT
+-- table. It made this file unusable as a fresh-initialization script, so
+-- database.init_db() raised on the very first statement for any database it
+-- had to create, which is why no fresh database had migration 0040's index
+-- (or any of this schema). Removed rather than guarded: there is no form of
+-- the statement SQLite accepts.
 CREATE TABLE project_decisions (
     id          TEXT PRIMARY KEY,
     label       TEXT NOT NULL,
@@ -50,6 +58,35 @@ CREATE TABLE project_state (
 );
 CREATE INDEX idx_project_state_key_created
     ON project_state(key, created_at);
+-- Migration 0040, inlined so a FRESH database is born enforcing it rather
+-- than acquiring it later. The key list MUST stay identical to the
+-- single-valued entries of KEY_CARDINALITY in runtime/db/state_authority.py
+-- and to runtime/schema/migrations/0040_project_state_single_live.sql;
+-- runtime/tests/test_state_authority.py asserts all three agree, so a key
+-- added in one place and not the others fails a test instead of drifting
+-- into a silent gap. See the migration file for why this is an index rather
+-- than a trigger or a CHECK.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_project_state_one_live_per_single_valued_key
+    ON project_state(key)
+ WHERE superseded_at IS NULL
+   AND key IN (
+        'build_phase',
+        'completed_tier',
+        'current_direction',
+        'current_queue_item',
+        'devpivot_index',
+        'enforcement_container',
+        'enforcement_status',
+        'external_dev_checkpoint',
+        'gateway_status_qwen',
+        'last_export_run_id',
+        'last_verified_closeout_tier',
+        'next_action',
+        'next_tier',
+        'pipeline_roadmap',
+        'pipeline_stability_verified',
+        'queue_projection_observation'
+   );
 CREATE TABLE dam_assets (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path       TEXT NOT NULL,
