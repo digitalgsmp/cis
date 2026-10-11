@@ -18,10 +18,16 @@ import shutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
-
 import container_app  # noqa: E402
 from container_app import app  # noqa: E402
+
+# Revision-127 containment: this route is now behind
+# workbench_auth.check_auth(). This file tests the READ MODEL, not the
+# authorization (test_revision_127_containment.py does that), so it configures
+# a credential once and presents it on every request. No assertion changes.
+import authed_test_client  # noqa: E402
+
+authed_test_client.install(app)
 
 
 class FakeCompletedProcess:

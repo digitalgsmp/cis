@@ -23,14 +23,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'tools', 'state'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'tools', 'state', 'tests'))
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
-
 import canonical_state as cs  # noqa: E402
 import recovery_packet as rp  # noqa: E402
 from test_canonical_state import make_scratch_db, table_counts  # noqa: E402
 
 import container_app  # noqa: E402
 from container_app import app  # noqa: E402
+
+# These two routes are authenticated as of the revision-127 containment: the
+# canonical state and the recovery packet were both publicly readable and both
+# are now behind workbench_auth.check_auth(). This file tests the READ MODEL,
+# not the authorization — that has its own file,
+# test_revision_127_containment.py — so it configures a credential once and
+# presents it on every request. No assertion below changes.
+import authed_test_client  # noqa: E402
+
+authed_test_client.install(app)
 
 results = []
 

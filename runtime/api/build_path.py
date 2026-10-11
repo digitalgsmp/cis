@@ -47,11 +47,26 @@ if str(_STATE_DIR) not in sys.path:
 
 import build_path as bp  # noqa: E402
 
+_RUNTIME_DIR = Path(__file__).resolve().parents[1]
+if str(_RUNTIME_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNTIME_DIR))
+
+from workbench_auth import check_auth  # noqa: E402
+
 build_path_bp = Blueprint("build_path", __name__)
 
 
 @build_path_bp.route("/api/workbench/build-path", methods=["GET"])
 def get_build_path():
+    # Fail-closed authorization (dev_continuity_events revision 127). Read-only
+    # is not the same as public: this returns the live phase authority, the
+    # stage-closeout blockers and the whole discovery ledger. The browser path
+    # keeps working because the Workbench session cookie is scoped to
+    # /api/workbench, which is exactly this prefix.
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     try:
         model = bp.get_build_path()
     except Exception as e:  # noqa: BLE001 -- must not turn into a 500 for the Workbench screen

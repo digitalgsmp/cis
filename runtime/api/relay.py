@@ -12,7 +12,9 @@ Endpoints:
     GET  /api/relay/<run_id>/verify    — Verify's evidence report
     GET  /api/relay/<run_id>/trace     — full trajectory trace
 
-Authentication: Bearer token via CIS_PIPELINE_API_KEY env var.
+Authentication: delegated to runtime/workbench_auth.check_auth() — a Bearer
+token matching CIS_PIPELINE_API_KEY, or a Workbench browser session. It is
+FAIL-CLOSED: see the _check_auth() note below.
 """
 
 import asyncio
@@ -31,29 +33,62 @@ from flask import Blueprint, jsonify, request
 
 relay_bp = Blueprint("relay", __name__)
 
+# runtime/ on sys.path so workbench_auth imports here exactly as it does from
+# container_app.py, app.py and the test harnesses — this module lives one level
+# down in runtime/api/ and must not depend on its importer's path setup.
+_RUNTIME_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _RUNTIME_DIR not in sys.path:
+    sys.path.insert(0, _RUNTIME_DIR)
+
+from workbench_auth import check_auth as _workbench_check_auth  # noqa: E402
+
 # ── Config ─────────────────────────────────────────────────────────────
 
 DB_PATH = os.environ.get(
     "CIS_SPINE_PATH", "/mnt/projects/cis/data/cis_memory.db"
 )
-API_KEY = os.environ.get("CIS_PIPELINE_API_KEY", "")
+
+# NOTE: there is deliberately no module-level API_KEY constant any more.
+# Capturing the key at import time was half of the defect below: it made the
+# effective auth posture depend on import order and let a test blank it out.
+# workbench_auth reads the environment on every call instead.
 
 # ── Auth ────────────────────────────────────────────────────────────────
 
 
 def _check_auth() -> Optional[tuple]:
-    """Returns (error_response, status_code) if auth fails, None if OK."""
-    if not API_KEY:
-        return None  # Auth disabled when no key configured
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        token = auth[7:].strip()
-        if token == API_KEY:
-            return None
-    return (
-        jsonify({"error": "Unauthorized", "detail": "Invalid or missing API key"}),
-        401,
-    )
+    """Returns (error_response, status_code) if auth fails, None if OK.
+
+    FAIL-CLOSED. This function previously read:
+
+        if not API_KEY:
+            return None          # <-- unset key = auth skipped entirely
+
+    which turned *missing server configuration* into *anonymous access*. That
+    is the exact defect recorded at dev_continuity_events revision 127:
+    CIS_PIPELINE_API_KEY is empty in the running cis-pipeline container, two
+    public Cloudflare hostnames forward to that listener, and so every relay
+    route — including POST /api/relay/start, POST /api/relay/run and the
+    POST /api/relay/<run_id>/gate approval path — was reachable from the open
+    internet with no credential at all.
+
+    It now delegates to runtime/workbench_auth.check_auth(), the single
+    reviewed authorization contract already used by workbench_app,
+    card_factory_app, card_runner and braingate_conversation. No parallel
+    identity system is introduced here, and there is no bypass flag:
+
+        valid Bearer (CIS_PIPELINE_API_KEY)   -> allowed
+        valid Workbench session cookie        -> allowed (+ CSRF on mutations)
+        a mechanism configured, bad/no cred   -> 401
+        NO mechanism configured               -> 503 service not ready
+
+    "Missing key" is never "allowed". Note that the session cookie is scoped to
+    SESSION_COOKIE_PATH = /api/workbench, so in practice the relay surface is
+    the API-key path: a browser never sends its Workbench cookie here, and the
+    Workbench SPA does not call /api/relay/* (runtime/ui/src/api.js reaches the
+    read models under /api/workbench only).
+    """
+    return _workbench_check_auth()
 
 
 # ── DB Helper ────────────────────────────────────────────────────────────
@@ -148,7 +183,20 @@ def _run_pipeline_background(run_id: str, intent: str, db_path: str = None) -> N
 
 @relay_bp.route("/api/relay/health", methods=["GET"])
 def relay_health():
-    """Health check — no auth required, used by container entrypoint."""
+    """Gateway health — AUTHENTICATED.
+
+    Revision 127 named "gateway health" as one of the sensitive read surfaces
+    that was publicly reachable. This route enumerates every internal gateway
+    port, its reachability and its latency, which is operational state, not a
+    liveness bit. The unauthenticated liveness probe is GET /api/relay/ping
+    (container_app.py), which returns a fixed {"status": "ok"} and touches no
+    port, no database and no configuration — that is what the container
+    entrypoint now uses.
+    """
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
     from abstraction.dispatch import PROFILES, check_gateway
     gateways = {}
     for role, profile in PROFILES.items():
@@ -1716,7 +1764,12 @@ import re as _re
 
 @relay_bp.route("/system/health", methods=["GET"])
 def system_health():
-    """Get health of all Docker containers and key services."""
+    """Get health of all Docker containers and key services. AUTHENTICATED —
+    revision 127 named gateway/container health as a protected read surface."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
     containers = []
     services = []
 
@@ -1852,7 +1905,11 @@ def system_health():
 
 @relay_bp.route("/system/restart", methods=["POST"])
 def system_restart():
-    """Restart a single Docker container."""
+    """Restart a single Docker container. AUTHENTICATED — a mutation."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
     data = request.get_json(silent=True) or {}
     container = data.get("container", "")
     if not container:
@@ -1881,7 +1938,11 @@ def system_restart():
 
 @relay_bp.route("/system/restart-all", methods=["POST"])
 def system_restart_all():
-    """Restart all CIS containers in dependency order."""
+    """Restart all CIS containers in dependency order. AUTHENTICATED — a mutation."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
     order = ["cis-hermes", "cis-brainstorm", "cis-drafter",
              "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
              "cis-verifier", "cis-pipeline"]
@@ -1904,7 +1965,12 @@ def system_restart_all():
 
 @relay_bp.route("/system/logs/<container>", methods=["GET"])
 def system_logs(container):
-    """Get last 50 lines of container logs."""
+    """Get last 50 lines of container logs. AUTHENTICATED — revision 127 named
+    gateway logs as a protected read surface."""
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
+
     allowed = ["cis-pipeline", "cis-hermes", "cis-brainstorm", "cis-drafter",
                "cis-qwen-reviewer", "cis-glm-reviewer", "cis-implementer",
                "cis-verifier"]

@@ -46,11 +46,26 @@ if str(_STATE_DIR) not in sys.path:
 import canonical_state as cs  # noqa: E402
 import recovery_packet as rp  # noqa: E402
 
+_RUNTIME_DIR = Path(__file__).resolve().parents[1]
+if str(_RUNTIME_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNTIME_DIR))
+
+from workbench_auth import check_auth  # noqa: E402
+
 system_context_bp = Blueprint("system_context", __name__)
 
 
 @system_context_bp.route("/api/workbench/system-context", methods=["GET"])
 def get_system_context():
+    # Fail-closed authorization (dev_continuity_events revision 127). This is
+    # the single most sensitive read on the listener: the FULL canonical state
+    # of the project. Revision 127 measured it returning 295 KB to an anonymous
+    # internet caller. The browser path is unaffected — the Workbench session
+    # cookie is scoped to /api/workbench, which is this prefix.
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     try:
         state = cs.get_canonical_state()
     except Exception as e:  # noqa: BLE001 -- must not turn into a 500 for the Workbench screen
@@ -62,6 +77,12 @@ def get_system_context():
 
 @system_context_bp.route("/api/workbench/system-context/recovery-packet", methods=["GET"])
 def get_recovery_packet():
+    # Fail-closed authorization (revision 127): the recovery packet is the
+    # agent-handoff dossier — unfinished work, contradictions, open discoveries.
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     issue = request.args.get("issue") or None
     if issue and issue not in rp.ISSUE_AREAS:
         return jsonify({

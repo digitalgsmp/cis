@@ -189,7 +189,10 @@ echo "[entrypoint] Pipeline API started (pid $PIPELINE_PID)"
 
 # Wait for API to be ready
 sleep 3
-if curl -s "http://127.0.0.1:5000/api/relay/health" >/dev/null 2>&1; then
+# /api/relay/ping, not /api/relay/health: the latter enumerates gateway ports
+# and is authenticated as of the revision-127 containment. /api/relay/ping is
+# the fixed-result liveness endpoint and needs no credential.
+if curl -sf "http://127.0.0.1:5000/api/relay/ping" >/dev/null 2>&1; then
     echo "[entrypoint] Pipeline API: UP on port 5000"
 else
     echo "[entrypoint] Pipeline API: NOT READY (check $LOG_DIR/pipeline_api.log)"

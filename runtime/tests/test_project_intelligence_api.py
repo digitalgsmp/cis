@@ -49,8 +49,6 @@ sys.path.insert(0, os.path.join(_HERE, ".."))                   # runtime/
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "state"))  # read models
 sys.path.insert(0, _REPO_ROOT)                                  # tools.development
 
-os.environ.setdefault("CIS_PIPELINE_API_KEY", "")
-
 import build_path as bp  # noqa: E402
 import canonical_state as cs  # noqa: E402
 from db import state_authority as sa  # noqa: E402  (the sanctioned project_state writer)
@@ -58,6 +56,14 @@ import destination_architecture as da  # noqa: E402
 import project_intelligence as pi  # noqa: E402
 
 from container_app import app  # noqa: E402
+
+# Revision-127 containment: this route is now behind
+# workbench_auth.check_auth(). This file tests the READ MODEL, not the
+# authorization (test_revision_127_containment.py does that), so it configures
+# a credential once and presents it on every request. No assertion changes.
+import authed_test_client  # noqa: E402
+
+authed_test_client.install(app)
 
 results = []
 

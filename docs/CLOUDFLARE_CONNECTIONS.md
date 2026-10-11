@@ -4,13 +4,22 @@ Authoritative inventory of every Cloudflare connection CIS depends on: the
 zone, the tunnels, every public hostname, what each one points at, and which
 Access policy guards it.
 
-Last verified **2026-09-25** against the live system (WB.1 tunnel-durability
-card; supersedes the stable-origin card of 2026-09-24).
+Last verified **2026-10-10** against the live system (WB.1-TRUST-127 public
+listener containment; supersedes the tunnel-durability card of 2026-09-25,
+which in turn superseded the stable-origin card of 2026-09-24).
+
+> **Read §10 before trusting §3, §5 or §9.** Those sections were written when
+> `workbench.*` pointed at the loopback-only OIDC preview on port 5055. It has
+> pointed at the authoritative production listener on port 5000 since
+> 2026-10-01 (WB1-D17), which changed what "no Access policy on this hostname"
+> costs. §10 records what was exposed, what is now contained in the
+> application, and what remains open at the edge.
 
 Discovery status as of this revision:
 
 | Discovery | State |
 |---|---|
+| **127 — public trust-boundary exposure on the authoritative listener** | **APPLICATION CONTAINED / EDGE BLOCKED** — see §10 |
 | 43 (CF-D1) — tunnel crash durability | **RESOLVED** — `Restart=always`/`RestartSec=5`, proven by a controlled `SIGKILL` recovery test (§7) |
 | 44 (CF-D2) — no HTTP→HTTPS redirect on Workbench | **RESOLVED** — hostname-scoped `308` Redirect Rule; zone-wide `Always Use HTTPS` still OFF (§8) |
 | 45 (CF-D3) — preview origin does not survive reboot | **EXPLICITLY DEFERRED** — temporary dev listener by design (§6) |
@@ -133,7 +142,7 @@ the tunnel. **No port is exposed to the Internet directly.**
 |---|---|---|---|
 | `mcp.creative-intelligence-system.com` | `localhost:8888` | `mcp-proxy` (pid 5359) | **Service token** — `GET /` returns 403 |
 | `api.creative-intelligence-system.com` | `localhost:5000` | Production `cis-pipeline` container | **"Eric only" Allow** — `GET /` returns 302 to the Access login |
-| `workbench.creative-intelligence-system.com` | `127.0.0.1:5055` | WB.1 OIDC preview app | **None, deliberately** — see §5 |
+| `workbench.creative-intelligence-system.com` | `localhost:5000` | **Authoritative production listener** (`runtime/container_app.py` in `cis-pipeline`) since 2026-10-01, WB1-D17 — *not* the port-5055 preview any more | **None** — see §9 and §10. Application authorization now carries this hostname; the edge does not. |
 
 Ingress is first-match and ordered; the catch-all must stay last:
 
@@ -144,9 +153,14 @@ ingress:
   - hostname: api.creative-intelligence-system.com
     service: http://localhost:5000
   - hostname: workbench.creative-intelligence-system.com
-    service: http://127.0.0.1:5055
+    service: http://localhost:5000     # was 127.0.0.1:5055 until WB1-D17
   - service: http_status:404
 ```
+
+The live file carries a long comment on the `workbench.*` rule. As of the
+revision-127 containment that comment states the SEVEN blueprints the listener
+actually registers; it previously claimed two, and that false claim is why the
+exposure in §10 was not visible at the point of the ingress change.
 
 Verify any change before restarting:
 
@@ -175,6 +189,14 @@ responses with zero `cf-access-domain`, `cf-access-aud`, `CF_AppSession` or
 ---
 
 ## 5. Why the Workbench hostname has no Access policy
+
+> **Superseded in part by §10.** The reasoning below is still correct about
+> *why* Access was kept off this hostname, and it is still the live
+> configuration. What it does not account for is that the hostname now forwards
+> to the authoritative production listener rather than the loopback preview, so
+> "the origin registers only the auth surface" — the second bullet at the end
+> of this section — stopped being true on 2026-10-01. Revision 127 is the
+> consequence. Read §10.
 
 This is intentional, and reversing it would break the product.
 
@@ -472,6 +494,13 @@ Zone → Rules → Ruleset:Edit stored outside the repo.
 
 ## 9. Access remains off the Workbench hostname
 
+> **Still true as configuration, no longer sufficient as protection.** This
+> section was written while the hostname pointed at the loopback preview. It
+> now points at the authoritative listener, and revision 127 requires
+> deny-by-default edge ingress that this hostname does not have. §10 records
+> the exposure, the application-layer containment that landed on 2026-10-10,
+> and the exact prerequisites that leave the edge work BLOCKED.
+
 `workbench.creative-intelligence-system.com` intentionally has **no Cloudflare
 Access application**. The authentication path is:
 
@@ -484,3 +513,130 @@ after this card's work: `api.*` still `302`s to
 `cis-live.cloudflareaccess.com`, `mcp.*` still returns `403` at the edge, and
 `workbench.*` still returns `200` with no Access interception. No Access
 application was created, modified or deleted.
+
+---
+
+## 10. Revision 127 — the public listener exposure, and what contains it
+
+Recorded at `dev_continuity_events` revision 127 (`task='WB.1'`,
+`kind='unfinished_work'`, `status='BEFORE_STAGE_CLOSEOUT'`). Contained in the
+application on **2026-10-10** by the WB.1-TRUST-127 card. **The edge half is
+not done** — see "Still open" below. Do not read this section as "revision 127
+is closed".
+
+### What was exposed
+
+`workbench.*` has no Access application (§9), and since WB1-D17 it forwards to
+the authoritative production listener. That listener registers **seven**
+blueprints, not the two §5/§6 describe, and before this card only two of the
+seven checked a credential. Measured at the edge on 2026-10-10, with no
+credential presented, every one of these answered `200` with real data:
+
+| Surface | Route | Response |
+|---|---|---|
+| Canonical state | `/api/workbench/system-context` | 200, 295 KB |
+| Recovery packet | `/api/workbench/system-context/recovery-packet` | 200 |
+| Build path | `/api/workbench/build-path` | 200, 126 KB |
+| Destination architecture | `/api/workbench/destination-architecture` | 200, 183 KB |
+| Project intelligence | `/api/workbench/project-intelligence` | 200, 960 KB |
+| Enforcement/security audit | `/api/relay/system/security` | 200 |
+| Gateway health | `/api/relay/system/health`, `/api/relay/health` | 200 |
+| Gateway logs | `/api/relay/system/logs/<container>` | 200, 4.8 KB of pipeline log |
+| Relay runs / metrics / KB decisions | `/api/relay/runs`, `/metrics`, `/kb/decisions` | 200, 123 KB on decisions |
+| Guardrails / DLQ / projects | `/api/relay/guardrails`, `/dlq`, `/api/projects` | 200 |
+
+The cause was not an oversight on one route. `runtime/api/relay.py::_check_auth`
+was fail-open **by construction** —
+
+```python
+def _check_auth():
+    if not API_KEY:
+        return None          # unset key = auth skipped entirely
+```
+
+— and `CIS_PIPELINE_API_KEY` is empty in the running container, so *every*
+relay route was unauthenticated, including `POST /api/relay/start` and
+`/api/relay/run` (which begin a real pipeline run and spend model tokens),
+`POST /api/relay/<run_id>/gate` (the Eric Gate approval path), `/answer`,
+`/decompose` and `POST /api/projects`. **The mutating routes were never
+exercised against the live system, by this card or the one that found it.**
+
+### What contains it now (application layer)
+
+Every route above is behind `runtime/workbench_auth.check_auth()` — the same
+reviewed contract `workbench_app`, `card_factory_app`, `card_runner` and
+`braingate_conversation` already used. No parallel identity system was added
+and no bypass flag exists. The contract:
+
+| Condition | Result |
+|---|---|
+| Valid `Bearer` matching `CIS_PIPELINE_API_KEY` | allowed |
+| Valid Workbench session cookie, identity still on the allowlist | allowed (+ CSRF on mutations) |
+| A mechanism configured, credential absent or wrong | **401** |
+| No mechanism configured at all | **503** — still a denial, never anonymous access |
+
+The browser path is unaffected because the session cookie is scoped to
+`/api/workbench`, which is exactly where the four read models live. The SPA
+never calls `/api/relay/*`.
+
+The complete unauthenticated surface of the listener is now, and is asserted
+to be exactly:
+
+- fixed-result liveness — `/api/relay/ping`, `/api/ping`, `/health`, `/api/health`;
+- the OIDC sign-in lifecycle — `/api/workbench/auth/{login,callback,session,logout}`,
+  which cannot sit behind the credential check because it is how a credential
+  is obtained, and which guards itself (issuer/audience/nonce/PKCE + the
+  server-side allowlist);
+- the static SPA shell — `/`, `/ui/`, `/ui/<path>`, `/dashboard/`.
+
+`runtime/tests/test_revision_127_containment.py` pins that set. A route added
+later without a credential check fails check C3 rather than quietly joining the
+public surface.
+
+Verified live at the edge after deployment, no credentials sent: all 18
+protected GETs and all 12 protected POSTs answer `401` with a 95-byte generic
+refusal. No workflow run, project, approval or spine row was created by the
+verification, and no model token was spent.
+
+### Still open: deny-by-default at the edge — BLOCKED
+
+Revision 127 calls for defence in depth: fail-closed application authorization
+**and** deny-by-default public ingress. Only the first is done.
+
+| Hostname | Edge posture |
+|---|---|
+| `api.*` | Cloudflare Access enforced — `302` to `cis-live.cloudflareaccess.com`, `auth_status=NONE` |
+| `mcp.*` | Cloudflare Access enforced — `403` at the edge |
+| `workbench.*` | **No Access application.** Application authorization only. |
+
+Two prerequisites are missing, and neither can be improvised:
+
+1. **Authority/credential.** Access applications are created in the Cloudflare
+   Zero Trust dashboard or through the Cloudflare API at
+   `/accounts/{account_id}/access/apps`. That needs an API token scoped to
+   *Account → Cloudflare Zero Trust → Access: Apps and Policies: Edit*, plus
+   the account ID. No such token exists on this host: not in the environment,
+   not in `secrets.env`. The `cloudflared` binary cannot do it either — its
+   `access` subcommand is a *client* (`login`, `curl`, `token`, `ssh`) with no
+   application-management verb, and the origin certificate's embedded token is
+   zone-scoped, not account-scoped.
+
+2. **An architect decision**, which is the substantive blocker. §5 and §9 record
+   a deliberate decision that `workbench.*` must have *no* Access application,
+   because Access would insert a second unrelated login and intercept the Auth0
+   callback at `/api/workbench/auth/callback`. Putting deny-by-default Access
+   on this hostname therefore requires choosing one of:
+
+   - accept the double login (Access, then Auth0) — simplest, and nothing in
+     the product breaks, but it changes the sign-in experience; or
+   - scope Access to the hostname with a bypass on the callback path — which is
+     a reusable unauthenticated exception on the exact path that completes
+     authentication, and the containment card forbids creating one; or
+   - split the listener so only the Workbench origin is browser-facing and the
+     relay/API surface moves behind `api.*`, which already has Access. This is
+     the option that removes the tension rather than trading it off, and it is
+     a listener redesign — out of scope for a containment card.
+
+Until one is chosen and applied, `workbench.*` is protected by application
+authorization alone. That is one control, not two, and revision 127 asked for
+two.

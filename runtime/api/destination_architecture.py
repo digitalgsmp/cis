@@ -48,12 +48,25 @@ if str(_STATE_DIR) not in sys.path:
 
 import destination_architecture as da  # noqa: E402
 
+_RUNTIME_DIR = Path(__file__).resolve().parents[1]
+if str(_RUNTIME_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNTIME_DIR))
+
+from workbench_auth import check_auth  # noqa: E402
+
 destination_architecture_bp = Blueprint("destination_architecture", __name__)
 
 
 @destination_architecture_bp.route("/api/workbench/destination-architecture",
                                    methods=["GET"])
 def get_destination_architecture():
+    # Fail-closed authorization (dev_continuity_events revision 127). The
+    # browser path is unaffected — the Workbench session cookie is scoped to
+    # /api/workbench, which is this prefix.
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     try:
         model = da.get_destination_architecture()
     except Exception as e:  # noqa: BLE001 -- must not turn into a 500 for the Workbench screen

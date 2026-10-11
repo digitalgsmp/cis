@@ -61,11 +61,25 @@ if str(_STATE_DIR) not in sys.path:
 
 import project_intelligence as pi  # noqa: E402
 
+_RUNTIME_DIR = Path(__file__).resolve().parents[1]
+if str(_RUNTIME_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNTIME_DIR))
+
+from workbench_auth import check_auth  # noqa: E402
+
 project_intelligence_bp = Blueprint("project_intelligence", __name__)
 
 
 @project_intelligence_bp.route("/api/workbench/project-intelligence", methods=["GET"])
 def get_project_intelligence():
+    # Fail-closed authorization (dev_continuity_events revision 127). This is
+    # the widest composition of the three read models — revision 127 measured
+    # it returning 959 KB to an anonymous internet caller. The browser path is
+    # unaffected: the Workbench session cookie is scoped to /api/workbench.
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     try:
         model = pi.get_project_intelligence()
     except Exception as e:  # noqa: BLE001 -- must not turn into a 500 for the Workbench screen

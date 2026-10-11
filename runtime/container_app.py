@@ -22,6 +22,15 @@ if RUNTIME_DIR not in sys.path:
 
 app = Flask(__name__, static_folder=None)
 
+# ── Fail-closed authorization (dev_continuity_events revision 127) ────────────
+# The single reviewed authorization contract for this listener. Imported here,
+# at the top, because EVERY sensitive route below calls it: the four Workbench
+# read models, the gateway health/logs surface and the enforcement audit. The
+# relay blueprint delegates to the same function (runtime/api/relay.py
+# _check_auth), so there is one place where "missing configuration" is decided
+# and it decides DENY.
+from workbench_auth import check_auth
+
 # ── Register only the pipeline relay blueprint ─────────────────────────────────
 from api.relay import relay_bp
 app.register_blueprint(relay_bp)
@@ -185,7 +194,15 @@ def relay_run_start():
 
 @app.route("/api/relay/ping", methods=["GET"])
 def relay_ping():
-    """Liveness probe: no auth, no DB, no gateway sweep. Returns exactly {"status": "ok"}."""
+    """Liveness probe: no auth, no DB, no gateway sweep. Returns exactly {"status": "ok"}.
+
+    Deliberately public, and the ONLY relay-family route that is. Revision 127
+    containment allows a minimal public liveness endpoint provided it exposes
+    only a fixed health result — this one names no configuration, no model, no
+    log, no route inventory, no database and no project data. The container
+    entrypoint's readiness check uses this rather than /api/relay/health, which
+    enumerates gateway ports and is now authenticated.
+    """
     return jsonify({"status": "ok"})
 
 # ── React SPA (built to ui/dist/) ───────────────────────────────────────────────
@@ -262,7 +279,15 @@ def _system_health():
     """Get health of internal gateways and key services.
     Docker container management is NOT available from inside the contained worker
     — that would require docker socket access, which breaks the enforcement model.
-    Container status is available via the host-side API at port 8642/system/health."""
+    Container status is available via the host-side API at port 8642/system/health.
+
+    AUTHENTICATED — revision 127 named gateway health as a protected read
+    surface. It sweeps six internal gateway ports, names the model loaded on
+    each, and reports the spine's on-disk path."""
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     containers = []
     gateways = []
     services = []
@@ -332,20 +357,39 @@ def _system_health():
 @app.route("/api/relay/system/restart", methods=["POST"])
 def _system_restart():
     """Docker restart is NOT available from inside the contained worker.
-    Container restart must be performed from the host side."""
+    Container restart must be performed from the host side. AUTHENTICATED
+    anyway: an unauthenticated caller learns nothing about this listener, not
+    even which routes answer it."""
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     return jsonify({"error": "Docker restart not available from contained worker. Use host-side: sg docker -c 'docker restart <name>'"}), 403
 
 
 @app.route("/api/relay/system/restart-all", methods=["POST"])
 def _system_restart_all():
-    """Docker restart is NOT available from inside the contained worker."""
+    """Docker restart is NOT available from inside the contained worker.
+    AUTHENTICATED for the same reason as _system_restart."""
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     return jsonify({"error": "Docker restart not available from contained worker. Use host-side: sg docker -c 'docker restart <name>'"}), 403
 
 
 @app.route("/api/relay/system/logs/<container>")
 def _system_logs(container):
     """Docker logs are NOT available from inside the contained worker.
-    Gateway logs are available at /tmp/cis-logs/<profile>.log inside the container."""
+    Gateway logs are available at /tmp/cis-logs/<profile>.log inside the container.
+
+    AUTHENTICATED — revision 127 named gateway logs explicitly, and measured
+    this route returning 4.8 KB of real pipeline log to an anonymous internet
+    caller."""
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     # Gateway logs ARE accessible — they're local files, not docker commands
     log_map = {
         "cis-brainstorm": "/tmp/cis-logs/brain.log",
@@ -392,7 +436,17 @@ def _check_writable(path):
 @app.route("/api/relay/system/security")
 def _system_security():
     """Deterministic enforcement audit. Checks actual filesystem state to prove
-    the container is secure and agents are guardrailed. No self-report — raw evidence."""
+    the container is secure and agents are guardrailed. No self-report — raw evidence.
+
+    AUTHENTICATED — revision 127 named the enforcement/security audit as a
+    protected read surface. It is a map of the containment model: uid/gid and
+    mode of the managed config, every enforcement plugin path, the gate
+    directory and the entrypoint. Useful to the operator, and a target list to
+    anyone else."""
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
+
     checks = []
     all_pass = True
 
