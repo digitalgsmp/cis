@@ -4,22 +4,26 @@ Authoritative inventory of every Cloudflare connection CIS depends on: the
 zone, the tunnels, every public hostname, what each one points at, and which
 Access policy guards it.
 
-Last verified **2026-10-10** against the live system (WB.1-TRUST-127 public
-listener containment; supersedes the tunnel-durability card of 2026-09-25,
-which in turn superseded the stable-origin card of 2026-09-24).
+Last verified **2026-10-11** against the live system (WB1-REV127 edge-containment
+closeout; supersedes the public-listener containment card of 2026-10-10, the
+tunnel-durability card of 2026-09-25, and the stable-origin card of 2026-09-24).
 
-> **Read §10 before trusting §3, §5 or §9.** Those sections were written when
-> `workbench.*` pointed at the loopback-only OIDC preview on port 5055. It has
-> pointed at the authoritative production listener on port 5000 since
-> 2026-10-01 (WB1-D17), which changed what "no Access policy on this hostname"
-> costs. §10 records what was exposed, what is now contained in the
-> application, and what remains open at the edge.
+> **Read §10 before trusting §3, §5, §8's `api.*`/`mcp.*` subsection or §9.**
+> Those sections were written when `workbench.*` had no Cloudflare Access
+> application — first while it pointed at the loopback-only OIDC preview on
+> port 5055, then after it was repointed at the authoritative production
+> listener on port 5000 (2026-10-01, WB1-D17), which is what made the absence
+> expensive. **That is no longer the configuration.** `workbench.*` now has a
+> whole-host Access application, verified 2026-10-11. §5 and §9 are retained
+> as superseded history and must not be read as current state. §10 records
+> what was exposed, the application-layer containment, and the edge
+> containment that now sits in front of it.
 
 Discovery status as of this revision:
 
 | Discovery | State |
 |---|---|
-| **127 — public trust-boundary exposure on the authoritative listener** | **APPLICATION CONTAINED / EDGE BLOCKED** — see §10 |
+| **127 — public trust-boundary exposure on the authoritative listener** | **CONTAINED AT BOTH LAYERS** — Access at the edge *and* fail-closed application authorization; pending independent review, not self-accepted (§10) |
 | 43 (CF-D1) — tunnel crash durability | **RESOLVED** — `Restart=always`/`RestartSec=5`, proven by a controlled `SIGKILL` recovery test (§7) |
 | 44 (CF-D2) — no HTTP→HTTPS redirect on Workbench | **RESOLVED** — hostname-scoped `308` Redirect Rule; zone-wide `Always Use HTTPS` still OFF (§8) |
 | 45 (CF-D3) — preview origin does not survive reboot | **EXPLICITLY DEFERRED** — temporary dev listener by design (§6) |
@@ -142,7 +146,7 @@ the tunnel. **No port is exposed to the Internet directly.**
 |---|---|---|---|
 | `mcp.creative-intelligence-system.com` | `localhost:8888` | `mcp-proxy` (pid 5359) | **Service token** — `GET /` returns 403 |
 | `api.creative-intelligence-system.com` | `localhost:5000` | Production `cis-pipeline` container | **"Eric only" Allow** — `GET /` returns 302 to the Access login |
-| `workbench.creative-intelligence-system.com` | `localhost:5000` | **Authoritative production listener** (`runtime/container_app.py` in `cis-pipeline`) since 2026-10-01, WB1-D17 — *not* the port-5055 preview any more | **None** — see §9 and §10. Application authorization now carries this hostname; the edge does not. |
+| `workbench.creative-intelligence-system.com` | `localhost:5000` | **Authoritative production listener** (`runtime/container_app.py` in `cis-pipeline`) since 2026-10-01, WB1-D17 — *not* the port-5055 preview any more | **"Eric only" Allow**, whole host, no path exception — `GET` on *any* path returns 302 to the Access login. See §10. |
 
 Ingress is first-match and ordered; the catch-all must stay last:
 
@@ -177,28 +181,55 @@ Reusable policies, from the dashboard (Access controls → Policies):
 
 | Policy | Action | Applications using it |
 |---|---|---|
-| Eric only | Allow | 1 — `api.*` |
+| Eric only | Allow | 2 — `api.*` and `workbench.*` (the latter added 2026-10-11, §10) |
 | API Service Token | Service Auth | 0 — currently inert |
 | MCP Service Token | Service Auth | 1 — `mcp.*` |
 
-Access is applied **per application**. There is no zone-wide or wildcard
-application, proven by live probe: the `workbench.*` hostname returns CIS's own
-responses with zero `cf-access-domain`, `cf-access-aud`, `CF_AppSession` or
-`cloudflareaccess.com` redirects on any path.
+The "Eric only" policy is a **reusable** policy: both applications reference the
+same policy object rather than carrying a copy, so its include selector is
+defined once. That selector is a single **exact email** — the operator's own
+address, one address and no other (the value is in the dashboard, not here).
+Critically it is **not** an email-*domain* selector, so no one else at that mail
+provider inherits access. There is no service-auth policy and no bypass policy
+on either application.
+
+Access is applied **per application**, and all three public hostnames now have
+one:
+
+| Application | Hostname | Action | Scope |
+|---|---|---|---|
+| CIS Workbench | `workbench.*` | Allow — "Eric only" | whole host, no path |
+| (api) | `api.*` | Allow — "Eric only" | whole host |
+| (mcp) | `mcp.*` | Service Auth — MCP Service Token | whole host |
+
+There is still no zone-wide or wildcard application; each is scoped to its own
+hostname, and each therefore presents its **own** Access audience (`aud`/`kid`).
+A differing audience between these hostnames is expected and is not a fault.
 
 ---
 
-## 5. Why the Workbench hostname has no Access policy
+## 5. Why the Workbench hostname had no Access policy — SUPERSEDED
 
-> **Superseded in part by §10.** The reasoning below is still correct about
-> *why* Access was kept off this hostname, and it is still the live
-> configuration. What it does not account for is that the hostname now forwards
-> to the authoritative production listener rather than the loopback preview, so
-> "the origin registers only the auth surface" — the second bullet at the end
-> of this section — stopped being true on 2026-10-01. Revision 127 is the
-> consequence. Read §10.
+> **SUPERSEDED BY §10 — this is history, not current state.** `workbench.*`
+> now **has** a whole-host Access application. Two claims below are now false
+> and are kept only to show what was believed and why:
+>
+> 1. "**reversing it would break the product**" — measured false on
+>    2026-10-11. Access in front of the hostname does *not* break the Auth0
+>    callback, because the browser that reaches the callback is already
+>    carrying the Cloudflare authorization cookie from the Access login it
+>    completed moments earlier. The full flow was driven end to end. See §10.
+> 2. "the origin binds `127.0.0.1:5055` only" and "the preview app registers
+>    *only* the auth surface" — both stopped being true on 2026-10-01
+>    (WB1-D17), when the hostname was repointed at the authoritative
+>    production listener. Revision 127 is the consequence.
+>
+> What survives from this section is the *cost* it correctly identified: Access
+> does insert a second, unrelated login. That cost was weighed and
+> **deliberately accepted** rather than disproved. See §10.
 
-This is intentional, and reversing it would break the product.
+This was intentional, and the belief at the time was that reversing it would
+break the product.
 
 The Workbench authenticates users through **Auth0/OIDC inside CIS**:
 
@@ -461,13 +492,24 @@ https://mcp.*     ->  403             (identical to the pre-rule baseline)
 ```
 
 The likely explanation is Cloudflare Access, which forces HTTPS on the
-hostnames it protects because its session cookies are `Secure`-only. §4 of this
-document records exactly the right split: `api.*` has the "Eric only" Allow
-application and `mcp.*` has the MCP Service Token application, while
-`workbench.*` has **no** Access application at all. The two hostnames that
-`301` are precisely the two with Access in front; the one that did not redirect
-until a rule was added is precisely the one without. That asymmetry *is*
-discovery 44.
+hostnames it protects because its session cookies are `Secure`-only. At the
+time this was written the split was: `api.*` had the "Eric only" Allow
+application and `mcp.*` had the MCP Service Token application, while
+`workbench.*` had **no** Access application at all. The two hostnames that
+`301` were precisely the two with Access in front; the one that did not
+redirect until a rule was added was precisely the one without. That asymmetry
+*is* discovery 44.
+
+> **Correction, 2026-10-11.** The premise of that asymmetry no longer holds:
+> `workbench.*` now has its own whole-host Access application (§4, §10), so all
+> three hostnames have Access in front of them. This does **not** invalidate
+> discovery 44 or its resolution — the hostname-scoped `308` Redirect Rule is
+> still in place and still the thing that closed it, and the explanation above
+> remains the best account of why only `workbench.*` ever needed one. It does
+> mean the sentence "`workbench.*` has no Access application at all" must not
+> be lifted out of this section as current state. The open question that
+> remains is unchanged and still only cosmetic: whether `api.*`/`mcp.*` would
+> now be reached by their own `301` or by Access's HTTPS enforcement first.
 
 If you want this closed off completely, confirm in the dashboard that
 SSL/TLS → Edge Certificates → **Always Use HTTPS** reads OFF and that Redirect
@@ -492,27 +534,26 @@ and Zone Settings. Changing it is a dashboard action, or needs a token scoped to
 Zone → Rules → Ruleset:Edit stored outside the repo.
 
 
-## 9. Access remains off the Workbench hostname
+## 9. Access was off the Workbench hostname — RETIRED, NO LONGER TRUE
 
-> **Still true as configuration, no longer sufficient as protection.** This
-> section was written while the hostname pointed at the loopback preview. It
-> now points at the authoritative listener, and revision 127 requires
-> deny-by-default edge ingress that this hostname does not have. §10 records
-> the exposure, the application-layer containment that landed on 2026-10-10,
-> and the exact prerequisites that leave the edge work BLOCKED.
+> **RETIRED 2026-10-11. Do not act on this section.** Its central claim —
+> that `workbench.creative-intelligence-system.com` has no Cloudflare Access
+> application — is **false as of 2026-10-11**. The hostname has a whole-host
+> Access application using the reusable exact-email "Eric only" Allow policy.
+> The authoritative description of the current edge posture and the
+> authentication path is **§10**. This heading is kept, rather than deleted,
+> so that anything citing "§9" lands on the correction instead of silently
+> reading stale state.
 
-`workbench.creative-intelligence-system.com` intentionally has **no Cloudflare
-Access application**. The authentication path is:
+The retired claim, for the record, was: this hostname intentionally has no
+Access application, and the authentication path is
 
 ```
 Browser → Cloudflare Tunnel → CIS Workbench → Auth0/OIDC
 ```
 
-not a Cloudflare Access login in front of it. Verified unchanged before and
-after this card's work: `api.*` still `302`s to
-`cis-live.cloudflareaccess.com`, `mcp.*` still returns `403` at the edge, and
-`workbench.*` still returns `200` with no Access interception. No Access
-application was created, modified or deleted.
+with no Access login in front of it. The current path has an Access login in
+front of it and is recorded in §10.
 
 ---
 
@@ -520,14 +561,19 @@ application was created, modified or deleted.
 
 Recorded at `dev_continuity_events` revision 127 (`task='WB.1'`,
 `kind='unfinished_work'`, `status='BEFORE_STAGE_CLOSEOUT'`). Contained in the
-application on **2026-10-10** by the WB.1-TRUST-127 card. **The edge half is
-not done** — see "Still open" below. Do not read this section as "revision 127
-is closed".
+application on **2026-10-10** by the WB.1-TRUST-127 card, and at the edge on
+**2026-10-11** by the WB1-REV127 edge-containment closeout. Both halves of the
+defence-in-depth requirement are now in place and verified.
+
+**Revision 127 is nevertheless not closed by this document.** It is *ready for
+independent review*. The sessions that implemented the containment do not
+accept their own work, and no Eric Gate approval was written. Do not read this
+section as "revision 127 is resolved".
 
 ### What was exposed
 
-`workbench.*` has no Access application (§9), and since WB1-D17 it forwards to
-the authoritative production listener. That listener registers **seven**
+At the time of the exposure `workbench.*` had no Access application, and since
+WB1-D17 it forwards to the authoritative production listener. That listener registers **seven**
 blueprints, not the two §5/§6 describe, and before this card only two of the
 seven checked a credential. Measured at the edge on 2026-10-10, with no
 credential presented, every one of these answered `200` with real data:
@@ -598,45 +644,155 @@ protected GETs and all 12 protected POSTs answer `401` with a 95-byte generic
 refusal. No workflow run, project, approval or spine row was created by the
 verification, and no model token was spent.
 
-### Still open: deny-by-default at the edge — BLOCKED
+### Deny-by-default at the edge — IMPLEMENTED 2026-10-11
 
 Revision 127 calls for defence in depth: fail-closed application authorization
-**and** deny-by-default public ingress. Only the first is done.
+**and** deny-by-default public ingress. **Both are now in place.** The
+subsection this replaces recorded the edge half as BLOCKED on two
+prerequisites; both were cleared — the credential/authority by performing the
+change in the Zero Trust dashboard, and the architect decision by **choosing
+the first of the three options it listed: accept the double login.**
 
 | Hostname | Edge posture |
 |---|---|
 | `api.*` | Cloudflare Access enforced — `302` to `cis-live.cloudflareaccess.com`, `auth_status=NONE` |
-| `mcp.*` | Cloudflare Access enforced — `403` at the edge |
-| `workbench.*` | **No Access application.** Application authorization only. |
+| `mcp.*` | Cloudflare Access enforced — `403` at the edge, with `cf-access-aud` |
+| `workbench.*` | **Cloudflare Access enforced** — `302` to `cis-live.cloudflareaccess.com` on every path |
 
-Two prerequisites are missing, and neither can be improvised:
+#### The application
 
-1. **Authority/credential.** Access applications are created in the Cloudflare
-   Zero Trust dashboard or through the Cloudflare API at
-   `/accounts/{account_id}/access/apps`. That needs an API token scoped to
-   *Account → Cloudflare Zero Trust → Access: Apps and Policies: Edit*, plus
-   the account ID. No such token exists on this host: not in the environment,
-   not in `secrets.env`. The `cloudflared` binary cannot do it either — its
-   `access` subcommand is a *client* (`login`, `curl`, `token`, `ssh`) with no
-   application-management verb, and the origin certificate's embedded token is
-   zone-scoped, not account-scoped.
+| Item | Value |
+|---|---|
+| Name | CIS Workbench |
+| Type | Self-hosted |
+| Hostname | `workbench.creative-intelligence-system.com` |
+| Path | **none — the application protects the entire hostname** |
+| Session duration | **8 hours** |
+| Policy | the existing **reusable** "Eric only" policy (§4) |
+| Policy action | Allow |
+| Include selector | **exact email**, one address |
+| Identity provider | Cloudflare One-time PIN available; CIS Auth0 remains the *application* login |
 
-2. **An architect decision**, which is the substantive blocker. §5 and §9 record
-   a deliberate decision that `workbench.*` must have *no* Access application,
-   because Access would insert a second unrelated login and intercept the Auth0
-   callback at `/api/workbench/auth/callback`. Putting deny-by-default Access
-   on this hostname therefore requires choosing one of:
+What the application deliberately does **not** have — each of these was
+considered and rejected, not merely omitted:
 
-   - accept the double login (Access, then Auth0) — simplest, and nothing in
-     the product breaks, but it changes the sign-in experience; or
-   - scope Access to the hostname with a bypass on the callback path — which is
-     a reusable unauthenticated exception on the exact path that completes
-     authentication, and the containment card forbids creating one; or
-   - split the listener so only the Workbench origin is browser-facing and the
-     relay/API surface moves behind `api.*`, which already has Access. This is
-     the option that removes the tension rather than trading it off, and it is
-     a listener redesign — out of scope for a containment card.
+- **no bypass policy**;
+- **no service-auth policy**;
+- **no email-domain selector** (exact email only, so a whole domain cannot
+  inherit access);
+- **no unauthenticated exception for the Auth0 callback**;
+- **no path exception of any kind** — the application is defined with no path,
+  which is what makes "every path" the default rather than a list that must be
+  maintained.
 
-Until one is chosen and applied, `workbench.*` is protected by application
-authorization alone. That is one control, not two, and revision 127 asked for
-two.
+#### The browser flow, and why the callback survives
+
+```
+Browser → Cloudflare Access (one-time PIN)
+        → CIS Auth0 login
+        → /api/workbench/auth/callback
+        → authenticated Workbench SPA
+```
+
+§5 predicted that an Access application would intercept the Auth0 callback at
+`/api/workbench/auth/callback` and break sign-in. **It does not, and the reason
+is specific:** by the time Auth0 redirects the browser back to the callback,
+that browser has already completed the Access login and is carrying the
+Cloudflare authorization cookie for this application. The callback request
+therefore arrives *authorized at the edge* and is passed to the origin like any
+other authorized request. Access only intercepts requests that do not yet carry
+that cookie — which is exactly the anonymous case it is there to stop. **No
+callback bypass was needed, and none was created.**
+
+This is the **deliberately accepted double login**: the first of the three
+alternatives the former "BLOCKED" subsection listed. Signing in costs two
+logins (Access, then Auth0). That was judged the right trade against leaving
+the authoritative listener without deny-by-default ingress. The third option —
+splitting the listener so the relay/API surface moves behind `api.*` — remains
+the option that removes the tension rather than trading it off, and remains
+available as future work; accepting the double login does not foreclose it.
+
+#### Verified 2026-10-11
+
+Driven end to end in a browser: Access one-time PIN → Auth0 → callback →
+authenticated SPA, which rendered the owner identity and then loaded **real
+data** through that authenticated session on the Project Map, Build Path,
+System Context / Recovery, and the Braingate conversation/project list. This is
+the positive half of the proof: Access denies anonymous traffic *without*
+denying the legitimate user.
+
+Anonymously from outside that session — **no cookie, no `Authorization`
+header, no service token, no credential of any kind** — all of the following
+return `302` to `cis-live.cloudflareaccess.com` with the CIS Workbench
+audience, a 143-byte Cloudflare-generated redirect page, `server: cloudflare`,
+`auth_status: NONE`, `service_token_status: false`, and **no origin body and no
+operational state**:
+
+```
+/                                       /api/workbench/project-intelligence
+/ui/                                    /api/relay/ping
+/api/workbench/auth/login               /api/relay/health
+/api/workbench/auth/callback            /api/relay/runs
+/api/workbench/auth/session             /api/relay/system/security
+/api/workbench/system-context           /dashboard/
+/api/workbench/build-path               /favicon.ico
+/api/workbench/destination-architecture /some/random/path
+```
+
+The last four are the whole-host check: paths the origin does not even
+register, plus `/dashboard/` — which the application layer leaves
+unauthenticated by design and which revision 127's containment work had to
+declare as a residual item — are now intercepted before the origin sees them,
+because the application carries no path and so has nothing to enumerate.
+
+Re-verify with (note: **GET/HEAD only** — do not probe mutating routes):
+
+```bash
+for p in / /ui/ /api/relay/runs /api/workbench/system-context /some/random/path; do
+  curl -sS -o /dev/null -D - "https://workbench.creative-intelligence-system.com$p" \
+    | grep -iE '^HTTP/|^server:|^location:' | cut -c1-80
+done
+```
+
+Expect `HTTP/2 302`, `server: cloudflare`, and a `Location` on
+`cis-live.cloudflareaccess.com/cdn-cgi/access/login/workbench.creative-intelligence-system.com`.
+That the redirect is Cloudflare-generated is what proves the origin was not
+reached: the origin's own refusal is a 95-byte JSON `401`, never a 302. (The
+`cis-pipeline` container does not log inbound requests, so log *absence* proves
+nothing here and is not relied on.)
+
+Each hostname presents its own audience; `api.*` and `mcp.*` differing from
+`workbench.*` is correct, not a regression (§4).
+
+#### Application authorization is still required
+
+The edge is now the outer of two controls, **not a replacement for the inner
+one**. Every protected route must keep calling
+`runtime/workbench_auth.check_auth()`, and
+`runtime/tests/test_revision_127_containment.py` must keep passing, because:
+
+- an Access application can be edited, scoped, bypassed or deleted in the
+  dashboard by anyone with account access, and nothing in this repository would
+  notice;
+- the origin is reachable from this host and from anything else that can reach
+  `localhost:5000` — a path that does not traverse Cloudflare at all;
+- defence in depth is the explicit requirement of revision 127. One control is
+  not two.
+
+Verified the same day, with the edge deliberately bypassed by requesting
+`127.0.0.1:5000` directly and sending no credential: the protected Workbench
+read models and the relay surface each answered `401` with the 95-byte generic
+refusal. `/api/workbench/auth/session` answered `200` with
+`{"authenticated": false, …}`, which is the intended unauthenticated sign-in
+lifecycle endpoint and carries no operational state. **Both layers hold
+independently.**
+
+#### Machine callers
+
+`CIS_PIPELINE_API_KEY` remains **unset**, so the relay/API surface is closed to
+every machine caller, not merely to unauthenticated ones. That is fail-closed
+and correct, and nothing currently depends on it. **No key was minted** —
+creating a production credential is an operator action and was not requested.
+A machine caller would additionally now have to satisfy Access, which for a
+non-browser client means a service token; none is configured for this
+application, and adding one would be a new decision.
