@@ -1,15 +1,18 @@
+# RETIRED 2026-10-12 (card CIS-OPS-EXTRACTOR-PERMANENT-REMEDIATION).
+# This unit is NOT installed and must not be enabled. The legacy extractor
+# daemon is manual-only; it requires DEEPSEEK_API_KEY to be supplied by the
+# operator at invocation. Do not re-add a credential to this file.
 [Unit]
-Description=CIS Extractor — auto-restart on interrupt
+Description=CIS Extractor (RETIRED — manual, bounded; do not enable)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=eric
-Environment=DEEPSEEK_API_KEY=sk-ba0b06b597c54bb9be63846d66b4f37d
 WorkingDirectory=/mnt/projects/cis/runtime
 ExecStart=/usr/bin/python3 /mnt/projects/cis/runtime/extractor_daemon.sh
-Restart=always
+Restart=no
 RestartSec=30
 StandardOutput=append:/mnt/projects/cis/logs/extractor_daemon.log
 StandardError=append:/mnt/projects/cis/logs/extractor_daemon.log
