@@ -734,12 +734,13 @@ operational state**:
 /api/workbench/auth/login               /api/relay/health
 /api/workbench/auth/callback            /api/relay/runs
 /api/workbench/auth/session             /api/relay/system/security
-/api/workbench/system-context           /dashboard/
-/api/workbench/build-path               /favicon.ico
-/api/workbench/destination-architecture /some/random/path
+/api/workbench/system-context           /api/workbench/conversations
+/api/workbench/build-path               /dashboard/
+/api/workbench/destination-architecture /favicon.ico
+/static/anything.js                     /some/random/path
 ```
 
-The last four are the whole-host check: paths the origin does not even
+The last five are the whole-host check: paths the origin does not even
 register, plus `/dashboard/` — which the application layer leaves
 unauthenticated by design and which revision 127's containment work had to
 declare as a residual item — are now intercepted before the origin sees them,
