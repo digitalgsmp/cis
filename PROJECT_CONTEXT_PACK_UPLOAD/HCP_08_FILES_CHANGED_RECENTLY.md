@@ -1,7 +1,43 @@
 # Files Changed Recently
-Generated: 2026-10-12 10:02 UTC | Run: run-6f1c30489119
+Generated: 2026-10-12 15:06 UTC | Run: run-6ddf0dc8ca68
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
+
+## 3a69005 ops: retire the runaway legacy extractor autostart
+
+## AGENTS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
+
+## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
+
+## docs/DEV-PIVOT_STATUS.md 
+
+## runtime/cis-extractor.service 
+
+## runtime/extractor_daemon.sh 
+
+## runtime/manifests/EXPORT_MANIFEST.json 
 
 ## a0b30ab docs: correct the revision 127 anonymous matrix to the verified 18 paths
 
@@ -618,83 +654,3 @@ DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 ## tools/state/build_path.py 
 
 ## tools/state/recovery_packet.py 
-
-## 8ca190a recovery: durably preserve the KB recovery mechanism and the architecture phase handoff
-
-## .gitignore 
-
-## AGENTS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_00_README_START_HERE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_01_CURRENT_STATE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_02_ACTIVE_ARCHITECTURE.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_03_DECISIONS_LOG.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_04_OPEN_QUESTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_05_NEXT_ACTIONS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_06_MODEL_ROLES_AND_PROTOCOL.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_07_RECENT_HANDOFF.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_08_FILES_CHANGED_RECENTLY.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_09_TERMS_AND_NAMING.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/HCP_10_DEV_PIVOT_STATUS.md 
-
-## PROJECT_CONTEXT_PACK_UPLOAD/READ_FIRST_HERMES_CONTEXT.md 
-
-## config/kb_source_policy.yaml 
-
-## docs/DEV-PIVOT_STATUS.md 
-
-## docs/UNIFIED_BUILD_LIST.md 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/INDEPENDENT_EXTERNAL_REVIEW_AND_PHASE_HANDOFF.md 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/KB_SOURCE_COVERAGE_AND_DEVELOPMENT_HISTORY_RECOVERY_REPORT.md 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/README.md 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/SOURCE_EVIDENCE_MAP.md 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/hnsw_recall_measurement.txt 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/recall_probe.py 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/retrieval_probe.py 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/retrieval_proof.txt 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/secret_scan.txt 
-
-## docs/review_packets/CIS-ARCH-RECONSTRUCTION-PHASE-HANDOFF-2026-10-07/test_summary.md 
-
-## enforcement/mwl-proof-v2/gates/gate_kb_source_coverage.py 
-
-## runtime/manifests/EXPORT_MANIFEST.json 
-
-## tools/development/discovery.py 
-
-## tools/ingest_claude_code_sessions.py 
-
-## tools/kb/__init__.py 
-
-## tools/kb/ingest_files.py 
-
-## tools/kb/install_session_end_hook.py 
-
-## tools/kb/session_end_ingest.sh 
-
-## tools/kb/source_policy.py 
-
-## tools/kb/tests/__init__.py 
-
-## tools/kb/tests/test_install_session_end_hook.py 
-
-## tools/kb/tests/test_kb_coverage.py 
