@@ -1,10 +1,14 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-12 15:06 UTC | Run: run-6ddf0dc8ca68
+Generated: 2026-10-13 04:22 UTC | Run: run-0015d9161f32
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-13 | [ADR-ARCH-004] Human intent, canonical technical authority, and cards as projections: **1 — HUMAN INTENT AND ALIGNMENT.* | This is recorded because the alternative had already been proposed once: treatin | DECIDED | spine record |
+| 2026-10-13 | [ADR-ARCH-003] Execution-backend contract — minimal boundary frozen, generalization deferred: The generalized multi-back | Specifying the full contract now would generalize from a single backend and woul | DECIDED | spine record |
+| 2026-10-13 | [ADR-ARCH-002] Record once, derive everywhere: EVERY FACT HAS EXACTLY ONE AUTHORITATIVE RECORD AND EXACTLY ONE OWNING MO | The rule is already obeyed pervasively and enforced mechanically — ADR-PIPE-006' | DECIDED | spine record |
+| 2026-10-13 | [ADR-ARCH-001] Architecture freeze — module contract, planes as properties, and the Hermes replacement boundary: **1 — S | Reconstruction cannot select modules without a definition of a module, and `dev_ | DECIDED | spine record |
 | 2026-10-05 | [ADR-WIASW-006] Executive development path / development journey — a derived architect-facing orientation layer, not ano | The architect reported, in his own words, that he has lost track of development  | DECIDED | spine record |
 | 2026-10-04 | [ADR-PIPE-009] Queue recovery must be identity-safe: machine-owned scope marker, evidence-derived item identifiers, and  | Found while proving OQ-TRIAGE-002 requirement 15 and then measured on a copy of  | DECIDED | spine record |
 | 2026-10-04 | [ADR-WIASW-005] Reference outcome — cross-discipline creative and software production, and the Creative/Software Control | ADR-WIASW-001 through 003 recorded WHAT the destination is and ADR-WIASW-004 rec | DECIDED | spine record |
