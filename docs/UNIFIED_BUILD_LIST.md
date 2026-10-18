@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: 28d1f2cbed7d1b76 -->
+<!-- state_revision: e4eaee36534d7167 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -4589,3 +4589,161 @@ execution/review/results), not starting automatically.
 
 **Evidence:**
 `data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_04_RECOVERY_DRILL_AND_CLOSEOUT.md`.
+
+### 4.33 Project-level reconstruction journey map in the Workbench
+
+**User idea, preserved from the 2026-10-14 reconstruction discussion:**
+
+> I imagine the flowchart being a linear timeline or build map sort of like a line of arrows pointing toward each other for each project segment. Since CIS will make independent project folders for each new project created by a user, I want this visual tool at the top of the project view in the Workbench.
+
+**Intent:** Give every independently created CIS project a persistent, immediately understandable orientation view at the top of its Workbench project page. The view must show the project's intended destination, the ordered project segments leading toward it, a conspicuous "you are here" position, and the next segment or action. It should behave like a linear timeline/build map with connected directional segments, not like a technical dependency graph that the user must interpret.
+
+**Continuity constraint:** Recording this idea must not redirect or interrupt the active clean-room reconstruction slice. Schedule it when the Workbench project-view shell and authoritative project/trajectory projection are ready to support it without creating a second manually maintained status record.
+
+**Architectural placement:** The visual belongs at the top of each project view, with project-specific content loaded from that project's own folder and authority. Its status, current position, and next step must be derived from canonical project state; presentation must not invent or separately store progress.
+
+**Acceptance direction:**
+
+- Each new CIS project folder can supply the map for its own Workbench project view.
+- The map reads left-to-right or top-to-bottom as a linear sequence of connected project segments.
+- The destination, completed segments, current segment, and next segment are understandable without architecture terminology.
+- A "you are here" indicator is derived from authoritative project state.
+- Selecting a segment can reveal its purpose, completion evidence, and dependent next work without changing authority.
+- The feature is developed at the appropriate dependency point and does not displace the current reconstruction work.
+
+### 4.34 Preserve the reconstruction architecture during Workbench development
+
+**Need: OPEN.** Eric approved adding this governing agenda item on 2026-10-15 after confirming that the Workbench redesign and restored/dormant capabilities must remain on the clean modular reconstruction trajectory rather than becoming another layer of accumulation.
+
+**Why this item exists:** The architecture-recovery phase began when the generated `AGENTS.md` approached its hard 20,000-character limit and the repository's accumulated backup files, stray databases, duplicate state, archives, historical specifications, and large mixed-responsibility modules made the need for reconstruction visible. Queue item 4.26 previously restored meaningful AGENTS.md headroom and was correctly completed; the generated file has since grown back to 19,908/20,000 characters. Queue item 4.33 governs the visual project journey map, but does not govern the architecture used to build the Workbench capabilities around it. This item protects that broader trajectory without reopening completed work or treating cleanup as the product.
+
+**Governing decisions and evidence:** ADR-SEED-017 (functionality first, refactor deliberately); ADR-SEED-018 (Layer 1 UI/control plane, Layer 2 CIS abstraction/adapter, Layer 3 replaceable Hermes backend); WB.1 architecture-freeze decision at `dev_continuity_events` revision 180; portfolio-backend verified result at revision 181; architecture recovery at WB.1 revisions 126, 128, 130, 132, and 136; `data/agent_handoffs/ARCH-RECOVERY-01-three-plane/ARCHITECTURE_REVIEW_PACKET.md`; `CIS_DEEP_ARCHITECTURE_HANDOFF_FOR_CHATGPT.md`.
+
+**Governing constraint for remaining Workbench work:** Every new or restored capability must identify and preserve its architectural path before activation:
+
+1. Layer 1 UI component or human-facing surface.
+2. Layer 2 CIS-owned API/read model/adapter contract.
+3. Authoritative state or capability source.
+4. Explicit prohibited dependencies and trust-boundary conditions.
+
+Layer 1 must not read the CIS spine or Hermes directly. UI components consume normalized Layer-2 contracts. Hermes-specific ports, profiles, private configuration, logs, provider behavior, dispatch compatibility, and failure-envelope handling belong behind the CIS-owned Layer-2 adapter boundary. Workbench chatbot, agents, procedures, deterministic gates, project maps, queues, dependencies, evidence, and pipeline-stage views must not deepen the current direct Hermes coupling.
+
+**AGENTS.md altitude requirement:** The always-loaded generated file is a bounded orientation and index projection, not a growing copy of operational history. Do not raise or weaken the hard limit merely to make new text fit. Preserve full authority, reasoning, evidence, and history in the spine and bounded retrieval surfaces; keep AGENTS.md focused on current orientation, governing constraints, and pointers into authority. Any remediation must retain discoverability for future agents and must explain what moved, where it is authoritative, and how it is retrieved.
+
+**Modular build requirement:** New modules must state their responsibility, inputs, outputs, authority source, allowed dependencies, prohibited dependencies, failure behavior, and verification contract. Reuse the existing read-model/API pattern and the existing declared-input/output/refusal contract grammar where applicable. Do not invent a competing project registry, queue, roadmap, or status store. Presentation derives state; it does not author or duplicate it.
+
+**Reconstruction and cleanup boundary:** `/mnt/projects/cis` remains the protected reference environment. Broad reorganization, deletion, and archaeological cleanup do not occur opportunistically inside feature cards. Reconstruction must use an isolated worktree/environment, preserve authority and history, classify migrate/regenerate/reference decisions, and prove behavioral equivalence before replacement. Cleanup remains last and evidence-driven; the accumulation must stay visible until safely classified.
+
+**Required acceptance for each affected Workbench slice:**
+
+- A layer/module map identifies the UI surface, Layer-2 contract, authority source, and prohibited dependencies.
+- Tests prove Layer 1 does not directly access SQLite or Hermes and that public responses do not expose server-only paths or credentials.
+- Existing architectural-boundary violations are not deepened; any unavoidable dependency is classified and recorded with a disposition.
+- Feature evidence covers both user-visible behavior and the applicable architectural boundary.
+- Generated projections remain within their enforced limits with meaningful headroom and no loss of authoritative information.
+- The protected reference remains recoverable and the reconstruction path does not silently mix current, planned, and historical implementations.
+
+**Relationship to active work:** This is a governing constraint on the remaining WB.1/UI work, not authorization for P1, broad cleanup, a service restart, or a full in-place refactor. It does not invalidate the verified portfolio backend; that slice already follows the server-owned resolver/read-model/API direction and remains not activated. Before the chatbot and other pipeline entities are expanded in the UI, their current direct gateway/database dependencies must be mapped and the Layer-2 placement made explicit.
+
+### 4.35 Operator compensation detection and capability-gap learning
+
+**Need: OPEN.**
+
+CIS must detect when a human has compensated for a missing system function by
+supplying memory, diagnosing an operational obstruction, restoring direction,
+or proposing a safeguard that CIS should eventually have been able to surface
+itself. The exact human statement, triggering context, affected task and prior
+similar incidents must remain linked.
+
+The capability must distinguish human authority, creative judgment, genuinely
+new knowledge and explicit redirection from an operator-compensation event.
+Only the last category becomes a capability-gap candidate. Capture is not
+authorization: proposed generalizations require reconciliation against the
+knowledge base and queue, independent review and verification, and Eric Gate
+approval before implementation or promotion.
+
+Initial examples are Eric's semantic-memory contribution, recognition of the
+Claude execution-environment obstruction, and recognition that external
+developers and trusted host controls need a clean-room boundary separate from
+the accumulated reference repository.
+
+**Scope:** CIS CONTROL / CONTINUOUS INTAKE / OSA-BR / SELF-EVOLUTION — human
+contribution classification, durable compensation events, capability-gap
+derivation and governed promotion; not automation of human intent, creative
+judgment or approval authority.
+
+### 4.36 Operational Self-Assessment and Bounded Recovery foundation
+
+Build the Layer-2 operational event/evidence contract, deterministic failure taxonomy and classifier, maintenance-incident state machine, bounded preauthorized recovery playbooks, exact-task rerun, and independent verification defined by ADR-WIASW-007, ADR-PIPE-010, and ADR-PIPE-011.
+
+This work is deliberately sequenced after the trusted host control plane and contained execution pipeline are complete enough to enforce authority. OSA-BR may classify and execute only preauthorized, reversible recovery actions. It must escalate rather than widen permissions, weaken gates, change evaluators, self-modify, repair production data without authority, or promote its own recommendations.
+
+Acceptance requires deterministic fixtures for success, refusal, concealed upstream error, timeout, insufficient evidence, semantic-memory restoration, environment-obstruction diagnosis, clean-room recognition, bounded recovery, failed recovery, and escalation. Human-origin evidence remains distinct from model interpretation. Routine bounded recovery stays inside CIS; external developers are not a normal execution tier.
+
+### 4.37 Complete the trusted host control plane, contained pipeline, and external-developer retirement gate
+
+Finish the enforcement architecture established by ADR-SEED-015 and ADR-SEED-016. The root-owned `/opt/cis-control` trust root launches constrained non-root workers; contracts, policies and launch authority remain outside model-writable paths; source and control mounts are read-only; each task receives only its declared writable workspace and capabilities; and the worker cannot grant itself edit authority, mount access, Docker access, credentials, or a bypass.
+
+External Claude Code and Codex sessions are temporary reconstruction builders. They retire from normal development only after a real contained code task proves the full path: exact human instruction and interpretation remain separately attributable; contract freeze; contained Worker execution; independent Reviewer review; deterministic Verifier and gates; evidence-bound acceptance; durable state/continuity recording; and safe failure behavior. Claude, ChatGPT, or other models may remain available through Hermes as replaceable constrained pipeline entities; model lineage never grants authority.
+
+After retirement, `/opt/cis-control` remains the quiet host trust root and break-glass recovery plane. Routine operational recovery belongs to OSA-BR. External development may return only for an explicitly authorized recovery incident when the contained pipeline or its trust boundary cannot recover within its existing authority. Recovery access is time-bounded, evidence-producing, independently verified, and revoked when the incident closes.
+
+First implementation slice: move every host-side write grant and execution permission out of model-writable repository code and behind a root-owned dispatcher in `/opt/cis-control`; remove the Claude-specific `acceptEdits` grant from the agent-side launcher; prove fail-closed behavior, allowed dispatch, read-only control/source mounts, sole declared writable workspace, and an operator-controlled override path.
+
+### 4.38 Workbench architecture explorer — modules, files, and relationships in plain language
+
+**Need: OPEN.**
+
+**User idea, 2026-10-17:** In addition to the Mermaid roadmap, provide a Workbench tab or page that helps a non-coder understand how the application is built. It should present the application as a navigable flowchart of modules and their relationships, then allow the user to drill into the files that comprise each module and read a plain-language explanation of each module and file's purpose.
+
+**Purpose:** Make the implementation structure understandable without requiring the user to browse a repository or interpret source code. This is an architecture-and-orientation view, distinct from queue item 4.33's project journey map: 4.33 explains where a project is going and its development stage; this item explains what the application is made of and how its parts relate.
+
+**Required experience:**
+
+- Add an **Architecture Explorer** entry alongside the roadmap in the Workbench project view.
+- Begin with a readable module/layer flowchart showing the UI/control plane, CIS-owned contracts and services, contained pipeline entities and gates, authoritative data sources, and host trust boundary where applicable.
+- Selecting a module reveals its plain-language purpose, responsibility, inputs, outputs, allowed dependencies, prohibited dependencies, trust boundary, pipeline role, and relationships to other modules.
+- Within the module, group its associated implementation, contract/schema, configuration, test, migration, and operational files. Each file entry shows its repository-relative path and a plain-language explanation of what it contributes to that module.
+- Support drill-down and navigation from module to file and back, plus search/filter by project, layer/domain, pipeline stage, and file role. Include a glossary or human-readable labels where technical terms cannot be avoided.
+- Show unknown, unclassified, duplicated, or boundary-violating files explicitly instead of silently omitting them; these are architecture-recovery findings, not display errors.
+- Keep the page usable on the mobile Workbench layout as well as desktop.
+
+**Authority and architecture constraint:** The UI is a read-only projection, not a second architecture registry. Its module/file descriptions and dependency edges must be generated from or reconciled with authoritative module contracts, project manifests, declared pipeline/entity contracts, repository inventory, and verified dependency evidence. Where no authoritative description exists, label it as unknown or proposed rather than allowing generated prose to appear as fact. Layer 1 consumes a bounded Layer-2 architecture read model/API; it must not scan the filesystem, query SQLite, or inspect Hermes directly from the browser. Do not expose secrets, credentials, private host paths, or privileged control details.
+
+**Acceptance direction:**
+
+1. A non-coder can identify the application's major modules, the purpose of each, and the direction of their important relationships from the overview.
+2. Every displayed module can be expanded to show its associated files and each file's role in that module.
+3. The view distinguishes authoritative, observed, proposed, historical, and unclassified information.
+4. Automated checks prove that the projection is derived from declared sources, repository-relative paths are safe, sensitive paths/data are excluded, and stale or missing classifications are surfaced.
+5. The same underlying architecture contract can support documentation/projections without introducing a separately maintained UI truth.
+
+**Sequencing:** Record now without interrupting the active contained-pipeline work. Implement after item 4.37 establishes the trusted execution path and as part of the resumed Workbench/refactoring program governed by item 4.34. The inventory and module-contract work should be reusable by the modular reconstruction rather than performed only for presentation.
+
+### 4.39 Closed-loop capability reconciliation and completion planning
+
+**Need: OPEN. Destination capability approved by Eric on 2026-10-18.**
+
+Once the contained pipeline can execute end to end and the Operational Self-Assessment and Bounded Recovery foundation is operational, CIS must be able to assess its own verified functional state against the complete authoritative record of requested deterministic controls. The comparison must include the canonical queue, accepted decisions and reconciliations, applicable contracts and ADRs, operator-compensation capability gaps, self-evolution proposals that have passed their required review state, and implementation evidence. Historical prose or a model assertion is not proof that a capability exists.
+
+The result is a continuously reproducible capability-reconciliation matrix. For every requested control it identifies the authoritative source, intended module and pipeline stage, dependency relationships, current disposition, evidence, and the exact gap between the request and verified behavior. Dispositions must distinguish at least ENFORCED, PARTIALLY_ENFORCED, DOCUMENTED_ONLY, NOT_PRESENT, CONFLICTING, SUPERSEDED, and UNKNOWN. A control is ENFORCED only when its deterministic mechanism and declared verification evidence exist and pass.
+
+After reconciliation, CIS produces an ordered completion plan of bounded, digestible implementation recommendations, item by item and module by module, for the authorized development workers. During reconstruction these recommendations may be dispatched to external developers under the contained-development role contract. They do not authorize implementation, queue mutation, acceptance, promotion, or permission expansion by themselves. Implementer, Reviewer, Verifier, promotion authority, and Eric Gate remain separate. Failed or unexecuted checks remain UNVERIFIED, and a failed worker unit is reduced and redispatched or explicitly escalated rather than silently completed by a different role.
+
+After each accepted implementation increment, the pipeline reruns the affected checks and capability reconciliation so that satisfied gaps close through evidence and newly exposed dependencies remain visible. Self-assessment and self-evolution may propose corrections or new deterministic controls, but may not approve their own findings, rewrite their evaluation criteria, weaken containment, grant permissions, or mark work complete. Unsupported conclusions and contradictory authorities stop at review or human adjudication.
+
+**Dependencies and sequence:** This destination builds on 4.35 (operator-compensation learning), 4.36 (OSA-BR), and 4.37 (trusted contained pipeline). It begins only when the relevant end-to-end execution, evidence, review, verification, and continuity authorities are operational enough to make its own assessment trustworthy. It does not delay the bounded work needed to reach that point.
+
+**Required acceptance:**
+
+- A frozen assessment input names exact queue, decision, contract, policy, and evidence revisions; rerunning the same input produces the same matrix.
+- Every requested control has source attribution and one explicit disposition; omissions, unknowns, conflicts, and supersessions remain visible rather than being summarized away.
+- ENFORCED requires a mapped deterministic mechanism plus independently executed, passing evidence. Documentation, model confidence, skipped tests, and implementer self-report cannot satisfy it.
+- The system maps each unresolved control to the responsible module and pipeline stage, then derives dependency-ordered, mechanically bounded implementation recommendations with declared checks and evidence requirements.
+- Recommendations pass independent review and authority gates before dispatch. The assessor cannot write completion status, promote code, widen permissions, or alter its own rubric.
+- External-developer recommendations preserve explicit planner, implementer, Reviewer, Verifier, and promotion roles, with no silent role substitution.
+- After each accepted increment, incremental reassessment updates only from authoritative changes while retaining a reproducible full reconciliation mode.
+- Deterministic fixtures prove complete, partial, documentation-only, missing, conflicting, superseded, unknown, failed-test, and stale-evidence cases, plus refusal of self-approval and unauthorized queue writes.
+- Workbench projections can show the destination, current coverage, gaps, evidence, dependencies, and next bounded recommendations without becoming a second authority.
+
+**Destination outcome:** CIS can inspect what it has actually proved, reconcile that state with what Eric has asked it to become, and maintain an evidence-grounded completion program until the requested deterministic controls are implemented across every applicable module and pipeline stage.

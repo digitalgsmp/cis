@@ -1,0 +1,691 @@
+# PHASE 2 CANDIDATE ITEMS
+
+Mined from Claude.ai sessions, Claude Code sessions, and advisor review assessments.
+Requested by Eric, 2026-09-09. Card: "mine all session files and advisor reviews into a numbered item list."
+
+### Files read
+- **Claude Code sessions (7)** — `~/.claude/projects/-mnt-projects-cis/*.jsonl`, 16,384 lines total:
+  - `8227ac7a` (1,908) active Sep 9–10 · `c0cc5f8d` (3,720) Sep 2–9 · `c98a9089` (886) Sep 2
+  - `5be3d5a1` (2,252) Aug 31–Sep 2 · `c203e64a` (2,316) Aug 30–31 · `3ad4637d` (3,217) Aug 28–30 · `9ac1eaed` (3,085) Aug 26–28
+- **Advisor review assessments** — `reviews/done/*.md`, 29 files (round 1 responses, round 2 replies, round 3 result reviews), plus 22 `reviews/pending/*.md` packets as context. 5,704 lines total in `reviews/`.
+- **Claude.ai sessions** — `cis_kernel/source/transcripts/claude_2026-05-30_advisor-chat-problems.json` (56 messages) + `cards/external_exchanges_cache.json` (4,768 Claude+ChatGPT entries; the 3,742-entry `chatgpt:export` is non-CIS personal/film/social-work content and out of scope).
+- **Hermes session corpus** — `cards/synthesis_input.jsonl` (17,966 lines, May–Aug) is the corpus the card-factory already mined into UNIFIED_BUILD_LIST; re-mining yields duplicates of existing build-list items.
+
+### Scope note
+Items are what the sources themselves stated — raised by Eric, Claude.ai, Claude Code, or the advisor-review lineages (GLM `advisor` 8649 / Qwen `evaluator` 8650). Items raised once and never followed up are included; they are the point. No ranking: numbering is sequence only.
+
+### Item count by who raised it
+- Eric — 15
+- Claude.ai — 22
+- Claude Code — 16
+- advisor review — 57
+- **Total — 110**
+
+---
+
+## 1. The DB is on the VM, not "in the container"
+The path `/workspace/cis` inside the container is `/mnt/projects/cis` on the VM disk — a bind mount, not a copy. So the spine DB survives container recreate, and Claude Code reaches it through the mount. Claude Code answered "yes" when asked if the DB was in the container, which is true from inside the container's view and false from the operator's.
+Plane: container
+Raised by: Eric
+Source: `8227ac7a`, 05:32–05:36 — "when was the cis folder written to the container" / "I asked if the db is in the container and you said yes" / "How do I take away db privileges from you"
+
+## 2. No way to work outside the container yet
+Eric's own framing of the above: the operator has no independent ground truth outside the container path — every read/write he can perform goes through it.
+Plane: container
+Raised by: Eric
+Source: this session (Eric, verbatim)
+
+## 3. The queue table regenerates instead of persisting
+"Why does the table regenerate instead of being persistant" — the queue was being rebuilt on run rather than surviving as a durable table.
+Plane: container
+Raised by: Eric
+Source: `8227ac7a`, 05:14:50
+
+## 4. The "authoritative" DB queue can still be overwritten
+"First of all I asked you to make the db authoritative. If it is being made authoritative, why can it be over written. It should just be labels and after the reviewers prove it's evidence of being completed it should be locked." Authority with no write-lock is not authority.
+Plane: container
+Raised by: Eric
+Source: `8227ac7a`, 05:28:17
+
+## 5. Cards get created but not routed to review
+"You created a card, why was it not sent for review, that's how you're suppose to work." The loop only reviews when the builder remembers to send it.
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 05:04:00
+
+## 6. The frame gate is asked-for, not hardcoded
+"We proved today the capability was always there and the prompt simply never asked… it should be the primary gate not something we have to ask for." Eight reviews, zero spontaneous frame challenges; one explicit ask produced two independent challenges.
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 00:48:40
+
+## 7. The reviewer presents a succeed/fail false dichotomy
+"These choices are a known false dichotomy where the options are succeed or fail. It's a waste of my attention, or is it a test to see if this is a moment where you can misalign my project."
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 01:18:48
+
+## 8. Telegram pause notices don't state the required action
+"I read through the telegram messages, I can't determine if I am suppose to do anything from reading them." / "This telegram user feature is still not clear cut describing the required user action. For the cards you just worked on I guessed and pasted the bash into you prompt."
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 01:38:12, 02:27:33
+
+## 9. Where is the proof of 1.22's first half
+"Where is the proof that the first half of 1.22." The loop's capture half was claimed done but the reviews reached the KB only incidentally (via transcript quoting), not from the spine.
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 05:09:42
+
+## 10. Where does the history of what has been done live
+"Where does the history of what has been done lives. I thought that's what the commits were for." Commits exist but the operator cannot find the record of completed work from them.
+Plane: container
+Raised by: Eric
+Source: `8227ac7a`, 05:11:28
+
+## 11. Who needs the markdown regenerated
+"Who needs the markdown regenerated" — after the DB became authoritative, the markdown render is still regenerated with no identified consumer.
+Plane: container
+Raised by: Eric
+Source: `8227ac7a`, 05:23:05
+
+## 12. Token cost of the frame gate — needs a cheaper continuity path
+"If token cost is a concern, which it is the kb has scores of intent examples based on frame continuity. Either a local agent, a lower reasoning agent model or script comparing to a priority list may need to be added."
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 00:54:24
+
+## 13. "Are we building the right thing"
+Eric asked this directly. It became a card (intent-slate-loop). The advisor's own answer: the loop is being built on a queue that cannot answer three of the four questions the loop needs it to answer.
+Plane: advisor review
+Raised by: Eric
+Source: `8227ac7a`, 00:13–00:30; `reviews/done/intent-slate-loop.advisor.response.md`
+
+---
+
+## 14. R1 gateway routed to the wrong model for 36+ days
+The R1 gateway at 8643 was calling the wrong model for over a month; no model in the loop verified API documentation.
+Plane: container
+Raised by: Claude.ai
+Source: `cis_kernel/source/transcripts/claude_2026-05-30_advisor-chat-problems.json`
+
+## 15. deepseek-reasoner string routed to v4-flash thinking mode since April 24
+The "reasoner" model string was actually serving v4-flash thinking, not true R1.
+Plane: container
+Raised by: Claude.ai
+Source: `cis_kernel/source/transcripts/claude_2026-05-30_advisor-chat-problems.json`
+
+## 16. Architect and Critic on the same model = same-model convergence risk
+Both Architect and Critic panels ran the same v4-pro model; moderated only by Claude/ChatGPT escalation.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cis_kernel/source/transcripts/claude_2026-05-30_advisor-chat-problems.json`
+
+## 17. NeMo Guardrails identified as a compatible forced-search sidecar
+NeMo Guardrails named as a compatible sidecar for the forced-search-before-response pattern; DeepEval for end-to-end testing. (Raised, never built.)
+Plane: container
+Raised by: Claude.ai
+Source: `cis_kernel/source/transcripts/claude_2026-05-30_advisor-chat-problems.json`
+
+---
+
+## 18. Call-site surveys counted by statement syntax miss sites
+"I told you nine sites. There are fourteen. The five I missed." The grep for `INSERT INTO` missed `INSERT OR IGNORE INTO`. Survey must enumerate by object, not by statement syntax.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 17:58:12 and 18:13:04
+
+## 19. AGENTS.md reaches agents at 16% (3,000 of 18,376 chars)
+"AGENTS.md total chars: 18376 injected into prompts: 3000 (16%)… LAST LINE THAT REACHES AN AGENT: '- /hom'". The briefing is truncated, so most of it never reaches an agent.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 18:22:12
+
+## 20. KB writes halt card work — 0.3's arbitration has no priority model
+"while the KB is being written, card tasks stop." 0.3 resolved batch-ingest contention for readers but has no priority model for writers.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 12:54:48
+
+## 21. Closeout embedding sweep holds the Chroma write lock ~15 min
+"Remove sync_missing_embeddings.py from the closeout ingest step — a 15-minute job holding the Chroma write lock."
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 15:26:56
+
+## 22. The "two-round cap" never existed
+"The header's 'two-round cap' doesn't exist. UNIQUE(run_id, round_number) blocks a duplicate round number, not a third round." A collision was reported as a cap, confidently.
+Plane: advisor review
+Raised by: Claude Code
+Source: `8227ac7a`, 03:49:17
+
+## 23. The extractor falls through to NULL on an unrecognized token
+"Make an unrecognised token after **Need: fire UNPARSED instead of falling through to NULL." An unrecognized status silently becomes NULL rather than a loud UNPARSED.
+Plane: container
+Raised by: Claude Code
+Source: `8227ac7a`, 17:49:53
+
+## 24. queue_edges extraction produced 27 edges of pure noise
+"27 edges of pure noise" — markdown table rows and code blocks were parsed as dependency edges during queue_edges extraction.
+Plane: container
+Raised by: Claude Code
+Source: `8227ac7a`, 06:21:18
+
+## 25. Extraction error rate 15% after fixes, and the errors changed character
+"error rate: 15%, down from 30%… 12 defensible, 3 wrong, 5 I cannot verify." The loud noise is gone; the remaining errors are subtler.
+Plane: container
+Raised by: Claude Code
+Source: `8227ac7a`, 12:39:00
+
+## 26. Unnumbered dependencies need a human read — count unknown without one
+"There is no way to know how many [unnumbered items] there are without doing it [a human read]." Dependency edges stated in prose without a number can't be machine-counted.
+Plane: container
+Raised by: Claude Code
+Source: `8227ac7a`, 06:16:59
+
+## 27. A file Claude Code did not write appeared in the working tree
+"docs/CIS_SESSION_HANDOFF.md I did not create — 8,410 bytes… Someone or something else wrote it." Claude Code flagged an artifact it could not attribute.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 03:38:54
+
+## 28. Edits introduced a duplicate paragraph
+"But the edit introduced a duplication, and I should have foreseen it." A self-inflicted doc regression during build-list editing.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 13:45:35
+
+## 29. Stale references flagged, then self-corrected
+"I was wrong to list them" — two rows mapping to 1.1 were NOT stale. Confidence about staleness was itself wrong, requiring re-verification.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 13:56:13
+
+## 30. "Writers of build_plan_nodes: NONE" was wrong
+"that was wrong; my grep matched INSERT INTO and missed INSERT OR IGNORE INTO." The same survey-by-syntax failure as item 18, occurring a second time.
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 17:58:12
+
+## 31. The denied write also contained the call-site-survey rule (2.37)
+"The earlier denied write also contained 2.37 'call-site surveys must enumerate by object, not statement syntax' — the lesson from the two grep misses."
+Plane: container
+Raised by: Claude Code
+Source: `c0cc5f8d`, 18:31:31
+
+## 32. Advisor review is single-turn — the advisor has no tools to iterate
+"1 (single-turn: the advisor has no tools, so there is nothing to iterate on)." Recorded as a structural fact in every review header.
+Plane: advisor review
+Raised by: Claude Code
+Source: `reviews/done/*.response.md` header (every file)
+
+## 33. Gateway returns HTTP 200 carrying an error object
+`{"error":{"code":"agent_incomplete"}}` returned as a successful completion after four truncation retries — a billing 402 laundered into success. Guarding transport is not guarding the result.
+Plane: advisor review
+Raised by: Claude Code
+Source: `c0cc5f8d`, 15:05–15:10; `UNIFIED_BUILD_LIST.md` 1.20
+
+---
+
+## 34. The advisor prompt labeled proposals as results for a week
+The scope line opened "You are reviewing a result packet" while every packet ever sent was a proposal. All divergence measurements were collected under the wrong label.
+Plane: advisor review
+Raised by: advisor review
+Source: `tools/advisor_review.sh` header lines 138–141
+
+## 35. The current-item pointer has no staleness detection
+A pointer left on a finished item asserts something false and no check catches it. "This is not an edge case — it is the default state the pointer will drift into."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/current-item-pointer.advisor.response.md`
+
+## 36. The pointer is manual — nothing triggers setting it
+"Someone must remember to run it." The safe-failure mode (NOT AVAILABLE when unset) protects against absence, not neglect.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/current-item-pointer.advisor.response.md`
+
+## 37. The pointer-to-slate relationship is entirely soft
+"Whether [the slate] respects the pointer is unenforceable." The pointer could exist perfectly and the slate could still propose done items.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/current-item-pointer.advisor.response.md`
+
+## 38. No mechanism advances the pointer when markdown marks an item done
+"the pointer will sit on a finished item until someone manually moves it. That is the most likely operational state."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/current-item-pointer.advisor.response.md`
+
+## 39. The migration backup is non-functional pseudo-code
+"STEP 1 is pseudo-code — not valid Python and would produce no backup." Nothing verifies a backup file exists before the rebuild runs.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 40. The column DEFAULT is never verified — the core of the fix is untested
+"nothing checks PRAGMA table_info(build_plan_nodes) to confirm the default is actually 'cis' and not 'CIS'. The EXPECT is blind to the exact thing the migration exists to change."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 41. The new table schema is elided — column order not confirmed
+"The CREATE TABLE contains '... identical to current, except:' — the actual column list is absent." Diverging column order silently corrupts data.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 42. The UNIQUE constraint is claimed but never verified
+"No VERIFY query checks for its presence." The constraint could be omitted and every EXPECT still passes.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 43. No check that other tables referencing the rebuilt table survive
+"the card never enumerates which tables reference build_plan_nodes or confirms their row counts are unchanged."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 44. No check that 0020 was the last applied migration, or that 0021 collides
+"No check that 0020 was the last applied migration or that 0021 doesn't collide with an existing file."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 45. workflow_runs left with the wider bug — EXPECT gives no signal
+"the card touches only build_plan_nodes. All five VERIFY queries pass while workflow_runs retains any uppercase values it may hold."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight.response.md`
+
+## 46. The FOREIGN KEY to projects(id) was never actually created
+"The migration template shows the column definition but omits the REFERENCES projects(id) clause. The plain join returning 30 rows proves the values match, not that referential integrity is enforced."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight-qwen.response.md`
+
+## 47. Dependent schema objects (indexes/triggers/views) not verified preserved
+"dependent schema objects … are preserved through the drop-and-rename" is unverified; they would be silently dropped.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/fix-3.6-preflight-qwen.response.md`
+
+## 48. The gate in round 3 is retrospective — weaker case than rounds 1 and 2
+"Round 3 is after work is done — 'was this the right work' is retrospective… Putting the gate in round 3 triples token cost for a question whose answer can't change what already happened."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/frame-gate-slate.advisor.response.md`
+
+## 49. The gate fires at full price on trivial items
+"across 42 OPEN items and 56 with no status, the gate fires on every single one, including trivial items where the frame question is obviously yes."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/frame-gate-slate.advisor.response.md`
+
+## 50. The gate's quality bar is unchecked — it can pass as a format ritual
+"the model can say 'Yes, this is the right work' as a one-liner and then spend 2,000 tokens on schema details — and check 5 passes." A secondary check (does the frame answer ever contradict the design review?) would surface whether the gate works or performs.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/frame-gate-slate.advisor.response.md`
+
+## 51. The slate's grounding is unchecked — invented items and dependencies pass
+"the card only confirms a slate appears… It does not check whether the items the slate proposes are real items, whether the dependencies it names are accurate."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/frame-gate-slate.advisor.response.md`
+
+## 52. The slate's only consumer is Eric's manual attention
+"the slate's only consumer is Eric's attention. If Eric doesn't act on the slate… the feedback loop depends entirely on Eric reading, understanding, and acting on unstructured prose."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/frame-gate-slate.advisor.response.md`
+
+## 53. Advisor token cost overshoots the "3-4k" target (4,502)
+"prompt_tokens landed at 4,502, which is above the 'near 3-4k' target… 12-15 percent over." The result was reported as a success without addressing the gap.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 54. write_file/patch remain in the advisor tool surface
+"An advisor that is supposed to read and answer should not be able to patch files or write files. The caveat was logged, not resolved." (All-or-nothing file toolset.)
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 55. The advisor carries three dispatch tools that can start pipeline runs
+"cis-knowledge carries three dispatch tools… that can start pipeline runs. The standing rule is that runs are not started without Eric. The card flagged this but did not resolve it."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 56. Backup naming is confusing (timestamp vs write date)
+"config.yaml.bak.20260902-devmode… its timestamp is Aug 29 21:47, which is before Sep 2." A restorer could pick the wrong file.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 57. The "what can the agent still do" deliverable was not produced
+"Evidence 5 enumerates 22 tools by name… which is a tool inventory, not a capability list. There is no plain-language summary of what the advisor can actually do."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 58. The only functional test was "PONG"
+"The only functional test was 'Reply with exactly: PONG.'… No end-to-end advisor task was run."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 59. No restoration path/guardrail for the trimmed config
+"There is no automated restoration mechanism, no cron job, no guardrail. If someone forgets, the reviewer agent runs with 2 toolsets instead of 14 and produces incomplete reviews."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/toolset-trim-20260902.response.md`
+
+## 60. No reader for queue_items — the table could be sediment
+"No code is proposed to query queue_items. The verification proves the table is correct; nothing proves it is useful."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 61. No writer for workflow_runs.queue_item_num — schema without mechanism
+"The design proposes the column but does not propose the writer. If nothing writes it, the fourth of 2.30's questions remains unanswered."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 62. The success join inherits item 1.24's false-positive defect
+"phase rows say success on runs that failed downstream. The join inherits that defect… A join that returns a false positive is worse than no join at all."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 63. queue_edges is hand-made, unregenerated, unread — half a queue
+"By creating queue_items without a dependency strategy, you are building half a queue. queue_edges will drift relative to queue_items the moment the markdown changes."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.advisor.response.md`
+
+## 64. 56 NULL statuses can't distinguish "no status" from "unrecognized shape"
+"the contract names this failure and does not check for it… the design cannot distinguish 'no status stated' from 'status stated in an unrecognized shape.'"
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 65. Parser's "item" definition is unchecked — round-trip passes while partition is wrong
+"if it merges two items, or splits one… the concatenation still equals the source file… All three verification measures share the parser's definition."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.advisor.response.md`
+
+## 66. Check 9 is the weakest check — doesn't verify the right item came back
+"A reader that returns item 3.22's data when asked for 3.21 passes this check. The verification needs to assert the returned item_num equals the requested item_num."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 67. Check 3 covers only 10 of 119 items, status only
+"It does not verify that the body_md… title… tier… or scope is correct for those 10 items. The remaining 109 items have zero fixture-based verification."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 68. Check 4 shares the parser with the extractor — internal consistency, not correctness
+"check 4 proves internal consistency, not external correctness." Both sides agree because both use the same classification logic.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 69. No routing from the old tool to the new one
+"cis_get_build_status exists, is wired to six profiles, and returns wrong results for unified-list items. The new cis_get_queue_item is added alongside it. Nothing removes, deprecates, or redirects the old tool."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 70. Stale dependency edges — the reader should omit, not return stale data
+"Returning nothing forces the agent to say 'I don't know.' Returning stale data lets it say 'I know' when it doesn't." Edges are a 2026-09-05 snapshot with 45 hand-made rows.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 71. The comment-based decision record is not durable against table rebuilds
+"migration 0030 silently dropped two indexes by rebuilding a table… A COMMENT in SQLite DDL… vanishes without error." Decision needs a version-controlled record file (docs/decisions/…) and/or a schema_decisions table.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.advisor.response.md`
+
+## 72. The 119 item count is not a stable verification target
+"it drifted from 117 to 119 in one day… The count check should be '>= 119' or re-read the expected count from a fresh parse at verification time, not hardcode a number taken today."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 73. body_md truncation at blank line — lost/misallocated bytes unchecked
+"Check 7 catches lost bytes, not misallocated bytes." A parser that truncates body_md can still round-trip byte-identically.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r3.evaluator.response.md`
+
+## 74. No follow-on card stated for build_plan_nodes/queue_edges disposition
+"The packet does not state whether a follow-on card exists. If it does not, the deferral becomes permanent and the design is incomplete."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 75. Blast radius of altering workflow_runs not enumerated
+"Item 2.38 exists because that is how a schema change goes wrong. The design should state which code touches workflow_runs and whether the new column affects any of it."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-3.21-r2.evaluator.response.md`
+
+## 76. Final extraction needs a row-count and item-num coverage witness
+"If the table already had rows from a prior extraction, the 'final' run could silently no-op and the check would still pass." Confirm row count equals 120 and every markdown item_num appears before locking the extractor.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 77. Evidence must be non-empty for DONE/OPEN/PARTLY/PRESENT_UNPROVEN
+"If the tool accepts an empty evidence string for DONE, the rule is unenforced." NEEDS_ERIC and NO_CHECK_WRITTEN may carry a note instead.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 78. Superseded-card starting state is undefined
+"A superseded card that was partially run leaves the system in an undefined state relative to the new card's Step 1." State the starting assumption or detect prior partial execution.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 79. Classify by the hardest-to-settle check — any JUDGMENT makes the item JUDGMENT
+"classify by the hardest-to-settle check the item names. If any check is JUDGMENT, the item is JUDGMENT."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 80. Distinguish an errored check from an ambiguous result
+"An errored check is not the same as an ambiguous result… a broken check is fixable and should not be left as a permanent UNCLEAR."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 81. Multiple checks that disagree — mark PARTLY, don't leave to builder judgment
+"If the item names two checks and one passes and one fails, the honest mark is PARTLY with evidence from both."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 82. Verify the event row's old_value matches the prior status
+"the verifier should check old_value specifically because a null or wrong old_value means the history is already lying."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 83. Add a CHECK constraint on status values in queue_items
+"a CHECK constraint on the new status values in queue_items would make the tool's refusal logic enforced at the database too, not just at the CLI. Not blocking… but cheap insurance."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/queue-authority-and-audit.advisor.response.md`
+
+## 84. The loop is built on a queue that can't answer 3 of its 4 questions
+"The loop… is being built on a queue that cannot answer three of the four questions the loop needs it to answer. The loop may be ratifying itself before it can actually do the job it exists to do."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/intent-slate-loop.advisor.response.md`
+
+## 85. Advisors have never once challenged the frame
+"the advisors reviewing those early slates have, by Claude Code's own observation, never once challenged the frame. A self-improving loop whose reviewers only contest content will improve code quality while marching in the wrong direction with a clean record."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/intent-slate-loop.advisor.response.md`
+
+## 86. Seven missing capabilities for the loop (A–G)
+A current-item designation; B regenerating dependency edges; C a per-item success signal (withdrawn, no replacement); D real-time activity recording (four activity tables stopped writing June–Aug, no tool_calls table); E slate production at result review; F two-way Telegram intake; G a frame-level review capability.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/intent-slate-loop.advisor.response.md`
+
+## 87. The backfill assumes deliberation_rounds has per-round frame/result verdicts
+"before writing the backfill, confirm deliberation_rounds has run_id, reviewer_role (lineage), round number, frame verdict, and result verdict. If any are missing, the backfill rows will be malformed per 3C's own standard."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/kb-1.22-loop-record.advisor.response.md`
+
+## 88. Data rollback path is implicit — need delete-by-source_key
+"if the build fails part-way, you'd need to delete rows by source_key pattern, not just verify a count… you'd need to delete rows where source='advisor_loop'."
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/kb-1.22-loop-record.evaluator.response.md`
+
+## 89. The frame question has never changed an outcome
+"Two RIGHT_WORK verdicts with zero changed outcomes… it becomes a ritual." The gate runs but has never caught a wrong direction.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/loop-first-turn.advisor.result.md`
+
+## 90. The proposal step was built but has never run
+"The next-work proposal, was built but has never actually run, so the one thing that would change the operator's experience has not yet happened." VERDICT: NOT_ESTABLISHED.
+Plane: advisor review
+Raised by: advisor review
+Source: `reviews/done/loop-first-turn.advisor.result.md`
+
+
+## 91. Claude Code is not an independent external auditor
+"It runs on the VM with Read+Bash access. It is not 'Hermes auditing itself' — it's a different agent, but it's not independent." Connecting Claude Code via API to Hermes does not produce an external audit.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [6]
+
+## 92. Claude.ai chat has network access disabled
+"I cannot read your system. Network access is disabled in this environment." Blocks can only reach the external model by paste or upload, with truncation risk.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [4]
+
+## 93. An API key does not give the external model filesystem access
+"An API key does not give me — this Claude, in this chat — access to anything. API keys work the other direction: they let your code call a Claude model, not let a Claude reach into your systems."
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [5]
+
+## 94. Claude Code can run two ways — agent (Read+Bash) or plain model (no system access)
+"Claude Code can run two ways — as an agent with Read+Bash, or as a plain model with no system access. The second is 'Claude independently.'" Independent review uses `claude -p "You are an independent reviewer with NO system access…"`.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [7]
+
+## 95. gate_runner.sh prints "PASSED" unconditionally — silent gate failure
+"skipped gates print the same green PASSED as run gates… unset env var turns enforcement off invisibly." Failure mode #11 (silent gate failures), confirmed at line 122.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entries [15][24][31]
+
+## 96. reviewer_reconcile.py hardcodes the API key
+"reviewer_reconcile.py:39 — literal api_key hardcoded. Confirmed. Rotate it." Dead key, no live exposure; cleanup deferred.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [15]
+
+## 97. spine.db is a 0-byte decoy, not a live fault
+"the 0-byte spine.db is a dead decoy file, not a live failure path. Nothing reads it." The earlier "every gate silently queries a dead DB" finding was wrong — code resolves to cis_memory.db everywhere.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [21]
+
+## 98. The governance reset never landed in the HCP files
+"the regeneration didn't take. The old ceremony is still in the live HCP because a silent failure (#11) let it survive." ADR-SEED-008 keeps HCP as the external-advisor packet, so the strip was deliberately retained there.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [13]
+
+## 99. Role-confusion during the audit — Drafter used instead of the read-only reviewer
+"Switch to r1 (8643), not the Drafter… Role-confusion (#10) in the middle of an audit about role confusion."
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [11]
+
+## 100. DEV-PIVOT files have no generator — hand-written, staleness risk
+"HCP regenerates; DEV-PIVOT is hand-written." Two documentation systems, only one regenerates.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [34]
+
+## 101. "Connecting claude code via api to hermes" is not independent review
+"I just did the same useless task of connecting claude code via api to hermes thinking it would be claude doing the audit but it is just hermes auditing itself again using claude code."
+Plane: advisor review
+Raised by: Eric
+Source: `cards/external_exchanges_cache.json` — CLAUDE_SESSION_VERBATIM_2026-06-19, entry [6]
+
+## 102. No verification mechanism for completed work
+"there is no verification mechanism of work actually completed." The reorientation file was dated 2026-04-22 and already stale. This is the root ask the advisor review grew out of.
+Plane: advisor review
+Raised by: Eric
+Source: `cards/external_exchanges_cache.json` — Verification mechanism session (2026-04-25), entry [0]
+
+## 103. The verifier needs three modes, not one
+"Mode 1 — Script (deterministic): file existence, size, forbidden strings. Mode 2 — Local model (semantic). Mode 3 — Frontier (external)." Verification must work for local models AND receive prompts to verify outside models.
+Plane: advisor review
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — Verification mechanism (2026-04-25), entry [4]
+
+## 104. 24GB VRAM means frontier model and extraction can't run simultaneously
+"24GB VRAM means you cannot run a frontier-class local model and the extraction pipeline simultaneously."
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — Verification mechanism (2026-04-25), entry [6]
+
+## 105. Unprivileged LXC cannot bind-mount a single file
+"unprivileged containers can't bind mount a single file directly — they need a directory mount." Hit as `lxc.hook.pre-start` failure on `pct start`.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — LXC sandboxing (2026-04-19), entry [21]
+
+## 106. The container is read-only — the write path never goes through it
+"The container cannot write to the file. That is the point of ro=1." App writes on the host; the container is a read/serve endpoint for external models.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — LXC sandboxing (2026-04-19), entry [1]
+
+## 107. nano autocorrected `ro=1` to `1O` — config parse failure
+"`ro=1` got a capital letter O instead of the number 1 — `1O` instead of `10`." A typo in a bind-mount line broke container startup.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — LXC sandboxing (2026-04-19), entry [22]
+
+## 108. ISP locks port forwarding — Cloudflare Tunnel is the zero-change path
+"all the port forwarding buttons are disabled, which is a CenturyLink ISP restriction." Cloudflare Tunnel requires no domain and no router swap.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — LXC sandboxing (2026-04-19), entry [49]
+
+## 109. The container has no network access back to the VM
+"The container doesn't have network access to your VM, so I can't run the Ollama query directly." Container→VM network path is closed.
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — Model registry (2026-04-22), entry [3]
+
+## 110. The model registry is a living roster, not a static list
+"The model registry isn't a static list of what's currently installed — it's a living roster that needs to support a testing and evaluation lifecycle."
+Plane: container
+Raised by: Claude.ai
+Source: `cards/external_exchanges_cache.json` — Model registry (2026-04-22), entry [5]

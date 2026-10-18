@@ -1,10 +1,16 @@
 # Decisions Log — Hermes Harness / CIS
-Generated: 2026-10-13 04:22 UTC | Run: run-0015d9161f32
+Generated: 2026-10-17 23:14 UTC | Run: run-151da15d6bca
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
 | Date | Decision | Reason | Status | Evidence |
 |------|----------|--------|--------|----------|
+| 2026-10-16 | [ADR-PIPE-012] Containment and retirement proof precede OSA-BR and Workbench redesign: Amends current sequencing without | Adjudicates the Claude full-development-plan review against Eric's clarified des | DECIDED | spine record |
+| 2026-10-16 | [ADR-XDEV-003] External developer lifecycle: normal-operation retirement and bounded break-glass return: External develo | Eric clarified that external developers retire after the secure contained pipeli | DECIDED | spine record |
+| 2026-10-16 | [ADR-WIASW-007] Contained deterministic self-evolving pipeline — operational self-assessment and bounded recovery: Recor | Eric identified this deeper CIS foundation and directed durable integration befo | DECIDED | spine record |
+| 2026-10-16 | [ADR-PIPE-010] Operational self-assessment and bounded recovery is the next Layer-2 architecture foundation: AMENDS CURR | The earlier roadmap named P6 recovery and learning but omitted the prerequisite  | DECIDED | spine record |
+| 2026-10-16 | [ADR-WIASW-008] Operator compensation detection and capability-gap learning: Records a self-policing CIS capability that | Eric clarified that the important pattern was not only the clean-room suggestion | DECIDED | spine record |
+| 2026-10-16 | [ADR-PIPE-011] Operator compensation is an evidence source for OSA-BR and governed self-evolution: Queue item 4.35 is in | The architecture must learn from occasions where Eric functions as a missing CIS | DECIDED | spine record |
 | 2026-10-13 | [ADR-ARCH-004] Human intent, canonical technical authority, and cards as projections: **1 — HUMAN INTENT AND ALIGNMENT.* | This is recorded because the alternative had already been proposed once: treatin | DECIDED | spine record |
 | 2026-10-13 | [ADR-ARCH-003] Execution-backend contract — minimal boundary frozen, generalization deferred: The generalized multi-back | Specifying the full contract now would generalize from a single backend and woul | DECIDED | spine record |
 | 2026-10-13 | [ADR-ARCH-002] Record once, derive everywhere: EVERY FACT HAS EXACTLY ONE AUTHORITATIVE RECORD AND EXACTLY ONE OWNING MO | The rule is already obeyed pervasively and enforced mechanically — ADR-PIPE-006' | DECIDED | spine record |

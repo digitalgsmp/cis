@@ -1,0 +1,31 @@
+{
+  "manifest_version": "cis-control-plane-release-v2",
+  "control_root": "/opt/cis-control",
+  "artifacts": [
+    {"source": "tools/development/control_dispatch.py", "destination": "bin/cis-dispatch", "mode": "0555"},
+    {"source": "tools/development/control_dispatch.py", "destination": "bin/control_dispatch.py", "mode": "0444"},
+    {"source": "tools/development/control_contract.py", "destination": "bin/cis-contract", "mode": "0555"},
+    {"source": "enforcement/mwl-proof-v2/run_container.sh", "destination": "bin/cis-container", "mode": "0555"},
+    {"source": "tools/development/gate_host_launch_service.py", "destination": "bin/cis-host-launch-gate", "mode": "0555"},
+    {"source": "tools/development/install_host_launch_service.py", "destination": "bin/cis-host-launch-install", "mode": "0555"},
+    {"source": "config/dispatch-policy.json", "destination": "policy/dispatch-policy.json", "mode": "0444"},
+    {"source": "config/pipeline-image-id.txt", "destination": "policy/pipeline-image-id.txt", "mode": "0444"},
+    {"source": "config/sudoers/cis-pipeline", "destination": "policy/cis-pipeline.sudoers", "mode": "0440"},
+    {"source": "config/systemd/cis-pipeline.service", "destination": "systemd/cis-pipeline.service", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/entrypoint.sh", "destination": "runtime/entrypoint.sh", "mode": "0555"},
+    {"source": "enforcement/mwl-proof-v2/managed-config.yaml", "destination": "runtime/managed-config.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/container_gate_runner.py", "destination": "runtime/gates/container_gate_runner.py", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/gates", "destination": "runtime/gates", "kind": "tree", "include_suffixes": [".py", ".sh"], "allowed_extra_files": ["container_gate_runner.py"], "file_mode": "0555", "dir_mode": "0555"},
+    {"source": "enforcement/mwl-proof-v2/plugin/__init__.py", "destination": "runtime/plugin/__init__.py", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/plugin/plugin.yaml", "destination": "runtime/plugin/plugin.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/advisor.yaml", "destination": "runtime/profiles/advisor.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/brain.yaml", "destination": "runtime/profiles/brain.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/draft.yaml", "destination": "runtime/profiles/draft.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/evaluator.yaml", "destination": "runtime/profiles/evaluator.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/menter.yaml", "destination": "runtime/profiles/menter.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/review1.yaml", "destination": "runtime/profiles/review1.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/review2.yaml", "destination": "runtime/profiles/review2.yaml", "mode": "0444"},
+    {"source": "enforcement/mwl-proof-v2/profiles/verify.yaml", "destination": "runtime/profiles/verify.yaml", "mode": "0444"},
+    {"source": ".gate-control/README.md", "destination": "gate/README.md", "mode": "0444"}
+  ]
+}

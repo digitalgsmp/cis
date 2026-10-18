@@ -1,0 +1,20 @@
+{
+  "policy_version": "cis-dispatch-policy-v1",
+  "max_ttl_seconds": 3600,
+  "allowed_working_roots": [
+    "/mnt/projects/cis-clean",
+    "/mnt/cache/cis-workspaces"
+  ],
+  "tools": {
+    "claude": {
+      "executable": "/home/eric/.hermes/node/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe",
+      "executable_sha256": "1a0a662dc1bb938eaec38545abce9a4a69113d7d7f7c5e1a553ea276617b906a",
+      "argv_profile": "claude_accept_edits"
+    },
+    "codex": {
+      "executable": "/usr/lib/chatgpt/resources/codex",
+      "executable_sha256": "6970ad6a5b7615d2f5838879e19c1369e5527cb1544f1515f76900267740a403",
+      "argv_profile": "codex_exec"
+    }
+  }
+}

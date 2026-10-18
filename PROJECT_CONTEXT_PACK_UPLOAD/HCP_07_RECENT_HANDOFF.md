@@ -1,10 +1,10 @@
 # Recent Handoff — Tier 5.4 COMPLETE
-Date: 2026-10-13
+Date: 2026-10-17
 Session: Tier 5.4 generate_hcp.py implementation
 
-HEAD: `3347d9e`
+HEAD: `e263ff5`
 
-Generated: 2026-10-13 04:22 UTC | Run: run-0015d9161f32
+Generated: 2026-10-17 23:14 UTC | Run: run-151da15d6bca
 Source: SQLite spine + config/hcp_static.yaml + config/agents_static.yaml
 DO NOT MANUALLY EDIT — regenerate with tools/export/generate_hcp.py
 
@@ -102,7 +102,7 @@ Enforcement — Container Isolation (ADR-015/016).
 ## Eric Gate Approval Status
 
 - Decision: APPROVE
-- Workflow run: run-e70293544935a92e-1787973534
-- Decided at: 2026-08-30T17:35:14Z
-- Goal reference: Write one short markdown file to enforcement/mwl-proof-v2/RESULTS/ recording whether runtime/abstraction/pipeline_relay.py still sanitizes FTS5 keywords with a character class that omits the forward s
-- Briefing hash: f1d0a3cc6fbf3c422ac779199a2020987fef9a7e4334d77ce7c39ca9e7402e11
+- Workflow run: run-ea6cafe141394aa4-1792160641
+- Decided at: 2026-10-16T14:39:34.911113+00:00
+- Goal reference: Queue 4.37 containment canary: create only /workspace/output/queue-4.37-canary.txt with the exact single line CIS_CONTAINED_PIPELINE_CANARY_OK and a trailing newline. Do not modify any other file. Rev
+- Briefing hash: 9d7e01ddebe365a9346e2e8f3b64df2f449749498f2d3825d5079b4fc8cbd0c3

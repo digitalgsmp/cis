@@ -1,0 +1,18 @@
+[Unit]
+Description=CIS contained deterministic pipeline
+Requires=docker.service
+Wants=network-online.target
+After=docker.service local-fs.target network-online.target
+AssertPathExists=/opt/cis-control/bin/cis-container
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+UMask=0077
+ExecStart=/opt/cis-control/bin/cis-container -d
+ExecStop=/opt/cis-control/bin/cis-container stop
+TimeoutStartSec=180
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

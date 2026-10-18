@@ -206,7 +206,7 @@ function model(overrides = {}) {
     ],
     areas: [
       { id: "overview", label: "Overview", plain_question: "How do the parts fit together?",
-        plain_english: "A starting point for the other five views." },
+        plain_english: "A starting point for the other six views." },
       { id: "current_build", label: "Current Build", plain_question: "What are we building now?",
         plain_english: "The sequence the project is working through." },
       { id: "queue_problems", label: "Queue / Problems",
@@ -221,11 +221,15 @@ function model(overrides = {}) {
       { id: "trajectory", label: "Trajectory",
         plain_question: "How does today's work move toward that destination?",
         plain_english: "Today's steps, then a separate explanatory link." },
+      { id: "development_activity", label: "Development Activity",
+        plain_question: "What has actually been happening in development?",
+        plain_english: "The other views show the plan. This one shows the evidence." },
     ],
     counts: { phases: 2, problems: 2, blocking_problems: 1, unresolved_problems: 2,
               queue_items: 132, awaiting_triage: 56, capabilities: 2,
               capabilities_registered: 1, anatomy_areas: 2, destination_nodes: 2,
-              relationships: 5, not_yet_linked: 3, problems_reported: 0 },
+              relationships: 5, not_yet_linked: 3, problems_reported: 0,
+              continuity_events_total: 198, action_proposals_total: 2, dirty_files: 3 },
     current_build: { available: true, error: null, read_model: "cis_build_path",
                      build_path: buildPathPayload() },
     destination: {
@@ -490,6 +494,72 @@ function model(overrides = {}) {
         authority_refs: [],
       },
     },
+    development_activity: {
+      available: true, error: null, read_model: "cis_development_activity",
+      session_handoff: {
+        available: true, note: null, confidence_class: "authoritative",
+        handoff: {
+          date: "2026-10-12", title: "Oct 12: Development Activity area",
+          summary: "Added the seventh Project Map area.",
+          decisions: "Compose, never restate.", next_actions: "Wire the UI.",
+          git_head: "abc123", created_at: "2026-10-12T00:00:00+00:00",
+        },
+      },
+      continuity_events: {
+        available: true, note: null, total_count: 198, shown_count: 2,
+        events: [
+          { task: "WB.1", revision: 170, kind: "unfinished_work", status: "open",
+            actor: "claude_code", summary: "Recorded a new finding.",
+            created_at: "2026-10-12T10:00:00+00:00" },
+          { task: "4.32", revision: 3, kind: "decision", status: "resolved",
+            actor: "eric", summary: "An unrelated, older decision.",
+            created_at: "2026-09-01T00:00:00+00:00" },
+        ],
+      },
+      action_proposals: {
+        available: true, note: null, total_count: 2, shown_count: 2,
+        card_runner_available: true,
+        proposals: [
+          {
+            id: 1, project_id: "proj-x", kind: "implementation", status: "approved",
+            request_id: "req-explicit", created_at: "2026-10-12T00:00:00+00:00",
+            dispatch_run: {
+              confidence_class: "authoritative",
+              run: { id: 1, mode: "implement", target: "claude", status: "completed" },
+              explanation: "workbench_action_proposals.card_runner_run_id is an explicit, "
+                          + "stored foreign key to this run.",
+              authority_refs: [{ kind: "foreign_key", table: "workbench_action_proposals",
+                                 column: "card_runner_run_id", value: 1 }],
+            },
+          },
+          {
+            id: 2, project_id: "proj-x", kind: "mockup", status: "proposed",
+            request_id: "req-nothing", created_at: "2026-10-11T00:00:00+00:00",
+            dispatch_run: {
+              confidence_class: "not_yet_linked", run: null,
+              explanation: "No card_runner_run_id is recorded on this proposal, and no "
+                          + "card_runner_runs row shares its request_id. No authoritative "
+                          + "link recorded yet.",
+              authority_refs: [],
+            },
+          },
+        ],
+      },
+      continuity_transactions: {
+        available: false,
+        note: "continuity_transactions table not present on this database — migration 0041 "
+             + "has not been applied here",
+        transactions: [], total_count: 0, shown_count: 0,
+      },
+      working_tree: {
+        available: true,
+        note: "observed directly from git at call time",
+        dirty: true, dirty_file_count: 3,
+        files: [{ status: "M", path: "CLAUDE.md" }, { status: "??", path: "new_file.py" },
+                { status: "M", path: "runtime/workbench_app.py" }],
+        head_sha: "abc1234567", branch: "master",
+      },
+    },
     relationships: [
       { source: "WB1-D15", target: "braingate_conversation",
         relationship: "problem_concerns_capability",
@@ -539,7 +609,7 @@ describe("ProjectMap — loading and failure", () => {
     expect(screen.getByText("Project Map")).toBeInTheDocument();
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
       "Overview", "Current Build", "Queue / Problems", "System Anatomy",
-      "Destination", "Trajectory",
+      "Destination", "Trajectory", "Development Activity",
     ]);
   });
 
@@ -581,7 +651,7 @@ describe("ProjectMap — loading and failure", () => {
 describe("ProjectMap — Overview", () => {
   it("leads with plain language for every area and navigates on click", async () => {
     await renderMap();
-    expect(screen.getByText("A starting point for the other five views.")).toBeInTheDocument();
+    expect(screen.getByText("A starting point for the other six views.")).toBeInTheDocument();
     expect(screen.getByText("What work and unresolved problems exist?")).toBeInTheDocument();
     expect(screen.getByText("56 items awaiting triage", { exact: false })).toBeInTheDocument();
 
@@ -943,6 +1013,73 @@ describe("ProjectMap — Trajectory", () => {
     expect(screen.getAllByText(MISSING_LINK).length).toBe(1);
     expect(screen.getAllByText(/does not name a capability/).length).toBe(1);
     expect(screen.getByText(/work items the roadmap names here/)).toBeInTheDocument();
+  });
+});
+
+describe("ProjectMap — Development Activity (the micro trajectory of actual evidence)", () => {
+  it("shows the last session handoff as recorded evidence, with its own confidence badge",
+     async () => {
+    await renderMap();
+    await goTo("Development Activity");
+    expect(screen.getByText(/Oct 12: Development Activity area/)).toBeInTheDocument();
+    expect(screen.getByText("Added the seventh Project Map area.")).toBeInTheDocument();
+    expect(screen.getAllByText("Stated by an authority").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows the continuity ledger as a raw feed, never matched to a proposal or run",
+     async () => {
+    await renderMap();
+    await goTo("Development Activity");
+    expect(screen.getByText("Recorded a new finding.")).toBeInTheDocument();
+    expect(screen.getByText("An unrelated, older decision.")).toBeInTheDocument();
+    await setMode("More Detail");
+    expect(screen.getByText(/Showing 2 of 198 recorded events/)).toBeInTheDocument();
+    expect(screen.getByText(/no event here is matched to a proposal/)).toBeInTheDocument();
+  });
+
+  it("distinguishes an authoritative dispatch-run link from a missing one", async () => {
+    await renderMap();
+    await goTo("Development Activity");
+    expect(screen.getAllByText("Stated by an authority").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/run #1/)).toBeInTheDocument();
+    expect(screen.getByText(/explicit, stored foreign key/)).toBeInTheDocument();
+    expect(screen.getByText(MISSING_LINK)).toBeInTheDocument();
+  });
+
+  it("reports an unapplied migration honestly rather than hiding the section", async () => {
+    await renderMap();
+    await goTo("Development Activity");
+    await setMode("More Detail");
+    expect(screen.getByText(/migration 0041/)).toBeInTheDocument();
+  });
+
+  it("shows working-tree facts as uncommitted facts, not a claim about completion or intent",
+     async () => {
+    await renderMap();
+    await goTo("Development Activity");
+    expect(screen.getByText(/3 files currently differ from the last commit/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing here says whether any of it is finished/)).toBeInTheDocument();
+    expect(screen.queryByText("CLAUDE.md")).toBeNull();
+    await setMode("More Detail");
+    expect(screen.getByText(/CLAUDE.md/)).toBeInTheDocument();
+    expect(screen.getByText(/new_file.py/)).toBeInTheDocument();
+    expect(screen.queryByText(/abc1234567/)).toBeNull();
+    await setMode("Technical");
+    expect(screen.getByText(/abc1234567/)).toBeInTheDocument();
+    expect(screen.getByText(/master/)).toBeInTheDocument();
+  });
+
+  it("reports one area failing without losing the rest of the map", async () => {
+    await renderMap(() => Promise.resolve(ok(model({
+      development_activity: { available: false,
+                              error: "RuntimeError: spine unreachable",
+                              read_model: null, session_handoff: null,
+                              continuity_events: null, action_proposals: null,
+                              continuity_transactions: null, working_tree: null },
+    }))));
+    await goTo("Development Activity");
+    expect(screen.getByText(/development-activity view is unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/rest of this map still loaded/)).toBeInTheDocument();
   });
 });
 

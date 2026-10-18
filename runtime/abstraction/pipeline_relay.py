@@ -3159,18 +3159,16 @@ class PipelineRelay:
         _complete_round(self.conn, round_id, "CONSENSUS_REACHED",
                        {"brain_output": output})
 
-        # Save catalog to disk
-        catalog_path = os.path.join(project_dir, "runtime", "catalogs", "PATTERN_CATALOG.md")
-        os.makedirs(os.path.dirname(catalog_path), exist_ok=True)
-        with open(catalog_path, "w") as f:
-            f.write(f"# Pattern Catalog\n\nGenerated: {datetime.now(timezone.utc).isoformat()}\n\n")
-            f.write(output)
-
         # Extract planned files from FINAL_JSON
+        # The catalog is already persisted in this run's deliberation_rounds
+        # record by _complete_round above.  Do not also write a global
+        # runtime/catalogs/PATTERN_CATALOG.md file: the project source mount is
+        # intentionally read-only in the contained pipeline, and a shared
+        # filename would let concurrent runs overwrite one another's catalog.
         files_planned = parsed.get("files_planned", [])
         self._files_planned = files_planned
 
-        print(f"[pipeline] Pattern catalog saved. {len(files_planned)} files planned.")
+        print(f"[pipeline] Pattern catalog recorded. {len(files_planned)} files planned.")
         _set_run_status(self.conn, run_id, "CODE_REVIEW_GATE")
         await self._code_review_gate(run_id, intent)
 

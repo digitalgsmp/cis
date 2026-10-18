@@ -86,6 +86,12 @@ CLARIFICATION_SHELL = (
 )
 
 ECHO_STDIN_SHELL = "#!/bin/sh\ncat\nexit 0\n"
+ECHO_ARGS_AND_STDIN_SHELL = "#!/bin/sh\necho \"ARGS:$*\"\ncat\nexit 0\n"
+JSON_DISPATCHER_SHELL = (
+    "#!/bin/sh\n"
+    "printf '{\"launched\":true,\"completion_status\":\"transport_only_not_verified\","
+    "\"stdout\":\"ARGS:%s\"}\\n' \"$*\"\n"
+)
 
 
 def test_resolve_execution_authorization_rejects_missing():
@@ -606,21 +612,33 @@ def test_launch_execution_handoff_valid_exact_directive_works_for_both_adapters(
             conn, task="WB.1TEST", kind="user_instruction", status="authorized", actor="codex",
             summary="d", body="Execute the exact authorized directive.", expected_prev_revision=0,
         )
+        original_dispatcher = launcher.CONTROL_DISPATCHER
+        fake_dispatcher = make_fake_executable(tmp, "cis-dispatch", JSON_DISPATCHER_SHELL)
+        launcher.CONTROL_DISPATCHER = fake_dispatcher
+        contract = os.path.join(tmp, "contract.json")
+        with open(contract, "w") as f:
+            f.write("{}")
         for tool_name in ("claude", "codex"):
             out = os.path.join(tmp, tool_name)
             os.makedirs(out, exist_ok=True)
-            fake = make_fake_executable(out, tool_name, ECHO_STDIN_SHELL)
+            fake = make_fake_executable(out, tool_name, ECHO_ARGS_AND_STDIN_SHELL)
             result = launcher.launch_execution_handoff(
                 conn, fake, task="WB.1TEST", actor="claude_code", out_dir=out,
                 directive_text="Execute the exact authorized directive.",
                 authorization_revision=row["revision"], tool=tool_name, dry_run=False,
+                control_contract=contract,
             )
             check(f"{tool_name}: valid exact directive dispatches successfully via the guarded path",
                   result["launched"] is True
-                  and "Execute the exact authorized directive." in result["stdout"],
+                  and "--contract" in result["stdout"],
                   result)
             check(f"{tool_name}: completion_status stays transport-only even for a real, valid dispatch",
                   result["completion_status"] == "transport_only_not_verified", result)
+            check(f"{tool_name}: repository launcher delegates to the control dispatcher",
+                  "--contract" in result["stdout"] and contract in result["stdout"], result)
+            check(f"{tool_name}: repository launcher cannot inject model permission flags",
+                  "--permission-mode" not in result["stdout"], result)
+        launcher.CONTROL_DISPATCHER = original_dispatcher
         conn.close()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

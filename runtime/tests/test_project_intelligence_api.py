@@ -146,10 +146,10 @@ def test_read_model_builds():
     check("1c. it declares itself a composition layer, not an authority",
           "not an authority" in (model["authority"]["role"] or ""),
           model["authority"]["role"][:80])
-    check("1d. all five conceptual areas plus the overview are present",
+    check("1d. all six conceptual areas plus the overview are present",
           [a["id"] for a in model["areas"]] ==
           ["overview", "current_build", "queue_problems", "system_anatomy",
-           "destination", "trajectory"],
+           "destination", "trajectory", "development_activity"],
           [a["id"] for a in model["areas"]])
     check("1e. the three presentation modes are declared, Simple by default",
           [m["id"] for m in model["modes"]] == ["simple", "detail", "technical"]
@@ -1172,8 +1172,8 @@ def test_diagrams_are_generated_from_the_same_data(model):
     overview = model["overview_mermaid"]
     anatomy = model["anatomy"]["mermaid"]
     trajectory = model["trajectory"]["mermaid"]
-    check("25a. the overview graph is small — the five areas, not the repository",
-          overview.count("[\"") == 5, overview.count("[\""))
+    check("25a. the overview graph is small — the six areas, not the repository",
+          overview.count("[\"") == 6, overview.count("[\""))
     check("25b. the overview graph carries the live counts it summarizes",
           f"{model['counts']['awaiting_triage']} items awaiting triage" in overview,
           overview[:200])
@@ -1191,6 +1191,128 @@ def test_diagrams_are_generated_from_the_same_data(model):
     check("25f. the diagrams are generated server-side, from the model",
           all(src.startswith("flowchart") for src in (overview, anatomy, trajectory)),
           [src[:12] for src in (overview, anatomy, trajectory)])
+
+
+# ── 26. development activity (the micro companion to the build trajectory) ─
+
+def test_development_activity(model):
+    import development_activity as dev_activity  # noqa: E402 (deferred — fixtures import earlier)
+
+    area = model["development_activity"]
+    check("26a. the development-activity area is available and names its own read model",
+          area["available"] is True and area["read_model"] == "cis_development_activity",
+          area.get("read_model"))
+
+    conn = sqlite3.connect(f"file:{cs.DB}?mode=ro", uri=True)
+    try:
+        live_events_total = conn.execute(
+            "SELECT COUNT(*) FROM dev_continuity_events").fetchone()[0]
+        live_proposals_total = conn.execute(
+            "SELECT COUNT(*) FROM workbench_action_proposals").fetchone()[0]
+        runner_present = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' "
+            "AND name='card_runner_runs'").fetchone() is not None
+        transactions_present = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' "
+            "AND name='continuity_transactions'").fetchone() is not None
+    finally:
+        conn.close()
+
+    check("26b. the continuity-ledger feed count is the live one, not cached or hardcoded",
+          area["continuity_events"]["available"] is True
+          and area["continuity_events"]["total_count"] == live_events_total,
+          (area["continuity_events"].get("total_count"), live_events_total))
+    check("26c. no continuity event is cross-linked to a proposal or a run — a raw feed only",
+          all("dispatch_run" not in e and "capability_ids" not in e
+              for e in area["continuity_events"]["events"]),
+          "the card forbids inventing a relationship for an unrelated ledger entry")
+
+    check("26d. the action-proposals feed count is the live one",
+          area["action_proposals"]["available"] is True
+          and area["action_proposals"]["total_count"] == live_proposals_total,
+          (area["action_proposals"].get("total_count"), live_proposals_total))
+    check("26e. the proposals feed knows honestly whether card_runner_runs exists here",
+          area["action_proposals"]["card_runner_available"] == runner_present,
+          (area["action_proposals"]["card_runner_available"], runner_present))
+
+    check("26f. an unapplied migration 0041 is reported honestly, not as a failure",
+          area["continuity_transactions"]["available"] == transactions_present,
+          (area["continuity_transactions"]["available"], transactions_present))
+    if not transactions_present:
+        check("26g. the honest reason names migration 0041",
+              "0041" in (area["continuity_transactions"].get("note") or ""),
+              area["continuity_transactions"].get("note"))
+
+    wt = area["working_tree"]
+    check("26h. working-tree facts are observed, structurally, and carry no semantic claim",
+          wt["available"] is True
+          and isinstance(wt["dirty"], bool)
+          and isinstance(wt["dirty_file_count"], int)
+          and isinstance(wt["files"], list)
+          and not any(k in wt for k in
+                      ("intent", "owner", "ownership", "completion", "success", "status")),
+          sorted(wt.keys()))
+    check("26i. every dirty file is reported as a raw git status code and path, nothing more",
+          all(set(f) == {"status", "path"} for f in wt["files"]),
+          wt["files"][:3])
+
+    # Proposal <-> card_runner_run linking never upgrades a literal request_id
+    # match, and never links on project_id alone — exercised directly against
+    # the module (production's own workbench_action_proposals table is empty,
+    # so the live model alone cannot exhibit this).
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.executescript(open(os.path.join(
+            _REPO_ROOT, "runtime", "schema", "migrations", "0037_card_runner.sql"),
+            encoding="utf-8").read())
+        conn.executescript(open(os.path.join(
+            _REPO_ROOT, "runtime", "schema", "migrations", "0038_workbench_action_proposals.sql"),
+            encoding="utf-8").read())
+        conn.execute(
+            "INSERT INTO card_runner_runs (id, request_id, card_factory_card_id, card_path, "
+            "card_fingerprint, mode, target, limits_json, authorized_by, permission_mode) "
+            "VALUES (1, 'req-explicit', 1, 'x', 'x', 'implement', 'claude', '{}', 'eric', 'x')")
+        conn.execute(
+            "INSERT INTO card_runner_runs (id, request_id, card_factory_card_id, card_path, "
+            "card_fingerprint, mode, target, limits_json, authorized_by, permission_mode) "
+            "VALUES (2, 'req-literal-match', 1, 'x', 'x', 'implement', 'claude', '{}', "
+            "'eric', 'x')")
+        conn.execute(
+            "INSERT INTO workbench_action_proposals (id, project_id, source_message_ids_json, "
+            "user_words, kind, card_runner_run_id, request_id) "
+            "VALUES (1, 'proj-x', '[]', 'do it', 'implementation', 1, 'req-explicit')")
+        conn.execute(
+            "INSERT INTO workbench_action_proposals (id, project_id, source_message_ids_json, "
+            "user_words, kind, card_runner_run_id, request_id) "
+            "VALUES (2, 'proj-x', '[]', 'do it too', 'implementation', NULL, "
+            "'req-literal-match')")
+        conn.execute(
+            "INSERT INTO workbench_action_proposals (id, project_id, source_message_ids_json, "
+            "user_words, kind, card_runner_run_id, request_id) "
+            "VALUES (3, 'proj-x', '[]', 'unlinked', 'implementation', NULL, 'req-nothing')")
+        conn.commit()
+
+        linked = dev_activity.get_recent_action_proposals(conn)
+        by_id = {p["id"]: p for p in linked["proposals"]}
+        check("26j. an explicit stored foreign key is authoritative",
+              by_id[1]["dispatch_run"]["confidence_class"] == "authoritative"
+              and by_id[1]["dispatch_run"]["run"]["id"] == 1,
+              by_id[1]["dispatch_run"])
+        check("26k. a bare request_id match is derived, never upgraded to authoritative",
+              by_id[2]["dispatch_run"]["confidence_class"] == "derived_from_evidence"
+              and by_id[2]["dispatch_run"]["run"]["id"] == 2,
+              by_id[2]["dispatch_run"])
+        check("26l. no identifier at all leaves the chain honestly broken",
+              by_id[3]["dispatch_run"]["confidence_class"] == "not_yet_linked"
+              and by_id[3]["dispatch_run"]["run"] is None,
+              by_id[3]["dispatch_run"])
+        check("26m. project_id alone never creates a link — all three share proj-x",
+              len({by_id[i]["project_id"] for i in (1, 2, 3)}) == 1
+              and by_id[3]["dispatch_run"]["confidence_class"] == "not_yet_linked",
+              "shared project_id must not be read as a relationship")
+    finally:
+        conn.close()
 
 
 def run():
@@ -1219,6 +1341,7 @@ def run():
     test_read_model_is_structurally_read_only()
     test_scratch_db_proves_nothing_is_hardcoded()
     test_diagrams_are_generated_from_the_same_data(model)
+    test_development_activity(model)
 
     for r in results:
         print(r)

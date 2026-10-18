@@ -89,6 +89,7 @@ if str(_STATE_DIR) not in sys.path:
 import build_path as bp  # noqa: E402  (COMPOSED, not reimplemented)
 import canonical_state as cs  # noqa: E402  (shared DB default + state revision)
 import destination_architecture as da  # noqa: E402  (COMPOSED, not reimplemented)
+import development_activity as dev_activity  # noqa: E402  (COMPOSED, not reimplemented)
 
 from tools.development import continuity_store as _continuity  # noqa: E402
 from tools.development import discovery as _discovery  # noqa: E402
@@ -1148,6 +1149,8 @@ def build_overview_mermaid(areas, counts):
                            f"<br/>{counts.get('capabilities', 0)} capabilities"),
         "destination": f"Destination<br/>{counts.get('destination_nodes', 0)} nodes",
         "trajectory": "Trajectory<br/>today → destination",
+        "development_activity": (f"Development Activity<br/>"
+                                 f"{counts.get('continuity_events_total', 0)} ledger events"),
     }
     for area in areas:
         if area["id"] == "overview":
@@ -1159,9 +1162,10 @@ def build_overview_mermaid(areas, counts):
         "  CURRENT_BUILD -->|what it builds| SYSTEM_ANATOMY",
         "  SYSTEM_ANATOMY -->|what it is for| TRAJECTORY",
         "  TRAJECTORY -.->|explains, does not sequence| DESTINATION",
+        "  CURRENT_BUILD -.->|evidenced by| DEVELOPMENT_ACTIVITY",
         "  classDef area fill:#1f3350,stroke:#5b8fd6,color:#e8f0fb",
         "  classDef dest fill:#2a2340,stroke:#8a7bc8,color:#eee8fb,stroke-dasharray: 5 4",
-        "  class CURRENT_BUILD,QUEUE_PROBLEMS,SYSTEM_ANATOMY,TRAJECTORY area",
+        "  class CURRENT_BUILD,QUEUE_PROBLEMS,SYSTEM_ANATOMY,TRAJECTORY,DEVELOPMENT_ACTIVITY area",
         "  class DESTINATION dest",
     ]
     return "\n".join(lines)
@@ -1244,6 +1248,11 @@ AUTHORITY = {
          "answers": "what is CIS ultimately being built to support",
          "note": ("CALLED, never restated. The WIASW nodes and edges are not duplicated here; "
                   "the graph below is the one that read model produced.")},
+        {"read_model": "cis_development_activity",
+         "module": "tools/state/development_activity.py",
+         "answers": "what has actually been happening in development, right now",
+         "note": ("CALLED, never restated, over the SAME read-only connection this module "
+                  "already opened. The micro companion to Current Build / Trajectory.")},
     ],
     "reads_directly": [
         {"source": "queue_items + queue_edges",
@@ -1347,6 +1356,14 @@ def get_project_intelligence(db_path=None):
             conn, db_path, vocabulary, current_task, state_texts,
             authority_unavailable)
         queue = build_queue(conn, vocabulary, build)
+
+        development_activity, development_activity_error = None, None
+        try:
+            development_activity = dev_activity.get_development_activity(conn)
+        except Exception as e:  # noqa: BLE001
+            development_activity_error = f"{type(e).__name__}: {e}"
+            problems_found.append({"kind": "development_activity_unavailable",
+                                   "detail": development_activity_error})
     finally:
         conn.close()
 
@@ -1421,6 +1438,12 @@ def get_project_intelligence(db_path=None):
         "not_yet_linked": sum(1 for r in relationships
                               if r["confidence_class"] == NOT_LINKED),
         "problems_reported": len(problems_found),
+        "continuity_events_total": ((development_activity or {}).get("continuity_events") or {})
+                                   .get("total_count", 0),
+        "action_proposals_total": ((development_activity or {}).get("action_proposals") or {})
+                                  .get("total_count", 0),
+        "dirty_files": ((development_activity or {}).get("working_tree") or {})
+                       .get("dirty_file_count"),
     }
 
     areas = (vocabulary or {}).get("areas", [])
@@ -1497,6 +1520,20 @@ def get_project_intelligence(db_path=None):
         },
         "queue": queue,
         "trajectory": {**trajectory, "mermaid": build_trajectory_mermaid(trajectory)},
+        # The micro companion to Current Build / Trajectory: actual
+        # development evidence rather than the declared roadmap. Composed
+        # from tools/state/development_activity.py over the SAME read-only
+        # connection opened above — no second connection, no model call.
+        "development_activity": {
+            "available": development_activity is not None,
+            "error": development_activity_error,
+            "read_model": (development_activity or {}).get("read_model"),
+            "session_handoff": (development_activity or {}).get("session_handoff"),
+            "continuity_events": (development_activity or {}).get("continuity_events"),
+            "action_proposals": (development_activity or {}).get("action_proposals"),
+            "continuity_transactions": (development_activity or {}).get("continuity_transactions"),
+            "working_tree": (development_activity or {}).get("working_tree"),
+        },
         "relationships": relationships,
         "overview_mermaid": build_overview_mermaid(areas, counts),
         "problems_found": problems_found,
