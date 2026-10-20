@@ -60,7 +60,11 @@ for i in "${!PROFILES[@]}"; do
 
     # Create profile directory (Dockerfile may not pre-create per-profile dirs)
     mkdir -p "$home_dir"
-    cp "$profile_config" "$home_dir/config.yaml"
+    # Hermes hardens a live profile config to mode 0444.  Docker restart keeps
+    # the named profile volumes, so a plain cp then fails to truncate the old
+    # file and set -e traps the container in a restart loop.  Recreate the file
+    # through the worker-owned directory; do not broaden its steady-state mode.
+    cp --remove-destination "$profile_config" "$home_dir/config.yaml"
     chown worker:worker "$home_dir/config.yaml"
 done
 

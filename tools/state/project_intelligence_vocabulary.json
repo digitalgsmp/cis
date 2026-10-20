@@ -94,7 +94,7 @@
       "id": "overview",
       "label": "Overview",
       "plain_question": "How do the parts of this map fit together?",
-      "plain_english": "A starting point. It shows the five other views, the headline numbers behind each, and how a problem connects through to the thing it is eventually meant to support."
+      "plain_english": "A starting point. It shows the six other views, the headline numbers behind each, and how a problem connects through to the thing it is eventually meant to support."
     },
     {
       "id": "current_build",
@@ -125,6 +125,12 @@
       "label": "Trajectory",
       "plain_question": "How does today's work move toward that destination?",
       "plain_english": "Today's build steps in order, and then a separate, clearly marked explanatory link to the destination. Finishing the last build step does not start the destination work."
+    },
+    {
+      "id": "development_activity",
+      "label": "Development Activity",
+      "plain_question": "What has actually been happening in development?",
+      "plain_english": "The other views show the plan. This one shows the evidence: the last session handoff, the most recent during-work ledger entries, recent action proposals and the dispatch runs explicitly linked to them, and the working tree exactly as it stands right now. Nothing here is matched up by guesswork — where no stored link exists, this view says so."
     }
   ],
 

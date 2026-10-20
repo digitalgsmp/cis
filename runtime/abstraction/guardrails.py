@@ -146,8 +146,14 @@ def _extract_claimed_files(text: str) -> List[str]:
         if '.' in lang and '/' not in lang:
             paths.append(lang)
     
-    # Pattern 3: absolute paths in text (must be preceded by whitespace, quote, or start of line)
-    for m in re.finditer(r'(?:^|[\s"\'])(/[a-zA-Z0-9_\-/]+\.\w{1,6})', text):
+    # Pattern 3: absolute paths in text (must be preceded by whitespace, quote,
+    # or start of line).  Dots and hyphens may occur before the real extension
+    # (for example queue-4.37-canary.txt).  Requiring a token boundary after
+    # the extension prevents the old expression from truncating that example
+    # to the nonexistent path /workspace/output/queue-4.37.
+    for m in re.finditer(
+            r'(?:^|[\s"\'])(/[a-zA-Z0-9_./\-]+\.[A-Za-z0-9_]{1,10})'
+            r'(?![A-Za-z0-9_.\-])', text):
         p = m.group(1)
         if p not in paths and '/proc/' not in p and '/sys/' not in p:
             paths.append(p)

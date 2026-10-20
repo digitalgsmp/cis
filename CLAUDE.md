@@ -174,6 +174,21 @@ tell whether it worked.
 - One question at a time, and make it answerable without reading code.
 - When you don't know something, say what you'd need to find out and
   what it would cost. Don't list every unknown.
+- ANYTHING I HAVE TO RELAY, GIVE ME AS ONE COPYABLE BLOCK — ALWAYS, WITHOUT
+  BEING ASKED. Eric, 2026-10-13: "allow me to copy it all the time." If the
+  output is addressed to someone other than me — a return to Codex or ChatGPT,
+  a review packet, a card, a disposition, a handoff — it goes in a single
+  fenced block I can select and paste in one gesture, with nothing I have to
+  reassemble. Rules for that block: no nested code fences; no markdown tables,
+  bold or links, because they arrive as literal asterisks and pipes; plain
+  ASCII, since em dashes and smart quotes do not survive every paste; complete
+  on its own, so the recipient needs nothing from the surrounding chat. Put
+  your own commentary to me OUTSIDE the block, before it, in a line or two.
+  Until this was recorded the relay text was formatted for the terminal and I
+  had to rebuild it by hand every time, which is the manual-transport defect
+  queue WB.1 exists to remove — and ADR-ARCH-004 clause 4 records that my
+  relaying a card is transport, not technical certification, so make the
+  transport cost me one keystroke.
 
 ### Two separate agent sets
 - Host agents live in /home/eric/.hermes-* on the VM.

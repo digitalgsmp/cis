@@ -86,6 +86,42 @@ app.register_blueprint(destination_architecture_bp)
 from api.project_intelligence import project_intelligence_bp
 app.register_blueprint(project_intelligence_bp)
 
+# ── Workbench Portfolio (read-only, server-owned project registry) ───────────
+# Read-only wrapper over tools/state/portfolio.py and the secure resolver
+# underneath it, tools/state/project_context.py: two GET routes,
+# /api/workbench/portfolio and /api/workbench/portfolio/projects/<project_id>.
+# dev_continuity_events revision 180 (task WB.1, approved) is the
+# reconciliation authority for this slice: the Workbench is an
+# application-level portfolio hub, and CIS, WIASW and SWA are peer projects
+# with separate repositories, spines, roadmaps, gates and development
+# histories. ADR-SEED-010's project-isolation model is unchanged by that —
+# revision 180 reconciles an application-level portfolio VIEW with it, it
+# does not grant cross-project runtime sharing. The browser may send only a
+# stable project_id; every repo/spine path either route reports comes from
+# the server-owned `projects` registry (migration 0022, unmodified by this
+# change), re-validated by project_context.py before it is trusted (unsafe
+# root, path escape, symlink escape and missing-repo/spine are all rejected
+# there), and every spine this resolver reaches is opened mode=ro. This is a
+# DIFFERENT registry from workbench_projects (braingate_conversation_bp's
+# /api/workbench/projects): that one is Braingate's conversation-workspace
+# mapping; this one is never merged with it. WIASW carries no row in
+# `projects` and is not seeded here — resolving it answers 404, the same as
+# any other unknown id. Registering this blueprint grants a view and nothing
+# else: no mutating route, no schema change, no new seeded row.
+from api.portfolio import portfolio_bp
+app.register_blueprint(portfolio_bp)
+
+# ── Workbench Pipeline Entities (read-only, queue item 4.34) ─────────────────
+# Read-only wrapper over tools/state/pipeline_entities.py: one GET route,
+# /api/workbench/pipeline-entities. Composes the braingate_conversation
+# chatbot (distinct from, and never presented as, a seventh pipeline role),
+# the six canonical roles from abstraction/dispatch.py PROFILES, the
+# procedure stages/gates from abstraction/guardrails.py PHASE_GATE_MAP and
+# SECURITY_GATES, and a shared newest-20-run activity cohort read through
+# strict per-table column allowlists. No write path of any kind.
+from api.pipeline_entities import pipeline_entities_bp
+app.register_blueprint(pipeline_entities_bp)
+
 
 # ── WB.1 Slice 1 — Braingate conversation stage, ACTIVATED ────────────────────
 # Activated by the WB.1 Braingate live-activation card. Exactly two blueprints

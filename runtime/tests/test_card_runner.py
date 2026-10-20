@@ -869,6 +869,322 @@ def run():
           "substituted for the new current card",
           row_sup_review["card_factory_card_id"] == card_sup, row_sup_review)
 
+    # ══ Layer-2 semantic continuity gate (bounded CIS Workbench continuity ══
+    # slice): dispatch() itself re-verifies any continuity_authorization it
+    # is handed against the exact conductor_transaction being dispatched
+    # now — ALLOW reaches a mock backend and launches; HOLD creates no
+    # runner row and launches nothing; a conductor packet that changed
+    # after the authorization was computed is rejected; the written
+    # metadata artifact never carries raw retrieved excerpts.
+    import continuity_interceptor as ci
+    from tools.development.conductor_contract import DevelopmentIntent, compile_transaction
+
+    def _continuity_fixture_conn():
+        c = sqlite3.connect(":memory:")
+        c.row_factory = sqlite3.Row
+        c.executescript("""
+            CREATE TABLE knowledge_messages (
+                id INTEGER PRIMARY KEY, content TEXT, source TEXT,
+                role TEXT, source_key TEXT
+            );
+            CREATE VIRTUAL TABLE knowledge_messages_fts USING fts5(
+                content, source, role, content='knowledge_messages', content_rowid='id'
+            );
+        """)
+        c.execute(
+            "INSERT INTO knowledge_messages(content, source, role, source_key) VALUES (?,?,?,?)",
+            ("The continuity gate protects dispatch between approval and launch.",
+             "cis_docs", "user", "continuity/gate:1"),
+        )
+        c.commit()
+        return c
+
+    def _continuity_empty_conn():
+        c = sqlite3.connect(":memory:")
+        c.row_factory = sqlite3.Row
+        c.executescript("""
+            CREATE TABLE knowledge_messages (
+                id INTEGER PRIMARY KEY, content TEXT, source TEXT,
+                role TEXT, source_key TEXT
+            );
+            CREATE VIRTUAL TABLE knowledge_messages_fts USING fts5(
+                content, source, role, content='knowledge_messages', content_rowid='id'
+            );
+        """)
+        return c
+
+    def _continuity_semantic_hit(_query, _limit):
+        return [{"source_ref": "continuity/gate:1", "source": "cis_docs", "role": "user",
+                 "content": "The continuity gate protects dispatch between approval and launch."}]
+
+    def _continuity_mock_backend(_messages):
+        return json.dumps({
+            "verdict": "ALIGNED", "summary": "aligned with the recorded antecedent",
+            "concepts": ["continuity gate"], "source_refs": ["continuity/gate:1"],
+            "required_changes": [], "uncertainty": "",
+        }), None
+
+    def _ct(success_note, baseline):
+        return compile_transaction(DevelopmentIntent(
+            operator_instruction="Protect dispatch with a continuity gate.",
+            expected_outcome="Allow or hold is enforced before launch.",
+            task_id="continuity-gate-test", project_id="cis",
+            prepared_context_refs=("continuity-gate-test-ref",),
+            repo_baseline=baseline,
+            allowed_files=("runtime/continuity.py",), allowed_commands=(),
+            success_checks=(success_note,), stop_conditions=("stop if scope grows",),
+            capability="repository implementation", role="bounded implementer",
+            backend_preference="claude",
+        ))
+
+    def _continuity_semantic_tx(proposed_output, operation="approve continuity-gate-test proposal"):
+        # The semantic transaction IS the conductor transaction: same
+        # identity, exactly as workbench_app.approve_proposal binds it.
+        return ci.SemanticTransaction(
+            kind="EXECUTION", criticality="AUTHORITATIVE", actor="workbench",
+            operation=operation, input_payload={"proposal_id": "continuity-gate-test"},
+            proposed_output=proposed_output,
+            transaction_id=proposed_output["transaction_id"],
+        )
+
+    runs_before_continuity = run_count()
+
+    # dispatch() requires the ledger mark Workbench adds after attempting
+    # persistence against migration 0041's table — never part of
+    # ContinuityAuthorization.bounded_dict() itself, since the mark records
+    # an outcome that happens after evaluate() returns.
+    _ledger_ok = {"ledger_recorded": True, "ledger_status": ci.LEDGER_MARK_RECORDED}
+    _ledger_absent = {"ledger_recorded": False, "ledger_status": ci.LEDGER_MARK_MIGRATION_ABSENT}
+
+    # ── ALLOW reaches the mock backend and dispatch proceeds and completes ──
+    ask_ci = make_ask(project="cis")
+    card_ci = make_card(ask_ci, ask_revision=1)
+    baseline_allow = card_runner.repository_baseline()
+    ct_allow = _ct("the gate test passes", baseline_allow)
+    fixture_conn = _continuity_fixture_conn()
+    authorization = ci.evaluate(fixture_conn, _continuity_semantic_tx(ct_allow), _continuity_mock_backend,
+                                 semantic_retriever=_continuity_semantic_hit)
+    check("continuity ALLOW reaches the mock backend", authorization.decision == "ALLOW", authorization.verdict)
+
+    row_ci, _ = card_runner.dispatch(
+        card_ci, "implement", "claude", request_id="r-continuity-allow",
+        expected_card_fingerprint=fp(), authorized_by="eric",
+        permitted_files=["runtime/continuity.py"], accept_time_only_control=True,
+        conductor_transaction=ct_allow,
+        continuity_authorization={**authorization.bounded_dict(), **_ledger_ok},
+        _test_command=_claude_mock(os.path.join(tmp_root, "stdin_capture_continuity.txt")),
+    )
+    row_ci = wait_terminal(row_ci["id"])
+    check("ALLOW continuity authorization dispatches and completes", row_ci["status"] == "completed", row_ci)
+
+    auth_artifact_path = os.path.join(repo_root, row_ci["run_dir"], "CONTINUITY_AUTHORIZATION.json")
+    check("metadata-only continuity authorization artifact written into the run folder",
+          os.path.isfile(auth_artifact_path), auth_artifact_path)
+    artifact_text = open(auth_artifact_path).read()
+    artifact_json = json.loads(artifact_text)
+    check("metadata artifact excludes raw retrieved antecedent excerpts",
+          "antecedents" not in artifact_json and
+          "continuity gate protects dispatch" not in artifact_text, artifact_json)
+    check("metadata artifact still carries the binding decision/hashes",
+          artifact_json.get("decision") == "ALLOW" and
+          artifact_json.get("output_hash") == ci.content_hash(ct_allow), artifact_json)
+    check("metadata artifact transaction_id is the conductor transaction_id",
+          artifact_json.get("transaction_id") == ct_allow["transaction_id"], artifact_json)
+    # Genuinely metadata-only: no model-generated free-form field survives
+    # into the artifact, by key or by value.
+    freeform_keys = ("summary", "concepts", "required_changes", "uncertainty", "antecedents")
+    check("metadata artifact carries no model-generated free-form field",
+          not any(key in artifact_json for key in freeform_keys), sorted(artifact_json))
+    check("metadata artifact carries none of the backend's own analysis text",
+          "aligned with the recorded antecedent" not in artifact_text and
+          "continuity gate" not in artifact_text, artifact_text)
+    check("metadata artifact is exactly the bounded allowlist",
+          set(artifact_json) <= ci.BOUNDED_ALLOWED_FIELDS, sorted(artifact_json))
+    stdin_sent_ci = open(os.path.join(tmp_root, "stdin_capture_continuity.txt")).read()
+    check("bounded continuity authorization reaches the backend prompt",
+          "BOUND CONTINUITY AUTHORIZATION" in stdin_sent_ci and '"decision": "ALLOW"' in stdin_sent_ci,
+          stdin_sent_ci[-800:])
+    prompt_tail_ci = stdin_sent_ci.split("BOUND CONTINUITY AUTHORIZATION", 1)[1]
+    check("backend prompt's continuity block carries no model-generated free-form text",
+          not any(f'"{key}"' in prompt_tail_ci for key in freeform_keys) and
+          "aligned with the recorded antecedent" not in prompt_tail_ci, prompt_tail_ci[:800])
+    check("ALLOW dispatch created exactly one new card_runner_runs row",
+          run_count() == runs_before_continuity + 1, run_count())
+
+    # ── HOLD creates no runner row and launches no process ──
+    ask_hold = make_ask(project="cis")
+    card_hold = make_card(ask_hold, ask_revision=1)
+    baseline_hold = card_runner.repository_baseline()
+    ct_hold = _ct("the gate test passes (hold variant)", baseline_hold)
+    empty_conn = _continuity_empty_conn()
+    hold_authorization = ci.evaluate(empty_conn, _continuity_semantic_tx(ct_hold), _continuity_mock_backend)
+    check("no-antecedent evaluation holds", hold_authorization.decision == "HOLD", hold_authorization.verdict)
+    runs_before_hold = run_count()
+    try:
+        card_runner.dispatch(
+            card_hold, "implement", "claude", request_id="r-continuity-hold",
+            expected_card_fingerprint=fp(), authorized_by="eric",
+            permitted_files=["runtime/continuity.py"], accept_time_only_control=True,
+            conductor_transaction=ct_hold,
+            continuity_authorization={**hold_authorization.bounded_dict(), **_ledger_ok},
+            _test_command=_claude_mock(os.path.join(tmp_root, "stdin_capture_continuity_hold.txt")),
+        )
+        check("HOLD continuity authorization is refused at dispatch", False)
+    except card_runner.RunnerError as e:
+        check("HOLD continuity authorization is refused at dispatch", "HOLD" in str(e), str(e))
+    check("HOLD dispatch created no card_runner_runs row", run_count() == runs_before_hold, run_count())
+    check("HOLD dispatch never wrote a stdin capture (no process was launched)",
+          not os.path.isfile(os.path.join(tmp_root, "stdin_capture_continuity_hold.txt")), None)
+
+    # ── tampering: authorization bound to one conductor transaction no ──
+    # ── longer matches a different (but individually valid) one at launch ──
+    ask_tamper = make_ask(project="cis")
+    card_tamper = make_card(ask_tamper, ask_revision=1)
+    baseline_tamper = card_runner.repository_baseline()
+    ct_a = _ct("tamper variant A", baseline_tamper)
+    ct_b = _ct("tamper variant B", baseline_tamper)
+    auth_a = ci.evaluate(fixture_conn, _continuity_semantic_tx(ct_a), _continuity_mock_backend,
+                          semantic_retriever=_continuity_semantic_hit)
+    check("tamper fixture: authorization A is ALLOW", auth_a.decision == "ALLOW", auth_a.verdict)
+    try:
+        card_runner.dispatch(
+            card_tamper, "implement", "claude", request_id="r-continuity-tamper",
+            expected_card_fingerprint=fp(), authorized_by="eric",
+            permitted_files=["runtime/continuity.py"], accept_time_only_control=True,
+            conductor_transaction=ct_b,
+            continuity_authorization={**auth_a.bounded_dict(), **_ledger_ok},
+            _test_command=_claude_mock(os.path.join(tmp_root, "stdin_capture_continuity_tamper.txt")),
+        )
+        check("authorization bound to a changed conductor transaction is rejected", False)
+    except card_runner.RunnerError as e:
+        check("authorization bound to a changed conductor transaction is rejected",
+              "no longer binds" in str(e), str(e))
+    check("tampering rejection created no card_runner_runs row", run_count() == runs_before_hold, run_count())
+    check("tampering rejection never wrote a stdin capture (no process was launched)",
+          not os.path.isfile(os.path.join(tmp_root, "stdin_capture_continuity_tamper.txt")), None)
+
+    # ── transaction-id tampering and forged decision/verdict pairs are ──
+    # ── rejected before any run row or child process exists ──
+    ask_forge = make_ask(project="cis")
+    card_forge = make_card(ask_forge, ask_revision=1)
+    ct_forge = _ct("forgery variant", card_runner.repository_baseline())
+    auth_forge = ci.evaluate(fixture_conn, _continuity_semantic_tx(ct_forge), _continuity_mock_backend,
+                              semantic_retriever=_continuity_semantic_hit)
+    check("forgery fixture: authorization is ALLOW/aligned",
+          auth_forge.decision == "ALLOW" and auth_forge.verdict in ci.ALLOWING_VERDICTS,
+          (auth_forge.decision, auth_forge.verdict))
+    runs_before_forge = run_count()
+
+    def _forged_dispatch(label, overrides, expected_fragment, request_id, capture_name,
+                          remove_keys=()):
+        forged = {**auth_forge.bounded_dict(), **_ledger_ok, **overrides}
+        for key in remove_keys:
+            forged.pop(key, None)
+        try:
+            card_runner.dispatch(
+                card_forge, "implement", "claude", request_id=request_id,
+                expected_card_fingerprint=fp(), authorized_by="eric",
+                permitted_files=["runtime/continuity.py"], accept_time_only_control=True,
+                conductor_transaction=ct_forge, continuity_authorization=forged,
+                _test_command=_claude_mock(os.path.join(tmp_root, capture_name)),
+            )
+            check(label, False)
+        except card_runner.RunnerError as e:
+            check(label, expected_fragment in str(e), str(e))
+        check(f"{label} — created no card_runner_runs row",
+              run_count() == runs_before_forge, run_count())
+        check(f"{label} — launched no process",
+              not os.path.isfile(os.path.join(tmp_root, capture_name)), None)
+
+    _forged_dispatch(
+        "continuity transaction_id tampering is rejected",
+        {"transaction_id": "f" * 64}, "transaction_id does not match",
+        "r-continuity-idtamper", "stdin_capture_continuity_idtamper.txt",
+    )
+    _forged_dispatch(
+        "forged ALLOW on a non-aligned verdict is rejected",
+        {"verdict": "MISMATCH"}, "cannot accompany an ALLOW",
+        "r-continuity-forgedverdict", "stdin_capture_continuity_forgedverdict.txt",
+    )
+    _forged_dispatch(
+        "a non-ALLOW decision is rejected even on an aligned verdict",
+        {"decision": "ANNOTATE"}, "requires decision 'ALLOW'",
+        "r-continuity-nonallow", "stdin_capture_continuity_nonallow.txt",
+    )
+
+    # ── ledger mark validation: dispatch() requires ledger_recorded and ──
+    # ── ledger_status, and only the two internally consistent states ──
+    # ── Workbench produces — missing, wrong-type, unknown, or ──
+    # ── contradictory marks are rejected before any run row or process ──
+    _forged_dispatch(
+        "missing ledger_recorded is rejected as an incomplete authorization",
+        {}, "continuity authorization is incomplete",
+        "r-continuity-ledger-missing-recorded", "stdin_capture_continuity_ledger_missing_recorded.txt",
+        remove_keys=("ledger_recorded",),
+    )
+    _forged_dispatch(
+        "missing ledger_status is rejected as an incomplete authorization",
+        {}, "continuity authorization is incomplete",
+        "r-continuity-ledger-missing-status", "stdin_capture_continuity_ledger_missing_status.txt",
+        remove_keys=("ledger_status",),
+    )
+    _forged_dispatch(
+        "a string ledger_recorded is rejected for having the wrong type",
+        {"ledger_recorded": "true"}, "wrong type",
+        "r-continuity-ledger-wrongtype-recorded", "stdin_capture_continuity_ledger_wrongtype_recorded.txt",
+    )
+    _forged_dispatch(
+        "a non-string ledger_status is rejected for having the wrong type",
+        {"ledger_status": 1}, "wrong type",
+        "r-continuity-ledger-wrongtype-status", "stdin_capture_continuity_ledger_wrongtype_status.txt",
+    )
+    _forged_dispatch(
+        "ledger_recorded=True paired with the migration-absent status is a "
+        "contradictory mark and is rejected",
+        {"ledger_recorded": True, "ledger_status": ci.LEDGER_MARK_MIGRATION_ABSENT},
+        "not one of the internally consistent marks",
+        "r-continuity-ledger-contradict-true", "stdin_capture_continuity_ledger_contradict_true.txt",
+    )
+    _forged_dispatch(
+        "ledger_recorded=False paired with the evaluated status is a "
+        "contradictory mark and is rejected",
+        {"ledger_recorded": False, "ledger_status": ci.LEDGER_MARK_RECORDED},
+        "not one of the internally consistent marks",
+        "r-continuity-ledger-contradict-false", "stdin_capture_continuity_ledger_contradict_false.txt",
+    )
+    _forged_dispatch(
+        "an unknown ledger_status is rejected even with ledger_recorded=True",
+        {"ledger_recorded": True, "ledger_status": "something_else"},
+        "not one of the internally consistent marks",
+        "r-continuity-ledger-unknown-status", "stdin_capture_continuity_ledger_unknown_status.txt",
+    )
+    ask_ledger_absent = make_ask(project="cis")
+    card_ledger_absent = make_card(ask_ledger_absent, ask_revision=1)
+    baseline_ledger_absent = card_runner.repository_baseline()
+    ct_ledger_absent = _ct("the gate test passes (ledger-absent variant)", baseline_ledger_absent)
+    authorization_ledger_absent = ci.evaluate(
+        fixture_conn, _continuity_semantic_tx(ct_ledger_absent), _continuity_mock_backend,
+        semantic_retriever=_continuity_semantic_hit,
+    )
+    check("ledger-absent fixture: authorization is ALLOW",
+          authorization_ledger_absent.decision == "ALLOW", authorization_ledger_absent.verdict)
+    row_ledger_absent, _ = card_runner.dispatch(
+        card_ledger_absent, "implement", "claude",
+        request_id="r-continuity-ledger-absent-ok",
+        expected_card_fingerprint=fp(), authorized_by="eric",
+        permitted_files=["runtime/continuity.py"], accept_time_only_control=True,
+        conductor_transaction=ct_ledger_absent,
+        continuity_authorization={**authorization_ledger_absent.bounded_dict(), **_ledger_absent},
+        _test_command=_claude_mock(os.path.join(tmp_root, "stdin_capture_continuity_ledger_absent_ok.txt")),
+    )
+    row_ledger_absent = wait_terminal(row_ledger_absent["id"])
+    check("ledger_recorded=False with the migration-absent status is accepted as internally "
+          "consistent and dispatches",
+          row_ledger_absent["status"] == "completed", row_ledger_absent)
+
+    fixture_conn.close()
+    empty_conn.close()
+
     passed = sum(1 for _, ok in results if ok)
     total = len(results)
     print(f"\n{passed}/{total} passed")

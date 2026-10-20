@@ -19,15 +19,17 @@
                                                 [--authorization-request-hash H]]
                                                 # Dry-run by default: builds and previews a
                                                 # CONTEXT-ONLY packet, sends nothing.
-                                                # --execute requires BOTH --directive-file (a
+                                                # --execute requires --directive-file (a
                                                 # file containing the explicit execution prose)
-                                                # and --authorization-revision (the exact
+                                                # --authorization-revision (the exact
                                                 # dev_continuity_events revision, of
                                                 # kind='user_instruction', that authorizes this
                                                 # send) — re-validated live against the database;
                                                 # missing/wrong-kind/hash-mismatched/superseded
                                                 # authorization is refused (exit 2), nothing is
-                                                # sent. Directive prose renders BEFORE the
+                                                # sent), and --control-contract (a frozen
+                                                # root-owned execution contract). Directive
+                                                # prose renders BEFORE the
                                                 # labeled reference packet in what is actually
                                                 # sent, via that tool's real CLI contract
                                                 # (stdin), never as a positional file path. A
@@ -312,11 +314,13 @@ def _cmd_handoff(a):
     (exit 2), not silently downgraded to a context-only dispatch."""
     conn = cs.connect(a.db)
     if a.execute:
-        if not a.directive_file or a.authorization_revision is None:
+        if (not a.directive_file or a.authorization_revision is None
+                or not a.control_contract):
             print(
                 "BLOCKED: --execute requires --directive-file and "
-                "--authorization-revision (explicit directive prose + a "
-                "live user_instruction authorization reference); refusing "
+                "--authorization-revision and --control-contract (explicit "
+                "directive prose + a live user_instruction reference + a "
+                "frozen root-owned execution contract); refusing "
                 "to send a bare context packet as if it were a directive.",
                 file=sys.stderr,
             )
@@ -334,6 +338,7 @@ def _cmd_handoff(a):
                 conn, a.tool, task=a.task, actor=a.actor, out_dir=a.out,
                 directive_text=directive_text,
                 authorization_revision=a.authorization_revision,
+                control_contract=a.control_contract,
                 concept_queries=a.query or [], kb_ids=a.kb_id or [],
                 expected_request_hash=a.authorization_request_hash,
                 dry_run=False, timeout=a.timeout,
@@ -487,6 +492,10 @@ def build_parser():
     sp.add_argument("--authorization-request-hash", default=None,
                      help="Optional: also require the authorization row's request_hash to "
                           "match exactly, binding the directive to a specific request.")
+    sp.add_argument("--control-contract", default=None,
+                    help="Frozen root-owned contract below /opt/cis-control/contracts. "
+                         "Required with --execute; the root-owned dispatcher, not this "
+                         "repository, owns the model's execution flags.")
     sp.add_argument("--timeout", type=int, default=30)
     sp.set_defaults(func=_cmd_handoff)
 

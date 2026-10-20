@@ -40,6 +40,7 @@ MIGRATION_0035 = os.path.join(MIGRATIONS_DIR, "0035_workbench.sql")
 MIGRATION_0036 = os.path.join(MIGRATIONS_DIR, "0036_card_factory.sql")
 MIGRATION_0037 = os.path.join(MIGRATIONS_DIR, "0037_card_runner.sql")
 MIGRATION_0038 = os.path.join(MIGRATIONS_DIR, "0038_workbench_action_proposals.sql")
+MIGRATION_0041 = os.path.join(MIGRATIONS_DIR, "0041_continuity_transactions.sql")
 REAL_EXECUTION_RULES = os.path.join(REPO_SRC, "cards", "EXECUTION_RULES.md")
 REAL_REVIEW_RULES = os.path.join(REPO_SRC, "cards", "REVIEW_RULES.md")
 
@@ -150,7 +151,8 @@ def run():
     db_path = os.path.join(tmp_root, "test_spine.db")
     conn = sqlite3.connect(db_path)
     conn.executescript(KNOWLEDGE_MESSAGES_SCHEMA)
-    for mig in (MIGRATION_0035, MIGRATION_0036, MIGRATION_0037, MIGRATION_0038):
+    for mig in (MIGRATION_0035, MIGRATION_0036, MIGRATION_0037, MIGRATION_0038,
+                MIGRATION_0041):
         with open(mig) as f:
             conn.executescript(f.read())
     conn.commit()
@@ -162,6 +164,7 @@ def run():
     import workbench_app  # noqa: E402
     import card_factory_app  # noqa: E402
     import card_runner  # noqa: E402
+    import continuity_interceptor  # noqa: E402
 
     for mod in (workbench_app, card_factory_app, card_runner):
         mod.DB_PATH = db_path
@@ -186,6 +189,28 @@ def run():
     orig_gateway = workbench_app._call_brain_gateway
     orig_generator = card_factory_app._call_generator
     orig_budget = workbench_app.WORKBENCH_CONTEXT_CHAR_BUDGET
+
+    # Layer-2 semantic continuity gate (runtime/continuity_interceptor.py)
+    # now sits between approve_proposal and dispatch. No paid model call
+    # here either: a deterministic ALLOW backend + a semantic_retriever
+    # seam that always supplies one antecedent is the default for every
+    # scenario below (none of this test's synthetic proposal text is
+    # actually indexed anywhere, so FTS alone would starve every approval
+    # of antecedents and HOLD it). Scenario 18 below swaps this out
+    # temporarily to prove the HOLD/tamper paths.
+    def _continuity_default_allow(_messages):
+        return json.dumps({
+            "verdict": "ALIGNED", "summary": "aligned with the confirmed proposal",
+            "concepts": ["workbench approval"], "source_refs": ["test:antecedent"],
+            "required_changes": [], "uncertainty": "",
+        }), None
+
+    def _continuity_default_semantic(_query, _limit):
+        return [{"source_ref": "test:antecedent", "source": "test", "role": "user",
+                 "content": "synthetic antecedent for deterministic workbench tests"}]
+
+    workbench_app._CONTINUITY_CALLER_OVERRIDE = _continuity_default_allow
+    workbench_app._CONTINUITY_SEMANTIC_RETRIEVER_OVERRIDE = _continuity_default_semantic
 
     def wait_terminal(run_id, timeout=10):
         deadline = time.time() + timeout
@@ -296,7 +321,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_id}/approve",
                 json={
                     "target": "claude", "request_id": f"approve-stale-{field}", "authorized_by": "eric",
-                    "expected_card_fingerprint": fingerprint, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fingerprint,
                     "accept_time_only_control": True, "expected_proposal_revision": new_rev,
                 },
             )
@@ -328,7 +353,7 @@ def run():
             f"/api/workbench/proposals/{proposal_id}/approve",
             json={
                 "target": "claude", "request_id": "approve-stale-client", "authorized_by": "eric",
-                "expected_card_fingerprint": fingerprint, "permitted_files": ["runtime/x.py"],
+                "expected_card_fingerprint": fingerprint,
                 "accept_time_only_control": True, "expected_proposal_revision": current_rev - 1,
             },
         )
@@ -369,7 +394,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_id}/approve",
                 json={
                     "target": "claude", "request_id": "approve-fresh", "authorized_by": "eric",
-                    "expected_card_fingerprint": fingerprint, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fingerprint,
                     "accept_time_only_control": True, "expected_proposal_revision": fresh_rev,
                 },
             )
@@ -392,7 +417,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_id}/approve",
                 json={
                     "target": "claude", "request_id": "approve-fresh", "authorized_by": "eric",
-                    "expected_card_fingerprint": fingerprint, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fingerprint,
                     "accept_time_only_control": True, "expected_proposal_revision": fresh_rev,
                 },
             )
@@ -420,7 +445,7 @@ def run():
             f"/api/workbench/proposals/{proposal_8}/approve",
             json={
                 "target": "claude", "request_id": "approve-fresh", "authorized_by": "eric",
-                "expected_card_fingerprint": fp8, "permitted_files": ["runtime/x.py"],
+                "expected_card_fingerprint": fp8,
                 "accept_time_only_control": True, "expected_proposal_revision": body8["proposal"]["revision"],
             },
         )
@@ -448,7 +473,7 @@ def run():
             f"/api/workbench/proposals/{proposal_9}/approve",
             json={
                 "target": "claude", "request_id": "approve-9", "authorized_by": "eric",
-                "expected_card_fingerprint": fp9, "permitted_files": ["runtime/x.py"],
+                "expected_card_fingerprint": fp9,
                 "accept_time_only_control": True, "expected_proposal_revision": body9["proposal"]["revision"],
             },
         )
@@ -519,7 +544,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_10}/approve",
                 json={
                     "target": "claude", "request_id": "approve-10", "authorized_by": "eric",
-                    "expected_card_fingerprint": fp10, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fp10,
                     "accept_time_only_control": True,
                     "expected_proposal_revision": body10["proposal"]["revision"],
                 },
@@ -697,7 +722,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_13}/approve",
                 json={
                     "target": "claude", "request_id": "approve-13", "authorized_by": "eric",
-                    "expected_card_fingerprint": fp13, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fp13,
                     "accept_time_only_control": True,
                     "expected_proposal_revision": body13c["proposal"]["revision"],
                 },
@@ -804,7 +829,7 @@ def run():
                 f"/api/workbench/proposals/{proposal_14}/approve",
                 json={
                     "target": "claude", "request_id": "approve-14", "authorized_by": "eric",
-                    "expected_card_fingerprint": fp14, "permitted_files": ["runtime/x.py"],
+                    "expected_card_fingerprint": fp14,
                     "accept_time_only_control": True,
                     "expected_proposal_revision": proposal_rev_before,
                 },
@@ -944,10 +969,269 @@ def run():
               resp.status_code == 200 and resp.get_json()["proposal"]["permitted_files"] ==
               ["runtime/ui/src/App.jsx", "runtime/ui/src/index.css"], (resp.status_code, resp.get_json()))
 
+        # ══ 18. Layer-2 semantic continuity gate between approval and ══
+        # dispatch (bounded CIS Workbench continuity slice): ALLOW reaches
+        # the mock backend and dispatch proceeds; the artifact it writes
+        # into the run folder carries no raw retrieved excerpt text; a
+        # HOLD decision never creates a runner row or launches a process;
+        # approval-time scope substitution stays blocked ahead of (and
+        # independent of) the continuity gate.
+        p18 = new_project("Scenario 18 (continuity gate)")
+        resp = draft(p18, QUOTE + " for scenario eighteen", "draft-18",
+                     f"ok\n{workbench_app.PROPOSAL_MARKER}\n" + _proposal_block())
+        proposal_18 = resp.get_json()["proposal"]["id"]
+        card_factory_app._call_generator = lambda payload: (
+            MODEL_CARD_TEXT.replace("test-conv-action", "test-conv-action-18")
+            .replace(QUOTE, QUOTE + " for scenario eighteen"), None, None
+        )
+        resp = client.post(f"/api/workbench/proposals/{proposal_18}/confirm-direction",
+                            json={"request_id": "confirm-18"})
+        body18 = resp.get_json()
+        fp18 = card_runner._sha256_text(body18["card"]["card_text"])
+
+        continuity_calls = []
+
+        def continuity_allow_capture(messages):
+            continuity_calls.append(messages)
+            return json.dumps({
+                "verdict": "ALIGNED", "summary": "aligned with prior direction",
+                "concepts": ["button"], "source_refs": ["test:antecedent"],
+                "required_changes": [], "uncertainty": "",
+            }), None
+
+        # approval-time scope substitution stays blocked -- checked (and
+        # refused with 400) before the continuity gate is ever reached, so
+        # this still works with no runner row and no continuity call made.
+        runs_before_18 = sqlite3.connect(db_path).execute("SELECT COUNT(*) FROM card_runner_runs").fetchone()[0]
+        resp = client.post(
+            f"/api/workbench/proposals/{proposal_18}/approve",
+            json={
+                "target": "claude", "request_id": "approve-18-badscope", "authorized_by": "eric",
+                "expected_card_fingerprint": fp18, "accept_time_only_control": True,
+                "expected_proposal_revision": body18["proposal"]["revision"],
+                "permitted_files": ["runtime/not_the_confirmed_scope.py"],
+            },
+        )
+        check("18a. approval-time scope substitution still blocked -> 400",
+              resp.status_code == 400, (resp.status_code, resp.get_json()))
+        check("18b. blocked scope substitution created no card_runner_runs row",
+              sqlite3.connect(db_path).execute(
+                  "SELECT COUNT(*) FROM card_runner_runs"
+              ).fetchone()[0] == runs_before_18, None)
+        check("18c. blocked scope substitution never reached the continuity backend",
+              len(continuity_calls) == 0, continuity_calls)
+
+        workbench_app._CONTINUITY_CALLER_OVERRIDE = continuity_allow_capture
+        card_runner._TEST_COMMAND_OVERRIDE = _mock_claude(message="scenario 18 ok")
+        try:
+            resp = client.post(
+                f"/api/workbench/proposals/{proposal_18}/approve",
+                json={
+                    "target": "claude", "request_id": "approve-18", "authorized_by": "eric",
+                    "expected_card_fingerprint": fp18,
+                    "accept_time_only_control": True,
+                    "expected_proposal_revision": body18["proposal"]["revision"],
+                },
+            )
+            body = resp.get_json()
+            check("18d. ALLOW continuity decision reaches a mock backend and dispatch proceeds -> 201",
+                  resp.status_code == 201, (resp.status_code, body))
+            check("18e. continuity backend was actually invoked (reached the mock)",
+                  len(continuity_calls) == 1, continuity_calls)
+            check("18f. continuity authorization returned in the response is ALLOW",
+                  (body.get("continuity_authorization") or {}).get("decision") == "ALLOW",
+                  body.get("continuity_authorization"))
+            run_id_18 = body["run"]["id"]
+            terminal18 = wait_terminal(run_id_18)
+            check("18g. dispatched run reaches completed", terminal18["status"] == "completed", terminal18)
+
+            run_dir_18 = os.path.join(repo_root, terminal18["run_dir"])
+            auth_artifact_path = os.path.join(run_dir_18, "CONTINUITY_AUTHORIZATION.json")
+            check("18h. metadata-only authorization artifact written into the run folder",
+                  os.path.isfile(auth_artifact_path), auth_artifact_path)
+            artifact_text = open(auth_artifact_path).read()
+            artifact_json = json.loads(artifact_text)
+            check("18i. metadata artifact excludes raw retrieved antecedent excerpts",
+                  "antecedents" not in artifact_json and
+                  "synthetic antecedent" not in artifact_text, artifact_json)
+            check("18j. metadata artifact still carries the binding decision/hashes",
+                  artifact_json.get("decision") == "ALLOW" and bool(artifact_json.get("transaction_id")),
+                  artifact_json)
+            # Genuinely metadata-only: no model-generated free-form field,
+            # by key or by value, in the artifact or in the prompt.
+            freeform_keys = ("summary", "concepts", "required_changes",
+                             "uncertainty", "antecedents")
+            check("18o. metadata artifact carries no model-generated free-form field",
+                  not any(key in artifact_json for key in freeform_keys) and
+                  "aligned with prior direction" not in artifact_text,
+                  sorted(artifact_json))
+            check("18p. metadata artifact is exactly the bounded allowlist",
+                  set(artifact_json) <= continuity_interceptor.BOUNDED_ALLOWED_FIELDS,
+                  sorted(artifact_json))
+            check("18q. the continuity transaction_id IS the conductor transaction_id",
+                  artifact_json.get("transaction_id") ==
+                  body["conductor_transaction"]["transaction_id"] and
+                  (body.get("continuity_authorization") or {}).get("transaction_id") ==
+                  body["conductor_transaction"]["transaction_id"], artifact_json)
+            check("18r. ledger append succeeded and is marked evaluated",
+                  (body.get("continuity_authorization") or {}).get("ledger_recorded") is True and
+                  (body.get("continuity_authorization") or {}).get("ledger_status") == "evaluated" and
+                  artifact_json.get("ledger_status") == "evaluated",
+                  body.get("continuity_authorization"))
+            check("18s. a ledger row was actually appended for this transaction",
+                  sqlite3.connect(db_path).execute(
+                      "SELECT COUNT(*) FROM continuity_transactions WHERE transaction_id = ?",
+                      (body["conductor_transaction"]["transaction_id"],),
+                  ).fetchone()[0] == 1, None)
+        finally:
+            card_runner._TEST_COMMAND_OVERRIDE = None
+            workbench_app._CONTINUITY_CALLER_OVERRIDE = _continuity_default_allow
+
+        # ── HOLD: a fresh proposal whose continuity backend reports an ──
+        # outage creates no runner row and launches no process.
+        p18h = new_project("Scenario 18 (continuity hold)")
+        resp = draft(p18h, QUOTE + " for scenario eighteen hold", "draft-18h",
+                     f"ok\n{workbench_app.PROPOSAL_MARKER}\n" + _proposal_block())
+        proposal_18h = resp.get_json()["proposal"]["id"]
+        card_factory_app._call_generator = lambda payload: (
+            MODEL_CARD_TEXT.replace("test-conv-action", "test-conv-action-18h")
+            .replace(QUOTE, QUOTE + " for scenario eighteen hold"), None, None
+        )
+        resp = client.post(f"/api/workbench/proposals/{proposal_18h}/confirm-direction",
+                            json={"request_id": "confirm-18h"})
+        body18h = resp.get_json()
+        fp18h = card_runner._sha256_text(body18h["card"]["card_text"])
+
+        def continuity_outage(_messages):
+            return None, "simulated continuity backend outage"
+
+        workbench_app._CONTINUITY_CALLER_OVERRIDE = continuity_outage
+        runs_before_hold_18 = sqlite3.connect(db_path).execute("SELECT COUNT(*) FROM card_runner_runs").fetchone()[0]
+        card_runner._TEST_COMMAND_OVERRIDE = _mock_claude()  # must never actually run
+        try:
+            resp = client.post(
+                f"/api/workbench/proposals/{proposal_18h}/approve",
+                json={
+                    "target": "claude", "request_id": "approve-18h", "authorized_by": "eric",
+                    "expected_card_fingerprint": fp18h,
+                    "accept_time_only_control": True,
+                    "expected_proposal_revision": body18h["proposal"]["revision"],
+                },
+            )
+            body = resp.get_json()
+            check("18k. HOLD continuity decision blocks dispatch -> 409",
+                  resp.status_code == 409, (resp.status_code, body))
+            check("18l. HOLD response carries decision=HOLD",
+                  (body.get("continuity_authorization") or {}).get("decision") == "HOLD",
+                  body.get("continuity_authorization"))
+            check("18m. no card_runner_runs row was created for the held approval",
+                  sqlite3.connect(db_path).execute(
+                      "SELECT COUNT(*) FROM card_runner_runs"
+                  ).fetchone()[0] == runs_before_hold_18, None)
+            check("18n. the proposal was never marked approved by the held attempt",
+                  client.get(f"/api/workbench/proposals/{proposal_18h}").get_json()["proposal"]["status"]
+                  != "approved", None)
+        finally:
+            card_runner._TEST_COMMAND_OVERRIDE = None
+            workbench_app._CONTINUITY_CALLER_OVERRIDE = _continuity_default_allow
+
+        # ── Ledger degradation is explicit, and only for a genuinely ──
+        # absent migration 0041: with the table really dropped from this
+        # spine, the approval proceeds but every artifact says the ledger
+        # event was not written.
+        def _fresh_18_proposal(tag):
+            project = new_project(f"Scenario 18 ({tag})")
+            resp = draft(project, QUOTE + f" for scenario eighteen {tag}", f"draft-{tag}",
+                         f"ok\n{workbench_app.PROPOSAL_MARKER}\n" + _proposal_block())
+            pid = resp.get_json()["proposal"]["id"]
+            card_factory_app._call_generator = lambda payload: (
+                MODEL_CARD_TEXT.replace("test-conv-action", f"test-conv-action-{tag}")
+                .replace(QUOTE, QUOTE + f" for scenario eighteen {tag}"), None, None
+            )
+            resp = client.post(f"/api/workbench/proposals/{pid}/confirm-direction",
+                                json={"request_id": f"confirm-{tag}"})
+            cbody = resp.get_json()
+            return pid, cbody, card_runner._sha256_text(cbody["card"]["card_text"])
+
+        proposal_18m, body18m, fp18m = _fresh_18_proposal("18m")
+        drop_conn = sqlite3.connect(db_path)
+        drop_conn.executescript("DROP TABLE continuity_transactions")
+        drop_conn.commit()
+        drop_conn.close()
+        card_runner._TEST_COMMAND_OVERRIDE = _mock_claude(message="scenario 18 ledger absent")
+        try:
+            resp = client.post(
+                f"/api/workbench/proposals/{proposal_18m}/approve",
+                json={
+                    "target": "claude", "request_id": "approve-18m", "authorized_by": "eric",
+                    "expected_card_fingerprint": fp18m, "accept_time_only_control": True,
+                    "expected_proposal_revision": body18m["proposal"]["revision"],
+                },
+            )
+            body = resp.get_json()
+            check("18t. an absent migration 0041 does not block dispatch -> 201",
+                  resp.status_code == 201, (resp.status_code, body))
+            check("18u. absent migration 0041 is marked explicitly, not silently",
+                  (body.get("continuity_authorization") or {}).get("ledger_recorded") is False and
+                  (body.get("continuity_authorization") or {}).get("ledger_status") ==
+                  "migration_0041_not_applied", body.get("continuity_authorization"))
+            terminal18m = wait_terminal(body["run"]["id"])
+            absent_artifact = json.load(open(os.path.join(
+                repo_root, terminal18m["run_dir"], "CONTINUITY_AUTHORIZATION.json")))
+            check("18v. the run artifact itself records that the ledger was not written",
+                  absent_artifact.get("ledger_recorded") is False and
+                  absent_artifact.get("ledger_status") == "migration_0041_not_applied",
+                  absent_artifact)
+        finally:
+            card_runner._TEST_COMMAND_OVERRIDE = None
+            restore_conn = sqlite3.connect(db_path)
+            with open(MIGRATION_0041) as f:
+                restore_conn.executescript(f.read())
+            restore_conn.commit()
+            restore_conn.close()
+
+        # ── Any other ledger persistence failure fails closed: no run row, ──
+        # no process, the proposal stays unapproved.
+        proposal_18p, body18p, fp18p = _fresh_18_proposal("18p")
+        orig_persist = workbench_app._continuity_persist_check
+
+        def _locked_persist(*_args, **_kwargs):
+            raise sqlite3.OperationalError("database is locked")
+
+        workbench_app._continuity_persist_check = _locked_persist
+        runs_before_locked = sqlite3.connect(db_path).execute(
+            "SELECT COUNT(*) FROM card_runner_runs").fetchone()[0]
+        card_runner._TEST_COMMAND_OVERRIDE = _mock_claude()  # must never actually run
+        try:
+            resp = client.post(
+                f"/api/workbench/proposals/{proposal_18p}/approve",
+                json={
+                    "target": "claude", "request_id": "approve-18p", "authorized_by": "eric",
+                    "expected_card_fingerprint": fp18p, "accept_time_only_control": True,
+                    "expected_proposal_revision": body18p["proposal"]["revision"],
+                },
+            )
+            body = resp.get_json()
+            check("18w. a non-missing-table ledger failure refuses dispatch -> 500",
+                  resp.status_code == 500 and "ledger persistence failed" in (body or {}).get("error", ""),
+                  (resp.status_code, body))
+            check("18x. the failed-ledger approval created no card_runner_runs row",
+                  sqlite3.connect(db_path).execute(
+                      "SELECT COUNT(*) FROM card_runner_runs"
+                  ).fetchone()[0] == runs_before_locked, None)
+            check("18y. the failed-ledger approval left the proposal unapproved",
+                  client.get(f"/api/workbench/proposals/{proposal_18p}").get_json()["proposal"]["status"]
+                  != "approved", None)
+        finally:
+            workbench_app._continuity_persist_check = orig_persist
+            card_runner._TEST_COMMAND_OVERRIDE = None
+
     finally:
         workbench_app._call_brain_gateway = orig_gateway
         card_factory_app._call_generator = orig_generator
         workbench_app.WORKBENCH_CONTEXT_CHAR_BUDGET = orig_budget
+        workbench_app._CONTINUITY_CALLER_OVERRIDE = None
+        workbench_app._CONTINUITY_SEMANTIC_RETRIEVER_OVERRIDE = None
         card_runner._TEST_COMMAND_OVERRIDE = None
         if orig_db_path_env is None:
             os.environ.pop("CIS_SPINE_PATH", None)

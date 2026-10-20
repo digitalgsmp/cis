@@ -75,6 +75,24 @@ from flask import Blueprint, jsonify, request
 
 from workbench_auth import check_auth
 
+# Runtime tests and direct ``python runtime/...`` entry points place only the
+# runtime directory on sys.path.  The Conductor contract remains a host-level
+# Layer-2 module, so expose the repository root without coupling it to a
+# backend implementation.
+_IMPORT_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _IMPORT_REPO_ROOT not in sys.path:
+    sys.path.insert(0, _IMPORT_REPO_ROOT)
+from tools.development.conductor_contract import validate_transaction
+from continuity_interceptor import (
+    CONTRACT_VERSION as CONTINUITY_CONTRACT_VERSION,
+    ALLOWING_VERDICTS as CONTINUITY_ALLOWING_VERDICTS,
+    LEDGER_MARK_FIELDS as _CONTINUITY_LEDGER_MARK_FIELDS,
+    LEDGER_MARK_RECORDED as _CONTINUITY_LEDGER_MARK_RECORDED,
+    LEDGER_MARK_MIGRATION_ABSENT as _CONTINUITY_LEDGER_MARK_MIGRATION_ABSENT,
+    bounded_authorization_dict as _continuity_bounded_dict,
+    content_hash as _continuity_content_hash,
+)
+
 # ── Config ───────────────────────────────────────────────────────────────
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -146,6 +164,32 @@ TERMINAL_STATUSES = ("completed", "failed", "timeout", "stopped", "stop_failed")
 # child command) can still avoid spawning a real, paid `claude`/`codex`
 # call. Never read from request JSON; never set outside tests.
 _TEST_COMMAND_OVERRIDE = None
+
+
+# Layer-2 semantic continuity (runtime/continuity_interceptor.py): the
+# fields a ContinuityAuthorization must carry for dispatch() to re-verify
+# its binding to the exact conductor_transaction being dispatched now.
+# Raw retrieved excerpts (`antecedents`) and every model-generated
+# free-form field are deliberately absent here and stripped below by
+# _bounded_continuity(), whatever the caller passed in.
+_CONTINUITY_REQUIRED_FIELDS = frozenset((
+    "transaction_id", "contract_version", "input_hash",
+    "output_hash", "evidence_set_hash", "verdict", "decision",
+) + _CONTINUITY_LEDGER_MARK_FIELDS)
+
+# The only two internally consistent (ledger_recorded, ledger_status) marks
+# Workbench produces: a successful write to migration 0041's table, or a
+# deterministic degrade because that migration isn't applied yet. Any other
+# pairing — contradictory, unknown, or wrong-typed — is a forged or corrupted
+# mark, not a third case to tolerate.
+_CONTINUITY_VALID_LEDGER_MARKS = frozenset((
+    (True, _CONTINUITY_LEDGER_MARK_RECORDED),
+    (False, _CONTINUITY_LEDGER_MARK_MIGRATION_ABSENT),
+))
+
+
+def _bounded_continuity(continuity_authorization: dict) -> dict:
+    return _continuity_bounded_dict(continuity_authorization)
 
 
 class RunnerError(Exception):
@@ -236,6 +280,30 @@ def _sha256_file(path: str) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def repository_baseline() -> str:
+    """Hash the current commit plus every dirty/untracked path and content."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT,
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RunnerError(f"cannot capture repository baseline: {exc}") from exc
+    if result.returncode != 0:
+        raise RunnerError(
+            "cannot capture repository baseline: " + (result.stderr or "git failed").strip()
+        )
+    dirty = [{
+        "path": path,
+        "content_hash": _sha256_file(os.path.join(REPO_ROOT, path))
+        if os.path.isfile(os.path.join(REPO_ROOT, path)) else None,
+    } for path in sorted(set(_git_dirty_paths()))]
+    dirty_hash = hashlib.sha256(
+        json.dumps(dirty, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return f"git:{result.stdout.strip()};dirty:{dirty_hash}"
 
 
 # ── Scope check (bounded-control addendum: fingerprints, not status text) ─
@@ -527,6 +595,7 @@ def dispatch(card_factory_card_id, mode, target, *, request_id, expected_card_fi
              max_turns=None, max_turns_ack_observation_only=False,
              budget_usd=None, accept_time_only_control=False,
              permitted_files=None, permitted_commands=None,
+             conductor_transaction=None, continuity_authorization=None,
              db_path=None, _test_command=None):
     """Dispatch one card to one CLI target, once. Never retries, never
     chains to another dispatch. Returns (run_dict, duplicate: bool).
@@ -591,6 +660,79 @@ def dispatch(card_factory_card_id, mode, target, *, request_id, expected_card_fi
     if not wall_clock_timeout_seconds or wall_clock_timeout_seconds <= 0:
         raise RunnerError("wall_clock_timeout_seconds must be a positive number")
 
+    if conductor_transaction is not None:
+        try:
+            validate_transaction(conductor_transaction)
+        except ValueError as exc:
+            raise RunnerError(f"invalid conductor transaction: {exc}") from exc
+        scope = conductor_transaction["scope"]
+        if scope["allowed_files"] != permitted_files:
+            raise RunnerError("conductor permitted_files does not match runner scope")
+        if scope["allowed_commands"] != permitted_commands:
+            raise RunnerError("conductor permitted_commands does not match runner scope")
+        backend = conductor_transaction["executor"].get("backend_preference")
+        if backend and backend != target:
+            raise RunnerError("conductor backend preference does not match dispatch target")
+        if conductor_transaction["repo_baseline"] != repository_baseline():
+            raise RevisionMismatch(
+                "repository changed after the conductor transaction was compiled"
+            )
+
+    if continuity_authorization is not None:
+        if conductor_transaction is None:
+            raise RunnerError(
+                "continuity_authorization requires a conductor_transaction to bind against"
+            )
+        if not isinstance(continuity_authorization, dict) or not \
+                _CONTINUITY_REQUIRED_FIELDS.issubset(continuity_authorization):
+            raise RunnerError("continuity authorization is incomplete")
+        ledger_recorded = continuity_authorization["ledger_recorded"]
+        ledger_status = continuity_authorization["ledger_status"]
+        if not isinstance(ledger_recorded, bool) or not isinstance(ledger_status, str):
+            raise RunnerError(
+                "continuity authorization ledger mark has the wrong type: "
+                "ledger_recorded must be bool and ledger_status must be str"
+            )
+        if (ledger_recorded, ledger_status) not in _CONTINUITY_VALID_LEDGER_MARKS:
+            raise RunnerError(
+                f"continuity authorization ledger mark (ledger_recorded={ledger_recorded!r}, "
+                f"ledger_status={ledger_status!r}) is not one of the internally consistent "
+                "marks Workbench produces"
+            )
+        if continuity_authorization["contract_version"] != CONTINUITY_CONTRACT_VERSION:
+            raise RunnerError("unsupported continuity contract version")
+        if continuity_authorization["decision"] == "HOLD":
+            raise RunnerError(
+                f"continuity decision is HOLD ({continuity_authorization.get('verdict')}): "
+                "dispatch refused — the Layer-2 semantic continuity check did not clear "
+                "this execution"
+            )
+        # Nothing but an ALLOW on an allowing verdict dispatches. ANNOTATE
+        # is an OBSERVE-criticality outcome and carries no execution
+        # authority here; an ALLOW paired with a non-allowing verdict is an
+        # inconsistent (forged or corrupted) binding, not a pass.
+        if continuity_authorization["decision"] != "ALLOW":
+            raise RunnerError(
+                f"continuity decision is {continuity_authorization['decision']!r}: dispatch "
+                "requires decision 'ALLOW' from the Layer-2 semantic continuity check"
+            )
+        if continuity_authorization["verdict"] not in CONTINUITY_ALLOWING_VERDICTS:
+            raise RunnerError(
+                f"continuity verdict {continuity_authorization['verdict']!r} cannot accompany an "
+                f"ALLOW decision (expected one of {list(CONTINUITY_ALLOWING_VERDICTS)}) — the "
+                "authorization is inconsistent and does not clear this execution"
+            )
+        if continuity_authorization["transaction_id"] != conductor_transaction["transaction_id"]:
+            raise RunnerError(
+                "continuity authorization transaction_id does not match the conductor "
+                "transaction_id — the authorization no longer binds this conductor transaction"
+            )
+        if continuity_authorization["output_hash"] != _continuity_content_hash(conductor_transaction):
+            raise RunnerError(
+                "continuity authorization no longer binds this conductor transaction — the "
+                "packet or the authorization changed after evaluation"
+            )
+
     cap = CAPABILITIES[target]
     if max_turns is not None:
         enforcement = cap["max_turns"]["enforcement"]
@@ -624,6 +766,10 @@ def dispatch(card_factory_card_id, mode, target, *, request_id, expected_card_fi
         "budget_enforcement": cap["budget_usd"]["enforcement"] if budget_usd is not None else "not_requested",
         "time_only_control": budget_usd is None,
         "usage_reporting_verified": USAGE_REPORTING_VERIFIED[target],
+        "conductor_transaction_id": (
+            conductor_transaction["transaction_id"]
+            if conductor_transaction is not None else None
+        ),
     }
 
     conn = _db(db_path)
@@ -779,6 +925,16 @@ def dispatch(card_factory_card_id, mode, target, *, request_id, expected_card_fi
     # holding the lock forever (the original bug this block fixes).
     try:
         os.makedirs(handoff_dir, exist_ok=False)
+        if conductor_transaction is not None:
+            with open(os.path.join(handoff_dir, "CONDUCTOR_TRANSACTION.json"), "w") as f:
+                json.dump(conductor_transaction, f, indent=2, sort_keys=True)
+        if continuity_authorization is not None:
+            # Metadata only: _bounded_continuity() keeps a fixed allowlist
+            # of binding/provenance fields regardless of what the caller
+            # passed in — this artifact never carries retrieved excerpt
+            # text or model-generated free-form analysis text.
+            with open(os.path.join(handoff_dir, "CONTINUITY_AUTHORIZATION.json"), "w") as f:
+                json.dump(_bounded_continuity(continuity_authorization), f, indent=2, sort_keys=True)
         with open(os.path.join(handoff_dir, "CARD.md"), "w") as f:
             f.write(card_md_text)
         os.makedirs(LOG_DIR, exist_ok=True)
@@ -793,6 +949,20 @@ def dispatch(card_factory_card_id, mode, target, *, request_id, expected_card_fi
         rules_path = EXECUTION_RULES_PATH if mode == "implement" else REVIEW_RULES_PATH
         with open(rules_path) as f:
             prompt = f.read() + "\n\n" + card_md_text
+        if conductor_transaction is not None:
+            prompt += (
+                "\n\nBOUND CONDUCTOR TRANSACTION\n"
+                "The following contract is hash-validated and does not permit scope expansion. "
+                "Stop if the requested work requires anything outside it.\n"
+                + json.dumps(conductor_transaction, indent=2, sort_keys=True)
+            )
+        if continuity_authorization is not None:
+            prompt += (
+                "\n\nBOUND CONTINUITY AUTHORIZATION\n"
+                "Semantic continuity check result for this execution (metadata only — no "
+                "retrieved excerpts and no model-written analysis text are included):\n"
+                + json.dumps(_bounded_continuity(continuity_authorization), indent=2, sort_keys=True)
+            )
         scope_before = _scope_snapshot(permitted_files)
     except OSError as e:
         _mark_setup_failed(run_id, db_path, f"setup failed before launch: {e}")

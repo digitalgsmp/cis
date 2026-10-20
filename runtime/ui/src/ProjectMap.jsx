@@ -38,7 +38,7 @@ import { atLeast } from "./presentationMode";
 // no mutation call in this file, and nothing here classifies a queue item.
 
 const AREA_ORDER = ["overview", "current_build", "queue_problems", "system_anatomy",
-                    "destination", "trajectory"];
+                    "destination", "trajectory", "development_activity"];
 
 function fmtTime(iso) {
   if (!iso) return "unknown";
@@ -171,6 +171,8 @@ function Overview({ model, mode, onGo }) {
     system_anatomy: `${counts.anatomy_areas ?? 0} areas · ${counts.capabilities ?? 0} capabilities`,
     destination: `${counts.destination_nodes ?? 0} destination nodes, none activated`,
     trajectory: "today → destination",
+    development_activity: `${counts.continuity_events_total ?? 0} ledger events · `
+      + `${counts.action_proposals_total ?? 0} proposals`,
   };
   return (
     <>
@@ -1257,6 +1259,268 @@ function Trajectory({ model, mode }) {
   );
 }
 
+// ── Development Activity ───────────────────────────────────────────────
+//
+// The micro companion to Current Build / Trajectory: those explain the
+// declared roadmap, this shows the actual evidence of work — the last
+// session handoff, the recent during-work ledger, recent action proposals
+// and the dispatch runs explicitly linked to them, and the working tree
+// exactly as git reports it. Nothing here is matched up by this component:
+// every relationship arrives with its own confidence_class from the
+// response, same as every other area on this screen.
+
+function SessionHandoff({ sh, mode, classes }) {
+  if (!sh?.available) {
+    return <MissingLink explanation={sh?.note} />;
+  }
+  if (!sh.handoff) {
+    return <div className="muted">{sh.note || "No current session handoff is recorded."}</div>;
+  }
+  const h = sh.handoff;
+  return (
+    <div className="pm-detail">
+      <ConfidenceBadge cls={sh.confidence_class} classes={classes} />
+      <h4>{h.title} <span className="muted">({h.date})</span></h4>
+      <div className="pm-plain">{h.summary}</div>
+      {atLeast(mode, "detail") && h.decisions && (
+        <div className="muted bp-fineprint">Decisions: {h.decisions}</div>
+      )}
+      {atLeast(mode, "detail") && h.next_actions && (
+        <div className="muted bp-fineprint">Next actions recorded then: {h.next_actions}</div>
+      )}
+      {atLeast(mode, "technical") && (
+        <div className="muted bp-fineprint">
+          <code>session_handoffs.is_current = 1</code>
+          {h.git_head && <> · recorded at <code>{h.git_head}</code></>} · recorded{" "}
+          {fmtTime(h.created_at)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContinuityEventsFeed({ feed, mode }) {
+  if (!feed?.available) {
+    return <MissingLink explanation={feed?.note} />;
+  }
+  if (feed.events.length === 0) {
+    return <div className="muted">No events recorded in dev_continuity_events.</div>;
+  }
+  return (
+    <>
+      <ul className="sc-list">
+        {feed.events.map((e, i) => (
+          <li key={i}>
+            <strong>{e.task}</strong> #{e.revision} · <code>{e.kind}</code> ·{" "}
+            <span className="muted">{e.actor}</span>
+            <div className="pm-plain-inline">{e.summary}</div>
+            {atLeast(mode, "technical") && (
+              <div className="muted bp-fineprint">
+                status <code>{e.status}</code> · recorded {fmtTime(e.created_at)}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {atLeast(mode, "detail") && (
+        <div className="muted bp-fineprint">
+          Showing {feed.shown_count} of {feed.total_count} recorded events, most recent first.
+          This is a raw feed — no event here is matched to a proposal, a run, or anything else.
+        </div>
+      )}
+    </>
+  );
+}
+
+function DispatchRunLink({ link, mode, classes }) {
+  if (link.confidence_class === "not_yet_linked") {
+    return <MissingLink explanation={link.explanation} />;
+  }
+  return (
+    <div>
+      <ConfidenceBadge cls={link.confidence_class} classes={classes} />{" "}
+      {link.run && (
+        <span>
+          run #{link.run.id} · <code>{link.run.mode}</code> on <code>{link.run.target}</code> ·{" "}
+          <span className={`sc-badge ${link.run.status === "completed" ? "sc-badge-ok"
+            : link.run.status === "failed" ? "sc-badge-error" : ""}`}>
+            {link.run.status}
+          </span>
+        </span>
+      )}
+      <div className="muted bp-fineprint">{link.explanation}</div>
+      {atLeast(mode, "technical") && <AuthorityRefs refs={link.authority_refs} mode={mode} />}
+    </div>
+  );
+}
+
+function ActionProposalsFeed({ feed, mode, classes }) {
+  if (!feed?.available) {
+    return <MissingLink explanation={feed?.note} />;
+  }
+  if (feed.proposals.length === 0) {
+    return <div className="muted">No action proposals recorded.</div>;
+  }
+  return (
+    <>
+      <ul className="sc-list">
+        {feed.proposals.map((p) => (
+          <li key={p.id}>
+            <strong>proposal #{p.id}</strong> · <code>{p.kind}</code> ·{" "}
+            <span className="sc-badge">{p.status}</span>
+            {atLeast(mode, "technical") && <> · project <code>{p.project_id}</code></>}
+            <h4>Dispatch run</h4>
+            <DispatchRunLink link={p.dispatch_run} mode={mode} classes={classes} />
+          </li>
+        ))}
+      </ul>
+      {atLeast(mode, "detail") && (
+        <div className="muted bp-fineprint">
+          Showing {feed.shown_count} of {feed.total_count} recorded proposals, most recent first.
+          {!feed.card_runner_available && (
+            <> card_runner_runs is not present on this database, so no proposal here can show a
+              dispatch run yet.</>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ContinuityTransactionsFeed({ feed }) {
+  if (!feed?.available) {
+    return (
+      <div className="muted">
+        {feed?.note || "continuity_transactions is not present on this database."}
+      </div>
+    );
+  }
+  if (feed.transactions.length === 0) {
+    return <div className="muted">No semantic-transaction rows recorded yet.</div>;
+  }
+  return (
+    <ul className="sc-list">
+      {feed.transactions.map((t) => (
+        <li key={t.ledger_event_id}>
+          <code>{t.kind}</code> · {t.operation} by <span className="muted">{t.actor}</span> ·{" "}
+          <span className="sc-badge">{t.verdict}</span> →{" "}
+          <span className="sc-badge">{t.decision}</span>
+          <div className="muted bp-fineprint">
+            criticality <code>{t.criticality}</code> · status <code>{t.status}</code> · checked{" "}
+            {fmtTime(t.checked_at)}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function WorkingTree({ wt, mode }) {
+  if (!wt?.available) {
+    return <div className="muted">{wt?.note || "Working-tree facts are unavailable."}</div>;
+  }
+  return (
+    <>
+      <div className="pm-plain">
+        {wt.dirty
+          ? `${wt.dirty_file_count} file${wt.dirty_file_count === 1 ? "" : "s"} currently differ from the last commit.`
+          : "The working tree matches the last commit — nothing is currently uncommitted."}
+      </div>
+      <div className="muted bp-fineprint">
+        These are observed facts only: which files git sees as changed, and HEAD. Nothing here
+        says whether any of it is finished, who it belongs to, or what it is for.
+      </div>
+      {atLeast(mode, "detail") && wt.dirty && (
+        <ul className="sc-list pm-pre">
+          {wt.files.map((f, i) => (
+            <li key={i}><code>{f.status || "?"}</code> {f.path}</li>
+          ))}
+        </ul>
+      )}
+      {atLeast(mode, "technical") && (
+        <div className="muted bp-fineprint">
+          HEAD <code>{wt.head_sha || "unknown"}</code>
+          {wt.branch && <> on <code>{wt.branch}</code></>}
+        </div>
+      )}
+    </>
+  );
+}
+
+function DevelopmentActivity({ model, mode }) {
+  const area = model.development_activity || {};
+  const classes = model.confidence_classes;
+
+  if (!area.available) {
+    return (
+      <div className="sc-section-group">
+        <div className="banner-error">
+          The development-activity view is unavailable: {area.error || "the read model did not load."}
+        </div>
+        <div className="muted">
+          The rest of this map still loaded. Nothing is filled in from assumption here.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="sc-section-group">
+        <h2>The evidence, not the plan</h2>
+        <section className="sc-section">
+          <div className="pm-plain">
+            Current Build and Trajectory show what the project has declared it is doing. This
+            shows what the record and the working tree actually say right now.
+          </div>
+        </section>
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Last session handoff</h2>
+        <section className="sc-section">
+          <SessionHandoff sh={area.session_handoff} mode={mode} classes={classes} />
+        </section>
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Recent during-work ledger entries</h2>
+        <section className="sc-section">
+          <ContinuityEventsFeed feed={area.continuity_events} mode={mode} />
+        </section>
+      </div>
+
+      <div className="sc-section-group">
+        <h2>Recent action proposals</h2>
+        <section className="sc-section">
+          <div className="muted bp-fineprint">
+            A proposal's dispatch run is shown only at the confidence it is actually known:
+            an explicit stored link is one thing, a matching id with no stored link is another,
+            and no match is said plainly rather than guessed at.
+          </div>
+          <ActionProposalsFeed feed={area.action_proposals} mode={mode} classes={classes} />
+        </section>
+      </div>
+
+      {atLeast(mode, "detail") && (
+        <div className="sc-section-group">
+          <h2>Semantic-transaction ledger</h2>
+          <section className="sc-section">
+            <ContinuityTransactionsFeed feed={area.continuity_transactions} />
+          </section>
+        </div>
+      )}
+
+      <div className="sc-section-group">
+        <h2>Working tree</h2>
+        <section className="sc-section">
+          <WorkingTree wt={area.working_tree} mode={mode} />
+        </section>
+      </div>
+    </>
+  );
+}
+
 // ── Current Build and Destination areas (reused views) ──────────────────
 
 function CurrentBuildArea({ model, mode, onOpenBuildPath }) {
@@ -1461,6 +1725,7 @@ export default function ProjectMap({ onBack, onOpenBuildPath }) {
             {area === "system_anatomy" && <SystemAnatomy model={model} mode={mode} />}
             {area === "destination" && <DestinationArea model={model} mode={mode} />}
             {area === "trajectory" && <Trajectory model={model} mode={mode} />}
+            {area === "development_activity" && <DevelopmentActivity model={model} mode={mode} />}
 
             <div className="muted bp-fineprint pm-footer">
               state revision <code>{model.state_revision}</code>, generated{" "}

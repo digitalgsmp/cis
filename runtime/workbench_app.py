@@ -43,7 +43,40 @@ from card_runner import (
     RevisionMismatch as _CRRevisionMismatch,
     RunnerBusy as _CRRunnerBusy,
     NotFound as _CRNotFound,
+    repository_baseline as _cr_repository_baseline,
 )
+from workbench_conductor import compile_proposal_transaction, require_exact_scope
+from continuity_interceptor import (
+    SemanticTransaction as _ContinuitySemanticTransaction,
+    evaluate as _continuity_evaluate,
+    persist_check as _continuity_persist_check,
+    make_openai_compatible_caller as _continuity_make_caller,
+    is_missing_ledger_table as _continuity_missing_ledger_table,
+    LEDGER_MARK_RECORDED as _CONTINUITY_LEDGER_RECORDED,
+    LEDGER_MARK_MIGRATION_ABSENT as _CONTINUITY_LEDGER_MIGRATION_ABSENT,
+)
+
+# Test-only seams for the Layer-2 semantic continuity gate (runtime/
+# continuity_interceptor.py) that sits between Workbench approval and
+# card_runner.dispatch(). Mirrors card_runner._TEST_COMMAND_OVERRIDE's own
+# pattern: never read from request JSON, never set outside tests. Production
+# default is the real replaceable OpenAI-compatible adapter with no semantic
+# retriever configured (FTS-only antecedent retrieval).
+_CONTINUITY_CALLER_OVERRIDE = None
+_CONTINUITY_SEMANTIC_RETRIEVER_OVERRIDE = None
+
+
+def _continuity_caller():
+    return _CONTINUITY_CALLER_OVERRIDE or _continuity_make_caller()
+
+
+def _continuity_db():
+    """A fresh, non-transactional connection, separate from any connection
+    already open for the proposal row — the continuity backend call must
+    never run while a SQLite write transaction is held."""
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 workbench_bp = Blueprint("workbench", __name__)
 # Card Factory (WB.1B-1) and Card Runner (WB.1B-2/2A) are sibling modules'
@@ -1223,8 +1256,105 @@ def approve_proposal(proposal_id: int):
                          f"{row['revision']}) — confirm direction again before approving"
             }), 409
         card_factory_card_id = row["card_factory_card_id"]
+        project = conn.execute(
+            "SELECT name FROM workbench_projects WHERE id = ?", (row["project_id"],)
+        ).fetchone()
+        try:
+            conductor_transaction = compile_proposal_transaction(
+                row,
+                project_name=project["name"] if project else row["project_id"],
+                card_fingerprint=data.get("expected_card_fingerprint") or "",
+                target=data.get("target"),
+                mode=data.get("mode", "implement"),
+                repo_baseline=_cr_repository_baseline(),
+            )
+            require_exact_scope(
+                conductor_transaction,
+                files=data.get("permitted_files"),
+                commands=data.get("permitted_commands"),
+            )
+        except (ValueError, _CRRunnerError) as e:
+            return jsonify({"error": f"conductor refused approval: {e}"}), 400
     finally:
         conn.close()
+
+    # Layer-2 semantic continuity: evaluate the compiled conductor
+    # transaction — AUTHORITATIVE EXECUTION criticality, proposed_output is
+    # the exact conductor transaction — before any dispatch happens. No
+    # SQLite write transaction is open here (the connection above is
+    # already closed; card_runner's own run-row insert hasn't started yet),
+    # so the backend call never runs under a write lock. The compiler
+    # itself grants no execution authority (compile_proposal_transaction's
+    # own authority.compiler_grants_execution=False); this evaluation does
+    # not change that — Eric's explicit approval above remains the grant.
+    continuity_transaction = _ContinuitySemanticTransaction(
+        kind="EXECUTION",
+        criticality="AUTHORITATIVE",
+        actor=str(data.get("authorized_by") or "workbench"),
+        operation=f"approve workbench proposal {proposal_id}",
+        input_payload={
+            "proposal_id": proposal_id,
+            "expected_proposal_revision": expected_proposal_revision,
+            "card_factory_card_id": card_factory_card_id,
+            "expected_card_fingerprint": data.get("expected_card_fingerprint"),
+        },
+        proposed_output=conductor_transaction,
+        project_id=str(row["project_id"]) if row["project_id"] is not None else None,
+        request_id=data.get("request_id"),
+        # The continuity transaction IS this conductor transaction: one
+        # identity, so card_runner can require that the authorization it is
+        # handed names the exact packet it is about to dispatch.
+        transaction_id=conductor_transaction["transaction_id"],
+    )
+    continuity_conn = _continuity_db()
+    ledger_recorded = True
+    ledger_status = _CONTINUITY_LEDGER_RECORDED
+    ledger_error = None
+    try:
+        continuity_authorization = _continuity_evaluate(
+            continuity_conn, continuity_transaction, _continuity_caller(),
+            semantic_retriever=_CONTINUITY_SEMANTIC_RETRIEVER_OVERRIDE,
+        )
+        try:
+            _continuity_persist_check(continuity_conn, continuity_transaction, continuity_authorization)
+            continuity_conn.commit()
+        except sqlite3.OperationalError as exc:
+            continuity_conn.rollback()
+            if _continuity_missing_ledger_table(exc):
+                # The one permitted degradation: migration 0041 is additive
+                # and not yet applied to this spine. It is marked
+                # explicitly, never silently, so every downstream artifact
+                # says the ledger event was not written.
+                ledger_recorded = False
+                ledger_status = _CONTINUITY_LEDGER_MIGRATION_ABSENT
+            else:
+                # Any other persistence failure (locked, read-only, corrupt
+                # schema) is a real ledger failure: fail closed before
+                # dispatch rather than execute unrecorded.
+                ledger_error = exc
+    finally:
+        continuity_conn.close()
+    if ledger_error is not None:
+        return jsonify({
+            "error": "continuity ledger persistence failed, so this execution is refused "
+                     f"before dispatch: {type(ledger_error).__name__}: {ledger_error}"
+        }), 500
+
+    ledger_marks = {"ledger_recorded": ledger_recorded, "ledger_status": ledger_status}
+    bounded_continuity_authorization = {
+        **continuity_authorization.bounded_dict(), **ledger_marks
+    }
+
+    if continuity_authorization.decision == "HOLD":
+        # No runner row created, no process launched — _cr_dispatch is
+        # never reached. The held response is the one place the
+        # model-written summary is surfaced at all: it goes to the operator
+        # live, never into an artifact or a downstream prompt.
+        return jsonify({
+            "error": f"continuity check held this execution: "
+                     f"{continuity_authorization.verdict}: {continuity_authorization.summary}",
+            "continuity_authorization": bounded_continuity_authorization,
+        }), 409
 
     try:
         run_row, duplicate = _cr_dispatch(
@@ -1243,8 +1373,10 @@ def approve_proposal(proposal_id: int):
             max_turns_ack_observation_only=bool(data.get("max_turns_ack_observation_only")),
             budget_usd=data.get("budget_usd"),
             accept_time_only_control=bool(data.get("accept_time_only_control")),
-            permitted_files=data.get("permitted_files"),
-            permitted_commands=data.get("permitted_commands"),
+            permitted_files=conductor_transaction["scope"]["allowed_files"],
+            permitted_commands=conductor_transaction["scope"]["allowed_commands"],
+            conductor_transaction=conductor_transaction,
+            continuity_authorization=bounded_continuity_authorization,
         )
     except (_CRRevisionMismatch, _CRRunnerBusy) as e:
         return jsonify({"error": str(e)}), 409
@@ -1278,4 +1410,6 @@ def approve_proposal(proposal_id: int):
         conn.close()
     return jsonify({
         "proposal": _proposal_dict(row), "run": run_row, "duplicate": duplicate,
+        "conductor_transaction": conductor_transaction,
+        "continuity_authorization": bounded_continuity_authorization,
     }), (200 if duplicate else 201)
