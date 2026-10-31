@@ -1,6 +1,6 @@
 <!-- DO NOT EDIT — generated from queue_items (the spine). -->
 <!-- Change a status with tools/queue/queue_set.py; this file regenerates on commit. -->
-<!-- state_revision: 28d1f2cbed7d1b76 -->
+<!-- state_revision: 3c93bd3679731742 -->
 # UNIFIED BUILD LIST — what is NOT in the code
 
 **Date:** 2026-08-29
@@ -4589,3 +4589,981 @@ execution/review/results), not starting automatically.
 
 **Evidence:**
 `data/agent_handoffs/CIS_WORKBENCH_RECOVERY_CARDS/CARD_04_RECOVERY_DRILL_AND_CLOSEOUT.md`.
+
+### 4.33 Project-level reconstruction journey map in the Workbench
+
+**User idea, preserved from the 2026-10-14 reconstruction discussion:**
+
+> I imagine the flowchart being a linear timeline or build map sort of like a line of arrows pointing toward each other for each project segment. Since CIS will make independent project folders for each new project created by a user, I want this visual tool at the top of the project view in the Workbench.
+
+**Intent:** Give every independently created CIS project a persistent, immediately understandable orientation view at the top of its Workbench project page. The view must show the project's intended destination, the ordered project segments leading toward it, a conspicuous "you are here" position, and the next segment or action. It should behave like a linear timeline/build map with connected directional segments, not like a technical dependency graph that the user must interpret.
+
+**Continuity constraint:** Recording this idea must not redirect or interrupt the active clean-room reconstruction slice. Schedule it when the Workbench project-view shell and authoritative project/trajectory projection are ready to support it without creating a second manually maintained status record.
+
+**Architectural placement:** The visual belongs at the top of each project view, with project-specific content loaded from that project's own folder and authority. Its status, current position, and next step must be derived from canonical project state; presentation must not invent or separately store progress.
+
+**Acceptance direction:**
+
+- Each new CIS project folder can supply the map for its own Workbench project view.
+- The map reads left-to-right or top-to-bottom as a linear sequence of connected project segments.
+- The destination, completed segments, current segment, and next segment are understandable without architecture terminology.
+- A "you are here" indicator is derived from authoritative project state.
+- Selecting a segment can reveal its purpose, completion evidence, and dependent next work without changing authority.
+- The feature is developed at the appropriate dependency point and does not displace the current reconstruction work.
+
+### 4.34 Preserve the reconstruction architecture during Workbench development
+
+**Need: OPEN.** Eric approved adding this governing agenda item on 2026-10-15 after confirming that the Workbench redesign and restored/dormant capabilities must remain on the clean modular reconstruction trajectory rather than becoming another layer of accumulation.
+
+**Why this item exists:** The architecture-recovery phase began when the generated `AGENTS.md` approached its hard 20,000-character limit and the repository's accumulated backup files, stray databases, duplicate state, archives, historical specifications, and large mixed-responsibility modules made the need for reconstruction visible. Queue item 4.26 previously restored meaningful AGENTS.md headroom and was correctly completed; the generated file has since grown back to 19,908/20,000 characters. Queue item 4.33 governs the visual project journey map, but does not govern the architecture used to build the Workbench capabilities around it. This item protects that broader trajectory without reopening completed work or treating cleanup as the product.
+
+**Governing decisions and evidence:** ADR-SEED-017 (functionality first, refactor deliberately); ADR-SEED-018 (Layer 1 UI/control plane, Layer 2 CIS abstraction/adapter, Layer 3 replaceable Hermes backend); WB.1 architecture-freeze decision at `dev_continuity_events` revision 180; portfolio-backend verified result at revision 181; architecture recovery at WB.1 revisions 126, 128, 130, 132, and 136; `data/agent_handoffs/ARCH-RECOVERY-01-three-plane/ARCHITECTURE_REVIEW_PACKET.md`; `CIS_DEEP_ARCHITECTURE_HANDOFF_FOR_CHATGPT.md`.
+
+**Governing constraint for remaining Workbench work:** Every new or restored capability must identify and preserve its architectural path before activation:
+
+1. Layer 1 UI component or human-facing surface.
+2. Layer 2 CIS-owned API/read model/adapter contract.
+3. Authoritative state or capability source.
+4. Explicit prohibited dependencies and trust-boundary conditions.
+
+Layer 1 must not read the CIS spine or Hermes directly. UI components consume normalized Layer-2 contracts. Hermes-specific ports, profiles, private configuration, logs, provider behavior, dispatch compatibility, and failure-envelope handling belong behind the CIS-owned Layer-2 adapter boundary. Workbench chatbot, agents, procedures, deterministic gates, project maps, queues, dependencies, evidence, and pipeline-stage views must not deepen the current direct Hermes coupling.
+
+**AGENTS.md altitude requirement:** The always-loaded generated file is a bounded orientation and index projection, not a growing copy of operational history. Do not raise or weaken the hard limit merely to make new text fit. Preserve full authority, reasoning, evidence, and history in the spine and bounded retrieval surfaces; keep AGENTS.md focused on current orientation, governing constraints, and pointers into authority. Any remediation must retain discoverability for future agents and must explain what moved, where it is authoritative, and how it is retrieved.
+
+**Modular build requirement:** New modules must state their responsibility, inputs, outputs, authority source, allowed dependencies, prohibited dependencies, failure behavior, and verification contract. Reuse the existing read-model/API pattern and the existing declared-input/output/refusal contract grammar where applicable. Do not invent a competing project registry, queue, roadmap, or status store. Presentation derives state; it does not author or duplicate it.
+
+**Reconstruction and cleanup boundary:** `/mnt/projects/cis` remains the protected reference environment. Broad reorganization, deletion, and archaeological cleanup do not occur opportunistically inside feature cards. Reconstruction must use an isolated worktree/environment, preserve authority and history, classify migrate/regenerate/reference decisions, and prove behavioral equivalence before replacement. Cleanup remains last and evidence-driven; the accumulation must stay visible until safely classified.
+
+**Required acceptance for each affected Workbench slice:**
+
+- A layer/module map identifies the UI surface, Layer-2 contract, authority source, and prohibited dependencies.
+- Tests prove Layer 1 does not directly access SQLite or Hermes and that public responses do not expose server-only paths or credentials.
+- Existing architectural-boundary violations are not deepened; any unavoidable dependency is classified and recorded with a disposition.
+- Feature evidence covers both user-visible behavior and the applicable architectural boundary.
+- Generated projections remain within their enforced limits with meaningful headroom and no loss of authoritative information.
+- The protected reference remains recoverable and the reconstruction path does not silently mix current, planned, and historical implementations.
+
+**Relationship to active work:** This is a governing constraint on the remaining WB.1/UI work, not authorization for P1, broad cleanup, a service restart, or a full in-place refactor. It does not invalidate the verified portfolio backend; that slice already follows the server-owned resolver/read-model/API direction and remains not activated. Before the chatbot and other pipeline entities are expanded in the UI, their current direct gateway/database dependencies must be mapped and the Layer-2 placement made explicit.
+
+### 4.35 Operator compensation detection and capability-gap learning
+
+**Need: OPEN.**
+
+CIS must detect when a human has compensated for a missing system function by
+supplying memory, diagnosing an operational obstruction, restoring direction,
+or proposing a safeguard that CIS should eventually have been able to surface
+itself. The exact human statement, triggering context, affected task and prior
+similar incidents must remain linked.
+
+The capability must distinguish human authority, creative judgment, genuinely
+new knowledge and explicit redirection from an operator-compensation event.
+Only the last category becomes a capability-gap candidate. Capture is not
+authorization: proposed generalizations require reconciliation against the
+knowledge base and queue, independent review and verification, and Eric Gate
+approval before implementation or promotion.
+
+Initial examples are Eric's semantic-memory contribution, recognition of the
+Claude execution-environment obstruction, and recognition that external
+developers and trusted host controls need a clean-room boundary separate from
+the accumulated reference repository.
+
+**Scope:** CIS CONTROL / CONTINUOUS INTAKE / OSA-BR / SELF-EVOLUTION — human
+contribution classification, durable compensation events, capability-gap
+derivation and governed promotion; not automation of human intent, creative
+judgment or approval authority.
+
+### 4.36 Operational Self-Assessment and Bounded Recovery foundation
+
+Build the Layer-2 operational event/evidence contract, deterministic failure taxonomy and classifier, maintenance-incident state machine, bounded preauthorized recovery playbooks, exact-task rerun, and independent verification defined by ADR-WIASW-007, ADR-PIPE-010, and ADR-PIPE-011.
+
+This work is deliberately sequenced after the trusted host control plane and contained execution pipeline are complete enough to enforce authority. OSA-BR may classify and execute only preauthorized, reversible recovery actions. It must escalate rather than widen permissions, weaken gates, change evaluators, self-modify, repair production data without authority, or promote its own recommendations.
+
+Acceptance requires deterministic fixtures for success, refusal, concealed upstream error, timeout, insufficient evidence, semantic-memory restoration, environment-obstruction diagnosis, clean-room recognition, bounded recovery, failed recovery, and escalation. Human-origin evidence remains distinct from model interpretation. Routine bounded recovery stays inside CIS; external developers are not a normal execution tier.
+
+### 4.37 Complete the trusted host control plane, contained pipeline, and external-developer retirement gate
+
+Finish the enforcement architecture established by ADR-SEED-015 and ADR-SEED-016. The root-owned `/opt/cis-control` trust root launches constrained non-root workers; contracts, policies and launch authority remain outside model-writable paths; source and control mounts are read-only; each task receives only its declared writable workspace and capabilities; and the worker cannot grant itself edit authority, mount access, Docker access, credentials, or a bypass.
+
+External Claude Code and Codex sessions are temporary reconstruction builders. They retire from normal development only after a real contained code task proves the full path: exact human instruction and interpretation remain separately attributable; contract freeze; contained Worker execution; independent Reviewer review; deterministic Verifier and gates; evidence-bound acceptance; durable state/continuity recording; and safe failure behavior. Claude, ChatGPT, or other models may remain available through Hermes as replaceable constrained pipeline entities; model lineage never grants authority.
+
+After retirement, `/opt/cis-control` remains the quiet host trust root and break-glass recovery plane. Routine operational recovery belongs to OSA-BR. External development may return only for an explicitly authorized recovery incident when the contained pipeline or its trust boundary cannot recover within its existing authority. Recovery access is time-bounded, evidence-producing, independently verified, and revoked when the incident closes.
+
+First implementation slice: move every host-side write grant and execution permission out of model-writable repository code and behind a root-owned dispatcher in `/opt/cis-control`; remove the Claude-specific `acceptEdits` grant from the agent-side launcher; prove fail-closed behavior, allowed dispatch, read-only control/source mounts, sole declared writable workspace, and an operator-controlled override path.
+
+### 4.38 Workbench architecture explorer — modules, files, and relationships in plain language
+
+**Need: OPEN.**
+
+**User idea, 2026-10-17:** In addition to the Mermaid roadmap, provide a Workbench tab or page that helps a non-coder understand how the application is built. It should present the application as a navigable flowchart of modules and their relationships, then allow the user to drill into the files that comprise each module and read a plain-language explanation of each module and file's purpose.
+
+**Purpose:** Make the implementation structure understandable without requiring the user to browse a repository or interpret source code. This is an architecture-and-orientation view, distinct from queue item 4.33's project journey map: 4.33 explains where a project is going and its development stage; this item explains what the application is made of and how its parts relate.
+
+**Required experience:**
+
+- Add an **Architecture Explorer** entry alongside the roadmap in the Workbench project view.
+- Begin with a readable module/layer flowchart showing the UI/control plane, CIS-owned contracts and services, contained pipeline entities and gates, authoritative data sources, and host trust boundary where applicable.
+- Selecting a module reveals its plain-language purpose, responsibility, inputs, outputs, allowed dependencies, prohibited dependencies, trust boundary, pipeline role, and relationships to other modules.
+- Within the module, group its associated implementation, contract/schema, configuration, test, migration, and operational files. Each file entry shows its repository-relative path and a plain-language explanation of what it contributes to that module.
+- Support drill-down and navigation from module to file and back, plus search/filter by project, layer/domain, pipeline stage, and file role. Include a glossary or human-readable labels where technical terms cannot be avoided.
+- Show unknown, unclassified, duplicated, or boundary-violating files explicitly instead of silently omitting them; these are architecture-recovery findings, not display errors.
+- Keep the page usable on the mobile Workbench layout as well as desktop.
+
+**Authority and architecture constraint:** The UI is a read-only projection, not a second architecture registry. Its module/file descriptions and dependency edges must be generated from or reconciled with authoritative module contracts, project manifests, declared pipeline/entity contracts, repository inventory, and verified dependency evidence. Where no authoritative description exists, label it as unknown or proposed rather than allowing generated prose to appear as fact. Layer 1 consumes a bounded Layer-2 architecture read model/API; it must not scan the filesystem, query SQLite, or inspect Hermes directly from the browser. Do not expose secrets, credentials, private host paths, or privileged control details.
+
+**Acceptance direction:**
+
+1. A non-coder can identify the application's major modules, the purpose of each, and the direction of their important relationships from the overview.
+2. Every displayed module can be expanded to show its associated files and each file's role in that module.
+3. The view distinguishes authoritative, observed, proposed, historical, and unclassified information.
+4. Automated checks prove that the projection is derived from declared sources, repository-relative paths are safe, sensitive paths/data are excluded, and stale or missing classifications are surfaced.
+5. The same underlying architecture contract can support documentation/projections without introducing a separately maintained UI truth.
+
+**Sequencing:** Record now without interrupting the active contained-pipeline work. Implement after item 4.37 establishes the trusted execution path and as part of the resumed Workbench/refactoring program governed by item 4.34. The inventory and module-contract work should be reusable by the modular reconstruction rather than performed only for presentation.
+
+### 4.39 Closed-loop capability reconciliation and completion planning
+
+**Need: OPEN. Destination capability approved by Eric on 2026-10-18.**
+
+Once the contained pipeline can execute end to end and the Operational Self-Assessment and Bounded Recovery foundation is operational, CIS must be able to assess its own verified functional state against the complete authoritative record of requested deterministic controls. The comparison must include the canonical queue, accepted decisions and reconciliations, applicable contracts and ADRs, operator-compensation capability gaps, self-evolution proposals that have passed their required review state, and implementation evidence. Historical prose or a model assertion is not proof that a capability exists.
+
+The result is a continuously reproducible capability-reconciliation matrix. For every requested control it identifies the authoritative source, intended module and pipeline stage, dependency relationships, current disposition, evidence, and the exact gap between the request and verified behavior. Dispositions must distinguish at least ENFORCED, PARTIALLY_ENFORCED, DOCUMENTED_ONLY, NOT_PRESENT, CONFLICTING, SUPERSEDED, and UNKNOWN. A control is ENFORCED only when its deterministic mechanism and declared verification evidence exist and pass.
+
+After reconciliation, CIS produces an ordered completion plan of bounded, digestible implementation recommendations, item by item and module by module, for the authorized development workers. During reconstruction these recommendations may be dispatched to external developers under the contained-development role contract. They do not authorize implementation, queue mutation, acceptance, promotion, or permission expansion by themselves. Implementer, Reviewer, Verifier, promotion authority, and Eric Gate remain separate. Failed or unexecuted checks remain UNVERIFIED, and a failed worker unit is reduced and redispatched or explicitly escalated rather than silently completed by a different role.
+
+After each accepted implementation increment, the pipeline reruns the affected checks and capability reconciliation so that satisfied gaps close through evidence and newly exposed dependencies remain visible. Self-assessment and self-evolution may propose corrections or new deterministic controls, but may not approve their own findings, rewrite their evaluation criteria, weaken containment, grant permissions, or mark work complete. Unsupported conclusions and contradictory authorities stop at review or human adjudication.
+
+**Dependencies and sequence:** This destination builds on 4.35 (operator-compensation learning), 4.36 (OSA-BR), and 4.37 (trusted contained pipeline). It begins only when the relevant end-to-end execution, evidence, review, verification, and continuity authorities are operational enough to make its own assessment trustworthy. It does not delay the bounded work needed to reach that point.
+
+**Required acceptance:**
+
+- A frozen assessment input names exact queue, decision, contract, policy, and evidence revisions; rerunning the same input produces the same matrix.
+- Every requested control has source attribution and one explicit disposition; omissions, unknowns, conflicts, and supersessions remain visible rather than being summarized away.
+- ENFORCED requires a mapped deterministic mechanism plus independently executed, passing evidence. Documentation, model confidence, skipped tests, and implementer self-report cannot satisfy it.
+- The system maps each unresolved control to the responsible module and pipeline stage, then derives dependency-ordered, mechanically bounded implementation recommendations with declared checks and evidence requirements.
+- Recommendations pass independent review and authority gates before dispatch. The assessor cannot write completion status, promote code, widen permissions, or alter its own rubric.
+- External-developer recommendations preserve explicit planner, implementer, Reviewer, Verifier, and promotion roles, with no silent role substitution.
+- After each accepted increment, incremental reassessment updates only from authoritative changes while retaining a reproducible full reconciliation mode.
+- Deterministic fixtures prove complete, partial, documentation-only, missing, conflicting, superseded, unknown, failed-test, and stale-evidence cases, plus refusal of self-approval and unauthorized queue writes.
+- Workbench projections can show the destination, current coverage, gaps, evidence, dependencies, and next bounded recommendations without becoming a second authority.
+
+**Destination outcome:** CIS can inspect what it has actually proved, reconcile that state with what Eric has asked it to become, and maintain an evidence-grounded completion program until the requested deterministic controls are implemented across every applicable module and pipeline stage.
+
+### 4.40 Managed-job and live-operations visibility in the Workbench
+
+**Need: OPEN.** Added 2026-10-27 from the CIS Project Observatory specification
+(`CIS-WB-PROJECT-OBSERVATORY-2026-10-27`), after reconciliation against queue items 4.33,
+4.34, 4.35, 4.36, 4.38 and 4.39. This item exists only for the acceptance criteria those
+items do not already carry.
+
+**Why this item exists:** The operator manages a Workbench whose coding worker runs
+invisibly. Queue item 4.33 governs the project journey map — where a project is going and
+what stage it is in. Queue item 4.38 governs the architecture explorer — what the
+application is made of and how its parts relate. Neither covers the third perspective the
+operator actually lacks: **what is running right now, what it is waiting on, and why it
+failed**, without opening a terminal. Queue item 4.36 (OSA-BR) classifies failures and
+executes bounded recovery; it does not present job state to a person. That presentation gap
+is this item.
+
+Together 4.33, 4.38 and this item form the "Project Observatory" described in the
+specification. **No parallel Observatory project, second progress database, or independent
+build list may be created** — the specification is explicit, and so is ADR-ARCH-002.
+
+**Required capability:** a stable Layer-2 read-only projection for managed jobs, plus the
+minimal Workbench panel that renders it. Required fields:
+
+- Queued / running / succeeded / failed state, with explicit **waiting**, **blocked** and
+  **user-action-required** presentation distinct from success.
+- Pipeline stage: pre-review, Menter, deterministic verification, independent review,
+  promotion decision — with the later **host action distinguished as a separate state**.
+- Start timestamp and elapsed duration. **No fabricated progress percentage or ETA.**
+- Managed job ID and candidate ID, linked to the exact candidate custody record and the
+  governing task/authorization identities.
+- Closed failure origin, service code, HTTP status where applicable, and a sanitized
+  actionable explanation.
+- Last durable transition and its evidence reference, including reviewer receipt and
+  verification disposition where present.
+
+**Four-dimensional status rule (applies here and to 4.33/4.38):** a component's state is
+four orthogonal channels, never one green indicator — **Built** (manifest reconstruction
+status), **Proven** (recorded test/guard run), **Recorded** (authority revision exists), and
+**Enforced** (required gate versus advisory). "Built but unproven", "built but unrecorded",
+"advisory not enforced", "unknown" and "blocked" must all be expressible and visually
+distinct. Historical completion of a reconstruction stage does not imply today's tests pass.
+This overlaps queue item 4.39's capability-reconciliation dispositions; derive from the same
+authority rather than recording a second judgement.
+
+**Boundary constraints, non-negotiable:**
+
+- Browser updates must not read systemd, job files, secrets, or private provider state.
+- No agent-driven polling loop and no model-token-consuming refresh. Use a low-cost
+  same-origin status projection.
+- A stalled or unknown state must be distinguishable from success.
+- Deterministic verification, independent semantic review, promotion authorization and host
+  application are **four distinct visual events** and may never be conflated. Promotion is a
+  decision that performs no host action.
+- Presentation only: animation or display may never trigger execution, promotion, dispatch,
+  polling or a service restart, and never grants authority.
+- Preserve the existing loopback-only assumption, profile-selection semantics, the no-CDN /
+  no-remote-font / no-browser-credential rules, accessibility, and a reduced-motion and
+  plain-language fallback.
+- Every label, node, edge and status is derived at load from
+  `blueprint/reconstruction_manifest.json`, `contracts/*.contract.json` and authority.
+  An undeclared step, module or edge **fails closed** rather than rendering a plausible
+  invented diagram.
+
+**Sequencing:** place alongside Workbench candidate admission, after the A3c checkpoint,
+respecting current dependencies and without bypassing candidate custody or review gates.
+This item does not authorize repair of the current test-suite regression, does not authorize
+a frontend stack change, and does not authorize a 3D renderer or any remote dependency —
+each of those requires its own decision.
+
+**Blocked on two owner decisions** recorded with this intake (see
+`dev_continuity_events:4.37:53`): the frozen-task-contract-per-authorization invariant, and
+whether the browser may call `POST /instruction` for the "Issue bound task" control.
+Affected work stays fail-closed until both are settled.
+
+**Deferred, not dropped:** richer local 3D/creative visuals and WIASW production-asset
+visualization (word–image–action–sound) are a future, separately contracted destination.
+No WIASW adapter or module standing exists today and none may be implied.
+
+**Evidence basis:**
+`data/agent_handoffs/CIS-WB-PROJECT-OBSERVATORY-2026-10-27/CIS_PROJECT_OBSERVATORY_QUEUE_SPEC.md`
+(sha256 62f6258a97bd5d9ee99106fdb4051b7ba80c35989cb050fced893d21004da735),
+`cis-build-agenda.md` (sha256 9f6173e195a36b06b7d1d7b32ae2867468af67dc85c42c09b69fbd35359a5cd8),
+`cis-nodes.json` (sha256 ba977443974078e15e13b7ad2ae3f108970605a30438bdc03144a06cee5c6fe5).
+The two companion files are 2026-10-27 snapshots, not a live reread; verify against current
+authority before acting on their numbers.
+
+**Scope:** REPO — one new Layer-2 managed-job projection module plus its contract in cis-clean, rendered by a panel in src/cis/interface/ui.py; exact module id UNDETERMINED until the frozen-task-contract-per-authorization invariant and the POST /instruction browser-boundary decision are settled
+
+<!-- cis:scope="REPO — one new Layer-2 managed-job projection module plus its contract in cis-clean, rendered by a panel in src/cis/interface/ui.py; exact module id UNDETERMINED until the frozen-task-contract-per-authorization invariant and the POST /instruction browser-boundary decision are settled" -->
+
+### 4.41 Portfolio, hub and permissioned multi-user destination — reconcile before implementing
+
+**Need: OPEN. DESTINATION RECORDING, not mainline implementation.** Added 2026-10-29 from the
+consolidated Observatory/WIASW destination refinement dated 2026-10-28, after reconciliation
+against 4.33, 4.34, 4.35, 4.36, 4.38, 4.39, 4.40, WB.1 and 3.6.
+
+**What is already recorded elsewhere, and must not be duplicated here.** The destination
+architecture itself is recorded as **`ADR-WIASW-009`** in `project_decisions`, which is the
+semantic authority `tools/state/destination_architecture.py` reads. That decision adds 12
+nodes and 24 edges to the destination graph — hub, portfolio, assets, workbenches, outputs,
+observatory, the identity/authorization/preferences separation, platform administration, and
+SWA — and the graph is parsed from the decision text at read time with no second store. **Do
+not transcribe those nodes into a queue body, a frontend, or a new table.** This item exists
+only for the work the decision cannot do by itself: reconciling the recovered historical
+design against live authority, and settling what the document leaves open.
+
+**Why this item exists.** 4.33 governs the project journey map, 4.38 the plain-language
+architecture explorer, 4.40 managed-job visibility, 4.34 the architecture-preservation
+constraint. None of them covers multi-project identity, portfolio navigation across
+independently deployed applications, or a permissioned multi-user access model. CIS today is
+explicitly a single trusted local operator on loopback with no caller identity and no
+identity seam, and the reconstruction manifest records security trust boundaries as
+deliberately deferred. Moving from that to a permissioned multi-user platform is a distinct
+architectural step that must be reconciled, not assumed.
+
+**Historical design to reconcile, recovered and not yet attached to an item.** Because there
+is no audited path to amend an existing item's body, these are recorded here rather than
+inside 4.33/4.38, and belong to them on reconciliation:
+
+- September 2026 Workbench surfaces: `projects`, `project_create`, `conversation`,
+  `proposals`, `card_factory`, `card_runner`, `proposal_actions`, `execution`. These are
+  recovered *intentions*, not evidence any route is implemented or authorized. **Route
+  absence may be a security boundary — never enable a route because an older plan lists it.**
+- Project Map drill-down (October 2): Problem → Solution → Capability → Code → Build Phase →
+  Destination. Plain language first, technical evidence one click away.
+- Development orientation (October 5): distinguish `MAINLINE`, `DETOUR/PREREQUISITE` and
+  `DESTINATION RECORDING`. Architecture topology is not the development narrative.
+- Read-only Project Map (October 8): problems, work, capabilities, code, build order,
+  destination, branches, blockers and next action from shared authoritative state.
+- An early creative-production dashboard concept (briefs, assets, stages, feedback, version
+  history). Useful per-project concepts; **its schemas and UI are not confirmed** by the
+  recovered record and must not be treated as adopted.
+
+**Required before any portfolio or multi-user implementation.**
+
+1. Establish which existing records define project identity, project creation and
+   cross-project isolation in the clean-room implementation. Note 3.6 (DONE) fixed a
+   `projects.id` / `project_id` collation disagreement; that was a schema repair and is **not**
+   a project-identity model.
+2. Decide whether the older `projects` / `project_create` concepts remain accepted
+   destinations or are superseded by newer contracts.
+3. Define the sanctioned relationship between a portfolio project, a Brain objective, a frozen
+   task contract and a queue item. CIS infrastructure, SWA and WIASW must never silently share
+   mutable task, authority or evidence identities.
+4. Record what SWA scope and milestones are actually durably recorded. **Do not infer them
+   from the owner's job title or from the application's name.**
+5. Settle the permissions and collaboration model, tenancy, how SWA development data is
+   isolated from its production data, asset-lineage schema, what constitutes a workbench per
+   domain, and the hub-to-CIS API surface. All are unresolved in the source document.
+
+**Constraints carried from the destination record.** Identity, authorization and preferences
+stay three separate things; interest-based personalization grants nothing; backend checks and
+not hidden menus enforce access; platform administration never waives CIS task authorization,
+deterministic verification, independent review or promotion gates; credentials and sensitive
+production data stay outside browser visualization. Architecture graph labels and edges remain
+derived from the validated manifest and contracts, and progress from trajectory and evidence —
+no second graph or progress table in the frontend. The dependency-free, loopback-only, inline
+browser constraint and native SVG/Canvas/CSS baseline hold unless separately authorized.
+
+**Explicitly not authorized by this item:** implementation, a frontend stack change, a
+self-hosted 3D renderer, any remote dependency, widening a route, a new authority or progress
+store, a commit, a push, a service restart, or a WIASW adapter or module standing. No domain
+name, identity provider, tenancy model, hosting topology or database schema is adopted.
+
+**Evidence basis:**
+`data/agent_handoffs/CIS-WB-PROJECT-OBSERVATORY-2026-10-27/CIS_OBSERVATORY_WIASW_REFINED_DESTINATION_CONSOLIDATED.md`
+(sha256 19b9a01804bdce49eff8d7634acda94463b403eeb59bcffb553ddf09007b5a2e);
+`project_decisions:ADR-WIASW-009`; `dev_continuity_events:4.37:54`. The document's own snapshot
+counts and failure figures are dated observations, not current operational assertions — verify
+against live authority before acting on them.
+
+**Scope:** UNDETERMINED — would be settled by establishing which live records define project identity, project creation and cross-project isolation, and whether the September 2026 projects/project_create route concepts remain accepted destinations; no implementation target may be named before that
+
+<!-- cis:scope="UNDETERMINED — would be settled by establishing which live records define project identity, project creation and cross-project isolation, and whether the September 2026 projects/project_create route concepts remain accepted destinations; no implementation target may be named before that" -->
+
+### 4.42 Roadmap representation — name mechanisms not slogans, separate the WIASW hub from the creative studio, derive position from dependencies
+
+**Need: OPEN. DESTINATION/PLANNING REPRESENTATION.** Recorded 2026-10-30 from the consolidated
+Observatory/WIASW destination refinement and the owner's correction of it. Nothing here
+authorizes implementation.
+
+**Owner-stated operating reality, recorded because it contradicts how the roadmap row reads.**
+There are no fixed roadmap targets. The roadmap is a list; expectations and dependencies change
+every time anything is touched, and a model misalignment regularly forces a jump to a different
+area to reorient the project and keep it moving. Work happens when it can happen. Therefore a
+phase's *position* must be derived from its dependencies and readiness, never asserted as a
+timeline, and no view may present the chain as a schedule or imply a date. Recorded so a later
+agent does not "helpfully" reintroduce fixed sequencing.
+
+**Four distinct destination elements, not three.** The refinement document separates these and
+the live roadmap collapses them. Acceptance criteria 3 and 4 of that document are the proof:
+criterion 3 requires *"WIASW hub, CIS infrastructure/project, and independently deployed SWA"*
+to be **distinct roles**; criterion 4 requires *"SWA is shown as the first intended application
+after CIS usefulness; WIASW creative expansion follows."* The hub is a role alongside CIS and
+SWA. The creative expansion is a later element after SWA. They are not the same thing.
+
+1. **CIS foundation** — the governed infrastructure, and also a maintainable project reachable
+   from inside the hub.
+2. **WIASW hub** — the usable permissioned shell: global navigation, search, portfolio, assets,
+   access management, entry into workbenches. **Near-term, not far-future:** the document's
+   section F states the Observatory *"remains a specialized development workspace, not the
+   entirety of WIASW,"* and section C reaches the CIS Observatory via Web → Software Projects →
+   CIS. The hub is therefore the frame around work already queued as 4.33, 4.38, 4.40 and 4.41,
+   overlapping the existing verified-projections/UI element rather than following it.
+3. **SWA** — first intended independent application once CIS is useful, own URL and runtime,
+   development project visible through the hub, production data isolated. See 4.43.
+4. **WIASW creative studio** — Word/Image/Action/Sound production, assets becoming outputs,
+   render jobs, deliverables. Explicitly *"a longer-term expansion, not the first post-CIS
+   application."*
+
+The live `project_state.pipeline_roadmap` ends in one lumped element,
+`CIS/WIASW/SWA PRODUCT WORK + DELIBERATE REFACTOR`, which gets this wrong three ways: it fuses
+three roles into one, implies WIASW and SWA arrive together, and hides the hub-versus-studio
+distinction entirely. A dependency-ordered correction is wanted; an invented position is not.
+
+**The label problem.** `GOVERNED SELF-EVOLUTION` in that same row names no mechanism. It reads
+as enterprise filler while a specific, already-recorded mechanism sits underneath it. When this
+item is addressed, replace slogan labels with the mechanism and attach real `queue N.N` hooks so
+`tools/state/build_path.py` resolves them against actual items.
+
+**Self-evolution, defined here so the definition is not lost again.** Per ADR-WIASW-007 it is
+**Operational Self-Assessment and Bounded Recovery (OSA-BR)**, *"the feedback and control layer
+of the Contained Deterministic Self-Evolving Pipeline"* and *"a reusable CIS substrate capability
+beneath all projects, not a WIASW domain, project-specific feature, or permission for
+unconstrained self-modification."* It does not mean the system rewrites itself. It means the
+pipeline notices its own work failed, classifies why, repairs only what it holds standing
+pre-authorization to repair, and turns everything else into a recommendation a human promotes.
+
+- **Three nested loops:** (1) operational execution, evidence, review, verification, attribution
+  and preauthorized bounded recovery; (2) learning from verified incidents into reusable
+  pathologies and recommendation-only harness improvements; (3) governance through replay,
+  regression, counterfactual challenge, independent verification and owner promotion authority.
+- **The line it may not cross:** CIS deterministically owns event capture, task and
+  expected-effect identity, evidence fingerprints, failure taxonomy, permissions, recovery
+  budgets, replay, promotion and rollback. Models may produce diagnoses, causal hypotheses,
+  repair proposals and challenges but *"may not certify their own work, alter their scorer,
+  widen authority or convert missing evidence into success."*
+- **Where it starts — not a switch:** ADR-WIASW-007's *"FIRST FOUNDATION: a Layer-2 operational
+  event/evidence contract, failure taxonomy and linked maintenance-incident state machine,
+  proven before automatic repair."* That is queue **4.36**. Loop 2 is queue **4.35** /
+  ADR-WIASW-008 (operator-compensation detection: when the owner supplies memory, diagnoses an
+  obstruction or restores direction, it becomes an `OPERATOR_COMPENSATION_EVENT`, then a
+  `CAPABILITY_GAP_CANDIDATE`, recommendation-only). Loop 3's closure is queue **4.39**.
+- **Already built:** `cis.assurance.recovery`, `.recovery_attempt`, `.recovery_execution`,
+  `cis.execution.worker_supervisor`, `.verifier`, `.reviewer`, `.promotion`,
+  `cis.host.promotion_gate`, `cis.authority.runs`, `cis.authority.evidence`.
+- **Not built:** 4.36's three foundation structures; 4.35's compensation detection.
+- **Live hole:** the promotion conjunction does not require the independent post-implementation
+  semantic review (revisions 51/52). Loop 3 is not enforceable today, so no part of this may be
+  made automatic regardless of sequence.
+- **Its lateness is a dependency, not a date:** loop 1 needs real contained-run evidence, and
+  4.36 is *"deliberately sequenced after the trusted host control plane and contained execution
+  pipeline are complete enough to enforce authority."*
+
+**Constraints for whoever addresses this.** `project_state.pipeline_roadmap` plus
+`project_decisions` is the sequencing authority, parsed by `build_path.py` as an `A -> B -> C`
+chain with parenthesised descriptions and `queue N.N` hooks resolved against real items; the
+destination *graph* is a separate authority (`ADR-WIASW-*`, read by
+`tools/state/destination_architecture.py`) that deliberately holds no sequence. Do not merge
+them, do not hand-maintain a second roadmap copy, and do not let a presentation layer assert a
+position the dependencies do not support. The destination graph still lacks a node
+distinguishing the creative studio from the hub; ADR-WIASW-010 addresses that, and
+`WIASW_HUB` from ADR-WIASW-009 must not be reused to mean both.
+
+**Evidence basis:**
+`data/agent_handoffs/CIS-WB-PROJECT-OBSERVATORY-2026-10-27/CIS_OBSERVATORY_WIASW_REFINED_DESTINATION_CONSOLIDATED.md`
+(sha256 19b9a01804bdce49eff8d7634acda94463b403eeb59bcffb553ddf09007b5a2e), sections A, B, C, E, F
+and acceptance criteria 3 and 4; `project_decisions:ADR-WIASW-007`, `ADR-WIASW-008`,
+`ADR-WIASW-009`, `ADR-WIASW-010`; `project_state.pipeline_roadmap` (live);
+`dev_continuity_events:4.37:55`; queue 4.33, 4.35, 4.36, 4.38, 4.39, 4.40, 4.41, 4.43.
+
+### 4.43 SWA standing, scope and visibility — the next application is invisible to every derived view
+
+**Need: OPEN.** Recorded 2026-10-30 after the owner observed that SWA is never referenced when
+the destination or future projects are discussed, though it was prominent in previous months.
+Investigated 2026-10-29; the cause is structural, not an oversight by any one agent.
+
+**The owner's stated intent:** SWA is the next project, beginning once work can transition into
+the container pipeline. Nothing in the record carried that.
+
+**Measured chain of invisibility, 2026-10-29.** SWA appears in no authority a derived view reads:
+
+| Source | SWA mentions |
+|---|---|
+| `blueprint/reconstruction_manifest.json` | 0 |
+| `contracts/*.contract.json` (all 47) | 0 |
+| `cis-build-agenda.md` (generated from those) | 0 |
+| `cis-nodes.json` (generated from those) | 0 |
+| First external Observatory spec (built from those two files) | 0 |
+| Consolidated refinement, after the owner said it directly | 14 |
+
+SWA entered the design conversation only because the owner put it there by hand. Every artifact
+upstream of that was derived from authority that does not mention it.
+
+**Three causes.**
+
+1. **No standing in the destination authority until 2026-10-28.**
+   `tools/state/destination_architecture.py` derives the destination graph only from
+   `project_decisions` rows matching `ADR-WIASW-%`. `WIASW` is declared by ADR-WIASW-001 and
+   `CIS` by ADR-WIASW-002; of 46 decision rows, **zero mentioned SWA**. The `SWA [application]`
+   node exists only because ADR-WIASW-009 declared it on 2026-10-28. This is the architecture
+   behaving correctly — "record once, derive everywhere," and a journey step naming something
+   the manifest does not declare is refused at load. Undeclared means invisible by
+   construction. The gap was the missing record, not the mechanism.
+2. **No queue item of its own.** Of 143 items, five match `SWA` on a word boundary and four are
+   incidental: 1.8 quotes a question about whether `drive_imports` is SWA material; 3.6 contains
+   the code comment `-- CIS, SWA, WIAS` in a column default; 3.12 describes SWA's Miramont
+   behavioural-health documents inside an unstructured drive dump; WB.1 cites KB rows on "SWA
+   overlapping workflow relationships." Nothing says build SWA, so `propose_next` and the
+   generated build list can never route it.
+3. **Its knowledge base is large, real and orphaned.** Source `swa_project` holds **116,639
+   rows** — the second-largest source in the entire KB, ahead of `cis_kernel` (54,110) and
+   `cis_docs` (47,029). Its date range is **2026-06-27 to 2026-08-29**: nothing for two months,
+   which is exactly the period the owner remembers it being prominent. And `swa_project` is
+   **not a declared family** in `config/kb_source_policy.yaml`, which declares ten families and
+   not this one. So nothing measures its coverage, detects drift, or re-ingests it. It is
+   retrievable only by accident — `ask_history` surfaced a `[swa_project]` row during an
+   unrelated search — never by design.
+
+**The only place SWA is visible, and it is the weakest possible form.** The live
+`project_state.pipeline_roadmap` ends `... -> GOVERNED SELF-EVOLUTION -> CIS/WIASW/SWA PRODUCT
+WORK + DELIBERATE REFACTOR`. SWA is the last token of a compound phrase in the final element,
+with no item, no decision of its own, no scope, no milestones. See 4.42 for the roadmap
+representation problem this is part of.
+
+**Recorded answer to an open question in 4.41.** Item 4.41 asks what SWA scope and milestones are
+durably recorded. Measured answer: **none.** 116,639 rows of source material and zero recorded
+scope, milestones, or contracts.
+
+**What to do when this is addressed.**
+
+1. Declare `swa_project` as a family in `config/kb_source_policy.yaml` so its 116,639 rows become
+   measured and maintained rather than orphaned, and so drift against the filesystem is
+   detectable. Check the roots under `/mnt/projects/` (`swa`, `swa-app`, `swa_audit`,
+   `swa-repos`) and `data/drive_imports/` — 3.12 records that the drive dump is outside the
+   knowledge base entirely and mixes SWA material with other content.
+2. Record SWA's own standing and scope in the decision authority, beyond the bare node
+   ADR-WIASW-009 gave it: what it is, its deployment boundary (own URL and runtime, development
+   project visible through the hub, production data isolated from hub users and developer
+   agents), and its dependency on CIS usefulness rather than a fixed position.
+3. Create bounded queue work for SWA's first actual step once scope exists.
+4. Settle whether the September 2026 `projects` / `project_create` concepts are the mechanism by
+   which SWA becomes a project, or are superseded. See 4.41.
+
+**Do not infer SWA's scope from the owner's job title, from the application's name, or from the
+Miramont documents in the drive dump.** Scope must be recorded from the owner's own statements
+or from the `swa_project` corpus read deliberately, not guessed.
+
+**Evidence basis:** measurements taken 2026-10-29 against `data/cis_memory.db`
+(`queue_items`, `project_decisions`, `project_state`, `knowledge_messages`),
+`config/kb_source_policy.yaml`, `/mnt/projects/cis-clean/blueprint/reconstruction_manifest.json`,
+`/mnt/projects/cis-clean/contracts/`, and
+`data/agent_handoffs/CIS-WB-PROJECT-OBSERVATORY-2026-10-27/`;
+`project_decisions:ADR-WIASW-009`; `dev_continuity_events:4.37:55`; queue 1.8, 3.6, 3.12, WB.1,
+4.41, 4.42.
+
+# Card 01 — Online Ingress and Operator Identity
+
+## Existing foundation
+
+- `deploy/brain-mvp.compose.yaml` binds `127.0.0.1:8099:8077`.
+- `deploy/workbench-brain/entrypoint.sh` runs `python -m cis serve`.
+- `src/cis/interface/api.py` has no caller identity/authentication.
+- Cloudflare Tunnel and an Eric-only Access policy exist; the recorded
+  Workbench origin still targets legacy port 5000.
+
+## Build
+
+- `src/cis/interface/access_identity.py`
+- `contracts/cis.interface.access_identity.contract.json`
+- HTTP-server integration and trusted deployment configuration for Access
+  issuer, audience, allowed operator, and JWKS source/cache.
+
+## Functionality
+
+1. Verify `CF-Access-Jwt-Assertion` signature, issuer, audience, expiry and
+   not-before on every non-health request.
+2. Cache verified JWKS for a bounded TTL and fail closed without a valid key.
+3. Produce a closed `OperatorIdentity`; accept no identity JSON fields.
+4. Require the configured operator for all mutations.
+5. Keep `/health` secret-free and the origin loopback-only.
+6. Add a non-secret deployment check for the intended future tunnel origin
+   `http://127.0.0.1:8099`; do not cut over until Card 10.
+
+## Network requirements
+
+- `cloudflared` outbound HTTPS to Cloudflare.
+- JWT verification outbound HTTPS to Cloudflare JWKS, or a verified host relay.
+- No direct Internet/LAN listener on 8077/8099 and no router port forwarding.
+
+## Acceptance / stop
+
+- Anonymous, expired, wrong-audience/issuer/operator assertions refuse.
+- Authorized requests reach the API and local 8099 remains healthy.
+- Stop before live hostname cutover, credential disclosure, or non-loopback
+  exposure.
+
+# Card 02 — Durable Brain Sessions and Deliberations
+
+## Existing foundation
+
+`BrainSessionBinding`, `CodexThreadResumeRunnerFactory`,
+`RemoteBrainWorkerController`, `brain.worker_service`, `DeliberationResult`,
+Workbench Brain methods and `/brain/sessions/*` already run the conversation.
+Completed results currently live only in the HTTP response/browser and sessions
+are process-local.
+
+## Build
+
+- Next migration: append-only `brain_sessions` and `brain_deliberations`.
+- `src/cis/brain/session_authority.py`
+- `src/cis/brain/deliberation_authority.py`
+- Contracts/manifest; integrate recording into `Workbench.submit_brain_turn`.
+
+## Functionality
+
+1. Record opaque session ID, operator identity, profile-ID hash, start and close
+   events; never store tokens.
+2. Before returning a successful turn, persist canonical `DeliberationResult`,
+   its domain hash, prompt hash, Codex thread/turn IDs and process-evidence
+   digest.
+3. Reparse and rehash every stored result on read.
+4. Return `deliberation_id` to the browser and expose verified ordered reads.
+5. Preserve completed deliberations across refresh/restart; never claim an
+   interrupted live turn resumed without matching thread evidence.
+
+## Runtime path
+
+`Workbench -> brain-worker:8088 -> Codex app-server -> OpenAI HTTPS`. The Brain
+worker keeps its private network, worker key and one-use profile token; it gets
+no CIS DB or source tree.
+
+## Acceptance / stop
+
+- Refresh/restart preserves completed deliberations; tampering refuses; no
+  credential is persisted.
+- Stop if Brain output is treated as authorization/card or tokens must be stored.
+
+# Card 03 — Pipeline Job Authority and Restartable Runner
+
+## Existing foundation
+
+Conductor, `Workbench.submit_instruction`, intent/continuity/authorization,
+reconstruction issuance, task contracts, Card Factory, AuthorityStore and
+trajectory/projection conventions already establish governed work.
+
+## Build
+
+- Next migration: append-only `pipeline_jobs`, `pipeline_job_events`, and
+  `pipeline_stage_claims`.
+- `src/cis/pipeline/job_authority.py`
+- `src/cis/pipeline/stages.py`
+- `src/cis/pipeline/projection.py`
+- `src/cis/pipeline/runner.py`
+- `deploy/systemd/cis-clean-pipeline-runner.service`
+- Contracts/manifest.
+
+## Functionality
+
+1. `create_job(deliberation_id, verbatim_instruction, operator_identity)` calls
+   the existing instruction path; only an ALLOW with frozen task contract/card
+   becomes runnable.
+2. Bind job to deliberation, transaction, objective, authorization, contract and
+   card hashes.
+3. Derive state from events; never accept a caller-written mutable status.
+4. Atomically claim one next stage with a bounded lease; prevent double claims.
+5. Recover expired claims; never repeat completed effects.
+6. Denials/objections remain stopped until separate recovery authority exists.
+7. Runner scans/wakes for actionable jobs and dispatches typed stage handlers.
+8. Projection reports current stage, evidence, last event, stop reason and next
+   permitted action.
+
+Required stages cover card, pre-review, implementation, recovery/admission,
+verification, review, promotion, application, activation and closeout, with
+explicit failed/denied/escalated states.
+
+## Permissions and acceptance
+
+Runner gets the authority DB and narrow reviewer/Menter/deployment sockets—no
+Docker socket or protected-reference write access. Restart must resume without
+duplicate stage effects. Stop if gates can be skipped/overridden or state is
+only mutable status.
+
+# Card 04 — Server-side Pre-review and Durable Dispatch
+
+## Existing foundation
+
+Durable Brain/job bindings from Cards 2-3, `CardFactoryProjection`,
+`HermesReviewer`, the reviewer Unix-socket relay, and fixed Qwen policy exist.
+Today the browser composes the packet and `Workbench._menter_grants` is
+process-local.
+
+## Build
+
+- Next migration: `pre_implementation_reviews`, `dispatch_entitlements`.
+- `src/cis/pipeline/pre_review.py`
+- `src/cis/pipeline/dispatch_entitlement.py`
+- Runner handlers, contracts and manifest entries.
+
+## Functionality
+
+1. Load verified job, deliberation, task contract and canonical card.
+2. Re-render canonical Markdown and build the packet server-side.
+3. Call Hermes through `/run/cis-reviewer/reviewer.sock` -> host relay ->
+   `127.0.0.1:8653` -> OpenRouter Qwen.
+4. Persist request ID, packet hash, full closed response, response hash,
+   generation/model/provider/role and verdict.
+5. PASS/zero objections creates exactly one entitlement bound to job, contract,
+   card hash and rendered-card hash.
+6. OBJECTIONS stops the job and creates no entitlement.
+7. Consumption is atomic/single-use and survives restart.
+8. Keep the old browser review route advisory-compatible; automated execution
+   uses durable server-side authority.
+
+## Acceptance / stop
+
+- A job automatically obtains a durable PASS entitlement or stops on objections.
+- No caller supplies model, provider, verdict, objections or scope.
+- Stop if the browser remains authoritative or the entitlement is process-only.
+
+# Card 05 — Asynchronous Menter Bridge and Observer
+
+## Existing foundation
+
+The preserved candidate
+`/mnt/cache/cis-workspaces/menter-e468adf81a5a4078a9957c0c7e874410`
+already implements Menter service job storage, client submit/status, Workbench
+submit/status, `/menter/jobs`, status polling and UI support. Production also
+has `cis.menter.managed_job`. Reconcile these into one canonical binding.
+
+## Build
+
+- Current-base edits to Menter service/client, Workbench, API and UI as verified
+  from the preserved candidate; never edit that sealed workspace.
+- `src/cis/pipeline/menter_job_handler.py`
+- Persistent Menter `--job-root` deployment configuration.
+
+## Functionality
+
+1. Consume one Card-4 dispatch entitlement.
+2. Submit exact canonical card/task binding and persist Menter job ID plus
+   `QUEUED` immediately.
+3. Background worker performs exactly one governed dispatch/callback.
+4. Persist `QUEUED/RUNNING/SUCCEEDED/FAILED` durably.
+5. Observer uses bounded backoff, records meaningful transitions and advances
+   without operator polling.
+6. Success advances to candidate intake. Eligible timeout/provider failure with
+   candidate ID advances to recovery. Other failure stops with stable code.
+7. Restart never silently replays work; bind one Menter job uniquely to one
+   pipeline job.
+
+Runtime path: runner/Workbench -> Menter Unix socket -> host service ->
+AppArmor/bubblewrap -> isolated `/mnt/cache/cis-workspaces` candidate -> Claude
+HTTPS.
+
+## Acceptance / stop
+
+- Submission returns promptly, status survives restart, observer advances once,
+  and one entitlement causes one execution.
+- Stop on preserved-candidate base conflict; create a reviewed current-base
+  candidate rather than editing the seal. Stop if two job stores can disagree
+  without a canonical binding or process-local grants remain required.
+
+# Card 06 — Sealed Candidate Recovery and Admission
+
+## Existing foundation
+
+`ExecutionRecoverableCandidate`, Claude adapter validation, gateway
+`execution_failure_evidence`, `MenterClient.candidate`, and
+`ReconstructionCandidateAuthority` exist.
+
+## Build
+
+- Next migration: append-only `sealed_candidate_recoveries` binding original
+  failed run/evidence/candidate to recovery authorization, child contract/run,
+  admitted candidate, base comparison and recovery hash.
+- `src/cis/assurance/sealed_candidate_recovery.py`
+- `src/cis/pipeline/candidate_handler.py`
+- Contracts/manifest and runner handlers.
+
+## Functionality
+
+Successful result: independently revalidate run/evidence/card/candidate map,
+admit through `ReconstructionCandidateAuthority`, then record
+`CANDIDATE_ADMITTED`.
+
+Eligible failed result:
+
+1. Require original FAILED with `EXECUTION_TIMED_OUT` or
+   `EXECUTION_PROVIDER_FAILURE` and verified failure evidence.
+2. Retrieve once and verify HMAC, execution identity/session, card/base/candidate
+   hashes, paths, file map and per-file digests.
+3. Require a separate fresh ALLOW recovery authorization for the same target
+   and scope; never reuse the failed authorization.
+4. Compare sealed base to current authorized base.
+5. On equality, materialize exact sealed bytes as a completed no-model child
+   run/evidence, preserve forward lineage, and admit the child.
+6. On mismatch, record `RECOVERY_BASE_MISMATCH`, create no child and request a
+   separately reviewed replacement-candidate job.
+7. Make exact retries idempotent.
+
+## Acceptance / stop
+
+- Successes admit automatically; eligible timeouts recover without rerunning
+  Claude; original failed run stays failed.
+- Stop before admission on digest/identity/scope/base mismatch. Never edit,
+  silently rebase, or weaken completed-run admission.
+
+# Card 07 — Assurance Coordinator and Qwen Route Receipt
+
+## Existing foundation
+
+`ReconstructionCandidateAuthority`, `Verifier`, deterministic `Reviewer`,
+`HermesReviewer`, external-model evidence/lifecycle authority,
+`cis.assurance.review_route`, `record_route_receipt`, and `PromotionRecorder`
+already exist.
+
+## Build
+
+- `src/cis/assurance/coordinator.py`
+- `src/cis/reviewer/route_controller.py`
+- Runner handlers, contracts and manifest entries.
+
+## Functionality
+
+1. Require task contract and admitted candidate.
+2. Call `Verifier.verify` once or reuse its immutable result; stop on fail.
+3. Call deterministic `Reviewer.review` once or reuse its immutable result;
+   PASS advances and objections use existing bounded cycles.
+4. Build post-implementation Qwen packet solely from recorded candidate,
+   verification and review authority.
+5. Call fixed Hermes/Qwen through the reviewer socket.
+6. Record reviewer request lifecycle and exact response as the existing external
+   model response evidence kind.
+7. Build via `review_route.receipt_payload`, hash with the existing helper, and
+   admit only through `record_route_receipt`.
+8. Call `PromotionRecorder.decide`; persist exact decision/reason on the job.
+9. Resume by reusing immutable completed stages—never seek a different answer.
+
+## Boundaries and acceptance
+
+Do not modify the promotion conjunction, Verifier, deterministic Reviewer,
+Qwen policy or receipt validation. Accept no caller verdict/hash/evidence/model/
+receipt/decision. An admitted candidate must automatically reach a truthful
+decision with no manual gate calls. Stop if any conjunction member must be
+bypassed or response evidence cannot bind to its request.
+
+# Card 08 — Multi-file Promotion and Rollback
+
+## Existing foundation
+
+Promotion decisions, exact candidate bytes, the single-file
+`HostPromotionGate`, and pipeline claims/events exist.
+
+## Build
+
+- Next migration: `multifile_promotion_plans`,
+  `multifile_promotion_plan_files`, `multifile_promotion_events`.
+- `src/cis/host/multifile_promotion_gate.py`
+- Narrow host Unix-socket service/client when the runner lacks source write
+  access; contracts/manifest and runner handler.
+
+## Functionality
+
+1. Require exact latest `PROMOTION_AUTHORIZED`.
+2. Read candidate only from verified reconstruction authority and reverify
+   card, paths, map and hashes.
+3. Refuse `/mnt/projects/cis` and anything outside configured CIS Clean root.
+4. Before mutation, record each path, candidate bytes/deletion marker and prior
+   presence/bytes/hash in one immutable plan.
+5. Stage, fsync, replace/delete and verify all targets; record `APPLIED` only
+   after complete verification.
+6. Recover interrupted plans and roll back every modified/created/deleted file
+   from recorded prior bytes, then verify `ROLLED_BACK`.
+7. Return only application ID/state/digests to pipeline.
+
+## Acceptance / stop
+
+- A five-file candidate applies under one authorized recoverable plan; denial
+  cannot create a plan; rollback restores exact prior tree.
+- Stop before mutation on authority/path/scope/digest/plan conflict. Do not give
+  Workbench Docker or unrestricted host access or combine decision and action.
+
+# Card 09 — Container Activation, Runtime Proof and Closeout
+
+## Existing foundation
+
+Compose/Dockerfiles, Workbench health, reviewer/Menter services, continuity and
+queue/dependency authority, plus Card-8 applied promotion evidence.
+
+## Build
+
+- Next migration: `deployment_plans`, `deployment_events`, `pipeline_closeouts`.
+- `src/cis/deployment/controller.py`, `service.py`, `client.py`.
+- `deploy/systemd/cis-clean-deployment.service` with authenticated Unix socket
+  `/run/cis-deployment/deployment.sock`.
+- `src/cis/pipeline/closeout.py`; contracts/manifest and runner handlers.
+
+## Trust boundary
+
+Host service owns constrained Docker/Compose operations. Workbench/runner never
+receive Docker socket. Requests name only an already-applied promotion ID—no
+shell, path, tag or Compose arguments.
+
+## Functionality
+
+1. Verify applied promotion/source digest and record current image/container as
+   rollback authority.
+2. Build uniquely tagged immutable image and run complete required tests in a
+   disposable container.
+3. Replace only the fixed Workbench service.
+4. Verify health, migrations, Brain worker, reviewer socket, Menter socket,
+   loopback binding, expected image digest and restart count.
+5. On failure restore previous deployment and verify health; on success record
+   `ACTIVE_VERIFIED` with evidence digests.
+6. Append `dev_continuity_events`, complete authoritative queue item, mark job
+   `CLOSED`, and wake the next dependency-eligible non-deferred job.
+
+## Acceptance / stop
+
+- Source becomes a tested verified running deployment without manual Docker;
+  failures automatically restore prior deployment; closeout and next selection
+  are durable.
+- Stop without activation if rollback identity, migration, tests or health fail.
+  Never mount Docker socket into Workbench or violate dependency/Do-Not-Start.
+
+# Card 10 — Unified Online Workbench and End-to-End Proof
+
+## Purpose
+
+Replace browser coordination with one governed-job action, cut the authenticated
+hostname over to CIS Clean, and prove the complete application with real work.
+
+## API
+
+Add:
+
+```text
+POST /pipeline/jobs
+GET  /pipeline/jobs/<job-id>
+GET  /pipeline/queue
+POST /pipeline/jobs/<job-id>/resume
+POST /pipeline/jobs/<job-id>/rollback
+```
+
+Submission accepts exactly `deliberation_id` and `verbatim_instruction`. It
+accepts no scope, paths, model/provider, verdict, candidate hash, receipt,
+promotion or deployment fields. Resume only wakes the recorded next eligible
+action; rollback only invokes an existing plan.
+
+## UI functionality
+
+1. Eric authenticates through Cloudflare Access, selects/signs into a Brain
+   profile and chats.
+2. Completed results are durable/selectable.
+3. Eric selects a draft or writes final instruction and clicks one `Start
+   governed job` control.
+4. Browser only reads job projection via bounded polling/events; it performs no
+   intermediate workflow mutation.
+5. Status shows instruction/objective/card, pre-review, Menter job,
+   candidate/recovery, verification, deterministic review, Qwen receipt,
+   promotion reason, host application, deployment health, closeout/next job,
+   stop reason and permitted recovery.
+6. Refresh/relogin rebuilds truth from authority.
+
+## Cloudflare cutover
+
+After local acceptance, validate named-tunnel configuration; change only
+`workbench.creative-intelligence-system.com` to `http://127.0.0.1:8099`;
+preserve other routes; restart managed `cloudflared` service (not SIGHUP); prove
+anonymous denial and authenticated access. Restore prior origin on failure.
+
+## Real proof
+
+Run a bounded visible Workbench application change. Use the async-bridge work
+if its base verifies, otherwise its separately reviewed replacement. Prove:
+
+```text
+remote Brain chat -> durable deliberation -> job/card -> Hermes pre-review
+-> async Claude -> admission/recovery -> Verifier -> deterministic Reviewer
+-> Qwen receipt -> promotion -> multi-file apply -> build/tests/activation
+-> remote browser verification -> continuity/queue closeout
+```
+
+Restart the runner once mid-job to prove no duplicate dispatch/action. Exercise
+rollback on a controlled canary or test deployment.
+
+## Acceptance / stop
+
+- Public hostname serves CIS Clean 8099 through Access; complete workflow is
+  operable without manual handoffs; all transitions are evidenced; PASS work
+  reaches `ACTIVE_VERIFIED/CLOSED`; correct denial remains truthful success.
+- Stop/restore origin on remote failure, roll back on runtime failure, and stop
+  if any stage advances without predecessor or browser state is authoritative.
+
+### 4.43A Recoverable tree checkpoint and image/source reconciliation
+
+Execute reviewed R2 Card 00. Verify and preserve checkpoint ref
+`refs/cis-checkpoints/close-assurance-chain-20261029T2115Z`, classify generated
+drift, inventory secrets without exposing values, reconcile running image
+identity to reproducible source, and record the exact rollback path. This blocks
+all CIS Clean implementation mutation until closed.
+
+Authority: R2 package
+`b9bdc25ec2e2e8f6c11a0b6364993be259fcb11437b6e561cb5c88fbb74117e0`,
+Card 00.
+
+**Need: DONE.**
+
+### 4.43B Correct test-fixture authorization semantics
+
+Execute reviewed R2 Card 00A after 4.43A. Repair only shared test support so
+each frozen contract obtains its own authorization; preserve production
+one-ALLOW/one-attempt. Record identical full-suite commands and exact before/
+after totals. This blocks reliance on later verification results until closed.
+
+Authority: R2 package
+`b9bdc25ec2e2e8f6c11a0b6364993be259fcb11437b6e561cb5c88fbb74117e0`,
+Card 00A.

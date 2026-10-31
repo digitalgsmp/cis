@@ -70,6 +70,8 @@ import time
 from . import continuity_store as cs
 from . import packet as packet_mod
 
+CONTROL_DISPATCHER = "/opt/cis-control/bin/cis-dispatch"
+
 
 def discover_executable(name):
     """Report whether `name` exists on PATH and what --version says.
@@ -486,7 +488,8 @@ def launch_with_packet(conn, executable_name, packet_obj, out_dir, tool=None,
 def launch_execution_handoff(conn, executable_name, *, task, actor, out_dir, directive_text,
                               authorization_revision, tool=None, extra_args=None,
                               concept_queries=None, kb_ids=None, dev_conn=None,
-                              expected_request_hash=None, dry_run=False, timeout=30):
+                              expected_request_hash=None, control_contract=None,
+                              dry_run=False, timeout=30):
     """The one guarded path for a real execution send: build the packet and
     execution payload, then IMMEDIATELY BEFORE invoking the child process
     re-validate both authorization and packet freshness against the
@@ -526,8 +529,53 @@ def launch_execution_handoff(conn, executable_name, *, task, actor, out_dir, dir
                 "reason": "stale packet, refusing to send (rechecked immediately before invocation)",
                 "freshness": fresh, "handoff_path": path, "completion_status": "not_dispatched"}
 
-    result = launch(executable_name, path, tool=tool, extra_args=extra_args,
-                     dry_run=dry_run, timeout=timeout)
+    # The model-writable repository is not allowed to grant its own edit
+    # authority.  A real execution must cross the root-owned control-plane
+    # dispatcher with a frozen root-owned contract.  That dispatcher owns
+    # the fixed model argv (including Claude's edit-capable mode); this
+    # launcher can neither add nor forward arbitrary model flags.
+    if extra_args:
+        raise AuthorizationError(
+            "execution extra_args are forbidden; the root-owned dispatcher "
+            "owns the complete model invocation"
+        )
+    if not control_contract:
+        raise AuthorizationError(
+            "execution requires a frozen /opt/cis-control contract; repository "
+            "authorization alone cannot grant host edit authority"
+        )
+    dispatcher = discover_executable(CONTROL_DISPATCHER)
+    if not dispatcher["available"]:
+        return {"launched": False, "reason": "root-owned control dispatcher unavailable",
+                "discovery": dispatcher, "completion_status": "not_dispatched",
+                "handoff_path": path, "freshness": fresh}
+    resolved_tool = tool or _infer_tool(executable_name)
+    if resolved_tool not in _ADAPTERS:
+        raise AuthorizationError("execution tool is unknown; refusing control dispatch")
+    argv = [dispatcher["path"], "--contract", control_contract,
+            "--handoff", path, "--task", task,
+            "--authorization-revision", str(authorization_revision),
+            "--tool", resolved_tool, "--timeout", str(timeout)]
+    if dry_run:
+        result = {"launched": False, "dry_run": True, "would_run": argv,
+                  "completion_status": "not_dispatched (dry_run)"}
+    else:
+        dispatched = subprocess.run(
+            argv, capture_output=True, text=True, timeout=timeout + 5,
+        )
+        try:
+            result = json.loads(dispatched.stdout)
+        except json.JSONDecodeError:
+            result = {"launched": False, "completion_status": "not_dispatched",
+                      "reason": "control dispatcher returned non-JSON output",
+                      "dispatcher_returncode": dispatched.returncode,
+                      "dispatcher_stderr": dispatched.stderr}
+        result["dispatcher_returncode"] = dispatched.returncode
+        if dispatched.returncode != 0:
+            result["launched"] = False
+            result["completion_status"] = "not_dispatched"
+            result.setdefault("reason", dispatched.stderr.strip() or
+                              "control dispatcher refused execution")
     result["handoff_path"] = path
     result["freshness"] = fresh
     result["authorization"] = {

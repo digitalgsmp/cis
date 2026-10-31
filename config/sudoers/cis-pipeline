@@ -1,0 +1,2 @@
+Cmnd_Alias CIS_PIPELINE_CONTROL = /usr/bin/systemctl start cis-pipeline.service, /usr/bin/systemctl stop cis-pipeline.service, /usr/bin/systemctl restart cis-pipeline.service
+eric ALL=(root) NOPASSWD: CIS_PIPELINE_CONTROL

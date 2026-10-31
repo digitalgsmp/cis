@@ -221,27 +221,26 @@ def check_5_drift_and_objection_state(conn, run_id):
 
 
 def check_6_export_agreement():
-    """Export gate passes — regenerate context and verify."""
+    """Export gate passes without mutating the project being verified."""
     import subprocess
 
-    # Check generate_all.py
     repo_root = os.environ.get("CIS_REPO", "/mnt/projects/cis")
-    result = subprocess.run(
-        ["python3", f"{repo_root}/tools/export/generate_all.py"],
-        capture_output=True, text=True, timeout=60,
-    )
-    if result.returncode != 0:
-        fail(6, f"generate_all.py failed:\n{result.stderr.strip()}")
-
-    # Check export agreement gate
+    # Verification runs inside the read-only contained pipeline.  Regenerating
+    # exports here both violates that boundary and conflates a host control-
+    # plane publishing action with evidence collection.  The host must publish
+    # exports first; this gate only checks that the published bytes agree.
     result2 = subprocess.run(
         ["bash", f"{repo_root}/tools/gates/gate_export_agreement.sh"],
         capture_output=True, text=True, timeout=30,
     )
     if result2.returncode != 0:
-        fail(6, f"gate_export_agreement.sh failed:\n{result2.stdout.strip()}")
+        detail = "\n".join(
+            part for part in (result2.stdout.strip(), result2.stderr.strip())
+            if part
+        )
+        fail(6, f"gate_export_agreement.sh failed:\n{detail}")
 
-    print(f"[6] PASS: Export agreement verified, context regenerated")
+    print("[6] PASS: Published export agreement verified read-only")
 
 
 def main():
